@@ -1,0 +1,10 @@
+# TODO (migration flysheet)
+- [ ] Inline one hot path; Cap’n Proto over UDS; pin NUMA; hugepages.
+- [ ] Port two connectors to WASM; enforce capability tokens.
+- [ ] SBOM + sign + verify at load.
+- [ ] Contract tests block merges.
+- [ ] Tri-sandbox A/B/C → merge → Model D; review fitness.
+- [ ] Anchor Merkle root per release; store receipt.
+- [ ] Install `make hooks-install` for strict push gate.
+- [ ] Replace sidecars on hot path with node gateway/eBPF.
+- [ ] Capability GC: rotate/revoke; nightly report.

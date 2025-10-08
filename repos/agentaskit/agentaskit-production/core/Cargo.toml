@@ -1,0 +1,52 @@
+[package]
+name = "agentaskit-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "AgentAsKit Production System Core - Multi-Agent Runtime and Orchestration"
+
+[[bin]]
+name = "agentaskit"
+path = "src/main.rs"
+
+[dependencies]
+# Workspace dependencies
+tokio.workspace = true
+async-trait.workspace = true
+futures.workspace = true
+once_cell.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+chrono.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+parking_lot.workspace = true
+crossbeam.workspace = true
+dashmap.workspace = true
+reqwest.workspace = true
+tonic.workspace = true
+prost.workspace = true
+clap.workspace = true
+ring.workspace = true
+sha2.workspace = true
+sled.workspace = true
+bincode.workspace = true
+config.workspace = true
+toml.workspace = true
+hex = "0.4"
+
+# Shared AgentAsKit components
+agentaskit-shared = { path = "../shared" }
+
+[dev-dependencies]
+mockall.workspace = true
+tempfile.workspace = true
+tokio-test = "0.4"
+
+[build-dependencies]
+tonic-build = "0.9"
+prost-build = "0.11"
