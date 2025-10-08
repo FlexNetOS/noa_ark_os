@@ -111,5 +111,16 @@
   
   // Terminal settings
   "terminal.integrated.scrollback": 10000,
-  "terminal.integrated.copyOnSelection": true
+  "terminal.integrated.copyOnSelection": true,
+  
+  // File-specific settings
+  "[shellscript]": {
+    "files.eol": "\n"
+  },
+  "[bash]": {
+    "files.eol": "\n"
+  },
+  "[powershell]": {
+    "files.eol": "\r\n"
+  }
 }

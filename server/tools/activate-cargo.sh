@@ -1,59 +1,49 @@
 #!/bin/bash
-# NOA ARK OS - Activate Cargo (WSL/Linux)
+# NOA ARK OS - Activate Portable Cargo (Windows)
 # Usage: source ./server/tools/activate-cargo.sh
 
-echo -e "\n🔧 Activating Cargo for WSL/Linux..."
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo -e "\n🔧 Activating Portable Cargo..."
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-# Check if Rust is installed in WSL
-if [ -f "$HOME/.cargo/env" ]; then
-    # Load Cargo environment
-    source "$HOME/.cargo/env"
-    
-    echo -e "\n✅ Cargo Activated Successfully!"
-    echo -e "\nEnvironment:"
-    echo "  CARGO_HOME   = $CARGO_HOME"
-    echo "  RUSTUP_HOME  = $RUSTUP_HOME"
-    
-    echo -e "\nVersions:"
-    cargo --version
-    rustc --version
-    
-    echo -e "\n💡 Tips:"
-    echo "  • Run 'cargo build' to build projects"
-    echo "  • Run 'cargo run' to run projects"
-    echo "  • Run 'cargo test' to run tests"
+# Get the script's directory to make it location-independent
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WORKSPACE_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
+
+CARGO_HOME="$WORKSPACE_ROOT/server/tools/cargo-portable"
+RUSTUP_HOME="$WORKSPACE_ROOT/server/tools/rustup-portable"
+
+# Verify installation exists
+if [ ! -f "$CARGO_HOME/bin/cargo.exe" ]; then
+    echo -e "\n❌ ERROR: Portable Cargo not found!"
+    echo -e "\nExpected location: $CARGO_HOME/bin/cargo.exe"
+    echo -e "\nPlease run setup first:"
+    echo "  ./server/tools/setup-portable-cargo.ps1"
     echo ""
-else
-    echo -e "\n⚠️  Rust not found in WSL!"
-    echo -e "\nTo install Rust in WSL, run:"
-    echo "  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
-    echo -e "\nThen reload this script:"
-    echo "  source ./server/tools/activate-cargo.sh"
-    echo ""
-    
-    # Check if Windows portable Cargo can be accessed
-    WIN_CARGO="/mnt/d/dev/workspaces/noa_ark_os/server/tools/cargo-portable/bin/cargo.exe"
-    if [ -f "$WIN_CARGO" ]; then
-        echo -e "ℹ️  Windows portable Cargo detected at:"
-        echo "  $WIN_CARGO"
-        echo -e "\nYou can use Windows Cargo from WSL (slower):"
-        echo "  export CARGO_HOME=/mnt/d/dev/workspaces/noa_ark_os/server/tools/cargo-portable"
-        echo "  export RUSTUP_HOME=/mnt/d/dev/workspaces/noa_ark_os/server/tools/rustup-portable"
-        echo "  export PATH=\"/mnt/d/dev/workspaces/noa_ark_os/server/tools/cargo-portable/bin:\$PATH\""
-        echo ""
-        
-        read -p "Would you like to use Windows Cargo from WSL? (y/N): " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            export CARGO_HOME="/mnt/d/dev/workspaces/noa_ark_os/server/tools/cargo-portable"
-            export RUSTUP_HOME="/mnt/d/dev/workspaces/noa_ark_os/server/tools/rustup-portable"
-            export PATH="/mnt/d/dev/workspaces/noa_ark_os/server/tools/cargo-portable/bin:$PATH"
-            
-            echo -e "\n✅ Windows Cargo activated in WSL!"
-            cargo.exe --version
-            rustc.exe --version
-            echo ""
-        fi
-    fi
+    exit 1
 fi
+
+# Set environment variables for current session
+export CARGO_HOME="$CARGO_HOME"
+export RUSTUP_HOME="$RUSTUP_HOME"
+
+# Prepend cargo bin to PATH (only if not already there)
+if [[ ":$PATH:" != *":$CARGO_HOME/bin:"* ]]; then
+    export PATH="$CARGO_HOME/bin:$PATH"
+fi
+
+echo -e "\n✅ Portable Cargo Activated Successfully!"
+echo -e "\nEnvironment:"
+echo "  CARGO_HOME   = $CARGO_HOME"
+echo "  RUSTUP_HOME  = $RUSTUP_HOME"
+echo "  PATH         = [cargo-portable/bin prepended]"
+
+echo -e "\nVersions:"
+cargo --version
+rustc --version
+
+echo -e "\n💡 Tips:"
+echo "  • Run 'cargo build' to build projects"
+echo "  • Run 'cargo run' to run projects"
+echo "  • Run 'cargo test' to run tests"
+echo "  • This activation is for the current shell session only"
+echo ""

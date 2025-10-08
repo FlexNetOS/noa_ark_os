@@ -8,7 +8,7 @@ members = [
     "retrieval",
     "plugins",
     "observability",
-    "cli",
+    "cli", "ai/inference",
 ]
 
 [workspace.package]
