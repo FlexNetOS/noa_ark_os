@@ -1,4 +1,6 @@
-﻿# NOA ARK OS
+# NOA ARK OS
+
+**Local first. Self hosted. Full-Stack. Mono-Repo. End-to-End Auto. AgenticAI. Hive Mind. Agent Swarm. Disposable MicroAgents**
 
 A self-contained operating system platform that unifies applications, AI models, and services.
 
@@ -282,7 +284,7 @@ Demonstrates:
 
 ### Completed
 - ✅ Core OS skeleton (Rust)
-- ✅ Agent Factory system
+- ✅ Agent Factory system (928 agents cataloged)
 - ✅ Unified Workflow engine
 - ✅ Sandbox system architecture
 - ✅ CI/CD pipeline framework
@@ -291,6 +293,7 @@ Demonstrates:
 - ✅ **AI auto-approval system** 🆕
 - ✅ **Drop-in folder architecture** 🆕
 - ✅ **Archive and compression** 🆕
+- ✅ **Fork processing system** 🆕
 
 ### In Progress
 - 🔨 Runtime environment integration
