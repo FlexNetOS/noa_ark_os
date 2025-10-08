@@ -22,6 +22,17 @@ dist/
 *~
 .DS_Store
 
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Workspace indexes and temp files
+.workspace/
+.graphs/
+
 # Rust
 **/*.rs.bk
 Cargo.lock
