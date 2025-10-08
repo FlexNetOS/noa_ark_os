@@ -7,8 +7,8 @@ use tokio::fs;
 use tokio::sync::mpsc;
 use tracing::{info, warn, error, instrument};
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
-// Define types locally since cicd doesn't depend on crc
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum SandboxModel {
     ModelA,
@@ -17,7 +17,7 @@ pub enum SandboxModel {
     ModelD,
 }
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, Error)]
 pub enum Error {
     #[error("System error: {0}")]
     SystemError(String),

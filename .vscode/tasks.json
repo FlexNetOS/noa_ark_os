@@ -1,0 +1,70 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Activate Portable Cargo",
+      "type": "shell",
+      "command": ".\\server\\tools\\activate-cargo.ps1",
+      "windows": {
+        "command": ".\\server\\tools\\activate-cargo.ps1"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Cargo Build (Portable)",
+      "type": "shell",
+      "command": ".\\server\\tools\\activate-cargo.ps1; cargo build",
+      "windows": {
+        "command": ".\\server\\tools\\activate-cargo.ps1; cargo build"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always"
+      },
+      "problemMatcher": ["$rustc"]
+    },
+    {
+      "label": "Cargo Run (Portable)",
+      "type": "shell",
+      "command": ".\\server\\tools\\activate-cargo.ps1; cargo run",
+      "windows": {
+        "command": ".\\server\\tools\\activate-cargo.ps1; cargo run"
+      },
+      "presentation": {
+        "reveal": "always"
+      },
+      "problemMatcher": ["$rustc"]
+    },
+    {
+      "label": "Cargo Test (Portable)",
+      "type": "shell",
+      "command": ".\\server\\tools\\activate-cargo.ps1; cargo test",
+      "windows": {
+        "command": ".\\server\\tools\\activate-cargo.ps1; cargo test"
+      },
+      "presentation": {
+        "reveal": "always"
+      },
+      "problemMatcher": ["$rustc"]
+    },
+    {
+      "label": "Cargo Check (Portable)",
+      "type": "shell",
+      "command": ".\\server\\tools\\activate-cargo.ps1; cargo check",
+      "windows": {
+        "command": ".\\server\\tools\\activate-cargo.ps1; cargo check"
+      },
+      "presentation": {
+        "reveal": "always"
+      },
+      "problemMatcher": ["$rustc"]
+    }
+  ]
+}

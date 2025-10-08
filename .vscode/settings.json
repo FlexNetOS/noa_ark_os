@@ -1,0 +1,115 @@
+{
+  // ============================================
+  // Multi-Platform Terminal Configuration
+  // ============================================
+  
+  // Windows: Default to PowerShell (for portable Cargo)
+  "terminal.integrated.defaultProfile.windows": "PowerShell",
+  
+  // Linux/WSL: Default to bash
+  "terminal.integrated.defaultProfile.linux": "bash",
+  
+  // Terminal profiles for all platforms
+  "terminal.integrated.profiles.windows": {
+    "PowerShell": {
+      "source": "PowerShell",
+      "icon": "terminal-powershell"
+    },
+    "Command Prompt": {
+      "path": [
+        "${env:windir}\\Sysnative\\cmd.exe",
+        "${env:windir}\\System32\\cmd.exe"
+      ],
+      "icon": "terminal-cmd"
+    },
+    "WSL": {
+      "path": "wsl.exe",
+      "icon": "terminal-ubuntu"
+    },
+    "Git Bash": {
+      "source": "Git Bash"
+    }
+  },
+  
+  // ============================================
+  // Rust Environment - Portable Cargo (Windows)
+  // ============================================
+  
+  "rust-analyzer.server.extraEnv": {
+    "CARGO_HOME": "D:\\dev\\workspaces\\noa_ark_os\\server\\tools\\cargo-portable",
+    "RUSTUP_HOME": "D:\\dev\\workspaces\\noa_ark_os\\server\\tools\\rustup-portable"
+  },
+  
+  // Cargo Path (Windows portable installation)
+  "rust-analyzer.cargo.path": "D:\\dev\\workspaces\\noa_ark_os\\server\\tools\\cargo-portable\\bin\\cargo.exe",
+  
+  // Rustc Path (Windows portable installation)
+  "rust-analyzer.rustc.path": "D:\\dev\\workspaces\\noa_ark_os\\server\\tools\\cargo-portable\\bin\\rustc.exe",
+  
+  // ============================================
+  // Environment Variables per Platform
+  // ============================================
+  
+  // Windows PowerShell environment
+  "terminal.integrated.env.windows": {
+    "CARGO_HOME": "D:\\dev\\workspaces\\noa_ark_os\\server\\tools\\cargo-portable",
+    "RUSTUP_HOME": "D:\\dev\\workspaces\\noa_ark_os\\server\\tools\\rustup-portable",
+    "PATH": "D:\\dev\\workspaces\\noa_ark_os\\server\\tools\\cargo-portable\\bin;${env:PATH}"
+  },
+  
+  // Linux/WSL environment (uses system Rust)
+  "terminal.integrated.env.linux": {
+    "CARGO_HOME": "${env:HOME}/.cargo",
+    "RUSTUP_HOME": "${env:HOME}/.rustup"
+  },
+  
+  // ============================================
+  // Rust-analyzer Configuration
+  // ============================================
+  
+  "rust-analyzer.checkOnSave": true,
+  // FIXED: Use 'check' instead of 'clippy' for portable toolchain without clippy installed
+  "rust-analyzer.check.command": "check",
+  "rust-analyzer.cargo.allFeatures": true,
+  "rust-analyzer.diagnostics.enable": true,
+  "rust-analyzer.inlayHints.enable": true,
+  
+  // ============================================
+  // File Explorer Settings
+  // ============================================
+  
+  // Files to exclude from explorer
+  "files.exclude": {
+    "**/target": true,
+    "**/.git": true,
+    "**/.DS_Store": true,
+    "**/Thumbs.db": true
+  },
+  
+  // Files to exclude from search
+  "search.exclude": {
+    "**/target": true,
+    "**/node_modules": true,
+    "**/.git": true,
+    "**/dist": true,
+    "**/build": true
+  },
+  
+  // ============================================
+  // Additional Editor Settings
+  // ============================================
+  
+  // Format on save for Rust files
+  "[rust]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "rust-lang.rust-analyzer"
+  },
+  
+  // Git configuration
+  "git.enabled": true,
+  "git.autofetch": true,
+  
+  // Terminal settings
+  "terminal.integrated.scrollback": 10000,
+  "terminal.integrated.copyOnSelection": true
+}

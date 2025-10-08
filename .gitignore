@@ -130,3 +130,11 @@ temp/
 # Documentation artifacts
 docs/build/
 site/
+
+# Workspace organization
+.workspace-backup-*/
+
+# Logs (keep structure, ignore files)
+logs/**/*.log
+logs/**/*.txt
+logs/**/!(.gitkeep|README.md)
