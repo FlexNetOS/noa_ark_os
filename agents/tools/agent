@@ -1,0 +1,76 @@
+#!/bin/bash
+#
+# Convenience wrapper for GitHub Coding Agent
+#
+# Usage:
+#   agent start    # Start the coding agent
+#   agent stop     # Stop the coding agent
+#   agent status   # Check agent status
+#   agent logs     # View agent logs
+#   agent config   # Edit agent configuration
+
+set -euo pipefail
+
+TOOLS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+AGENT_SCRIPT="$TOOLS_DIR/github_coding_agent.sh"
+AGENT_CONFIG="$HOME/config/applications/github_coding_agent.yaml"
+
+# Ensure agent script is executable
+chmod +x "$AGENT_SCRIPT" 2>/dev/null || true
+
+case "${1:-help}" in
+    start|stop|status|logs|restart)
+        "$AGENT_SCRIPT" "$@"
+        ;;
+    config)
+        ${EDITOR:-nano} "$AGENT_CONFIG"
+        ;;
+    install)
+        echo "Installing GitHub Coding Agent as systemd service..."
+        if [[ -f "$HOME/config/system/github-coding-agent.service" ]]; then
+            sudo cp "$HOME/config/system/github-coding-agent.service" /etc/systemd/system/
+            sudo systemctl daemon-reload
+            sudo systemctl enable github-coding-agent
+            echo "✅ Service installed and enabled"
+            echo "Start with: sudo systemctl start github-coding-agent"
+        else
+            echo "❌ Service file not found: $HOME/config/system/github-coding-agent.service"
+            exit 1
+        fi
+        ;;
+    uninstall)
+        echo "Uninstalling GitHub Coding Agent systemd service..."
+        sudo systemctl stop github-coding-agent 2>/dev/null || true
+        sudo systemctl disable github-coding-agent 2>/dev/null || true
+        sudo rm -f /etc/systemd/system/github-coding-agent.service
+        sudo systemctl daemon-reload
+        echo "✅ Service uninstalled"
+        ;;
+    help|*)
+        cat <<EOF
+GitHub Coding Agent - Management Tool
+
+Usage: agent <command>
+
+Commands:
+  start      - Start agent in background
+  stop       - Stop agent
+  restart    - Restart agent
+  status     - Check agent status
+  logs       - View agent logs (tail -f)
+  config     - Edit agent configuration
+  install    - Install as systemd service (requires sudo)
+  uninstall  - Remove systemd service (requires sudo)
+  help       - Show this help
+
+Examples:
+  agent start         # Start monitoring agentask.todo
+  agent status        # Check if agent is running
+  agent logs          # Watch agent activity
+  agent config        # Edit configuration
+
+Configuration: $AGENT_CONFIG
+Logs: ~/logs/development/github_agent.log
+EOF
+        ;;
+esac

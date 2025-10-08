@@ -1,0 +1,121 @@
+# Build artifacts
+target/
+bin/
+obj/
+dist/
+*.exe
+*.dll
+*.so
+*.dylib
+*.rlib
+*.pdb
+
+# IDE & Editor
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Rust
+**/*.rs.bk
+Cargo.lock
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# Go
+*.test
+*.out
+
+# Logs
+*.log
+logs/
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# Portable Tools (excluded from Git)
+server/tools/cargo-portable/
+server/tools/rustup-portable/
+
+# Runtime Data
+server/data/
+crc/temp/
+crc/archive/
+crc/sandboxes/*/active/
+crc/drop-in/incoming/stale/
+crc/drop-in/incoming/forks/*/
+
+# Models & Large Files
+*.bin
+*.gguf
+*.safetensors
+*.pt
+*.pth
+*.onnx
+models/
+*.model
+
+# Secrets
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+*.crt
+secrets/
+credentials/
+
+# Test outputs
+test-results/
+coverage/
+*.profraw
+*.profdata
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.backup
+*.cache
+
+# Documentation artifacts
+docs/build/
+site/

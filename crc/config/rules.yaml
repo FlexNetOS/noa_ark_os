@@ -1,0 +1,82 @@
+# CRC Adaptation Rules
+
+adaptation_rules:
+  # Naming conventions
+  naming:
+    convert_to_snake_case: true
+    prefix_modules: "noa_"
+    max_name_length: 50
+    remove_prefixes:
+      - "external_"
+      - "lib_"
+      - "util_"
+  
+  # Architecture alignment
+  architecture:
+    use_workspace_patterns: true
+    enforce_layer_separation: true
+    apply_security_model: true
+    match_directory_structure: true
+    module_organization:
+      - "core -> noa_core"
+      - "utils -> noa_utils"
+      - "models -> noa_models"
+  
+  # Dependencies
+  dependencies:
+    remove_external: true
+    use_embedded_runtimes: true
+    vendor_if_necessary: true
+    self_contained: true
+    replacements:
+      http:
+        - "requests -> noa_http"
+        - "urllib -> noa_http"
+        - "axios -> noa_http"
+        - "fetch -> noa_http"
+      database:
+        - "sqlite3 -> noa_storage::db"
+        - "postgresql -> noa_storage::db"
+        - "mysql -> noa_storage::db"
+      async:
+        - "asyncio -> noa_runtime::async"
+        - "tokio -> noa_runtime::async"
+      serialization:
+        - "json -> noa_core::json"
+        - "pickle -> noa_core::serialize"
+  
+  # Code quality
+  quality:
+    apply_formatter: true
+    enforce_linting: true
+    add_documentation: true
+    generate_tests: true
+    min_coverage: 80
+    max_complexity: 10
+    error_handling:
+      rust: "Result<T, E>"
+      python: "try/except with logging"
+      go: "error return values"
+  
+  # Security
+  security:
+    scan_vulnerabilities: true
+    check_licenses: true
+    remove_secrets: true
+    add_input_validation: true
+    enforce_sandboxing: true
+  
+  # Performance
+  performance:
+    optimize_imports: true
+    remove_dead_code: true
+    cache_frequently_used: true
+    add_profiling_hooks: false  # Only if needed
+  
+  # Testing
+  testing:
+    generate_unit_tests: true
+    generate_integration_tests: true
+    add_benchmarks: false
+    mock_external_calls: true
+    test_coverage_min: 80

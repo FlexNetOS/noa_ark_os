@@ -1,0 +1,15 @@
+merge_request:
+  id: ""
+  context:
+    purpose: ""
+    success_criteria: ""
+    constraints: ""
+    scope: ""
+  sources: []
+  target:
+    location: ""
+    format: "dir"
+  merge_model: "C"
+  policies:
+    - "Heal, Don't Harm"
+    - "Upgrades Only"

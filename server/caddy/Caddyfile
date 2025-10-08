@@ -1,0 +1,152 @@
+###############################
+# Caddyfile — Local scaffolding
+# Purpose: Front internal services (e.g., Vault) with TLS, logging,
+#          security headers, compression, health checks, and sane defaults.
+#
+# All site blocks below are DISABLED by default. Uncomment to enable.
+# Docs: https://caddyserver.com/docs/
+###############################
+
+{
+	# Admin endpoint (bind to loopback)
+	admin 127.0.0.1:2019
+
+	# Global email for ACME (used if you enable public certs)
+	email you@example.com
+
+	# Persist storage (certs, keys, staples) under workspace
+	# Default is OS data dir; customize here for portability
+	# (path is relative to where you run `caddy`)
+	storage file_system {
+		root data/storage/caddy
+	}
+
+	# Application log (not access logs). Useful for debugging.
+	log {
+		level INFO
+		output file logs/applications/caddy/app.log {
+			roll_size 50MiB
+			roll_keep 5
+			roll_keep_for 120d
+		}
+	}
+}
+
+#############################################
+# Example 1: Local Vault with TLS termination
+#
+# - Terminates TLS with an internal CA (trusted locally only)
+# - Proxies to a local Vault on 127.0.0.1:8200
+# - Adds compression, security headers, access logs
+# - Sets timeouts and enables health checks
+#############################################
+
+# https://localhost:8443 {
+#   # Issue a local CA-signed cert for development
+#   tls internal
+#
+#   # Compression
+#   encode zstd gzip
+#
+#   # Security headers
+#   header {
+#     Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+#     X-Content-Type-Options "nosniff"
+#     X-Frame-Options "DENY"
+#     Referrer-Policy "no-referrer"
+#   }
+#
+#   # Request size limits (adjust as needed)
+#   request_body {
+#     max_size 20MB
+#   }
+#
+#   # Upstream health checks and timeouts
+#   reverse_proxy {$VAULT_UPSTREAM_ADDR:127.0.0.1:8200} {
+#     lb_policy least_conn
+#     health_checks {
+#       active {
+#         path /v1/sys/health
+#         interval 10s
+#         timeout 2s
+#         # NOTE: Vault returns 200/429/472 depending on state; core health checks
+#         # consider 2xx-3xx healthy. Customize behavior by placing a local LB in front
+#         # if you require broader acceptance.
+#       }
+#       passive {
+#         fail_duration 30s
+#         max_fails 1
+#       }
+#     }
+#     transport http {
+#       read_timeout 30s
+#       write_timeout 30s
+#       dial_timeout 5s
+#     }
+#   }
+#
+#   # Access log (JSON) for this site
+#   log {
+#     output file logs/applications/caddy/access.log {
+#       roll_size 100MiB
+#       roll_keep 7
+#       roll_keep_for 30d
+#     }
+#     format json
+#   }
+#
+#   # Friendly JSON error responses (optional)
+#   handle_errors {
+#     respond "{ \"error\": {http.error.status_code}, \"id\": \"caddy\" }" {http.error.status_code} {
+#       close
+#     }
+#   }
+# }
+
+#############################################
+# Example 2: Public domain with mTLS to upstream
+#
+# For external exposure, prefer ACME (DNS-01) and mTLS to upstreams or clients.
+# Requires public DNS and proper credentials; values below are placeholders.
+#############################################
+
+# https://vault.example.com {
+#   # Automatic HTTPS via ACME; for DNS-01, configure your DNS provider.
+#   # tls {
+#   #   dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+#   # }
+#
+#   # Client certificate authentication (to your service)
+#   # tls {
+#   #   client_auth {
+#   #     mode require_and_verify
+#   #     trusted_ca_cert_file {$CLIENT_CA:-config/system/ca/clients.pem}
+#   #   }
+#   # }
+#
+#   encode zstd gzip
+#
+#   reverse_proxy {$VAULT_UPSTREAM_ADDR:127.0.0.1:8200} {
+#     lb_policy least_conn
+#     transport http {
+#       read_timeout 30s
+#       write_timeout 30s
+#       dial_timeout 5s
+#     }
+#   }
+#
+#   log {
+#     output file logs/applications/caddy/access-public.log
+#     format json
+#   }
+# }
+
+#############################################
+# Example 3: Static files (handy for quick docs/testing)
+#############################################
+
+# http://localhost:8080 {
+#   root * ./ui/web/dist
+#   file_server browse
+#   encode zstd gzip
+# }

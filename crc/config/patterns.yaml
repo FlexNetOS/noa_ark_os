@@ -1,0 +1,187 @@
+# Code Patterns for Adaptation
+
+patterns:
+  # HTTP Libraries
+  http_requests:
+    - pattern: "requests.get(url)"
+      replace: "noa_http::get(url)"
+      reason: "Use internal HTTP client"
+      confidence: 0.95
+    
+    - pattern: "requests.post(url, data)"
+      replace: "noa_http::post(url, data)"
+      reason: "Use internal HTTP client"
+      confidence: 0.95
+    
+    - pattern: "import requests"
+      replace: "use noa_http"
+      reason: "Use internal HTTP module"
+      confidence: 0.98
+    
+    - pattern: "axios.get(url)"
+      replace: "noa_http::get(url)"
+      reason: "Use internal HTTP client"
+      confidence: 0.90
+  
+  # Database Operations
+  database:
+    - pattern: "sqlite3.connect(db)"
+      replace: "noa_storage::db::connect(db)"
+      reason: "Use embedded database"
+      confidence: 0.98
+    
+    - pattern: "import sqlite3"
+      replace: "use noa_storage::db"
+      reason: "Use internal database module"
+      confidence: 0.98
+    
+    - pattern: "cursor.execute(query)"
+      replace: "db.query(query)"
+      reason: "Use unified database API"
+      confidence: 0.92
+  
+  # File Operations
+  file_io:
+    - pattern: "open(file, 'r')"
+      replace: "noa_fs::open(file, Mode::Read)"
+      reason: "Use internal file system"
+      confidence: 0.95
+    
+    - pattern: "os.path.join"
+      replace: "noa_fs::path::join"
+      reason: "Use internal path utilities"
+      confidence: 0.97
+  
+  # Error Handling
+  error_handling:
+    - pattern: "raise Exception(msg)"
+      wrap: "return Err(NoaError::from(msg))"
+      reason: "Use Result type for errors"
+      confidence: 0.85
+    
+    - pattern: "try:\\n    risky()"
+      wrap: "match risky() {\\n    Ok(v) => v,\\n    Err(e) => handle_error(e)\\n}"
+      reason: "Use Result pattern"
+      confidence: 0.80
+  
+  # Logging
+  logging:
+    - pattern: "print(message)"
+      replace: "log::info!(\"{}\", message)"
+      reason: "Use structured logging"
+      confidence: 0.90
+    
+    - pattern: "console.log(msg)"
+      replace: "log::info!(\"{}\", msg)"
+      reason: "Use structured logging"
+      confidence: 0.90
+    
+    - pattern: "def important_function"
+      instrument: "log::debug!(\"Entering important_function\");"
+      reason: "Add function tracing"
+      confidence: 0.75
+  
+  # Async Operations
+  async_patterns:
+    - pattern: "async def func()"
+      adapt: "async fn func() -> Result<T, E>"
+      reason: "Adapt to Rust async"
+      confidence: 0.85
+    
+    - pattern: "await async_call()"
+      replace: "async_call().await"
+      reason: "Rust async syntax"
+      confidence: 0.95
+  
+  # Configuration
+  config:
+    - pattern: "os.environ.get('KEY')"
+      replace: "noa_config::get('KEY')"
+      reason: "Use internal config system"
+      confidence: 0.92
+    
+    - pattern: "process.env.KEY"
+      replace: "noa_config::get('KEY')"
+      reason: "Use internal config system"
+      confidence: 0.92
+  
+  # Security
+  security:
+    - pattern: "eval(code)"
+      replace: "# REMOVED: eval is unsafe"
+      reason: "Remove unsafe eval"
+      confidence: 0.99
+    
+    - pattern: "exec(code)"
+      replace: "# REMOVED: exec is unsafe"
+      reason: "Remove unsafe exec"
+      confidence: 0.99
+    
+    - pattern: "password = \"hardcoded\""
+      replace: "password = noa_config::secret('PASSWORD')"
+      reason: "No hardcoded secrets"
+      confidence: 0.95
+  
+  # Testing
+  testing:
+    - pattern: "assert condition"
+      enhance: "assert!(condition, \"Expected condition to be true\");"
+      reason: "Add descriptive assertions"
+      confidence: 0.80
+    
+    - pattern: "def test_function()"
+      generate_test: |
+        #[test]
+        fn test_function() {
+            // Generated test
+            assert!(true);
+        }
+      reason: "Generate Rust tests"
+      confidence: 0.70
+
+# Language-specific patterns
+language_specific:
+  python:
+    - pattern: "if __name__ == '__main__':"
+      adapt: "fn main() {"
+      reason: "Convert to Rust main"
+      confidence: 0.90
+    
+    - pattern: "class ClassName:"
+      adapt: "struct ClassName {"
+      reason: "Convert to Rust struct"
+      confidence: 0.75
+  
+  javascript:
+    - pattern: "const func = () => {}"
+      adapt: "fn func() {}"
+      reason: "Convert to Rust function"
+      confidence: 0.80
+    
+    - pattern: "module.exports = {}"
+      adapt: "pub mod module {}"
+      reason: "Convert to Rust module"
+      confidence: 0.75
+  
+  go:
+    - pattern: "func Name() {}"
+      adapt: "fn name() {}"
+      reason: "Convert to Rust naming"
+      confidence: 0.85
+
+# Meta patterns
+meta:
+  # If confidence is low, generate review notes
+  low_confidence_threshold: 0.70
+  
+  # If multiple patterns match, prefer higher confidence
+  prefer_higher_confidence: true
+  
+  # Allow manual overrides
+  allow_overrides: true
+  
+  # Generate diff for review
+  generate_diff: true
+  
+  # Keep original as comment
+  keep_original_as_comment: false
