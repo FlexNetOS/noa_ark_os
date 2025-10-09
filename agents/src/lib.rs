@@ -2,38 +2,23 @@
 //! 
 //! Integrates with NOA ARK OS agent registry and implementations
 
+use serde::{Deserialize, Serialize};
+use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
+use uuid::Uuid;
+
+// Module declarations
 pub mod factory;
 pub mod registry;
 pub mod implementations;
 pub mod inference;
 
 // Re-export key types
-pub use factory::AgentFactory;
 pub use registry::{AgentRegistry, AGENT_REGISTRY};
 pub use inference::{InferenceEngine, InferenceConfig, LlamaInferenceEngine};
 
-// Agent metadata is defined inline for now
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AgentMetadata {
-    pub id: Uuid,
-    pub name: String,
-    pub description: String,
-    pub category: String,
-    pub tags: Vec<String>,
-}
-
-use std::sync::{Arc, Mutex};
-use std::collections::HashMap;
-
+// Type aliases
 pub type AgentId = String;
-
-// Re-export registry components
-pub use registry::AgentRegistry;
-pub use factory::AgentFactory;
-pub use inference::{InferenceEngine, InferenceConfig, LlamaInferenceEngine};
 
 /// Version of the agent system
 pub const VERSION: &str = "0.1.0";
@@ -41,7 +26,68 @@ pub const VERSION: &str = "0.1.0";
 /// Total number of agents in the NOA ecosystem
 pub const TOTAL_AGENTS: usize = 928;
 
-#[derive(Debug, Clone, PartialEq)]
+// Agent metadata
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentMetadata {
+    pub id: Uuid,
+    pub name: String,
+    pub description: String,
+    pub category: String,
+    pub tags: Vec<String>,
+    #[serde(default)]
+    pub layer: String,
+    #[serde(default)]
+    pub status: String,
+    #[serde(default)]
+    pub agent_id: String,
+    #[serde(default)]
+    pub health_status: String,
+    #[serde(default)]
+    pub agent_category: AgentCategory,
+    #[serde(default)]
+    pub agent_layer: AgentLayer,
+}
+
+impl AgentMetadata {
+    pub fn new(name: String, description: String, category: String) -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            name: name.clone(),
+            description,
+            category,
+            tags: vec![],
+            layer: String::from("worker"),
+            status: String::from("healthy"),
+            agent_id: name,
+            health_status: String::from("healthy"),
+            agent_category: AgentCategory::Other,
+            agent_layer: AgentLayer::L4Operations,
+        }
+    }
+    
+    pub fn layer_name(&self) -> &str {
+        &self.layer
+    }
+    
+    pub fn is_healthy(&self) -> bool {
+        self.status == "healthy"
+    }
+    
+    pub fn needs_repair(&self) -> bool {
+        self.status == "needs_repair" || self.status == "error"
+    }
+    
+    pub fn set_layer(&mut self, layer: String) {
+        self.layer = layer;
+    }
+    
+    pub fn set_status(&mut self, status: String) {
+        self.status = status;
+    }
+}
+
+// Agent types and states
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum AgentType {
     Master,
     Worker,
@@ -49,14 +95,14 @@ pub enum AgentType {
     Swarm,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum AgentLanguage {
     Python,
     Rust,
     Go,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum AgentState {
     Created,
     Initializing,
@@ -67,6 +113,54 @@ pub enum AgentState {
     Terminated,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum AgentLayer {
+    L1Autonomy,
+    L2Reasoning,
+    L3Orchestration,
+    L4Operations,
+    L5Infrastructure,
+}
+
+impl Default for AgentLayer {
+    fn default() -> Self {
+        Self::L4Operations
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum AgentCategory {
+    Analysis,
+    Code,
+    DevOps,
+    Testing,
+    Documentation,
+    Security,
+    Other,
+}
+
+impl Default for AgentCategory {
+    fn default() -> Self {
+        Self::Other
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum HealthStatus {
+    Healthy,
+    Degraded,
+    NeedsRepair,
+    Error,
+    Unknown,
+}
+
+impl Default for HealthStatus {
+    fn default() -> Self {
+        Self::Unknown
+    }
+}
+
+// Agent structure
 #[derive(Debug, Clone)]
 pub struct Agent {
     pub id: AgentId,
@@ -104,6 +198,22 @@ impl Agent {
     }
 }
 
+// Error types
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    #[error("Agent not found: {0}")]
+    AgentNotFound(String),
+    #[error("Agent error: {0}")]
+    AgentError(String),
+    #[error("CSV error: {0}")]
+    CsvError(#[from] csv::Error),
+    #[error("IO error: {0}")]
+    IoError(#[from] std::io::Error),
+}
+
+pub type Result<T> = std::result::Result<T, Error>;
+
+// Factory implementation
 pub struct AgentFactory {
     agents: Arc<Mutex<HashMap<AgentId, Agent>>>,
     next_id: Arc<Mutex<u64>>,
@@ -170,7 +280,7 @@ impl AgentFactory {
                 println!("[FACTORY] Cleaned up disposable agent: {}", id);
                 Ok(())
             } else {
-                Err(Error::AgentNotFound(format!("Agent {} is not disposable", id)))
+                Err(Error::AgentError(format!("Agent {} is not disposable", id)))
             }
         } else {
             Err(Error::AgentNotFound(id.to_string()))
