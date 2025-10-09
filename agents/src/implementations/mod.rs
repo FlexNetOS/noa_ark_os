@@ -7,6 +7,7 @@ pub mod executive;
 pub mod specialist;
 pub mod micro;
 pub mod orchestrator;
+pub mod model_selector;
 
 // Re-export for convenience
 pub use board::*;
@@ -15,3 +16,4 @@ pub use executive::*;
 pub use specialist::*;
 pub use micro::*;
 pub use orchestrator::*;
+pub use model_selector::*;
