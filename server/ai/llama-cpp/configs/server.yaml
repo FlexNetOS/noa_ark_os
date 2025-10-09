@@ -1,24 +1,49 @@
-# Llama.cpp Server Configuration
+# Llama.cpp Server Configuration - Optimized for Dual RTX 5090 (64GB VRAM)
 server:
   host: 127.0.0.1
   port: 8080
-  threads: 8
-  gpu_layers: 35  # Set to 0 for CPU-only
+  threads: 32  # Increased for better CPU utilization
+  gpu_layers: 99  # Offload ALL layers to GPU (2x RTX 5090 = 64GB VRAM)
+  gpu_split: "32000,32000"  # Split evenly across both GPUs (32GB each)
+  main_gpu: 0  # Primary GPU for prompt processing
+  tensor_split: "1,1"  # Equal workload distribution
 
 models:
   - name: default
     path: ./models/
-    context_size: 8192
-    batch_size: 512
+    context_size: 16384  # Increased for larger contexts (plenty of VRAM)
+    batch_size: 2048  # Increased for faster processing
+    n_parallel: 8  # Handle 8 parallel requests
 
 inference:
   temperature: 0.7
   top_p: 0.9
   top_k: 40
   repeat_penalty: 1.1
-  max_tokens: 2048
+  max_tokens: 4096  # Increased from 2048
+  
+  # GPU-optimized settings
+  flash_attention: true  # Enable flash attention for speed
+  low_vram: false  # Disabled - we have 64GB!
+  use_mmap: false  # Load directly to VRAM
+  use_mlock: true  # Lock in memory
+
+performance:
+  # Network settings
+  timeout: 600  # 10 minutes for large generations
+  max_upload_size: 100MB
+  
+  # Resource limits
+  max_concurrent: 16  # Handle many simultaneous requests
+  queue_size: 100
 
 logging:
   level: info
   file: ./logs/server.log
   rotation: daily
+  
+# GPU monitoring
+monitoring:
+  enable_metrics: true
+  metrics_port: 8081
+  report_gpu_usage: true
