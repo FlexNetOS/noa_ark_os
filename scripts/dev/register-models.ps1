@@ -6,7 +6,7 @@ param(
     [switch]$DryRun = $false,
     
     [Parameter(Mandatory=$false)]
-    [switch]$Verbose = $false
+    [switch]$ShowDetails = $false
 )
 
 $ModelsDir = "D:\dev\workspaces\noa_ark_os\server\ai\llama-cpp\models"
@@ -116,7 +116,7 @@ foreach ($model in $models) {
     $sizeMB = [math]::Round($model.Length / 1MB, 0)
     $modelName = $model.BaseName
     
-    if ($Verbose) {
+    if ($ShowDetails) {
         Write-Info "Processing: $($model.Name) ($sizeMB MB)"
     }
     
@@ -137,7 +137,7 @@ foreach ($model in $models) {
             cost = 0.8
             privacy = "Internal"
         }
-        if ($Verbose) {
+        if ($ShowDetails) {
             Write-Warning "  No metadata found, using defaults"
         }
     }
@@ -155,7 +155,7 @@ foreach ($model in $models) {
     
     $registeredModels += $modelInfo
     
-    if ($Verbose) {
+    if ($ShowDetails) {
         Write-Host "  Use cases: $($metadata.use_cases -join ', ')" -ForegroundColor Gray
         Write-Host "  Performance: $($metadata.performance) | Cost: $($metadata.cost)" -ForegroundColor Gray
     }
