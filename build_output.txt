@@ -1,0 +1,295 @@
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+package:   D:\dev\workspaces\noa_ark_os\core\Cargo.toml
+workspace: D:\dev\workspaces\noa_ark_os\Cargo.toml
+   Compiling noa_agents v0.1.0 (D:\dev\workspaces\noa_ark_os\agents)
+error: expected one of `!` or `::`, found `-`
+ --> agents\src\implementations\generated\infrastructure\deploy_specialized_agent_sa.rs:2:16
+  |
+2 |             SA - Auto-generated
+  |                ^ expected one of `!` or `::`
+
+error: expected one of `!` or `::`, found `-`
+ --> agents\src\implementations\generated\infrastructure\deploy_sub_agent_sub.rs:2:21
+  |
+2 |                 SUB - Auto-generated
+  |                     ^ expected one of `!` or `::`
+
+error: expected one of `!` or `::`, found `-`
+ --> agents\src\implementations\generated\infrastructure\digest_everything_agent_generated.rs:2:11
+  |
+2 | Generated - Auto-generated
+  |           ^ expected one of `!` or `::`
+
+error: expected one of `!` or `::`, found `-`
+ --> agents\src\implementations\generated\infrastructure\test_validation_agent_internal.rs:2:10
+  |
+2 | Internal - Auto-generated
+  |          ^ expected one of `!` or `::`
+
+error: expected one of `!` or `::`, found `-`
+ --> agents\src\implementations\generated\infrastructure\credentials_env_agent_security.rs:2:10
+  |
+2 | Security - Auto-generated
+  |          ^ expected one of `!` or `::`
+
+error: expected one of `!` or `::`, found `-`
+ --> agents\src\implementations\generated\infrastructure\template_manager_agent_codegen.rs:2:9
+  |
+2 | Codegen - Auto-generated
+  |         ^ expected one of `!` or `::`
+
+error: expected one of `!` or `::`, found `-`
+ --> agents\src\implementations\generated\infrastructure\code_quality_agent_linting.rs:2:9
+  |
+2 | Linting - Auto-generated
+  |         ^ expected one of `!` or `::`
+
+error: expected one of `!` or `::`, found `-`
+ --> agents\src\implementations\generated\infrastructure\test_case_generator_agent_automated.rs:2:11
+  |
+2 | Automated - Auto-generated
+  |           ^ expected one of `!` or `::`
+
+error: expected one of `!` or `::`, found `-`
+ --> agents\src\implementations\generated\infrastructure\prompt_designer_agent_llm.rs:2:5
+  |
+2 | LLM - Auto-generated
+  |     ^ expected one of `!` or `::`
+
+error: expected one of `!` or `::`, found `-`
+ --> agents\src\implementations\generated\infrastructure\execution_planning_agent_prompt.rs:2:8
+  |
+2 | Prompt - Auto-generated
+  |        ^ expected one of `!` or `::`
+
+error: expected one of `!` or `::`, found `-`
+ --> agents\src\implementations\generated\infrastructure\ux_accessibility_agent_internal.rs:2:10
+  |
+2 | Internal - Auto-generated
+  |          ^ expected one of `!` or `::`
+
+error: expected one of `!` or `::`, found `-`
+ --> agents\src\implementations\generated\infrastructure\cost_estimation_agent_finops.rs:2:8
+  |
+2 | FinOps - Auto-generated
+  |        ^ expected one of `!` or `::`
+
+error: expected one of `!` or `::`, found `-`
+ --> agents\src\implementations\generated\infrastructure\orchestrator_agent_mlops.rs:2:7
+  |
+2 | MLOps - Auto-generated
+  |       ^ expected one of `!` or `::`
+
+error: expected one of `!` or `::`, found `-`
+ --> agents\src\implementations\generated\infrastructure\dependency_resolver_agent_package.rs:2:9
+  |
+2 | Package - Auto-generated
+  |         ^ expected one of `!` or `::`
+
+error: expected one of `!` or `::`, found `-`
+ --> agents\src\implementations\generated\infrastructure\app_research_agent_research.rs:2:10
+  |
+2 | Research - Auto-generated
+  |          ^ expected one of `!` or `::`
+
+error: expected one of `!` or `::`, found `-`
+ --> agents\src\implementations\generated\infrastructure\upgrade_patch_agent_release.rs:2:9
+  |
+2 | Release - Auto-generated
+  |         ^ expected one of `!` or `::`
+
+error: expected one of `!` or `::`, found `-`
+ --> agents\src\implementations\generated\infrastructure\safestack_agent_red.rs:2:5
+  |
+2 | Red - Auto-generated
+  |     ^ expected one of `!` or `::`
+
+error: expected one of `!` or `::`, found `-`
+ --> agents\src\implementations\generated\infrastructure\backup_restore_agent_disaster.rs:2:10
+  |
+2 | Disaster - Auto-generated
+  |          ^ expected one of `!` or `::`
+
+error: expected one of `!` or `::`, found `-`
+ --> agents\src\implementations\generated\infrastructure\knowledge_base_agent_embedding.rs:2:11
+  |
+2 | Embedding - Auto-generated
+  |           ^ expected one of `!` or `::`
+
+error: expected one of `!` or `::`, found `-`
+ --> agents\src\implementations\generated\infrastructure\noa_executivecommanderchiefagent_overview.rs:2:10
+  |
+2 | Overview - Auto-generated
+  |          ^ expected one of `!` or `::`
+
+error: expected one of `!` or `::`, found `-`
+ --> agents\src\implementations\generated\infrastructure\executivecommanderchiefagent_noa.rs:2:5
+  |
+2 | NOA - Auto-generated
+  |     ^ expected one of `!` or `::`
+
+error: expected one of `!` or `::`, found `-`
+ --> agents\src\implementations\generated\infrastructure\digest_agent_the.rs:2:5
+  |
+2 | The - Auto-generated
+  |     ^ expected one of `!` or `::`
+
+warning: unused import: `Error`
+ --> agents\src\implementations\board\digest.rs:8:13
+  |
+8 | use crate::{Error, Result};
+  |             ^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `Error`
+ --> agents\src\implementations\board\finance.rs:7:13
+  |
+7 | use crate::{Error, Result};
+  |             ^^^^^
+
+warning: unused import: `Error`
+ --> agents\src\implementations\board\legal.rs:7:13
+  |
+7 | use crate::{Error, Result};
+  |             ^^^^^
+
+warning: unused import: `Error`
+ --> agents\src\implementations\board\operations.rs:7:13
+  |
+7 | use crate::{Error, Result};
+  |             ^^^^^
+
+warning: unused import: `Error`
+ --> agents\src\implementations\board\strategy.rs:7:13
+  |
+7 | use crate::{Error, Result};
+  |             ^^^^^
+
+warning: unused import: `Error`
+ --> agents\src\implementations\executive\noa.rs:8:13
+  |
+8 | use crate::{Error, Result};
+  |             ^^^^^
+
+warning: unused import: `Error`
+ --> agents\src\implementations\executive\emergency.rs:7:13
+  |
+7 | use crate::{Error, Result};
+  |             ^^^^^
+
+warning: unused import: `Error`
+ --> agents\src\implementations\executive\priority.rs:7:13
+  |
+7 | use crate::{Error, Result};
+  |             ^^^^^
+
+warning: unused import: `Error`
+ --> agents\src\implementations\executive\resources.rs:7:13
+  |
+7 | use crate::{Error, Result};
+  |             ^^^^^
+
+warning: unused import: `Error`
+ --> agents\src\implementations\executive\orchestrator.rs:7:13
+  |
+7 | use crate::{Error, Result};
+  |             ^^^^^
+
+warning: unused import: `Error`
+ --> agents\src\implementations\specialist\code_generation.rs:7:13
+  |
+7 | use crate::{Error, Result};
+  |             ^^^^^
+
+warning: unused import: `std::sync::Arc`
+ --> agents\src\implementations\specialist\data_analytics.rs:5:5
+  |
+5 | use std::sync::Arc;
+  |     ^^^^^^^^^^^^^^
+
+warning: unused import: `AgentId`
+ --> agents\src\implementations\model_selector.rs:1:28
+  |
+1 | use crate::{AgentMetadata, AgentId, Result, Error};
+  |                            ^^^^^^^
+
+warning: unused imports: `InferenceConfig` and `InferenceEngine`
+ --> agents\src\implementations\model_selector.rs:2:24
+  |
+2 | use crate::inference::{InferenceEngine, InferenceConfig};
+  |                        ^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^
+
+warning: ambiguous glob re-exports
+  --> agents\src\implementations\mod.rs:15:9
+   |
+15 | pub use board::*;
+   |         ^^^^^^^^ the name `DigestAgent` in the type namespace is first re-exported here
+...
+21 | pub use generated::*;
+   |         ------------ but the name `DigestAgent` in the type namespace is also re-exported here
+   |
+   = note: `#[warn(ambiguous_glob_reexports)]` on by default
+
+warning: ambiguous glob re-exports
+  --> agents\src\implementations\mod.rs:15:9
+   |
+15 | pub use board::*;
+   |         ^^^^^^^^ the name `LegalAgent` in the type namespace is first re-exported here
+...
+21 | pub use generated::*;
+   |         ------------ but the name `LegalAgent` in the type namespace is also re-exported here
+
+warning: ambiguous glob re-exports
+  --> agents\src\implementations\mod.rs:15:9
+   |
+15 | pub use board::*;
+   |         ^^^^^^^^ the name `StrategyAgent` in the type namespace is first re-exported here
+...
+21 | pub use generated::*;
+   |         ------------ but the name `StrategyAgent` in the type namespace is also re-exported here
+
+warning: ambiguous glob re-exports
+  --> agents\src\implementations\mod.rs:16:9
+   |
+16 | pub use executive::*;
+   |         ^^^^^^^^^^^^ the name `OrchestratorAgent` in the type namespace is first re-exported here
+...
+21 | pub use generated::*;
+   |         ------------ but the name `OrchestratorAgent` in the type namespace is also re-exported here
+
+warning: ambiguous glob re-exports
+  --> agents\src\implementations\mod.rs:17:9
+   |
+17 | pub use specialist::*;
+   |         ^^^^^^^^^^^^^ the name `SecurityAgent` in the type namespace is first re-exported here
+...
+21 | pub use generated::*;
+   |         ------------ but the name `SecurityAgent` in the type namespace is also re-exported here
+
+warning: unused variable: `kb`
+   --> agents\src\implementations\board\digest.rs:241:13
+    |
+241 |         let kb = self.knowledge_base.read().await;
+    |             ^^ help: if this is intentional, prefix it with an underscore: `_kb`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: unused variable: `context`
+   --> agents\src\implementations\executive\noa.rs:253:9
+    |
+253 |         context: serde_json::Value,
+    |         ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_context`
+
+warning: variable does not need to be mutable
+   --> agents\src\implementations\model_selector.rs:112:13
+    |
+112 |         let mut candidates: Vec<_> = models
+    |             ----^^^^^^^^^^
+    |             |
+    |             help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` on by default
+
+warning: `noa_agents` (lib) generated 22 warnings
+error: could not compile `noa_agents` (lib) due to 22 previous errors; 22 warnings emitted
