@@ -4,24 +4,15 @@
 //! Strategic intelligence and governance
 
 pub mod digest;
+pub mod finance;
+pub mod legal;
+pub mod operations;
+pub mod strategy;
 
 // Re-export for convenience
 pub use digest::DigestAgent;
-
-/// Placeholder for board-level agents
-pub struct BoardAgent {
-    pub name: String,
-}
-
-impl BoardAgent {
-    pub fn new(name: String) -> Self {
-        Self { name }
-    }
-}
-
-// Re-export for convenience
-pub use self::BoardAgent as FinanceBoardAgent;
-pub use self::BoardAgent as LegalComplianceBoardAgent;
-pub use self::BoardAgent as OperationsBoardAgent;
-pub use self::BoardAgent as StrategyBoardAgent;
+pub use finance::FinanceAgent;
+pub use legal::LegalAgent;
+pub use operations::OperationsAgent;
+pub use strategy::StrategyAgent;
 
