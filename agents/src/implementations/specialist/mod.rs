@@ -1,25 +1,23 @@
-// Specialist agent implementations - PLACEHOLDER
-// Full implementations available in _backup/ directory
+//! Specialist Agents Module
+//! 
+//! Specialist-level agents (L4 Operations layer)
+//! Domain-specific expertise and task execution
 
-// Simple placeholder struct
-pub struct SpecialistAgent {
-    pub name: String,
-}
+pub mod code_generation;
+pub mod data_analytics;
+pub mod deployment;
+pub mod integration;
+pub mod learning;
+pub mod monitoring;
+pub mod security;
+pub mod testing;
 
-impl SpecialistAgent {
-    pub fn new(name: String) -> Self {
-        Self { name }
-    }
-}
-
-// Agent type aliases for now
-pub type CodeGenerationAgent = SpecialistAgent;
-pub type TestingAgent = SpecialistAgent;
-pub type DeploymentAgent = SpecialistAgent;
-pub type MonitoringAgent = SpecialistAgent;
-pub type LearningAgent = SpecialistAgent;
-pub type SecuritySpecialistAgent = SpecialistAgent;
-pub type DataAnalyticsAgent = SpecialistAgent;
-pub type IntegrationAgent = SpecialistAgent;
-
-// TODO: Implement full Agent trait from _backup/ directory
+// Re-export for convenience
+pub use code_generation::CodeGenerationAgent;
+pub use data_analytics::DataAnalyticsAgent;
+pub use deployment::DeploymentAgent;
+pub use integration::IntegrationAgent;
+pub use learning::LearningAgent;
+pub use monitoring::MonitoringAgent;
+pub use security::SecurityAgent;
+pub use testing::TestingAgent;

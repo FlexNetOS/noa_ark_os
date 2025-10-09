@@ -1,0 +1,73 @@
+//! Learning Specialist Agent - Simplified version
+use crate::unified_types::*;
+use crate::Result;
+use tokio::sync::RwLock;
+use uuid::Uuid;
+
+pub struct LearningAgent {
+    metadata: AgentMetadata,
+    state: RwLock<AgentState>,
+}
+
+impl LearningAgent {
+    pub fn new() -> Self {
+        Self {
+            metadata: AgentMetadata {
+                id: Uuid::new_v4(),
+                agent_id: "learning-agent".to_string(),
+                name: "Learning Agent".to_string(),
+                layer: AgentLayer::L4Operations,
+                category: AgentCategory::Research,
+                agent_type: AgentType::Worker,
+                language: AgentLanguage::Rust,
+                description: "Learning Specialist".to_string(),
+                role: "Specialist Learning".to_string(),
+                purpose: "Continuous learning and adaptation".to_string(),
+                state: AgentState::Created,
+                health_status: HealthStatus::Unknown,
+                parent_id: None,
+                escalation_to: Some("system-orchestrator".to_string()),
+                stack: None,
+                capabilities: vec!["learning".to_string(), "adaptation".to_string()],
+                tools: vec![],
+                tags: vec!["specialist".to_string()],
+                inputs: vec!["feedback".to_string()],
+                outputs: vec!["insights".to_string()],
+                dependencies: vec![],
+                cpu_min: "1".to_string(),
+                ram_min: "1GB".to_string(),
+                disk_min: "500MB".to_string(),
+                autonomy_level: "guided".to_string(),
+                disposable: false,
+                issues_identified: vec![],
+                repair_recommendations: vec![],
+                created_at: Some(chrono::Utc::now().to_rfc3339()),
+                last_updated: Some(chrono::Utc::now().to_rfc3339()),
+                version: Some("1.0.0".to_string()),
+            },
+            state: RwLock::new(AgentState::Created),
+        }
+    }
+    
+    pub async fn initialize(&mut self) -> Result<()> {
+        *self.state.write().await = AgentState::Ready;
+        Ok(())
+    }
+    
+    pub fn metadata(&self) -> &AgentMetadata { &self.metadata }
+    pub async fn state(&self) -> AgentState { self.state.read().await.clone() }
+}
+
+impl Default for LearningAgent {
+    fn default() -> Self { Self::new() }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[tokio::test]
+    async fn test_agent() {
+        let agent = LearningAgent::new();
+        assert_eq!(agent.metadata().name, "Learning Agent");
+    }
+}
