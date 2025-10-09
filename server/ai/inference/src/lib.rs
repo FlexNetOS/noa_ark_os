@@ -12,3 +12,7 @@ mod tests {
         assert_eq!(result, 4);
     }
 }
+
+pub mod client;
+
+pub use client::{CompletionRequest, CompletionResponse, LlamaClient};

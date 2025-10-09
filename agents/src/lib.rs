@@ -3,15 +3,27 @@
 //! Integrates with NOA ARK OS agent registry and implementations
 
 pub mod factory;
-pub mod hive;
-pub mod swarm;
-pub mod runtime;
-pub mod registry;      // NEW: Agent registry from CRC drops
-pub mod types;         // NEW: Enhanced types
-pub mod error;         // NEW: Error handling
-pub mod implementations; // NEW: Agent implementations from agentaskit
-pub mod agentaskit;    // AgentAsKit integration scaffolding
-pub mod communication; // Agent communication hub
+pub mod registry;
+pub mod implementations;
+pub mod inference;
+
+// Re-export key types
+pub use factory::AgentFactory;
+pub use registry::{AgentRegistry, AGENT_REGISTRY};
+pub use inference::{InferenceEngine, InferenceConfig, LlamaInferenceEngine};
+
+// Agent metadata is defined inline for now
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentMetadata {
+    pub id: Uuid,
+    pub name: String,
+    pub description: String,
+    pub category: String,
+    pub tags: Vec<String>,
+}
 
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
@@ -20,9 +32,8 @@ pub type AgentId = String;
 
 // Re-export registry components
 pub use registry::AgentRegistry;
-pub use types::{AgentMetadata, AgentLayer, AgentCategory, HealthStatus};
-pub use error::{Error, Result};
-pub use communication::{AgentCommunicationHub, AgentMessage};
+pub use factory::AgentFactory;
+pub use inference::{InferenceEngine, InferenceConfig, LlamaInferenceEngine};
 
 /// Version of the agent system
 pub const VERSION: &str = "0.1.0";
