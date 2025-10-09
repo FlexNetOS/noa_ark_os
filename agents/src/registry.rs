@@ -193,7 +193,9 @@ impl AgentRegistry {
             // Update stats
             match agent.health_status {
                 HealthStatus::Healthy => stats_write.healthy_agents += 1,
+                HealthStatus::Degraded => stats_write.needs_repair += 1,
                 HealthStatus::NeedsRepair => stats_write.needs_repair += 1,
+                HealthStatus::Error => stats_write.needs_repair += 1,
                 HealthStatus::Unknown => stats_write.unknown_status += 1,
             }
             

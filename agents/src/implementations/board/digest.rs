@@ -9,7 +9,6 @@ use crate::{Error, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::Instant;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
@@ -76,7 +75,7 @@ pub struct StrategicInsight {
     pub description: String,
     pub importance: ImportanceLevel,
     pub confidence: f64,
-    pub generated_at: Instant,
+    pub generated_at: chrono::DateTime<chrono::Utc>,
 }
 
 /// Importance levels
@@ -351,7 +350,7 @@ mod tests {
             description: "This is a test insight".to_string(),
             importance: ImportanceLevel::Medium,
             confidence: 0.85,
-            generated_at: Instant::now(),
+            generated_at: chrono::Utc::now(),
         };
         
         agent.add_insight(insight).await.unwrap();

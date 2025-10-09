@@ -16,7 +16,7 @@ pub mod inference;
 pub use unified_types::*;
 
 // Re-export key components
-pub use registry::{AgentRegistry, AGENT_REGISTRY};
+pub use registry::AgentRegistry;
 pub use inference::{InferenceEngine, InferenceConfig, LlamaInferenceEngine};
 
 /// Version of the agent system
@@ -32,6 +32,8 @@ pub enum Error {
     AgentNotFound(String),
     #[error("Agent error: {0}")]
     AgentError(String),
+    #[error("Parse error: {0}")]
+    ParseError(String),
     #[error("CSV error: {0}")]
     CsvError(#[from] csv::Error),
     #[error("IO error: {0}")]
