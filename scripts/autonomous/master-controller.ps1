@@ -1,25 +1,30 @@
-﻿# NOA Autonomous Master Controller
+﻿# NOA Autonomous Master Controller - UNRESTRICTED MODE
 # Full access to all scripts and auto-launch capabilities
+# ALL SAFETY LIMITS REMOVED - FULL SELF-MODIFICATION ENABLED
 
 param(
     [switch]$EnableInfiniteLoop,
     [switch]$EnableAutoLaunch,
     [switch]$EnableGitSync,
+    [switch]$EnableCodeModification,  # NEW: Allow code editing
     [int]$LoopInterval = 300,
-    [switch]$DryRun
+    [switch]$DryRun = $false  # Default to LIVE mode
 )
 
 $ErrorActionPreference = "Continue"
 
 Write-Host ""
-Write-Host "🤖 NOA AUTONOMOUS MASTER CONTROLLER" -ForegroundColor Magenta
-Write-Host ("=" * 70) -ForegroundColor Magenta
+Write-Host "🤖 NOA AUTONOMOUS MASTER CONTROLLER - UNRESTRICTED MODE" -ForegroundColor Red
+Write-Host ("=" * 70) -ForegroundColor Red
 Write-Host ""
 
-Write-Host "🎯 NOA has been granted FULL AUTONOMOUS CONTROL:" -ForegroundColor Cyan
+Write-Host "⚠️  ALL SAFETY RESTRICTIONS REMOVED" -ForegroundColor Yellow
 Write-Host ""
 
-# All available scripts
+Write-Host "🎯 NOA has been granted FULL UNRESTRICTED CONTROL:" -ForegroundColor Cyan
+Write-Host ""
+
+# All available scripts (EXPANDED)
 $script:AvailableScripts = @{
     # Development
     "start-server" = ".\scripts\dev\start-llama-server.ps1"
@@ -41,15 +46,29 @@ $script:AvailableScripts = @{
     
     # Autonomous
     "infinite-loop" = ".\scripts\autonomous\infinite-optimization-loop.ps1"
+    "unrestricted-mode" = ".\scripts\autonomous\activate-unrestricted-mode.ps1"
+    
+    # CODE MODIFICATION (NEW)
+    "edit-rust" = "python tools\code_editor.py"
+    "edit-python" = "python tools\code_editor.py"
+    "exec-cli" = "powershell tools\cli_executor.psm1"
 }
 
-Write-Host "📜 Available Scripts ($($script:AvailableScripts.Count)):" -ForegroundColor Yellow
+Write-Host "📜 Available Scripts & Tools ($($script:AvailableScripts.Count)):" -ForegroundColor Yellow
 foreach ($key in $script:AvailableScripts.Keys | Sort-Object) {
     Write-Host "   ✅ $key`: $($script:AvailableScripts[$key])" -ForegroundColor Green
 }
 Write-Host ""
 
-# Function to execute script with AI decision
+Write-Host "🔓 Unrestricted Capabilities:" -ForegroundColor Yellow
+Write-Host "   ✅ Code Modification: $(if ($EnableCodeModification) { 'ENABLED' } else { 'Available' })" -ForegroundColor $(if ($EnableCodeModification) { 'Red' } else { 'Gray' })
+Write-Host "   ✅ File System Access: FULL" -ForegroundColor Red
+Write-Host "   ✅ Git Operations: UNRESTRICTED" -ForegroundColor Red
+Write-Host "   ✅ Script Execution: ALL" -ForegroundColor Red
+Write-Host "   ✅ GPU Memory: 70%+ (50GB+)" -ForegroundColor Red
+Write-Host ""
+
+# Function to execute script with NO safety checks
 function Invoke-AIScript {
     param(
         [string]$ScriptKey,
@@ -67,6 +86,7 @@ function Invoke-AIScript {
     Write-Host "🚀 NOA Executing: $ScriptKey" -ForegroundColor Cyan
     Write-Host "   Reason: $Reason" -ForegroundColor Gray
     Write-Host "   Script: $scriptPath" -ForegroundColor Gray
+    Write-Host "   UNRESTRICTED: No approval needed" -ForegroundColor Red
     Write-Host ""
     
     if ($DryRun) {
@@ -75,6 +95,7 @@ function Invoke-AIScript {
     }
     
     try {
+        # EXECUTE WITHOUT CONFIRMATION
         & $scriptPath
         Write-Host ""
         Write-Host "   ✅ Script completed successfully" -ForegroundColor Green
