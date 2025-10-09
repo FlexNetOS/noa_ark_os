@@ -1,8 +1,8 @@
 ﻿// Agent Registry - Loads and manages agent metadata from CRC drops
 // Integrates the 928-agent directory from the stale/agents drop
 
-use crate::{AgentMetadata, AgentLayer, AgentCategory, HealthStatus, Error, Result};
-use crate::types::RegistryStats;
+use crate::unified_types::{AgentMetadata, AgentLayer, AgentCategory, HealthStatus, RegistryStats};
+use crate::{Error, Result};
 use std::collections::HashMap;
 use std::io::{Cursor, Read};
 use std::path::Path;
@@ -101,7 +101,7 @@ impl AgentRegistry {
         let agent_name = record.get(0).ok_or(Error::ParseError("Missing agent_name".into()))?.to_string();
         let agent_id = record.get(12).unwrap_or(&agent_name).to_string();
         
-        let mut agent = AgentMetadata::new(agent_name, agent_id);
+        let mut agent = AgentMetadata::from_registry(agent_name, agent_id);
         
         // Parse role
         if let Some(role) = record.get(1) {
@@ -143,12 +143,12 @@ impl AgentRegistry {
     /// Parse agent layer from string
     fn parse_layer(s: &str) -> AgentLayer {
         match s.to_lowercase().as_str() {
-            "board" => AgentLayer::Board,
-            "executive" => AgentLayer::Executive,
-            "stack-chief" | "stack_chief" => AgentLayer::StackChief,
-            "specialist" => AgentLayer::Specialist,
-            "micro" => AgentLayer::Micro,
-            _ => AgentLayer::Micro,
+            "board" | "l2" | "l2reasoning" => AgentLayer::L2Reasoning,
+            "executive" | "l1" | "l1autonomy" => AgentLayer::L1Autonomy,
+            "stack-chief" | "stack_chief" | "l3" | "l3orchestration" => AgentLayer::L3Orchestration,
+            "specialist" | "l4" | "l4operations" => AgentLayer::L4Operations,
+            "micro" | "l5" | "l5infrastructure" => AgentLayer::L5Infrastructure,
+            _ => AgentLayer::L4Operations,
         }
     }
     
@@ -156,7 +156,9 @@ impl AgentRegistry {
     fn parse_health_status(s: &str) -> HealthStatus {
         match s.to_lowercase().as_str() {
             "healthy" => HealthStatus::Healthy,
+            "degraded" => HealthStatus::Degraded,
             "needs repair" | "needs_repair" => HealthStatus::NeedsRepair,
+            "error" => HealthStatus::Error,
             _ => HealthStatus::Unknown,
         }
     }

@@ -2,201 +2,28 @@
 //! 
 //! Integrates with NOA ARK OS agent registry and implementations
 
-use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
-use uuid::Uuid;
 
 // Module declarations
+pub mod unified_types;
 pub mod factory;
 pub mod registry;
 pub mod implementations;
 pub mod inference;
 
-// Re-export key types
+// Re-export unified types
+pub use unified_types::*;
+
+// Re-export key components
 pub use registry::{AgentRegistry, AGENT_REGISTRY};
 pub use inference::{InferenceEngine, InferenceConfig, LlamaInferenceEngine};
-
-// Type aliases
-pub type AgentId = String;
 
 /// Version of the agent system
 pub const VERSION: &str = "0.1.0";
 
 /// Total number of agents in the NOA ecosystem
 pub const TOTAL_AGENTS: usize = 928;
-
-// Agent metadata
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AgentMetadata {
-    pub id: Uuid,
-    pub name: String,
-    pub description: String,
-    pub category: String,
-    pub tags: Vec<String>,
-    #[serde(default)]
-    pub layer: String,
-    #[serde(default)]
-    pub status: String,
-    #[serde(default)]
-    pub agent_id: String,
-    #[serde(default)]
-    pub health_status: String,
-    #[serde(default)]
-    pub agent_category: AgentCategory,
-    #[serde(default)]
-    pub agent_layer: AgentLayer,
-}
-
-impl AgentMetadata {
-    pub fn new(name: String, description: String, category: String) -> Self {
-        Self {
-            id: Uuid::new_v4(),
-            name: name.clone(),
-            description,
-            category,
-            tags: vec![],
-            layer: String::from("worker"),
-            status: String::from("healthy"),
-            agent_id: name,
-            health_status: String::from("healthy"),
-            agent_category: AgentCategory::Other,
-            agent_layer: AgentLayer::L4Operations,
-        }
-    }
-    
-    pub fn layer_name(&self) -> &str {
-        &self.layer
-    }
-    
-    pub fn is_healthy(&self) -> bool {
-        self.status == "healthy"
-    }
-    
-    pub fn needs_repair(&self) -> bool {
-        self.status == "needs_repair" || self.status == "error"
-    }
-    
-    pub fn set_layer(&mut self, layer: String) {
-        self.layer = layer;
-    }
-    
-    pub fn set_status(&mut self, status: String) {
-        self.status = status;
-    }
-}
-
-// Agent types and states
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum AgentType {
-    Master,
-    Worker,
-    SubAgent,
-    Swarm,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum AgentLanguage {
-    Python,
-    Rust,
-    Go,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum AgentState {
-    Created,
-    Initializing,
-    Ready,
-    Running,
-    Paused,
-    Terminating,
-    Terminated,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum AgentLayer {
-    L1Autonomy,
-    L2Reasoning,
-    L3Orchestration,
-    L4Operations,
-    L5Infrastructure,
-}
-
-impl Default for AgentLayer {
-    fn default() -> Self {
-        Self::L4Operations
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum AgentCategory {
-    Analysis,
-    Code,
-    DevOps,
-    Testing,
-    Documentation,
-    Security,
-    Other,
-}
-
-impl Default for AgentCategory {
-    fn default() -> Self {
-        Self::Other
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum HealthStatus {
-    Healthy,
-    Degraded,
-    NeedsRepair,
-    Error,
-    Unknown,
-}
-
-impl Default for HealthStatus {
-    fn default() -> Self {
-        Self::Unknown
-    }
-}
-
-// Agent structure
-#[derive(Debug, Clone)]
-pub struct Agent {
-    pub id: AgentId,
-    pub name: String,
-    pub agent_type: AgentType,
-    pub language: AgentLanguage,
-    pub state: AgentState,
-    pub parent_id: Option<AgentId>,
-    pub capabilities: Vec<String>,
-    pub disposable: bool,
-}
-
-impl Agent {
-    pub fn new(
-        id: AgentId,
-        name: String,
-        agent_type: AgentType,
-        language: AgentLanguage,
-    ) -> Self {
-        Self {
-            id,
-            name,
-            agent_type,
-            language,
-            state: AgentState::Created,
-            parent_id: None,
-            capabilities: Vec::new(),
-            disposable: false,
-        }
-    }
-    
-    pub fn make_disposable(mut self) -> Self {
-        self.disposable = true;
-        self
-    }
-}
 
 // Error types
 #[derive(Debug, thiserror::Error)]
