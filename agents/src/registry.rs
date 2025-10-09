@@ -296,8 +296,9 @@ mod tests {
     
     #[test]
     fn test_parse_layer() {
-        assert_eq!(AgentRegistry::parse_layer("board"), AgentLayer::Board);
-        assert_eq!(AgentRegistry::parse_layer("Executive"), AgentLayer::Executive);
-        assert_eq!(AgentRegistry::parse_layer("micro"), AgentLayer::Micro);
+        assert_eq!(AgentRegistry::parse_layer("board"), AgentLayer::L2Reasoning);
+        assert_eq!(AgentRegistry::parse_layer("Executive"), AgentLayer::L1Autonomy);
+        assert_eq!(AgentRegistry::parse_layer("micro"), AgentLayer::L5Infrastructure);
+        assert_eq!(AgentRegistry::parse_layer("specialist"), AgentLayer::L4Operations);
     }
 }
