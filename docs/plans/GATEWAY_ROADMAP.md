@@ -24,6 +24,13 @@
 | 6 | **Federation & Ecosystem** | Scale across clusters, providers, and partners. | Federated micro-gateways, consensus mesh, intent-aware routing across regions, trust exchange marketplace. |
 | 7 | **DX & Documentation Excellence** | Keep the organization aligned and efficient. | Living design docs, scenario playbooks, docstring automation, integration tutorials, certification-ready evidence trails. |
 
+## Progress Snapshot (Current Execution)
+
+- ✅ **Phase 0 – Baseline Hardening**: Gateway bootstrap now loads a resilient schema catalog by default, emits telemetry for every critical path, and expands the regression suite with catalog, telemetry, and intent compilation coverage.
+- ✅ **Phase 1 – Ontology & Catalog**: Introduced a `SymbolSchema` registry with lifecycle governance, compatibility windows, and policy enforcement, backed by `docs/architecture/gateway_symbol_schema.md`.
+- ✅ **Phase 2 – Intent Compiler & Policy Mesh**: Delivered a YAML-driven `IntentCompiler` that converts manifests into verified intents, linking policy constraints directly into routing operations.
+- 🚧 **Phase 3+**: Automation fabric, observability graph, execution acceleration, federation, and DX streams remain on the roadmap; telemetry hooks and schema metadata lay the groundwork for these follow-on phases.
+
 ## Phase Highlights & Key Workstreams
 
 ### Phase 0 – Baseline Hardening
