@@ -1,9 +1,21 @@
+export type VibeMood = "focus" | "flow" | "chill" | "hype";
+
+export type CardIntegrationSnapshot = {
+  kind: "crc" | "cicd" | "runtime" | "agent";
+  label: string;
+  status: "idle" | "running" | "success" | "failed";
+  details?: string;
+};
+
 export type VibeCard = {
   id: string;
   title: string;
   notes: string;
   createdAt: string;
-  mood: "focus" | "flow" | "chill" | "hype";
+  mood: VibeMood;
+  assigneeId?: string;
+  dueDate?: string;
+  integrations?: CardIntegrationSnapshot[];
 };
 
 export type VibeColumn = {
@@ -13,8 +25,92 @@ export type VibeColumn = {
   cards: VibeCard[];
 };
 
+export type BoardMoodSample = {
+  recordedAt: string;
+  focus: number;
+  flow: number;
+  chill: number;
+  hype: number;
+};
+
+export type BoardMetrics = {
+  completedCards: number;
+  activeCards: number;
+  vibeMomentum: number;
+  cycleTimeDays?: number;
+  flowEfficiency?: number;
+};
+
 export type BoardSnapshot = {
+  id?: string;
+  workspaceId?: string;
   columns: VibeColumn[];
   lastUpdated: string;
   projectName: string;
+  description?: string;
+  accent?: string;
+  archived?: boolean;
+  metrics?: BoardMetrics;
+  moodSamples?: BoardMoodSample[];
+};
+
+export type WorkspaceBoard = BoardSnapshot & {
+  id: string;
+  workspaceId: string;
+};
+
+export type WorkspaceMember = {
+  id: string;
+  name: string;
+  role: "owner" | "member";
+  avatarHue: number;
+};
+
+export type ActivityEvent = {
+  id: string;
+  type: "board.created" | "board.updated" | "board.archived" | "presence.joined" | "presence.left" | "automation.triggered";
+  actorId: string;
+  actorName: string;
+  boardId?: string;
+  description: string;
+  createdAt: string;
+};
+
+export type Workspace = {
+  id: string;
+  name: string;
+  accent: string;
+  createdAt: string;
+  billingPlan: "starter" | "growth" | "enterprise";
+  members: WorkspaceMember[];
+  boards: WorkspaceBoard[];
+  activity: ActivityEvent[];
+  lastSyncedAt?: string;
+};
+
+export type PresenceUser = {
+  userId: string;
+  userName: string;
+  status: "online" | "idle";
+  lastPing: string;
+};
+
+export type WorkspacePresenceState = {
+  workspaceId: string;
+  boardId?: string;
+  users: PresenceUser[];
+};
+
+export type NotificationEvent = {
+  id: string;
+  message: string;
+  createdAt: string;
+  severity: "info" | "success" | "warning" | "error";
+};
+
+export type WorkspaceIntegrationStatus = {
+  id: string;
+  name: string;
+  status: "healthy" | "running" | "degraded" | "error";
+  lastEvent: string;
 };
