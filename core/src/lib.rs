@@ -13,6 +13,7 @@ pub mod memory;
 pub mod ipc;
 pub mod fs;
 pub mod security;
+pub mod gateway;
 
 /// Core OS version
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -29,6 +30,7 @@ pub fn init() -> Result<(), &'static str> {
     ipc::init()?;
     fs::init()?;
     security::init()?;
+    gateway::init().map_err(|_| "gateway initialization failed")?;
     
     println!("Core OS initialized successfully");
     Ok(())
