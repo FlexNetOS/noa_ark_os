@@ -1,3 +1,4 @@
+"""Chat command acknowledgement endpoints."""
 """Chat workspace endpoints bridging UI and agents."""
 from __future__ import annotations
 
@@ -10,10 +11,14 @@ router = APIRouter()
 
 
 class ChatMessage(BaseModel):
+    """Inbound chat payload."""
+
     message: str
 
 
 class ChatResponse(BaseModel):
+    """Normalized chat response."""
+
     reply: str
 
 

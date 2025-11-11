@@ -1,3 +1,4 @@
+"""Analytics and ROI endpoints."""
 """Analytics and ROI surfaces."""
 from __future__ import annotations
 
@@ -10,6 +11,8 @@ router = APIRouter()
 
 
 class Metric(BaseModel):
+    """Telemetry metric returned to the UI."""
+
     id: str
     label: str
     value: float
@@ -34,11 +37,19 @@ METRICS: Dict[str, Metric] = {
 
 @router.get("/metrics", response_model=List[Metric])
 async def list_metrics() -> List[Metric]:
+    """List high-level system metrics."""
+
     return list(METRICS.values())
 
 
 @router.get("/roi")
 async def calculate_roi() -> Dict[str, float]:
+    """Return a simple ROI calculation for the dashboard spotlight."""
+
+    productivity = METRICS["developer_productivity"].value
+    infrastructure = METRICS["infrastructure_cost"].value
+    if infrastructure == 0:
+        return {"roi": None}
     productivity = METRICS["developer_productivity"].value
     infrastructure = METRICS["infrastructure_cost"].value
     return {"roi": round(productivity / infrastructure, 2)}

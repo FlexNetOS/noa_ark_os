@@ -1,3 +1,4 @@
+"""Artifact catalog routes."""
 """Storage and artifact management endpoints."""
 from __future__ import annotations
 
@@ -10,6 +11,8 @@ router = APIRouter()
 
 
 class Artifact(BaseModel):
+    """Build artifact metadata."""
+
     id: str
     name: str
     size_bytes: int
@@ -24,11 +27,15 @@ ARTIFACTS: List[Artifact] = [
 
 @router.get("/artifacts", response_model=List[Artifact])
 async def list_artifacts() -> List[Artifact]:
+    """Return all stored artifacts."""
+
     return ARTIFACTS
 
 
 @router.get("/artifacts/{artifact_id}", response_model=Artifact)
 async def get_artifact(artifact_id: str) -> Artifact:
+    """Retrieve a single artifact."""
+
     for artifact in ARTIFACTS:
         if artifact.id == artifact_id:
             return artifact
@@ -37,4 +44,8 @@ async def get_artifact(artifact_id: str) -> Artifact:
 
 @router.post("/artifacts/{artifact_id}/retain")
 async def retain_artifact(artifact_id: str) -> Dict[str, str]:
+    """Mark an artifact for long term retention."""
+
+    if not any(artifact.id == artifact_id for artifact in ARTIFACTS):
+        raise HTTPException(status_code=404, detail="artifact not found")
     return {"status": "retained", "artifact_id": artifact_id}

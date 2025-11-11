@@ -1,3 +1,8 @@
+"""Workflow orchestration routes exposed to the unified dashboard."""
+from __future__ import annotations
+
+from datetime import datetime
+from typing import Dict, List, Optional
 """Workflow orchestration endpoints."""
 from __future__ import annotations
 
@@ -13,12 +18,16 @@ router = APIRouter()
 
 
 class WorkflowStage(BaseModel):
+    """Single stage that composes a workflow."""
+
     id: str
     label: str
     description: str
 
 
 class Workflow(BaseModel):
+    """Metadata surfaced to the dashboard."""
+
     id: str
     label: str
     description: str
@@ -26,6 +35,8 @@ class Workflow(BaseModel):
 
 
 class WorkflowRun(BaseModel):
+    """Runtime information for a workflow execution."""
+
     id: str
     workflow_id: str
     payload: Dict[str, str] = Field(default_factory=dict)
@@ -49,6 +60,11 @@ WORKFLOWS: Dict[str, Workflow] = {
         description="Promote artifacts",
         stages=[
             WorkflowStage(id="stage", label="Stage", description="Stage environment"),
+            WorkflowStage(
+                id="promote",
+                label="Promote",
+                description="Production deploy",
+            ),
             WorkflowStage(id="promote", label="Promote", description="Production deploy"),
         ],
     ),
@@ -59,10 +75,17 @@ RUN_HISTORY: Dict[str, WorkflowRun] = {}
 
 @router.get("/", response_model=List[Workflow])
 async def list_workflows() -> List[Workflow]:
+    """Return the catalog of available workflows."""
+
     return list(WORKFLOWS.values())
 
 
 @router.post("/{workflow_id}/trigger", response_model=WorkflowRun)
+async def trigger_workflow(
+    workflow_id: str, payload: Optional[Dict[str, str]] = None
+) -> WorkflowRun:
+    """Kick off a workflow and broadcast the event bus notification."""
+
 async def trigger_workflow(workflow_id: str, payload: Dict[str, str] | None = None) -> WorkflowRun:
     workflow = WORKFLOWS.get(workflow_id)
     if not workflow:
@@ -89,4 +112,8 @@ async def trigger_workflow(workflow_id: str, payload: Dict[str, str] | None = No
 
 @router.get("/runs", response_model=List[WorkflowRun])
 async def list_runs() -> List[WorkflowRun]:
+    """Return the recorded workflow run history."""
+
+    # Return newest first for dashboard readability.
+    return sorted(RUN_HISTORY.values(), key=lambda run: run.triggered_at, reverse=True)
     return list(RUN_HISTORY.values())
