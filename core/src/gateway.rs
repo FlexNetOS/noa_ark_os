@@ -1,3 +1,10 @@
+use serde::de::{self, Deserializer, Visitor};
+use serde::ser::Serializer;
+use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
+use std::fmt;
+use std::fmt::Formatter;
+use std::str::FromStr;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::sync::{Arc, OnceLock, RwLock, RwLockReadGuard, RwLockWriteGuard};
@@ -19,6 +26,86 @@ pub enum SymbolKind {
     Custom(String),
 }
 
+impl SymbolKind {
+    fn as_str(&self) -> &str {
+        match self {
+            SymbolKind::Api => "api",
+            SymbolKind::Hook => "hook",
+            SymbolKind::Plugin => "plugin",
+            SymbolKind::Extension => "extension",
+            SymbolKind::Stub => "stub",
+            SymbolKind::FeatureFlag => "feature_flag",
+            SymbolKind::Tag => "tag",
+            SymbolKind::Channel => "channel",
+            SymbolKind::Dataset => "dataset",
+            SymbolKind::Service => "service",
+            SymbolKind::Custom(value) => value.as_str(),
+        }
+    }
+}
+
+impl fmt::Display for SymbolKind {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl Serialize for SymbolKind {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(self.as_str())
+    }
+}
+
+impl<'de> Deserialize<'de> for SymbolKind {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct SymbolKindVisitor;
+
+        impl<'de> Visitor<'de> for SymbolKindVisitor {
+            type Value = SymbolKind;
+
+            fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
+                formatter.write_str("a symbol kind string")
+            }
+
+            fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                SymbolKind::from_str(value).map_err(|err| E::custom(err))
+            }
+        }
+
+        deserializer.deserialize_str(SymbolKindVisitor)
+    }
+}
+
+impl FromStr for SymbolKind {
+    type Err = String;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        match value {
+            "api" => Ok(SymbolKind::Api),
+            "hook" => Ok(SymbolKind::Hook),
+            "plugin" => Ok(SymbolKind::Plugin),
+            "extension" => Ok(SymbolKind::Extension),
+            "stub" => Ok(SymbolKind::Stub),
+            "feature_flag" => Ok(SymbolKind::FeatureFlag),
+            "tag" => Ok(SymbolKind::Tag),
+            "channel" => Ok(SymbolKind::Channel),
+            "dataset" => Ok(SymbolKind::Dataset),
+            "service" => Ok(SymbolKind::Service),
+            other if !other.trim().is_empty() => Ok(SymbolKind::Custom(other.to_string())),
+            _ => Err("symbol kind cannot be empty".to_string()),
+        }
+    }
+}
+
 /// Normalized metadata describing a symbol connector.
 #[derive(Debug, Clone)]
 pub struct Symbol {
@@ -32,6 +119,83 @@ pub struct Symbol {
 impl Symbol {
     pub fn matches_capabilities(&self, required: &HashSet<String>) -> bool {
         required.is_subset(&self.capabilities)
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LifecycleStage {
+    Prototype,
+    Active,
+    Deprecated,
+    Retired,
+}
+
+impl Default for LifecycleStage {
+    fn default() -> Self {
+        LifecycleStage::Prototype
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CompatibilityWindow {
+    pub related_kind: SymbolKind,
+    pub minimum_version: String,
+    #[serde(default)]
+    pub maximum_version: Option<String>,
+}
+
+impl CompatibilityWindow {
+    pub fn accepts(&self, kind: &SymbolKind, version: &str) -> bool {
+        if &self.related_kind != kind {
+            return false;
+        }
+        if version < self.minimum_version.as_str() {
+            return false;
+        }
+        if let Some(max) = &self.maximum_version {
+            if version > max.as_str() {
+                return false;
+            }
+        }
+        true
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SymbolSchema {
+    pub schema_id: String,
+    pub kind: SymbolKind,
+    pub version: String,
+    #[serde(default)]
+    pub capability_taxonomy: HashSet<String>,
+    #[serde(default)]
+    pub lifecycle: LifecycleStage,
+    #[serde(default)]
+    pub recommended_zones: HashSet<String>,
+    #[serde(default)]
+    pub compliance_tags: HashSet<String>,
+    #[serde(default)]
+    pub compatibility: Vec<CompatibilityWindow>,
+    pub schema_hash: String,
+}
+
+impl SymbolSchema {
+    pub fn matches_symbol(&self, symbol: &Symbol) -> bool {
+        self.kind == symbol.kind
+            && self.schema_hash == symbol.schema_hash
+            && self.version == symbol.version
+    }
+
+    pub fn capability_coverage(&self, required: &HashSet<String>) -> f32 {
+        if required.is_empty() {
+            return 1.0;
+        }
+        let covered = required
+            .iter()
+            .filter(|cap| self.capability_taxonomy.contains(*cap))
+            .count();
+        covered as f32 / required.len() as f32
     }
 }
 
@@ -141,6 +305,22 @@ pub struct ScanEvent {
     pub health_score: f32,
 }
 
+#[derive(Debug, Clone)]
+pub struct TelemetryEvent {
+    pub timestamp: SystemTime,
+    pub kind: TelemetryKind,
+    pub context: String,
+}
+
+#[derive(Debug, Clone)]
+pub enum TelemetryKind {
+    SchemaRegistered,
+    ConnectorRegistered,
+    ScanCompleted,
+    RouteCompiled,
+    SelfHealSuggested,
+}
+
 /// Plan produced after intent compilation and verification.
 #[derive(Debug, Clone)]
 pub struct RoutePlan {
@@ -163,6 +343,115 @@ pub struct GatewaySnapshot {
     pub average_health: f32,
 }
 
+#[derive(Debug, Clone)]
+pub struct SchemaCatalogSnapshot {
+    pub total: usize,
+    pub lifecycle_breakdown: HashMap<LifecycleStage, usize>,
+    pub capability_index: HashMap<String, usize>,
+}
+
+#[derive(Debug, Deserialize)]
+struct IntentDocument {
+    intents: Vec<IntentSpec>,
+}
+
+#[derive(Debug, Deserialize)]
+struct IntentSpec {
+    name: String,
+    target: String,
+    #[serde(default)]
+    capabilities: Vec<String>,
+    #[serde(default)]
+    constraints: IntentConstraintSpec,
+}
+
+#[derive(Debug, Deserialize)]
+struct IntentConstraintSpec {
+    #[serde(default = "default_latency")]
+    max_latency_ms: u32,
+    #[serde(default = "default_trust")]
+    min_trust_score: f32,
+    #[serde(default = "default_true")]
+    encryption: bool,
+    #[serde(default = "default_zones")]
+    zones: Vec<String>,
+}
+
+impl Default for IntentConstraintSpec {
+    fn default() -> Self {
+        Self {
+            max_latency_ms: default_latency(),
+            min_trust_score: default_trust(),
+            encryption: default_true(),
+            zones: default_zones(),
+        }
+    }
+}
+
+fn default_latency() -> u32 {
+    250
+}
+
+fn default_trust() -> f32 {
+    0.6
+}
+
+fn default_true() -> bool {
+    true
+}
+
+fn default_zones() -> Vec<String> {
+    vec!["global".into()]
+}
+
+impl IntentConstraintSpec {
+    fn into_constraints(self) -> IntentConstraints {
+        IntentConstraints {
+            max_latency_ms: self.max_latency_ms,
+            min_trust_score: self.min_trust_score,
+            encryption_supported: self.encryption,
+            allowed_zones: self.zones.into_iter().collect::<HashSet<_>>(),
+        }
+    }
+}
+
+impl IntentSpec {
+    fn into_intent(self) -> Result<Intent, GatewayError> {
+        let target_kind = SymbolKind::from_str(&self.target).map_err(|err| {
+            GatewayError::IntentParse(format!(
+                "intent '{}' has invalid target '{}': {err}",
+                self.name, self.target
+            ))
+        })?;
+
+        let required_capabilities = self
+            .capabilities
+            .into_iter()
+            .collect::<HashSet<_>>();
+
+        Ok(Intent {
+            description: self.name,
+            target_kind,
+            required_capabilities,
+            constraints: self.constraints.into_constraints(),
+        })
+    }
+}
+
+pub struct IntentCompiler;
+
+impl IntentCompiler {
+    pub fn compile(script: &str) -> Result<Vec<Intent>, GatewayError> {
+        let document: IntentDocument = serde_yaml::from_str(script)
+            .map_err(|err| GatewayError::IntentParse(err.to_string()))?;
+        document
+            .intents
+            .into_iter()
+            .map(IntentSpec::into_intent)
+            .collect()
+    }
+}
+
 type ConnectorId = String;
 
 #[derive(Debug)]
@@ -173,6 +462,9 @@ pub enum GatewayError {
     NoRouteFound,
     VerificationFailed(String),
     Poisoned(&'static str),
+    SchemaConflict(String),
+    SchemaNotFound(String),
+    IntentParse(String),
 }
 
 impl fmt::Display for GatewayError {
@@ -186,6 +478,9 @@ impl fmt::Display for GatewayError {
             GatewayError::NoRouteFound => write!(f, "no viable route found for intent"),
             GatewayError::VerificationFailed(msg) => write!(f, "verification failed: {msg}"),
             GatewayError::Poisoned(resource) => write!(f, "gateway state poisoned: {resource}"),
+            GatewayError::SchemaConflict(id) => write!(f, "schema {id} already registered"),
+            GatewayError::SchemaNotFound(id) => write!(f, "schema {id} not found"),
+            GatewayError::IntentParse(msg) => write!(f, "intent parsing error: {msg}"),
         }
     }
 }
@@ -195,6 +490,12 @@ impl std::error::Error for GatewayError {}
 static GLOBAL_GATEWAY: OnceLock<Gateway> = OnceLock::new();
 
 /// Primary entry point for the self-aware gateway.
+#[derive(Debug)]
+pub struct Gateway {
+    connectors: RwLock<HashMap<ConnectorId, ConnectorRecord>>,
+    topology: RwLock<HashMap<SymbolKind, HashSet<ConnectorId>>>,
+    schemas: RwLock<HashMap<String, SymbolSchema>>,
+    telemetry: RwLock<Vec<TelemetryEvent>>,
 #[derive(Debug, Default)]
 pub struct Gateway {
     connectors: RwLock<HashMap<ConnectorId, ConnectorRecord>>,
@@ -211,12 +512,124 @@ impl Gateway {
         GLOBAL_GATEWAY.get_or_init(Self::default)
     }
 
+    /// Register a schema into the catalog.
+    pub fn register_schema(&self, schema: SymbolSchema) -> Result<(), GatewayError> {
+        let mut registry = self.schemas_write()?;
+        if let Some(existing) = registry.get(&schema.schema_id) {
+            if existing.schema_hash != schema.schema_hash {
+                return Err(GatewayError::SchemaConflict(schema.schema_id));
+            }
+            return Ok(());
+        }
+
+        if registry
+            .values()
+            .any(|existing| existing.schema_hash == schema.schema_hash)
+        {
+            return Err(GatewayError::SchemaConflict(schema.schema_hash));
+        }
+
+        let descriptor = schema.clone();
+        registry.insert(descriptor.schema_id.clone(), descriptor.clone());
+        drop(registry);
+        self.emit_event(
+            TelemetryKind::SchemaRegistered,
+            format!("{}@{}", descriptor.schema_id, descriptor.version),
+        )?;
+        Ok(())
+    }
+
+    /// Bulk ingest schemas, ensuring catalog consistency.
+    pub fn ingest_schema_catalog(&self, schemas: &[SymbolSchema]) -> Result<(), GatewayError> {
+        let mut registry = self.schemas_write()?;
+        let mut new_entries = Vec::new();
+
+        for schema in schemas {
+            if let Some(existing) = registry.get(&schema.schema_id) {
+                if existing.schema_hash != schema.schema_hash {
+                    return Err(GatewayError::SchemaConflict(schema.schema_id.clone()));
+                }
+                continue;
+            }
+
+            if registry
+                .values()
+                .any(|existing| existing.schema_hash == schema.schema_hash)
+            {
+                return Err(GatewayError::SchemaConflict(schema.schema_hash.clone()));
+            }
+
+            registry.insert(schema.schema_id.clone(), schema.clone());
+            new_entries.push(schema.clone());
+        }
+
+        drop(registry);
+
+        for schema in new_entries {
+            self.emit_event(
+                TelemetryKind::SchemaRegistered,
+                format!("{}@{}", schema.schema_id, schema.version),
+            )?;
+        }
+
+        Ok(())
+    }
+
+    /// Provide a snapshot of the catalog for reporting.
+    pub fn catalog_snapshot(&self) -> Result<SchemaCatalogSnapshot, GatewayError> {
+        let registry = self.schemas_read()?;
+        let mut lifecycle_breakdown: HashMap<LifecycleStage, usize> = HashMap::new();
+        let mut capability_index: HashMap<String, usize> = HashMap::new();
+
+        for schema in registry.values() {
+            *lifecycle_breakdown.entry(schema.lifecycle).or_insert(0) += 1;
+            for capability in &schema.capability_taxonomy {
+                *capability_index.entry(capability.clone()).or_insert(0) += 1;
+            }
+        }
+
+        Ok(SchemaCatalogSnapshot {
+            total: registry.len(),
+            lifecycle_breakdown,
+            capability_index,
+        })
+    }
+
+    /// Drain telemetry into the monitoring pipeline.
+    pub fn drain_telemetry(&self) -> Result<Vec<TelemetryEvent>, GatewayError> {
+        let mut events = self.telemetry_write()?;
+        Ok(events.drain(..).collect())
+    }
+
+    /// Bootstraps the gateway with built-in schemas for critical services.
+    pub fn bootstrap_defaults(&self) -> Result<(), GatewayError> {
+        self.ingest_schema_catalog(&default_schemas())
+    }
+
     /// Register a new connector with its policy envelope.
     pub fn register_symbol(
         &self,
         symbol: Symbol,
         policy: ConnectionPolicy,
     ) -> Result<(), GatewayError> {
+        let schema = {
+            let registry = self.schemas_read()?;
+            registry
+                .values()
+                .find(|schema| schema.matches_symbol(&symbol))
+                .cloned()
+        };
+
+        let schema =
+            schema.ok_or_else(|| GatewayError::SchemaNotFound(symbol.schema_hash.clone()))?;
+
+        if !schema.capability_taxonomy.is_superset(&symbol.capabilities) {
+            return Err(GatewayError::PolicyViolation(format!(
+                "symbol {} declares capabilities not advertised by schema {}",
+                symbol.id, schema.schema_id
+            )));
+        }
+
         let mut connectors = self.connectors_write()?;
         if connectors.contains_key(&symbol.id) {
             return Err(GatewayError::AlreadyRegistered(symbol.id.clone()));
@@ -225,6 +638,15 @@ impl Gateway {
         let id = symbol.id.clone();
         let kind = symbol.kind.clone();
         let symbol = Arc::new(symbol);
+
+        connectors.insert(id.clone(), ConnectorRecord::new(symbol.clone(), policy));
+
+        self.topology_write()?.entry(kind).or_default().insert(id);
+
+        self.emit_event(
+            TelemetryKind::ConnectorRegistered,
+            format!("{}@{}", symbol.id, symbol.version),
+        )?;
 
         connectors.insert(id.clone(), ConnectorRecord::new(symbol, policy));
 
@@ -259,6 +681,16 @@ impl Gateway {
     pub fn auto_scan(&self) -> Result<Vec<ScanEvent>, GatewayError> {
         let mut connectors = self.connectors_write()?;
         let now = SystemTime::now();
+        let events: Vec<_> = connectors
+            .values_mut()
+            .map(|record| record.refresh(now))
+            .collect();
+        drop(connectors);
+        self.emit_event(
+            TelemetryKind::ScanCompleted,
+            format!("scan:{}", events.len()),
+        )?;
+        Ok(events)
         Ok(connectors
             .values_mut()
             .map(|record| record.refresh(now))
@@ -309,6 +741,14 @@ impl Gateway {
 
         if self.formal_verification(intent, &plan)? {
             plan.verified = true;
+            self.emit_event(
+                TelemetryKind::RouteCompiled,
+                format!(
+                    "intent:{} connectors:{}",
+                    intent.description,
+                    plan.connectors.len()
+                ),
+            )?;
             Ok(plan)
         } else {
             Err(GatewayError::VerificationFailed(
@@ -351,6 +791,13 @@ impl Gateway {
             }
         }
 
+        if !actions.is_empty() {
+            self.emit_event(
+                TelemetryKind::SelfHealSuggested,
+                format!("actions:{}", actions.len()),
+            )?;
+        }
+
         Ok(actions)
     }
 
@@ -386,6 +833,16 @@ impl Gateway {
         })
     }
 
+    fn emit_event(&self, kind: TelemetryKind, context: String) -> Result<(), GatewayError> {
+        let mut telemetry = self.telemetry_write()?;
+        telemetry.push(TelemetryEvent {
+            timestamp: SystemTime::now(),
+            kind,
+            context,
+        });
+        Ok(())
+    }
+
     fn connectors_read(
         &self,
     ) -> Result<RwLockReadGuard<'_, HashMap<ConnectorId, ConnectorRecord>>, GatewayError> {
@@ -417,13 +874,90 @@ impl Gateway {
             .write()
             .map_err(|_| GatewayError::Poisoned("topology"))
     }
+
+    fn schemas_read(
+        &self,
+    ) -> Result<RwLockReadGuard<'_, HashMap<String, SymbolSchema>>, GatewayError> {
+        self.schemas
+            .read()
+            .map_err(|_| GatewayError::Poisoned("schemas"))
+    }
+
+    fn schemas_write(
+        &self,
+    ) -> Result<RwLockWriteGuard<'_, HashMap<String, SymbolSchema>>, GatewayError> {
+        self.schemas
+            .write()
+            .map_err(|_| GatewayError::Poisoned("schemas"))
+    }
+
+    fn telemetry_write(&self) -> Result<RwLockWriteGuard<'_, Vec<TelemetryEvent>>, GatewayError> {
+        self.telemetry
+            .write()
+            .map_err(|_| GatewayError::Poisoned("telemetry"))
+    }
+}
+
+impl Default for Gateway {
+    fn default() -> Self {
+        Self {
+            connectors: RwLock::new(HashMap::new()),
+            topology: RwLock::new(HashMap::new()),
+            schemas: RwLock::new(HashMap::new()),
+            telemetry: RwLock::new(Vec::new()),
+        }
+    }
 }
 
 /// Initialize the global gateway and provide a stable foundation.
 pub fn init() -> Result<(), GatewayError> {
     let gateway = Gateway::global();
+    gateway.bootstrap_defaults()?;
     gateway.auto_scan()?;
     Ok(())
+}
+
+fn default_schemas() -> Vec<SymbolSchema> {
+    vec![
+        SymbolSchema {
+            schema_id: "core.analytics.api".into(),
+            kind: SymbolKind::Api,
+            version: "1.0.0".into(),
+            capability_taxonomy: HashSet::from([
+                "stream".to_string(),
+                "analytics".to_string(),
+                "replication".to_string(),
+            ]),
+            lifecycle: LifecycleStage::Active,
+            recommended_zones: HashSet::from(["global".to_string(), "edge".to_string()]),
+            compliance_tags: HashSet::from(["pii_safe".to_string(), "audited".to_string()]),
+            compatibility: vec![CompatibilityWindow {
+                related_kind: SymbolKind::Dataset,
+                minimum_version: "1.0.0".into(),
+                maximum_version: None,
+            }],
+            schema_hash: "abc123".into(),
+        },
+        SymbolSchema {
+            schema_id: "edge.render.plugin".into(),
+            kind: SymbolKind::Plugin,
+            version: "2.1.0".into(),
+            capability_taxonomy: HashSet::from([
+                "render".to_string(),
+                "viz".to_string(),
+                "gpu".to_string(),
+            ]),
+            lifecycle: LifecycleStage::Active,
+            recommended_zones: HashSet::from(["edge".to_string(), "workstation".to_string()]),
+            compliance_tags: HashSet::from(["license_required".to_string()]),
+            compatibility: vec![CompatibilityWindow {
+                related_kind: SymbolKind::Service,
+                minimum_version: "2.0.0".into(),
+                maximum_version: None,
+            }],
+            schema_hash: "deadbeef".into(),
+        },
+    ]
 }
 
 #[cfg(test)]
@@ -451,6 +985,7 @@ mod tests {
     #[test]
     fn register_and_route_symbol() {
         let gateway = Gateway::new();
+        gateway.bootstrap_defaults().expect("defaults should load");
         let symbol = Symbol {
             id: "analytics.api".into(),
             kind: SymbolKind::Api,
@@ -479,6 +1014,7 @@ mod tests {
     #[test]
     fn predictive_self_healing_flags_faults() {
         let gateway = Gateway::new();
+        gateway.bootstrap_defaults().expect("defaults should load");
         let symbol = Symbol {
             id: "legacy.plugin".into(),
             kind: SymbolKind::Plugin,
@@ -509,6 +1045,20 @@ mod tests {
     #[test]
     fn policy_violation_prevents_routing() {
         let gateway = Gateway::new();
+        gateway.bootstrap_defaults().expect("defaults should load");
+        gateway
+            .register_schema(SymbolSchema {
+                schema_id: "restricted.api".into(),
+                kind: SymbolKind::Api,
+                version: "1.2.0".into(),
+                capability_taxonomy: HashSet::from(["restricted".into()]),
+                lifecycle: LifecycleStage::Active,
+                recommended_zones: HashSet::from(["private".into()]),
+                compliance_tags: HashSet::new(),
+                compatibility: vec![],
+                schema_hash: "feedface".into(),
+            })
+            .expect("schema should register");
         let symbol = Symbol {
             id: "restricted.api".into(),
             kind: SymbolKind::Api,
@@ -562,5 +1112,64 @@ mod tests {
             ..constraints
         };
         assert!(!policy.allows(&stricter));
+    }
+
+    #[test]
+    fn catalog_snapshot_tracks_schema_counts() {
+        let gateway = Gateway::new();
+        gateway.bootstrap_defaults().expect("defaults should load");
+
+        let snapshot = gateway.catalog_snapshot().expect("snapshot should succeed");
+        assert_eq!(snapshot.total, 2);
+        assert_eq!(
+            snapshot.lifecycle_breakdown.get(&LifecycleStage::Active),
+            Some(&2)
+        );
+        assert!(snapshot.capability_index.contains_key("analytics"));
+    }
+
+    #[test]
+    fn intent_compiler_parses_yaml_specs() {
+        let yaml = r#"
+intents:
+  - name: replicate analytics stream
+    target: api
+    capabilities: ["stream", "analytics"]
+    constraints:
+      max_latency_ms: 20
+      min_trust_score: 0.7
+      encryption: true
+      zones: ["global"]
+"#;
+
+        let intents = IntentCompiler::compile(yaml).expect("yaml should parse");
+        assert_eq!(intents.len(), 1);
+        assert_eq!(intents[0].constraints.max_latency_ms, 20);
+        assert!(intents[0].required_capabilities.contains("analytics"));
+    }
+
+    #[test]
+    fn telemetry_records_key_events() {
+        let gateway = Gateway::new();
+        gateway.bootstrap_defaults().expect("defaults should load");
+
+        let symbol = Symbol {
+            id: "analytics.api".into(),
+            kind: SymbolKind::Api,
+            version: "1.0.0".into(),
+            capabilities: HashSet::from(["stream".into(), "analytics".into()]),
+            schema_hash: "abc123".into(),
+        };
+
+        gateway
+            .register_symbol(symbol.clone(), sample_policy())
+            .expect("registration should succeed");
+        gateway.auto_scan().expect("scan should succeed");
+
+        let events = gateway.drain_telemetry().expect("telemetry should drain");
+        assert!(!events.is_empty());
+        assert!(events
+            .iter()
+            .any(|event| matches!(event.kind, TelemetryKind::ConnectorRegistered)));
     }
 }

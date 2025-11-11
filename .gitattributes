@@ -1,6 +1,10 @@
 * text=auto eol=lf
 
 # Preserve LF for shell scripts
+# Global text normalization
+* text=auto
+
+# Shell scripts must use LF line endings
 *.sh text eol=lf
 *.bash text eol=lf
 

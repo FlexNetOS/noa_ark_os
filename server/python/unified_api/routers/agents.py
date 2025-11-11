@@ -1,10 +1,12 @@
 """Agent registry endpoints."""
+"""Agent orchestration endpoints."""
 from __future__ import annotations
 
 from typing import Dict, List
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from ..event_bus import GLOBAL_EVENT_BUS
 
@@ -74,3 +76,17 @@ async def scale_agent(agent_id: str, request: ScaleRequest) -> ScaleResponse:
         },
     )
     return ScaleResponse(status="accepted", agent_id=agent_id, replicas=request.replicas)
+    return list(AGENTS.values())
+
+
+@router.post("/{agent_id}/scale")
+async def scale_agent(agent_id: str, replicas: int) -> Dict[str, str]:
+    agent = AGENTS.get(agent_id)
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+
+    await GLOBAL_EVENT_BUS.publish(
+        "shell",
+        {"type": "agent_scaled", "agent_id": agent_id, "replicas": replicas},
+    )
+    return {"status": "accepted"}
