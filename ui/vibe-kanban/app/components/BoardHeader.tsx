@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AddColumnButton } from "./AddColumnButton";
+import type { BoardMetrics } from "./board-types";
 
 function formatDateLabel(iso: string) {
   const date = new Date(iso);
@@ -23,6 +24,7 @@ type BoardHeaderProps = {
   totalCardCount: number;
   completedCount: number;
   showMetrics?: boolean;
+  metrics?: BoardMetrics;
 };
 
 export function BoardHeader({
@@ -34,6 +36,7 @@ export function BoardHeader({
   totalCardCount,
   completedCount,
   showMetrics = true,
+  metrics: advancedMetrics,
 }: BoardHeaderProps) {
   const [value, setValue] = useState(projectName);
 
@@ -41,14 +44,23 @@ export function BoardHeader({
     setValue(projectName);
   }, [projectName]);
 
-  const metrics = useMemo(
-    () => [
+  const metrics = useMemo(() => {
+    const base = [
       { label: "Columns", value: columnCount },
       { label: "Active vibes", value: Math.max(totalCardCount - completedCount, 0) },
       { label: "Completed", value: completedCount },
-    ],
-    [columnCount, completedCount, totalCardCount]
-  );
+    ];
+    if (advancedMetrics) {
+      base.push({ label: "Vibe momentum", value: `${advancedMetrics.vibeMomentum}%` });
+      if (advancedMetrics.cycleTimeDays) {
+        base.push({ label: "Cycle time", value: `${advancedMetrics.cycleTimeDays}d` });
+      }
+      if (advancedMetrics.flowEfficiency) {
+        base.push({ label: "Flow efficiency", value: `${advancedMetrics.flowEfficiency}%` });
+      }
+    }
+    return base;
+  }, [advancedMetrics, columnCount, completedCount, totalCardCount]);
 
   return (
     <div className="flex flex-col gap-6 rounded-[2.5rem] border border-white/10 bg-surface/70 p-8 backdrop-blur-xl">
