@@ -100,9 +100,15 @@ server/tools/rustup-portable/
 server/data/
 crc/temp/
 crc/archive/
+crc/crc/
+crc/crc/archive/
+crc/crc/temp/
+crc/storage/
 crc/sandboxes/*/active/
 crc/drop-in/incoming/stale/
 crc/drop-in/incoming/forks/*/
+crc/crc/
+crc/storage/
 
 # Models & Large Files
 *.bin
@@ -149,3 +155,8 @@ site/
 logs/**/*.log
 logs/**/*.txt
 logs/**/!(.gitkeep|README.md)
+
+# CRC test artifacts
+crc/crc/
+crc/out/
+crc/storage/
