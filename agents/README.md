@@ -11,7 +11,7 @@ NOA ARK OS uses a hierarchical 5-layer architecture for organizing agents, from 
 | Layer | Alternative Name | Description | Examples |
 |-------|-----------------|-------------|----------|
 | **L1Autonomy** | Executive | Root CECCA, Constitutional authority | CECCA, Constitutional Oversight |
-| **L2Reasoning** | Board | Board & Executive decision-making | Board agents, Strategic Planning |
+| **L2Reasoning** | Board | Board decision-making | Board agents, Strategic Planning |
 | **L3Orchestration** | Stack-Chief | Chief Commanders, Orchestrators | Stack Chiefs, Workflow Coordinators |
 | **L4Operations** | Specialist | Domain specialists, Workers | Code agents, Security specialists |
 | **L5Infrastructure** | Micro | Micro agents, Infrastructure tasks | Utility agents, Monitoring |
