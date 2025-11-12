@@ -922,11 +922,21 @@
                 breaches.forEach((breach) => {
                     const card = document.createElement('div');
                     card.className = 'sla-card';
-                    card.innerHTML = `
-                        <strong>${(breach.type || 'breach').toString().toUpperCase()}</strong>
-                        <span>${formatDate(breach.timestamp)}</span>
-                        <span class=\"muted\">Duration: ${breach.duration_minutes || 0} minutes · Resolved by ${breach.resolved_by || 'N/A'}</span>
-                    `;
+
+                    const strong = document.createElement('strong');
+                    strong.textContent = (breach.type || 'breach').toString().toUpperCase();
+                    card.appendChild(strong);
+
+                    const timestampSpan = document.createElement('span');
+                    timestampSpan.textContent = formatDate(breach.timestamp);
+                    card.appendChild(timestampSpan);
+
+                    const detailsSpan = document.createElement('span');
+                    detailsSpan.className = 'muted';
+                    const duration = breach.duration_minutes || 0;
+                    const resolvedBy = breach.resolved_by || 'N/A';
+                    detailsSpan.textContent = `Duration: ${duration} minutes · Resolved by ${resolvedBy}`;
+                    card.appendChild(detailsSpan);
                     SLA_BREACHES.appendChild(card);
                 });
             }
