@@ -26,3 +26,9 @@ This document captures the current capabilities that ship with the NOA ARK OS UI
 - Hardened the unified gateway modules with missing imports, richer schemas, and expanded pytest coverage to validate workflows, analytics, chat, and CI endpoints.
 
 These changes align the UI codebase with the unified shell roadmap and deliver an actionable single surface for operations and AI-assisted development flows.
+
+## Phase 5–6 Execution Highlights
+
+- Introduced persona-aware navigation and workspace switching so operators, developers, and executives only see the modules that match their privileges.
+- Seeded a contextual knowledge overlay that pulls curated runbooks and documentation per persona directly into the shell chrome.
+- Added concrete packaging targets for desktop (Tauri), mobile (React Native/Expo), and XR adapters, ensuring the unified shell can be deployed across every supported surface.

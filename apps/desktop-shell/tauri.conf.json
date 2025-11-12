@@ -1,0 +1,41 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "build": {
+    "beforeBuildCommand": "npm run build --prefix ../../ui/noa-dashboard",
+    "devPath": "http://localhost:5173",
+    "distDir": "../../ui/noa-dashboard",
+    "withGlobalTauri": false
+  },
+  "package": {
+    "productName": "NOA Unified Shell",
+    "version": "0.1.0"
+  },
+  "tauri": {
+    "bundle": {
+      "active": true,
+      "targets": ["deb", "appimage", "msi", "app"],
+      "identifier": "com.noa.ark.shell",
+      "icon": ["icons/icon.png"],
+      "windows": {
+        "wix": {
+          "language": "en-US"
+        }
+      }
+    },
+    "security": {
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
+    },
+    "windows": [
+      {
+        "title": "NOA Unified Shell",
+        "width": 1440,
+        "height": 900,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "updater": {
+      "active": false
+    }
+  }
+}
