@@ -43,7 +43,7 @@ jobs:
             pnpm install --frozen-lockfile --offline || true
             echo "----------------------------------------"
             echo "Attempting online pnpm install..."
-            pnpm install --no-frozen-lockfile
+            pnpm install --frozen-lockfile
           fi
       - name: Build
         run: pnpm build
