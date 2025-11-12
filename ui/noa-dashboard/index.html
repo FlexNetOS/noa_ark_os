@@ -981,7 +981,8 @@
                     card.appendChild(metricElem);
 
                     const deltaElem = document.createElement('span');
-                    deltaElem.textContent = 'Delta: ' + ((anomaly.delta ?? 0).toFixed(2));
+                    const delta = Number.isFinite(anomaly.delta) ? anomaly.delta : 0;
+                    deltaElem.textContent = 'Delta: ' + delta.toFixed(2);
                     card.appendChild(deltaElem);
 
                     const detectedElem = document.createElement('span');
