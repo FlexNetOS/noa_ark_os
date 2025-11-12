@@ -6,6 +6,7 @@ type Heuristic = {
 
 const HEURISTICS: Heuristic[] = [
   {
+    // Matches either "SyntaxError" or "Unexpected token" error messages
     pattern: /SyntaxError|Unexpected token/i,
     summary: "Syntax issue detected in recent changes.",
     suggestions: ["Review recent code edits for unmatched brackets or misplaced keywords.", "Run the TypeScript compiler locally to pinpoint the line."],
