@@ -154,8 +154,8 @@ export type TriageTicket = {
 
 function createTriageTicket(id: number, result: CheckResult, logPath: string): TriageTicket {
   const logData = readJson<unknown>(logPath, null);
-  const content = typeof logData === "string" ? logData : JSON.stringify(logData, null, 2);
-  const analysis = analyzeLog(result.name, content ?? "");
+  const content = logData !== null ? JSON.stringify(logData, null, 2) : "";
+  const analysis = analyzeLog(result.name, content);
   const path = triagePath(id, result.name);
   const online = (process.env.ONLINE_GITHUB_MODE ?? "false").toLowerCase() === "true";
   const ticket: TriageTicket = {
