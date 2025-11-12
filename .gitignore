@@ -154,3 +154,8 @@ site/
 logs/**/*.log
 logs/**/*.txt
 logs/**/!(.gitkeep|README.md)
+
+# CRC test artifacts
+crc/crc/
+crc/out/
+crc/storage/
