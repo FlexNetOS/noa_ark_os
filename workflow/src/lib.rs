@@ -3,11 +3,11 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
+use chrono::{Duration, Utc};
 use noa_agents::{AgentFactory, AGENT_FACTORY_CAPABILITY};
 use noa_core::capabilities::KernelHandle;
 use noa_core::config::manifest::CAPABILITY_PROCESS;
 use noa_core::process::ProcessService;
-use chrono::{Duration, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -125,32 +125,32 @@ pub struct WorkflowEngine {
 
 impl WorkflowEngine {
     pub fn new() -> Self {
-        let instrumentation = PipelineInstrumentation::new()
-            .expect("failed to initialise pipeline instrumentation");
+        let instrumentation =
+            PipelineInstrumentation::new().expect("failed to initialise pipeline instrumentation");
         Self {
             workflows: Arc::new(Mutex::new(HashMap::new())),
             states: Arc::new(Mutex::new(HashMap::new())),
             stage_states: Arc::new(Mutex::new(HashMap::new())),
             instrumentation: Arc::new(instrumentation),
+            kernel: None,
+            event_stream: Arc::new(Mutex::new(None)),
         }
     }
 
     pub fn instrumentation(&self) -> Arc<PipelineInstrumentation> {
         Arc::clone(&self.instrumentation)
     }
-    
-            kernel: None,
-        }
-    }
 
     /// Create a workflow engine that interacts with kernel capabilities.
     pub fn with_kernel(kernel: KernelHandle) -> Self {
+        let instrumentation =
+            PipelineInstrumentation::new().expect("failed to initialise pipeline instrumentation");
         Self {
             workflows: Arc::new(Mutex::new(HashMap::new())),
             states: Arc::new(Mutex::new(HashMap::new())),
             stage_states: Arc::new(Mutex::new(HashMap::new())),
+            instrumentation: Arc::new(instrumentation),
             kernel: Some(kernel),
-        }
             event_stream: Arc::new(Mutex::new(None)),
         }
     }
@@ -301,7 +301,10 @@ impl WorkflowEngine {
 
     /// Execute a single task
     fn execute_task(&self, task: &Task) -> Result<(), String> {
-        println!("[WORKFLOW] Executing task: agent={}, action={}", task.agent, task.action);
+        println!(
+            "[WORKFLOW] Executing task: agent={}, action={}",
+            task.agent, task.action
+        );
         self.observe_task(task)?;
         println!(
             "[WORKFLOW] Executing task via kernel: agent={}, action={}",
@@ -320,10 +323,6 @@ impl WorkflowEngine {
                 );
             }
         }
-
-            "[WORKFLOW] Executing task: agent={}, action={}",
-            task.agent, task.action
-        );
         // Implementation would dispatch to appropriate agent
         Ok(())
     }
@@ -367,7 +366,7 @@ impl WorkflowEngine {
 
         Ok(())
     }
-    
+
     /// Check if dependencies are met
     fn check_dependencies(&self, workflow_id: &str, depends_on: &[String]) -> Result<bool, String> {
         if depends_on.is_empty() {
@@ -409,7 +408,7 @@ impl WorkflowEngine {
         self.emit_event(WorkflowEvent::StageState {
             workflow_id: workflow_id.to_string(),
             stage_id: stage_name.to_string(),
-            state,
+            state: state.clone(),
             timestamp: timestamp.clone(),
         });
 
@@ -438,6 +437,8 @@ impl WorkflowEngine {
 
 fn parameters_to_value(parameters: &HashMap<String, Value>) -> Value {
     serde_json::to_value(parameters).unwrap_or(Value::Null)
+}
+
 fn now_iso() -> String {
     Utc::now().to_rfc3339()
 }

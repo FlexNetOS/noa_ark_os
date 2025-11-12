@@ -122,10 +122,7 @@ impl PipelineInstrumentation {
         with_log_lock(|| {
             let path = self.log_path(log_name);
             // Try to atomically create the file if it doesn't exist
-            let file_result = OpenOptions::new()
-                .write(true)
-                .create_new(true)
-                .open(&path);
+            let file_result = OpenOptions::new().write(true).create_new(true).open(&path);
             match file_result {
                 Ok(mut file) => {
                     // File was created, write genesis entry
@@ -138,8 +135,9 @@ impl PipelineInstrumentation {
                         metadata: json!({"message": "ledger initialised"}),
                         timestamp: current_timestamp_millis(),
                     };
-                    let record = OperationRecord::new(kind.clone(), "system/bootstrap", "instrumentation")
-                        .with_metadata(json!({"initialised": true}));
+                    let record =
+                        OperationRecord::new(kind.clone(), "system/bootstrap", "instrumentation")
+                            .with_metadata(json!({"initialised": true}));
                     let signed = security::enforce_operation(record)?;
                     let entry = ImmutableLogEntry::new(event, signed, "GENESIS".to_string())?;
                     // Write the entry directly to the new file
@@ -164,8 +162,9 @@ impl PipelineInstrumentation {
                         metadata: json!({"message": "ledger initialised"}),
                         timestamp: current_timestamp_millis(),
                     };
-                    let record = OperationRecord::new(kind.clone(), "system/bootstrap", "instrumentation")
-                        .with_metadata(json!({"initialised": true}));
+                    let record =
+                        OperationRecord::new(kind.clone(), "system/bootstrap", "instrumentation")
+                            .with_metadata(json!({"initialised": true}));
                     let signed = security::enforce_operation(record)?;
                     let entry = ImmutableLogEntry::new(event, signed, "GENESIS".to_string())?;
                     // Open for appending and check again before writing

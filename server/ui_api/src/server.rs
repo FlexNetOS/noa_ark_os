@@ -89,19 +89,22 @@ impl UiApiServer {
 }
 
 async fn handle_websocket(mut socket: WebSocket, bridge: SessionBridge) {
-    let mut events = bridge.forward_events();
+    let mut events = bridge.subscribe();
     while let Some(event) = events.next().await {
-        match serde_json::to_string(&event) {
-            Ok(payload) => {
-                if socket.send(Message::Text(payload)).await.is_err() {
-                    break;
+        match event.map(SessionBridge::map_event) {
+            Ok(event) => match serde_json::to_string(&event) {
+                Ok(payload) => {
+                    if socket.send(Message::Text(payload)).await.is_err() {
+                        break;
+                    }
                 }
-            }
-            Err(error) => {
-                let _ = socket
-                    .send(Message::Text(format!("{{\"error\":\"{}\"}}", error)))
-                    .await;
-            }
+                Err(error) => {
+                    let _ = socket
+                        .send(Message::Text(format!("{{\"error\":\"{}\"}}", error)))
+                        .await;
+                }
+            },
+            Err(_) => continue,
         }
     }
 }

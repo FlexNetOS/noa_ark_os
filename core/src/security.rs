@@ -2,13 +2,12 @@
 
 use crate::utils::{current_timestamp_millis, simple_hash};
 use crate::time::current_timestamp_millis;
-use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Mutex, OnceLock};
 
 pub type UserId = u64;
 
@@ -204,14 +203,21 @@ impl PolicyEnforcer {
     }
 }
 
-lazy_static! {
-    static ref USER_TABLE: Arc<Mutex<HashMap<UserId, User>>> = Arc::new(Mutex::new(HashMap::new()));
-    static ref POLICY_ENFORCER: Arc<Mutex<PolicyEnforcer>> =
-        Arc::new(Mutex::new(PolicyEnforcer::new(
+static USER_TABLE: OnceLock<Mutex<HashMap<UserId, User>>> = OnceLock::new();
+static POLICY_ENFORCER: OnceLock<Mutex<PolicyEnforcer>> = OnceLock::new();
+static OPERATION_COUNTER: AtomicU64 = AtomicU64::new(1);
+
+fn user_table() -> &'static Mutex<HashMap<UserId, User>> {
+    USER_TABLE.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn policy_enforcer() -> &'static Mutex<PolicyEnforcer> {
+    POLICY_ENFORCER.get_or_init(|| {
+        Mutex::new(PolicyEnforcer::new(
             std::env::var("NOA_POLICY_SECRET")
-                .unwrap_or_else(|_| "noa-ark-default-policy".to_string())
-        )));
-    static ref OPERATION_COUNTER: AtomicU64 = AtomicU64::new(1);
+                .unwrap_or_else(|_| "noa-ark-default-policy".to_string()),
+        ))
+    })
 }
 
 fn next_operation_id() -> String {
@@ -244,6 +250,7 @@ pub fn init() -> Result<(), &'static str> {
         permissions: vec![Permission::Admin],
     };
 
+    let mut table = user_table().lock().unwrap();
     let mut table = USER_TABLE
         .lock()
         .map_err(|_| "user table mutex poisoned")?;
@@ -253,6 +260,9 @@ pub fn init() -> Result<(), &'static str> {
 }
 
 fn check_permission_inner(user_id: UserId, permission: Permission) -> bool {
+    let table = user_table().lock().unwrap();
+    if let Some(user) = table.get(&user_id) {
+        user.permissions.contains(&Permission::Admin) || user.permissions.contains(&permission)
     let table = USER_TABLE.lock();
     if let Ok(table) = table {
         if let Some(user) = table.get(&user_id) {
@@ -266,9 +276,14 @@ fn check_permission_inner(user_id: UserId, permission: Permission) -> bool {
     }
 }
 
+fn register_user_inner(user: User) {
+    let mut table = user_table().lock().unwrap();
+    table.insert(user.id, user);
+}
+
 /// Sign and register an operation in the policy ledger.
 pub fn enforce_operation(record: OperationRecord) -> Result<SignedOperation, PolicyError> {
-    let mut enforcer = POLICY_ENFORCER
+    let mut enforcer = policy_enforcer()
         .lock()
         .map_err(|_| PolicyError::SigningFailed("policy mutex poisoned".to_string()))?;
     enforcer.sign_and_register(record)
@@ -276,7 +291,7 @@ pub fn enforce_operation(record: OperationRecord) -> Result<SignedOperation, Pol
 
 /// Verify a signed operation using the policy enforcement secret.
 pub fn verify_signed_operation(operation: &SignedOperation) -> bool {
-    let enforcer = POLICY_ENFORCER.lock();
+    let enforcer = policy_enforcer().lock();
     if let Ok(enforcer) = enforcer {
         enforcer.verify(operation)
     } else {
@@ -291,7 +306,7 @@ pub fn verify_signed_operation(operation: &SignedOperation) -> bool {
 /// system lifetime, retrieve signed operations from persistent ledger storage
 /// (e.g., blockchain, append-only database, or external audit systems).
 pub fn audit_trail() -> Vec<SignedOperation> {
-    let enforcer = POLICY_ENFORCER.lock();
+    let enforcer = policy_enforcer().lock();
     if let Ok(enforcer) = enforcer {
         enforcer.audit_trail()
     } else {
