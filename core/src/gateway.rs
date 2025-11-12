@@ -5,6 +5,8 @@ use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::fmt::Formatter;
 use std::str::FromStr;
+use std::collections::{HashMap, HashSet};
+use std::fmt;
 use std::sync::{Arc, OnceLock, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::time::{Duration, SystemTime};
 
@@ -494,6 +496,10 @@ pub struct Gateway {
     topology: RwLock<HashMap<SymbolKind, HashSet<ConnectorId>>>,
     schemas: RwLock<HashMap<String, SymbolSchema>>,
     telemetry: RwLock<Vec<TelemetryEvent>>,
+#[derive(Debug, Default)]
+pub struct Gateway {
+    connectors: RwLock<HashMap<ConnectorId, ConnectorRecord>>,
+    topology: RwLock<HashMap<SymbolKind, HashSet<ConnectorId>>>,
 }
 
 impl Gateway {
@@ -642,6 +648,10 @@ impl Gateway {
             format!("{}@{}", symbol.id, symbol.version),
         )?;
 
+        connectors.insert(id.clone(), ConnectorRecord::new(symbol, policy));
+
+        self.topology_write()?.entry(kind).or_default().insert(id);
+
         Ok(())
     }
 
@@ -681,6 +691,10 @@ impl Gateway {
             format!("scan:{}", events.len()),
         )?;
         Ok(events)
+        Ok(connectors
+            .values_mut()
+            .map(|record| record.refresh(now))
+            .collect())
     }
 
     /// Calculate an optimized route for a given intent.
