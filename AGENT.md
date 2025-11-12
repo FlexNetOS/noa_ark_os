@@ -52,6 +52,9 @@ Establish one strict operating policy for every agent-driven action so each task
 * Provision dependencies via gateway-managed manifests (see `services/gateway/service.py`, `server/gateway/`, `.workspace/config/`, `.workspace/registry/*.json`, `tools/portable_builder.py`) so nothing bypasses archival or verification controls.
 * Route every environment variable, credential, configuration knob, dependent runtime, and secret through gateway shims and adapters maintained in `server/gateway/src/*.rs`, `services/gateway/`, `agents/src/implementations/generated/infrastructure/*gateway*`, and related tooling; no ad-hoc `.env` or external service dependencies.
 * Record environmental assumptions and manifest updates in the Evidence Ledger and mirror them in `.workspace/registry/` (or corresponding gateway config files) whenever a task introduces or changes gateway-managed configuration.
+* Provision dependencies via gateway-managed manifests (package registries, build kits, toolchains) so nothing bypasses archival or verification controls.
+* Route every environment variable, credential, configuration knob, and secret through gateway shims (`agents/gateways/`, `tools/`, `.workspace/registry/`) with auditable definitions and fallbacks; no ad-hoc `.env` or external service dependencies.
+* Record environmental assumptions in the Evidence Ledger whenever a task introduces or changes gateway-managed configuration.
 
 **Archival Procedure (mandatory):**
 

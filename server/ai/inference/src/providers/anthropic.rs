@@ -23,6 +23,7 @@ impl AnthropicProvider {
 #[async_trait]
 impl Provider for AnthropicProvider {
     async fn complete(&self, request: CompletionRequest) -> anyhow::Result<CompletionResponse> {
+        info!(model = %self.config.model, "anthropic offline completion");
         tracing::info!(
             model = self.config.model.as_str(),
             "anthropic offline completion"
