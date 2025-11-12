@@ -25,7 +25,7 @@ External partners can publish blueprint automations that extend Noa Ark workflow
 
 - **Intake:** Submit a merge request adding your blueprint entry under `workflow/blueprints/<slug>` with manifest and assets.
 - **Automated Checks:** Kernel CI validates manifest schema, test evidence, security scans, and UI descriptors.
-- **Human Review:** Workflow maintainers verify design, telemetry quality, and compliance posture within five business days.
+- **Human Review:** Blueprint catalog maintainers verify design, telemetry quality, and compliance posture within five business days.
 - **Publication:** Approved blueprints receive a kernel-signed catalog entry and are surfaced in the UI with the `Third-Party` badge.
 
 ## Maintenance Expectations
