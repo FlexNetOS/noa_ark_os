@@ -104,8 +104,13 @@ impl DropProcessor {
         }
 
         let mut metadata = validation.metadata;
-        if let Ok(serialized) = serde_json::to_string(&build_artifacts) {
-            metadata.insert("build_artifacts".to_string(), serialized);
+        match serde_json::to_string(&build_artifacts) {
+            Ok(serialized) => {
+                metadata.insert("build_artifacts".to_string(), serialized);
+            }
+            Err(e) => {
+                warn!("Failed to serialize build_artifacts for drop {}: {}", drop_id, e);
+            }
         }
 
         let errors = validation.errors;
