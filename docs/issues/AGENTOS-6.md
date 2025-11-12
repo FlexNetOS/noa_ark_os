@@ -26,7 +26,7 @@ Depends on: [AGENTOS-3](AGENTOS-3.md), [AGENTOS-4](AGENTOS-4.md), [AGENTOS-5](AG
 - Ecosystem bundle artifact published with release notes, install instructions, and verification checklist.
 - Community announcement drives adoption metrics (downloads, sign-ups) tracked via analytics dashboards.
 
-**Dependencies:** Completion of tasks 1–6, coordination with marketing/comms, publication infrastructure for release bundles.
+**Dependencies:** AGENTOS-3, AGENTOS-4, AGENTOS-5; coordination with marketing/comms; publication infrastructure for release bundles.
 
 **Risks & mitigation:** Launch alignment may slip due to upstream blockers → maintain dependency tracker and contingency date; community guidelines adoption risk → run office hours/webinars post-launch.
 
