@@ -1,3 +1,6 @@
+* text=auto eol=lf
+
+# Preserve LF for shell scripts
 # Global text normalization
 * text=auto
 
@@ -5,7 +8,22 @@
 *.sh text eol=lf
 *.bash text eol=lf
 
-# PowerShell scripts use CRLF
+# Windows-native scripts remain CRLF
 *.ps1 text eol=crlf
 *.psm1 text eol=crlf
 *.psd1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary assets
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.mp4 binary
+*.mp3 binary

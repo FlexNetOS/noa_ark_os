@@ -103,3 +103,12 @@ successes so the system proactively shifts load toward healthy, well-proven conn
 By codifying this schema contract plus its security, execution, and adaptive layers, the gateway now
 delivers the ontology, automation, and observability pillars of the roadmap while staying auditable
 and predictable.
+## Telemetry Feed
+
+Every registry, scan, route, and self-heal action emits `TelemetryEvent`s. Consumers should drain
+telemetry via `Gateway::drain_telemetry` and forward it to observability pipelines. Events include
+timestamp, kind (`SchemaRegistered`, `ConnectorRegistered`, `ScanCompleted`, `RouteCompiled`,
+`SelfHealSuggested`), and free-form context strings that reference connector IDs or counts.
+
+By codifying this schema contract the gateway delivers the ontology, automation, and observability
+pillars of the roadmap while staying auditable and predictable.

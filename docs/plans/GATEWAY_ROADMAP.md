@@ -33,6 +33,7 @@
 - ✅ **Phase 4 – Observability & Knowledge Graph**: Expanded telemetry now tracks attestation, routing model updates, and tool leases, providing richer signals for anomaly detection and digital-twin analytics.
 - ✅ **Phase 5 – Execution Fabric & Acceleration**: Shared `ToolArtifact` catalog with sandbox-aware leases allows multiple connectors to mount common tooling without duplication, enforcing concurrency limits for deterministic QoS.
 - 🚧 **Phase 6+**: Federation, partner trust exchange, and DX/documentation automation remain in-flight future efforts.
+- 🚧 **Phase 3+**: Automation fabric, observability graph, execution acceleration, federation, and DX streams remain on the roadmap; telemetry hooks and schema metadata lay the groundwork for these follow-on phases.
 
 ## Phase Highlights & Key Workstreams
 

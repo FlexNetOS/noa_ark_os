@@ -1,0 +1,26 @@
+{
+  "name": "noaUnifiedShell",
+  "displayName": "NOA Unified Shell",
+  "expo": {
+    "scheme": "noaark",
+    "plugins": [
+      "@react-native-community/async-storage",
+      "expo-font"
+    ],
+    "android": {
+      "package": "com.noa.ark.shell",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#101225"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "com.noa.ark.shell",
+      "supportsTablet": true
+    },
+    "extra": {
+      "workflowApiBase": "https://api.noa-ark-os.local/unified",
+      "chatAgent": "ops-studio"
+    }
+  }
+}
