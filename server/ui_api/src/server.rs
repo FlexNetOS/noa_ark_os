@@ -200,13 +200,13 @@ impl UiApiServer {
                         .await
                         .map_err(|err| internal_error(format!("failed to read upload chunk: {err}")))?
                     {
-                        total_size += chunk.len();
-                        if total_size > MAX_UPLOAD_SIZE {
+                        if total_size + chunk.len() > MAX_UPLOAD_SIZE {
                             return Err(bad_request(format!(
                                 "upload size exceeds maximum allowed size of {} MB",
                                 MAX_UPLOAD_SIZE / (1024 * 1024)
                             )));
                         }
+                        total_size += chunk.len();
                         file_data.extend_from_slice(&chunk);
                     }
                     
