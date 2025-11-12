@@ -37,7 +37,7 @@ pub enum RuntimeComponent {
 }
 
 /// Available execution backends for each runtime component.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ExecutionBackend {
     LlamaCppCpu,
     LlamaCppGpu {
@@ -81,7 +81,7 @@ pub fn select_execution_plan(
     profile: &HardwareProfile,
     policy: &RuntimePolicy,
 ) -> Result<RuntimePlan> {
-    let mut plan = RuntimePlan::new();
+    let mut plan = RuntimePlan::default();
 
     // Language model backend selection
     let llama_backend = choose_llama_backend(profile, policy);

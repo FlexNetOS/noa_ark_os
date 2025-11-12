@@ -63,9 +63,6 @@ pub struct Pipeline {
     pub approvals_required: Vec<String>,
     #[serde(default)]
     pub approvals_granted: Vec<String>,
-    pub crc_job_id: Option<String>, // new: link to CRC job
-    pub auto_approved: bool,        // new: AI auto-approval
-    pub ai_confidence: f32,         // new: AI confidence score
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -254,15 +251,6 @@ impl CICDSystem {
                 }
             }
         }
-
-        Ok(id)
-    }
-
-        Ok(id)
-    }
-
-        Ok(id)
-    }
 
         Ok(id)
     }

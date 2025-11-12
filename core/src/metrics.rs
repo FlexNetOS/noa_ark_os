@@ -1,13 +1,13 @@
-use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
-use std::sync::RwLock;
+use std::sync::{OnceLock, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 const MAX_HISTORY: usize = 32;
 
-lazy_static! {
-    static ref REGISTRY: RwLock<TelemetryRegistry> = RwLock::new(TelemetryRegistry::default());
+fn registry() -> &'static RwLock<TelemetryRegistry> {
+    static REGISTRY: OnceLock<RwLock<TelemetryRegistry>> = OnceLock::new();
+    REGISTRY.get_or_init(|| RwLock::new(TelemetryRegistry::default()))
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -153,17 +153,17 @@ fn derive_load_level(cpu: f32, memory: f32, inference_queue: f32, sandbox_queue:
 }
 
 pub fn record(snapshot: TelemetrySnapshot) {
-    let mut registry = REGISTRY.write().expect("metrics registry lock poisoned");
+    let mut registry = registry().write().expect("metrics registry lock poisoned");
     registry.record(snapshot);
 }
 
 pub fn current_snapshot() -> Option<TelemetrySnapshot> {
-    let registry = REGISTRY.read().expect("metrics registry lock poisoned");
+    let registry = registry().read().expect("metrics registry lock poisoned");
     registry.latest()
 }
 
 pub fn aggregated() -> Option<AggregatedTelemetry> {
-    let registry = REGISTRY.read().expect("metrics registry lock poisoned");
+    let registry = registry().read().expect("metrics registry lock poisoned");
     registry.aggregated()
 }
 
@@ -175,7 +175,7 @@ pub fn current_load_level() -> LoadLevel {
 
 #[cfg(test)]
 pub fn reset() {
-    let mut registry = REGISTRY.write().expect("metrics registry lock poisoned");
+    let mut registry = registry().write().expect("metrics registry lock poisoned");
     registry.clear();
 }
 

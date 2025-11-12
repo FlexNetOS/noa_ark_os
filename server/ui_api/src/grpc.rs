@@ -3,13 +3,12 @@ use std::pin::Pin;
 use axum::async_trait;
 use chrono::{DateTime, Utc};
 use futures::Stream;
-use prost_types::{Struct, Timestamp};
+use prost_types::{ListValue, Struct, Timestamp};
 use tokio_stream::StreamExt;
 use tonic::{Request, Response, Status};
 
-use crate::schema::{PageEnvelope, RealTimeEvent};
+use crate::schema::{LayoutSlot, PageEnvelope, RealTimeEvent};
 use crate::server::UiApiState;
-use crate::session::SessionBridge;
 
 pub mod proto {
     tonic::include_proto!("noa.ui");
@@ -62,9 +61,10 @@ impl proto::ui_schema_service_server::UiSchemaService for UiSchemaGrpc {
                 .ok_or(Status::unavailable("streaming disabled"))?
         };
 
-        let mut stream = bridge.forward_events();
+        let stream = bridge.forward_events();
         let output = async_stream::try_stream! {
-            while let Some(event) = stream.next().await {
+            let mut stream = Box::pin(stream);
+            while let Some(event) = stream.as_mut().next().await {
                 yield realtime_to_proto(event)?;
             }
         };
@@ -87,28 +87,37 @@ fn page_envelope_to_proto(envelope: PageEnvelope) -> Result<proto::PageEnvelope,
         .schema
         .regions
         .into_iter()
-        .map(|region| proto::LayoutRegion {
-            id: region.id,
-            layout: region.layout,
-            columns: region.columns.unwrap_or_default(),
-            gap: region.gap.unwrap_or_default(),
-            surface: region.surface.unwrap_or_default(),
-            slot: region.slot.map(|slot| slot as i32).unwrap_or_default(),
-            widgets: region
+        .map(|region| -> Result<proto::LayoutRegion, Status> {
+            let widgets = region
                 .widgets
                 .into_iter()
-                .map(|widget| proto::WidgetSchema {
-                    id: widget.id,
-                    kind: format!("{:?}", widget.kind),
-                    variant: widget.variant.unwrap_or_default(),
-                    props: widget
-                        .props
-                        .and_then(|value| Struct::try_from(value).ok())
-                        .unwrap_or_default(),
+                .map(|widget| {
+                    Ok(proto::WidgetSchema {
+                        id: widget.id,
+                        kind: format!("{:?}", widget.kind),
+                        variant: widget.variant.unwrap_or_default(),
+                        props: widget
+                            .props
+                            .map(value_to_struct)
+                            .transpose()?,
+                    })
                 })
-                .collect(),
+                .collect::<Result<Vec<_>, Status>>()?;
+
+            Ok(proto::LayoutRegion {
+                id: region.id,
+                layout: region.layout,
+                columns: region.columns.unwrap_or_default(),
+                gap: region.gap.unwrap_or_default(),
+                surface: region.surface.unwrap_or_default(),
+                slot: region
+                    .slot
+                    .map(slot_to_string)
+                    .unwrap_or_default(),
+                widgets,
+            })
         })
-        .collect();
+        .collect::<Result<Vec<_>, Status>>()?;
 
     let realtime = envelope
         .realtime
@@ -116,13 +125,17 @@ fn page_envelope_to_proto(envelope: PageEnvelope) -> Result<proto::PageEnvelope,
         .map(realtime_to_proto)
         .collect::<Result<Vec<_>, _>>()?;
 
-    let resume_token = envelope.resume_token.map(|token| proto::ResumeToken {
-        workflow_id: token.workflow_id,
-        stage_id: token.stage_id.unwrap_or_default(),
-        checkpoint: token.checkpoint,
-        issued_at: Some(timestamp_from_str(&token.issued_at)?),
-        expires_at: Some(timestamp_from_str(&token.expires_at)?),
-    });
+    let resume_token = if let Some(token) = envelope.resume_token {
+        Some(proto::ResumeToken {
+            workflow_id: token.workflow_id,
+            stage_id: token.stage_id.unwrap_or_default(),
+            checkpoint: token.checkpoint,
+            issued_at: Some(timestamp_from_str(&token.issued_at)?),
+            expires_at: Some(timestamp_from_str(&token.expires_at)?),
+        })
+    } else {
+        None
+    };
 
     Ok(proto::PageEnvelope {
         schema: Some(proto::PageSchema {
@@ -141,9 +154,7 @@ fn realtime_to_proto(event: RealTimeEvent) -> Result<proto::RealTimeEvent, Statu
     Ok(proto::RealTimeEvent {
         event_type: event.event_type,
         workflow_id: event.workflow_id,
-        payload: Some(
-            Struct::try_from(event.payload).map_err(|_| Status::internal("invalid payload"))?,
-        ),
+        payload: Some(value_to_struct(event.payload)?),
         timestamp: Some(timestamp_from_str(&event.timestamp)?),
     })
 }
@@ -156,4 +167,50 @@ fn timestamp_from_str(value: &str) -> Result<Timestamp, Status> {
         seconds: parsed.timestamp(),
         nanos: parsed.timestamp_subsec_nanos() as i32,
     })
+}
+
+fn value_to_struct(value: serde_json::Value) -> Result<Struct, Status> {
+    match value {
+        serde_json::Value::Object(map) => {
+            let fields = map
+                .into_iter()
+                .map(|(key, value)| Ok((key, value_to_prost_value(value)?)))
+                .collect::<Result<_, Status>>()?;
+            Ok(Struct { fields })
+        }
+        _ => Err(Status::internal("invalid payload")),
+    }
+}
+
+fn value_to_prost_value(value: serde_json::Value) -> Result<prost_types::Value, Status> {
+    use prost_types::value::Kind;
+
+    let kind = match value {
+        serde_json::Value::Null => Kind::NullValue(0),
+        serde_json::Value::Bool(value) => Kind::BoolValue(value),
+        serde_json::Value::Number(number) => Kind::NumberValue(
+            number
+                .as_f64()
+                .ok_or_else(|| Status::internal("invalid number"))?,
+        ),
+        serde_json::Value::String(value) => Kind::StringValue(value),
+        serde_json::Value::Array(values) => Kind::ListValue(ListValue {
+            values: values
+                .into_iter()
+                .map(value_to_prost_value)
+                .collect::<Result<_, Status>>()?,
+        }),
+        serde_json::Value::Object(map) => Kind::StructValue(Struct {
+            fields: map
+                .into_iter()
+                .map(|(key, value)| Ok((key, value_to_prost_value(value)?)))
+                .collect::<Result<_, Status>>()?,
+        }),
+    };
+
+    Ok(prost_types::Value { kind: Some(kind) })
+}
+
+fn slot_to_string(slot: LayoutSlot) -> String {
+    format!("{:?}", slot)
 }

@@ -1,7 +1,7 @@
 //! Kernel initialization and capability lifecycle orchestration.
 
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 
 use crate::capabilities::builtin::register_default_capabilities;
 use crate::capabilities::{CapabilityError, CapabilityRegistry, KernelHandle};
@@ -9,8 +9,9 @@ use crate::config::manifest::{KernelManifest, ManifestError};
 
 static KERNEL_RUNNING: AtomicBool = AtomicBool::new(false);
 
-lazy_static::lazy_static! {
-    static ref GLOBAL_KERNEL: Mutex<Option<KernelHandle>> = Mutex::new(None);
+fn global_kernel() -> &'static Mutex<Option<KernelHandle>> {
+    static GLOBAL_KERNEL: OnceLock<Mutex<Option<KernelHandle>>> = OnceLock::new();
+    GLOBAL_KERNEL.get_or_init(|| Mutex::new(None))
 }
 
 /// Kernel initialization errors.
@@ -48,7 +49,7 @@ pub fn init_with_manifest(manifest: KernelManifest) -> Result<KernelHandle, Kern
     registry.initialize_autostart(&handle)?;
 
     {
-        let mut global = GLOBAL_KERNEL.lock().unwrap();
+        let mut global = global_kernel().lock().unwrap();
         *global = Some(handle.clone());
     }
 
@@ -58,7 +59,7 @@ pub fn init_with_manifest(manifest: KernelManifest) -> Result<KernelHandle, Kern
 
 /// Access the active kernel handle, if initialized.
 pub fn handle() -> Option<KernelHandle> {
-    GLOBAL_KERNEL.lock().unwrap().clone()
+    global_kernel().lock().unwrap().clone()
 }
 
 /// Check if the kernel is running.
@@ -69,7 +70,7 @@ pub fn is_running() -> bool {
 /// Shutdown the kernel and all registered capabilities.
 pub fn shutdown() {
     let handle = {
-        let mut global = GLOBAL_KERNEL.lock().unwrap();
+        let mut global = global_kernel().lock().unwrap();
         global.take()
     };
 

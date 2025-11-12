@@ -132,25 +132,25 @@ impl WorkflowEngine {
             states: Arc::new(Mutex::new(HashMap::new())),
             stage_states: Arc::new(Mutex::new(HashMap::new())),
             instrumentation: Arc::new(instrumentation),
+            kernel: None,
+            event_stream: Arc::new(Mutex::new(None)),
         }
     }
 
     pub fn instrumentation(&self) -> Arc<PipelineInstrumentation> {
         Arc::clone(&self.instrumentation)
     }
-    
-            kernel: None,
-        }
-    }
 
     /// Create a workflow engine that interacts with kernel capabilities.
     pub fn with_kernel(kernel: KernelHandle) -> Self {
+        let instrumentation = PipelineInstrumentation::new()
+            .expect("failed to initialise pipeline instrumentation");
         Self {
             workflows: Arc::new(Mutex::new(HashMap::new())),
             states: Arc::new(Mutex::new(HashMap::new())),
             stage_states: Arc::new(Mutex::new(HashMap::new())),
+            instrumentation: Arc::new(instrumentation),
             kernel: Some(kernel),
-        }
             event_stream: Arc::new(Mutex::new(None)),
         }
     }
@@ -320,10 +320,6 @@ impl WorkflowEngine {
                 );
             }
         }
-
-            "[WORKFLOW] Executing task: agent={}, action={}",
-            task.agent, task.action
-        );
         // Implementation would dispatch to appropriate agent
         Ok(())
     }
@@ -403,13 +399,13 @@ impl WorkflowEngine {
         stage_states
             .entry(workflow_id.to_string())
             .or_insert_with(HashMap::new)
-            .insert(stage_name.to_string(), state);
+            .insert(stage_name.to_string(), state.clone());
 
         let timestamp = now_iso();
         self.emit_event(WorkflowEvent::StageState {
             workflow_id: workflow_id.to_string(),
             stage_id: stage_name.to_string(),
-            state,
+            state: state.clone(),
             timestamp: timestamp.clone(),
         });
 
@@ -438,6 +434,8 @@ impl WorkflowEngine {
 
 fn parameters_to_value(parameters: &HashMap<String, Value>) -> Value {
     serde_json::to_value(parameters).unwrap_or(Value::Null)
+}
+
 fn now_iso() -> String {
     Utc::now().to_rfc3339()
 }

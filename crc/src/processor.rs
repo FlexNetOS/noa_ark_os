@@ -79,17 +79,7 @@ impl DropProcessor {
             validation.confidence * 100.0
         );
 
-        // Stage 4: Determine sandbox assignment
-        let sandbox = self.assign_sandbox(&source_type, validation.confidence);
-        info!(
-            "✓ Assigned to {:?} ({:.1}% confidence)",
-            sandbox,
-            validation.confidence * 100.0
         let validation_confidence = validation.confidence;
-        info!(
-            "✓ Validation complete (confidence: {:.1}%)",
-            validation_confidence * 100.0
-        );
 
         // Stage 4: Determine sandbox assignment
         let sandbox = self.assign_sandbox(&source_type, validation_confidence);

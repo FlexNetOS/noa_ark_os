@@ -1,21 +1,20 @@
 //! Memory management subsystem with registry graph ingestion
 
-use lazy_static::lazy_static;
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, OnceLock, RwLock};
 
 const SUPPORTED_REGISTRY_VERSION: &str = "1.0.0";
 
 static ALLOCATED_MEMORY: AtomicUsize = AtomicUsize::new(0);
 
-lazy_static! {
-    static ref REGISTRY_GRAPH: Arc<RwLock<RegistryGraph>> =
-        Arc::new(RwLock::new(RegistryGraph::default()));
+fn registry_graph() -> &'static Arc<RwLock<RegistryGraph>> {
+    static REGISTRY_GRAPH: OnceLock<Arc<RwLock<RegistryGraph>>> = OnceLock::new();
+    REGISTRY_GRAPH.get_or_init(|| Arc::new(RwLock::new(RegistryGraph::default())))
 }
 
 /// Initialize memory management and load the registry graph.
@@ -110,7 +109,7 @@ pub fn load_registry<P: AsRef<Path>>(root: P) -> Result<(), RegistryError> {
 
     graph.validate()?;
 
-    let mut global = REGISTRY_GRAPH
+    let mut global = registry_graph()
         .write()
         .map_err(|_| RegistryError::PoisonedState("registry graph".into()))?;
     *global = graph;
@@ -120,7 +119,7 @@ pub fn load_registry<P: AsRef<Path>>(root: P) -> Result<(), RegistryError> {
 
 /// Obtain an immutable snapshot of the registry graph.
 pub fn registry_snapshot() -> Result<RegistryGraph, RegistryError> {
-    REGISTRY_GRAPH
+    registry_graph()
         .read()
         .map(|guard| guard.clone())
         .map_err(|_| RegistryError::PoisonedState("registry graph".into()))
@@ -128,7 +127,7 @@ pub fn registry_snapshot() -> Result<RegistryGraph, RegistryError> {
 
 /// Fetch a component by ID.
 pub fn registry_component(id: &str) -> Option<RegistryNode> {
-    REGISTRY_GRAPH
+    registry_graph()
         .read()
         .ok()
         .and_then(|graph| graph.component(id))
@@ -136,7 +135,7 @@ pub fn registry_component(id: &str) -> Option<RegistryNode> {
 
 /// Fetch the dependencies for a given component ID.
 pub fn registry_dependencies(id: &str) -> Vec<RegistryNode> {
-    REGISTRY_GRAPH
+    registry_graph()
         .read()
         .map(|graph| graph.dependencies_of(id))
         .unwrap_or_default()
@@ -144,7 +143,7 @@ pub fn registry_dependencies(id: &str) -> Vec<RegistryNode> {
 
 /// Fetch the dependents for a given component ID.
 pub fn registry_dependents(id: &str) -> Vec<RegistryNode> {
-    REGISTRY_GRAPH
+    registry_graph()
         .read()
         .map(|graph| graph.dependents_of(id))
         .unwrap_or_default()
@@ -152,7 +151,7 @@ pub fn registry_dependents(id: &str) -> Vec<RegistryNode> {
 
 /// Fetch component nodes associated with a given file.
 pub fn registry_components_for_file(path: &str) -> Vec<RegistryNode> {
-    REGISTRY_GRAPH
+    registry_graph()
         .read()
         .map(|graph| graph.components_for_file(path))
         .unwrap_or_default()
