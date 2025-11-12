@@ -317,7 +317,7 @@ impl CICDSystem {
                     return Err("Pipeline requires human review before execution".to_string());
                 }
                 if !pipeline.approvals_required.is_empty()
-                    && pipeline.approvals_granted.len() < pipeline.approvals_required.len()
+                    && !pipeline.approvals_required.iter().all(|required| pipeline.approvals_granted.contains(required))
                 {
                     return Err("Pipeline is waiting for documentation approvals".to_string());
                 }
