@@ -7,6 +7,7 @@ use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::sync::{Mutex, OnceLock};
 
 pub type UserId = u64;
@@ -203,6 +204,24 @@ impl PolicyEnforcer {
     }
 }
 
+fn user_table() -> &'static Arc<Mutex<HashMap<UserId, User>>> {
+    static USER_TABLE: OnceLock<Arc<Mutex<HashMap<UserId, User>>>> = OnceLock::new();
+    USER_TABLE.get_or_init(|| Arc::new(Mutex::new(HashMap::new())))
+}
+
+fn policy_enforcer() -> &'static Arc<Mutex<PolicyEnforcer>> {
+    static POLICY_ENFORCER: OnceLock<Arc<Mutex<PolicyEnforcer>>> = OnceLock::new();
+    POLICY_ENFORCER.get_or_init(|| {
+        Arc::new(Mutex::new(PolicyEnforcer::new(
+            std::env::var("NOA_POLICY_SECRET")
+                .unwrap_or_else(|_| "noa-ark-default-policy".to_string()),
+        )))
+    })
+}
+
+fn operation_counter() -> &'static AtomicU64 {
+    static OPERATION_COUNTER: OnceLock<AtomicU64> = OnceLock::new();
+    OPERATION_COUNTER.get_or_init(|| AtomicU64::new(1))
 static USER_TABLE: OnceLock<Mutex<HashMap<UserId, User>>> = OnceLock::new();
 static POLICY_ENFORCER: OnceLock<Mutex<PolicyEnforcer>> = OnceLock::new();
 static OPERATION_COUNTER: AtomicU64 = AtomicU64::new(1);
@@ -221,22 +240,9 @@ fn policy_enforcer() -> &'static Mutex<PolicyEnforcer> {
 }
 
 fn next_operation_id() -> String {
-    let counter = OPERATION_COUNTER.fetch_add(1, Ordering::SeqCst);
+    let counter = operation_counter().fetch_add(1, Ordering::SeqCst);
     let timestamp = current_timestamp_millis();
     format!("op-{}-{}", timestamp, counter)
-}
-
-fn simple_hash(value: &str) -> String {
-    const OFFSET_BASIS: u64 = 14695981039346656037;
-    const FNV_PRIME: u64 = 1099511628211;
-
-    let mut hash = OFFSET_BASIS;
-    for byte in value.as_bytes() {
-        hash ^= u64::from(*byte);
-        hash = hash.wrapping_mul(FNV_PRIME);
-    }
-
-    format!("{:016x}", hash)
 }
 
 /// Initialize security subsystem
@@ -250,6 +256,7 @@ pub fn init() -> Result<(), &'static str> {
         permissions: vec![Permission::Admin],
     };
 
+    let mut table = user_table()
     let mut table = user_table().lock().unwrap();
     let mut table = USER_TABLE
         .lock()
@@ -260,6 +267,7 @@ pub fn init() -> Result<(), &'static str> {
 }
 
 fn check_permission_inner(user_id: UserId, permission: Permission) -> bool {
+    let table = user_table().lock();
     let table = user_table().lock().unwrap();
     if let Some(user) = table.get(&user_id) {
         user.permissions.contains(&Permission::Admin) || user.permissions.contains(&permission)
@@ -373,12 +381,8 @@ mod tests {
     }
 }
 
-fn register_user_inner(user: User) {
-    let mut table = USER_TABLE.lock().unwrap();
-}
-
 fn register_user_inner(user: User) -> Result<(), &'static str> {
-    let mut table = USER_TABLE
+    let mut table = user_table()
         .lock()
         .map_err(|_| "user table mutex poisoned")?;
     table.insert(user.id, user);

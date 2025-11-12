@@ -74,11 +74,12 @@ impl DropProcessor {
 
         // Stage 3: Validation
         let validation = self.validate(&source_path, &adaptation).await?;
-        let validation_confidence = validation.confidence;
         info!(
             "✓ Validation complete (confidence: {:.1}%)",
-            validation_confidence * 100.0
+            validation.confidence * 100.0
         );
+
+        let validation_confidence = validation.confidence;
 
         // Stage 4: Determine sandbox assignment
         let sandbox = self.assign_sandbox(&source_type, validation_confidence);
