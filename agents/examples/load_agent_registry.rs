@@ -2,7 +2,19 @@
 //!
 //! Demonstrates loading the 928-agent directory embedded in the crate
 //!
-//! Usage:
+//! ## Layer Mapping
+//!
+//! The NOA ARK OS uses a 5-layer architecture. Historical layer names map to
+//! the new L1-L5 naming convention as follows:
+//!
+//! - **L1 (Autonomy)**: Executive layer - Root CECCA, Constitutional agents
+//! - **L2 (Reasoning)**: Board layer - Board & Executive decision-making agents
+//! - **L3 (Orchestration)**: Stack-Chief layer - Chief Commanders, Orchestrators
+//! - **L4 (Operations)**: Specialist layer - Specialists, Workers, domain experts
+//! - **L5 (Infrastructure)**: Micro layer - Micro agents, infrastructure services
+//!
+//! ## Usage
+//!
 //!   cargo run --example load_agent_registry
 //!   cargo run --example load_agent_registry -- path\to\agent_directory.csv
 
@@ -84,7 +96,7 @@ fn main() -> anyhow::Result<()> {
 
                     // Show first 3 agents
                     for agent in agents.iter().take(3) {
-                        println!("    • {} - {}", agent.agent_name, agent.role);
+                        println!("    • {} - {}", agent.name, agent.role);
                         if !agent.purpose.is_empty() {
                             let purpose = if agent.purpose.len() > 60 {
                                 format!("{}...", &agent.purpose[..60])

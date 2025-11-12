@@ -107,6 +107,10 @@ fn create_file_inner(path: String, permissions: u32) -> Result<(), &'static str>
 }
 
 fn get_file_inner(path: &str) -> Option<FileDescriptor> {
+    let table = FILE_TABLE.lock().unwrap();
+    table.get(path).cloned()
+}
+
 /// Synchronise file descriptors with registry metadata.
 pub fn sync_registry_metadata() -> Result<(), FsError> {
     let snapshot = memory::registry_snapshot();
@@ -185,6 +189,8 @@ pub fn create_file(path: String, permissions: u32) -> Result<(), &'static str> {
 /// Get file descriptor.
 pub fn get_file(path: &str) -> Option<FileDescriptor> {
     FileSystemService::default().get_file(path)
+}
+
 /// Move a file to a new destination path.
 pub fn move_file(source: &str, destination: String) -> Result<FileDescriptor, &'static str> {
     if source == "/" {
