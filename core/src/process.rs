@@ -1,6 +1,8 @@
 //! Process management subsystem
 
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::sync::{
     atomic::{AtomicU64, Ordering},
     Mutex, OnceLock,
@@ -23,6 +25,12 @@ pub enum ProcessState {
     Terminated,
 }
 
+fn process_table() -> &'static Arc<Mutex<HashMap<ProcessId, Process>>> {
+    static PROCESS_TABLE: OnceLock<Arc<Mutex<HashMap<ProcessId, Process>>>> = OnceLock::new();
+    PROCESS_TABLE.get_or_init(|| Arc::new(Mutex::new(HashMap::new())))
+}
+
+static NEXT_PID: AtomicU64 = AtomicU64::new(1);
 static PROCESS_TABLE: OnceLock<Mutex<HashMap<ProcessId, Process>>> = OnceLock::new();
 static NEXT_PID: AtomicU64 = AtomicU64::new(1);
 

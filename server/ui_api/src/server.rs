@@ -89,6 +89,12 @@ impl UiApiServer {
 }
 
 async fn handle_websocket(mut socket: WebSocket, bridge: SessionBridge) {
+    let mut events = Box::pin(bridge.forward_events());
+    while let Some(event) = events.as_mut().next().await {
+        match serde_json::to_string(&event) {
+            Ok(payload) => {
+                if socket.send(Message::Text(payload)).await.is_err() {
+                    break;
     let mut events = bridge.subscribe();
     while let Some(event) = events.next().await {
         match event.map(SessionBridge::map_event) {

@@ -6,6 +6,7 @@ use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::sync::{Mutex, OnceLock};
 
 pub type UserId = u64;
@@ -176,6 +177,24 @@ impl PolicyEnforcer {
     }
 }
 
+fn user_table() -> &'static Arc<Mutex<HashMap<UserId, User>>> {
+    static USER_TABLE: OnceLock<Arc<Mutex<HashMap<UserId, User>>>> = OnceLock::new();
+    USER_TABLE.get_or_init(|| Arc::new(Mutex::new(HashMap::new())))
+}
+
+fn policy_enforcer() -> &'static Arc<Mutex<PolicyEnforcer>> {
+    static POLICY_ENFORCER: OnceLock<Arc<Mutex<PolicyEnforcer>>> = OnceLock::new();
+    POLICY_ENFORCER.get_or_init(|| {
+        Arc::new(Mutex::new(PolicyEnforcer::new(
+            std::env::var("NOA_POLICY_SECRET")
+                .unwrap_or_else(|_| "noa-ark-default-policy".to_string()),
+        )))
+    })
+}
+
+fn operation_counter() -> &'static AtomicU64 {
+    static OPERATION_COUNTER: OnceLock<AtomicU64> = OnceLock::new();
+    OPERATION_COUNTER.get_or_init(|| AtomicU64::new(1))
 static USER_TABLE: OnceLock<Mutex<HashMap<UserId, User>>> = OnceLock::new();
 static POLICY_ENFORCER: OnceLock<Mutex<PolicyEnforcer>> = OnceLock::new();
 static OPERATION_COUNTER: AtomicU64 = AtomicU64::new(1);
@@ -194,22 +213,9 @@ fn policy_enforcer() -> &'static Mutex<PolicyEnforcer> {
 }
 
 fn next_operation_id() -> String {
-    let counter = OPERATION_COUNTER.fetch_add(1, Ordering::SeqCst);
+    let counter = operation_counter().fetch_add(1, Ordering::SeqCst);
     let timestamp = current_timestamp_millis();
     format!("op-{}-{}", timestamp, counter)
-}
-
-fn simple_hash(value: &str) -> String {
-    const OFFSET_BASIS: u64 = 14695981039346656037;
-    const FNV_PRIME: u64 = 1099511628211;
-
-    let mut hash = OFFSET_BASIS;
-    for byte in value.as_bytes() {
-        hash ^= u64::from(*byte);
-        hash = hash.wrapping_mul(FNV_PRIME);
-    }
-
-    format!("{:016x}", hash)
 }
 
 /// Initialize security subsystem
@@ -223,6 +229,7 @@ pub fn init() -> Result<(), &'static str> {
         permissions: vec![Permission::Admin],
     };
 
+    let mut table = user_table()
     let mut table = user_table().lock().unwrap();
     table.insert(0, root);
 
@@ -230,6 +237,7 @@ pub fn init() -> Result<(), &'static str> {
 }
 
 fn check_permission_inner(user_id: UserId, permission: Permission) -> bool {
+    let table = user_table().lock();
     let table = user_table().lock().unwrap();
     if let Some(user) = table.get(&user_id) {
         user.permissions.contains(&Permission::Admin) || user.permissions.contains(&permission)
@@ -285,6 +293,57 @@ mod tests {
         assert!(verify_signed_operation(&signed));
         assert!(signed.signature.len() > 10);
     }
+
+    #[test]
+    fn test_policy_enforcer_bounded_memory() {
+        init().unwrap();
+        
+        // Clear any existing records by creating a fresh enforcer
+        let mut enforcer = PolicyEnforcer::new("test-secret".to_string());
+        
+        // Add more records than MAX_IN_MEMORY_RECORDS
+        let test_count = MAX_IN_MEMORY_RECORDS + 100;
+        for i in 0..test_count {
+            let record = OperationRecord::new(
+                OperationKind::FileMove,
+                format!("user-{}", i),
+                format!("scope-{}", i),
+            );
+            enforcer.sign_and_register(record).expect("should sign");
+        }
+        
+        // Verify that only MAX_IN_MEMORY_RECORDS are kept
+        assert_eq!(
+            enforcer.records.len(),
+            MAX_IN_MEMORY_RECORDS,
+            "Records should be bounded to MAX_IN_MEMORY_RECORDS"
+        );
+        
+        // Verify that the oldest records were evicted (first 100 should be gone)
+        // and the most recent records are kept
+        let trail = enforcer.audit_trail();
+        assert_eq!(trail.len(), MAX_IN_MEMORY_RECORDS);
+        
+        // The first record in memory should be from iteration 100 (0-99 evicted)
+        assert!(
+            trail[0].record.actor.contains("100"),
+            "First record should be from iteration 100 after eviction"
+        );
+        
+        // The last record should be from the last iteration
+        assert!(
+            trail.last().unwrap().record.actor.contains(&format!("{}", test_count - 1)),
+            "Last record should be from the final iteration"
+        );
+    }
+}
+
+fn register_user_inner(user: User) -> Result<(), &'static str> {
+    let mut table = user_table()
+        .lock()
+        .map_err(|_| "user table mutex poisoned")?;
+    table.insert(user.id, user);
+    Ok(())
 }
 
 /// Kernel-managed security capability.
