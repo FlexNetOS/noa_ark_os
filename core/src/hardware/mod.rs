@@ -155,7 +155,7 @@ fn detect_gpus(_system: &System) -> Vec<GpuProfile> {
     let mut gpus = Vec::new();
 
     // Note: sysinfo graphics_cards() API not available in this version
-    // Falling back to nvidia-smi detection
+    // Falling back to nvidia-smi detection.
     
     gpus.extend(query_nvidia_smi());
 
