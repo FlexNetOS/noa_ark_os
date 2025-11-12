@@ -277,8 +277,8 @@ fn parse_drop_type(value: &str) -> Option<(SourceType, &'static str)> {
 fn sanitize_file_name(file_name: Option<&str>) -> String {
     file_name
         .filter(|name| !name.is_empty())
-        .filter(|name| is_valid_filename(name))
         .and_then(|name| Path::new(name).file_name().and_then(|value| value.to_str()))
+        .filter(|name| is_valid_filename(name))
         .map(|name| name.to_string())
         .unwrap_or_else(|| format!("upload-{}.bin", Uuid::new_v4()))
 }
