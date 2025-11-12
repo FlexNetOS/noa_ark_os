@@ -1,11 +1,11 @@
 use noa_core::security::{self, OperationKind, OperationRecord, SignedOperation};
+use noa_core::time::current_timestamp_millis;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::fs::{self, OpenOptions};
 use std::io::{ErrorKind, Write};
 use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
-use std::time::{SystemTime, UNIX_EPOCH};
 
 const INDEX_DIR: &str = ".workspace/indexes";
 const STORAGE_MIRROR_DIR: &str = "storage/db";
@@ -292,6 +292,8 @@ impl PipelineInstrumentation {
                 .append(true)
                 .open(path)?;
             file.write_all(payload.as_bytes())?;
+            file.flush()?;
+            file.sync_all()?;
         }
         Ok(())
     }
@@ -318,13 +320,6 @@ impl Clone for PipelineInstrumentation {
             mirror_dir: self.mirror_dir.clone(),
         }
     }
-}
-
-fn current_timestamp_millis() -> u128 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|duration| duration.as_millis())
-        .unwrap_or(0)
 }
 
 fn simple_hash(value: &str) -> String {

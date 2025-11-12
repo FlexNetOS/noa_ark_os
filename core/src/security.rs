@@ -1,5 +1,6 @@
 //! Security subsystem
 
+use crate::time::current_timestamp_millis;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -7,7 +8,6 @@ use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
-use std::time::{SystemTime, UNIX_EPOCH};
 
 pub type UserId = u64;
 
@@ -214,13 +214,6 @@ fn next_operation_id() -> String {
     format!("op-{}-{}", timestamp, counter)
 }
 
-fn current_timestamp_millis() -> u128 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|duration| duration.as_millis())
-        .unwrap_or(0)
-}
-
 fn simple_hash(value: &str) -> String {
     const OFFSET_BASIS: u64 = 14695981039346656037;
     const FNV_PRIME: u64 = 1099511628211;
@@ -245,17 +238,24 @@ pub fn init() -> Result<(), &'static str> {
         permissions: vec![Permission::Admin],
     };
 
-    let mut table = USER_TABLE.lock().unwrap();
+    let mut table = USER_TABLE
+        .lock()
+        .map_err(|_| "user table mutex poisoned")?;
     table.insert(0, root);
 
     Ok(())
 }
 
 fn check_permission_inner(user_id: UserId, permission: Permission) -> bool {
-    let table = USER_TABLE.lock().unwrap();
-    if let Some(user) = table.get(&user_id) {
-        user.permissions.contains(&Permission::Admin) || user.permissions.contains(&permission)
+    let table = USER_TABLE.lock();
+    if let Ok(table) = table {
+        if let Some(user) = table.get(&user_id) {
+            user.permissions.contains(&Permission::Admin) || user.permissions.contains(&permission)
+        } else {
+            false
+        }
     } else {
+        // If mutex is poisoned, deny permission for safety
         false
     }
 }
@@ -354,7 +354,14 @@ mod tests {
 
 fn register_user_inner(user: User) {
     let mut table = USER_TABLE.lock().unwrap();
+}
+
+fn register_user_inner(user: User) -> Result<(), &'static str> {
+    let mut table = USER_TABLE
+        .lock()
+        .map_err(|_| "user table mutex poisoned")?;
     table.insert(user.id, user);
+    Ok(())
 }
 
 /// Kernel-managed security capability.
@@ -364,7 +371,9 @@ pub struct SecurityService;
 impl SecurityService {
     /// Register or update a user.
     pub fn register_user(&self, user: User) {
-        register_user_inner(user);
+        if let Err(err) = register_user_inner(user.clone()) {
+            eprintln!("[SECURITY] Failed to register user {}: {}", user.name, err);
+        }
     }
 
     /// Validate a permission check.

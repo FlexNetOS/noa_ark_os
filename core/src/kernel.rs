@@ -22,6 +22,8 @@ pub enum KernelError {
     Manifest(#[from] ManifestError),
     #[error(transparent)]
     Capability(#[from] CapabilityError),
+    #[error("initialization failed: {0}")]
+    Init(String),
 }
 
 /// Initialize the kernel with the default manifest.
