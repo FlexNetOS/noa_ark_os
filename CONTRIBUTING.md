@@ -64,7 +64,7 @@ We are committed to providing a welcoming and inclusive environment for all cont
      gh auth status --hostname github.com
      ```
 
-   > **Troubleshooting:** If you encounter `gh: GitHub authentication is required. Run "gh auth login".` rerun the login command above with a valid fine-grained PAT and ensure the `GH_TOKEN`/`GITHUB_TOKEN` variables are exported in non-interactive environments.
+   > **Troubleshooting:** If you encounter `gh: GitHub authentication is required. Run "gh auth login".`, rerun the login command above with a valid fine-grained PAT and ensure the `GH_TOKEN`/`GITHUB_TOKEN` variables are exported in non-interactive environments.
 
 5. Install development dependencies:
    ```bash
