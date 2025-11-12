@@ -24,7 +24,7 @@ export interface PromptControllerDependencies {
   loadTemplate(): Promise<string>;
   provider?: AIProvider | null;
   logRequest(entry: AiRequestLogEntry): Promise<void>;
-  now?: () => Date;
+  now?: () => number;
 }
 
 export type AiRequestLogEntry = {

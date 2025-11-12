@@ -108,12 +108,12 @@ export function AIPromptButton({ card }: AIPromptButtonProps) {
           disabled={state.loading}
         >
           {state.loading ? (
-            <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" role="status" aria-hidden>
+            <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" role="status" aria-hidden="true">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
             </svg>
           ) : (
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
               <path d="M12 3v3m0 12v3m9-9h-3M6 12H3m14.95-6.95l-2.12 2.12M8.17 15.83l-2.12 2.12m0-12.72l2.12 2.12m6.66 6.66l2.12 2.12" />
             </svg>
           )}
