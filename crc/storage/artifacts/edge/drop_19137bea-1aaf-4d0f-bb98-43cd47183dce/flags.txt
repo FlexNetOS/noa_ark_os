@@ -1,1 +1,0 @@
--C opt-level=z -C lto=fat -C codegen-units=1
