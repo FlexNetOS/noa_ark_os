@@ -38,6 +38,7 @@
       ],
       "mitt": [
         "./types/mitt"
+      ],
       "@noa-ark/server/*": [
         "../../server/*"
       ],
