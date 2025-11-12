@@ -71,6 +71,15 @@ fn main() -> anyhow::Result<()> {
             // Show sample agents from each layer
             println!("🔍 Sample Agents by Layer:\n");
 
+            // NOA 5-Layer Architecture Mapping:
+            // L1Autonomy       ← Executive      (Root CECCA, Constitutional authority)
+            // L2Reasoning      ← Board          (Board & Executive decision-making agents)
+            // L3Orchestration  ← Stack-Chief    (Chief Commanders, Orchestrators)
+            // L4Operations     ← Specialist     (Domain specialists, Worker agents)
+            // L5Infrastructure ← Micro          (Micro agents, Subject domain tasks)
+            //
+            // This hierarchy reflects organizational structure: strategic governance (L1-L2),
+            // tactical coordination (L3), operational execution (L4), and infrastructure tasks (L5).
             for layer in [
                 AgentLayer::L1Autonomy,
                 AgentLayer::L2Reasoning,
