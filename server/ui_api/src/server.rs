@@ -303,9 +303,21 @@ async fn handle_websocket(mut socket: WebSocket, bridge: SessionBridge) {
                     let _ = socket
                         .send(Message::Text(format!("{{\"error\":\"{}\"}}", error)))
                         .await;
+        let Ok(event) = event.map(SessionBridge::map_event) else {
+            continue;
+        };
+
+        match serde_json::to_string(&event) {
+            Ok(payload) => {
+                if socket.send(Message::Text(payload)).await.is_err() {
+                    break;
                 }
-            },
-            Err(_) => continue,
+            }
+            Err(error) => {
+                let _ = socket
+                    .send(Message::Text(format!("{{\"error\":\"{}\"}}", error)))
+                    .await;
+            }
         }
     }
 }

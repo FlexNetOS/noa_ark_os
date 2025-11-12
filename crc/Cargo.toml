@@ -37,6 +37,11 @@ walkdir = "2.4"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
+# Archive handling
+zip = { version = "0.6", default-features = false, features = ["deflate"] }
+flate2 = "1.0"
+tar = "0.4"
+
 # Error handling
 thiserror = "1.0"
 anyhow = "1.0"
