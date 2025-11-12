@@ -7,9 +7,11 @@
     "export:roadmap": "tsx scripts/export_roadmap.ts",
     "lint": "pnpm --filter vibe-kanban lint && pnpm --filter vibe-kanban lint:eslint",
     "typecheck": "pnpm --filter vibe-kanban typecheck",
-    "test": "pnpm --filter vibe-kanban test",
+    "test": "pnpm --filter vibe-kanban test && pnpm exec tsx --test tools/offline_pr_queue/tests/**/*.test.ts",
     "build": "pnpm --filter vibe-kanban build",
-    "format": "pnpm --filter vibe-kanban format"
+    "format": "pnpm --filter vibe-kanban format",
+    "offline:queue": "pnpm exec tsx tools/offline_pr_queue/cli.ts",
+    "commit:copilot": "pnpm exec tsx tools/commit_copilot/cli.ts"
   },
   "devDependencies": {
     "tsx": "4.7.1",

@@ -10,11 +10,16 @@ export class AnthropicProvider implements AIProvider {
   private readonly apiKey: string | undefined;
   private readonly baseUrl: string;
   private readonly model: string;
+  private readonly fetchImpl: typeof fetch;
 
-  constructor(private readonly env: NodeJS.ProcessEnv = process.env) {
+  constructor(
+    private readonly env: NodeJS.ProcessEnv = process.env,
+    options: { fetchImpl?: typeof fetch } = {}
+  ) {
     this.apiKey = this.env.ANTHROPIC_API_KEY;
     this.baseUrl = this.env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com/v1";
     this.model = this.env.ANTHROPIC_MODEL ?? "claude-3-haiku-20240307";
+    this.fetchImpl = options.fetchImpl ?? fetch;
   }
 
   isConfigured(): boolean {
@@ -26,7 +31,7 @@ export class AnthropicProvider implements AIProvider {
       throw new ProviderConfigurationError("ANTHROPIC_API_KEY is not configured");
     }
 
-    const response = await fetch(`${this.baseUrl.replace(/\/$/, "")}/messages`, {
+    const response = await this.fetchImpl(`${this.baseUrl.replace(/\/$/, "")}/messages`, {
       method: "POST",
       headers: {
         "x-api-key": this.apiKey!,

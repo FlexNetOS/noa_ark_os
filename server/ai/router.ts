@@ -3,7 +3,7 @@
  * The Next.js API route imports this router to satisfy provider selection requirements.
  */
 
-import { AIProvider } from "./providers/provider";
+import { AIProvider, CachedProvider } from "./providers/provider";
 import { LlamaCppProvider } from "./providers/llama_cpp";
 import { OpenAIProvider } from "./providers/openai";
 import { AnthropicProvider } from "./providers/anthropic";
@@ -24,10 +24,7 @@ function instantiateProvider(kind: string, env: NodeJS.ProcessEnv) {
 }
 
 export function getProvider(env: NodeJS.ProcessEnv = process.env): AIProvider | null {
-  const requested = env.AI_PROVIDER?.toLowerCase();
-  if (!requested) {
-    return null;
-  }
+  const requested = (env.AI_PROVIDER ?? "llama.cpp").toLowerCase();
 
   if (providerCache.has(requested)) {
     const cached = providerCache.get(requested)!;
@@ -44,6 +41,11 @@ export function getProvider(env: NodeJS.ProcessEnv = process.env): AIProvider | 
     return null;
   }
 
-  providerCache.set(requested, instance);
-  return instance;
+  const cachedProvider = new CachedProvider(instance);
+  providerCache.set(requested, cachedProvider);
+  return cachedProvider;
+}
+
+export function resetProviderCache(): void {
+  providerCache.clear();
 }
