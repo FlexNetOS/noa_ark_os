@@ -970,13 +970,30 @@
                     const card = document.createElement('div');
                     card.className = 'anomaly-card';
                     const status = String(anomaly.status || 'investigating').toLowerCase();
-                    card.innerHTML = `
-                        <strong>${anomaly.id || 'ANOM'}</strong>
-                        <span>Metric: ${anomaly.metric || 'unknown'}</span>
-                        <span>Delta: ${(anomaly.delta ?? 0).toFixed(2)}</span>
-                        <span>Detected: ${formatDate(anomaly.detected)}</span>
-                        <span class=\"status-pill\" data-status=\"${status}\">${status}</span>
-                    `;
+                    
+                    // Create elements programmatically to prevent XSS
+                    const idElem = document.createElement('strong');
+                    idElem.textContent = anomaly.id || 'ANOM';
+                    card.appendChild(idElem);
+
+                    const metricElem = document.createElement('span');
+                    metricElem.textContent = 'Metric: ' + (anomaly.metric || 'unknown');
+                    card.appendChild(metricElem);
+
+                    const deltaElem = document.createElement('span');
+                    deltaElem.textContent = 'Delta: ' + ((anomaly.delta ?? 0).toFixed(2));
+                    card.appendChild(deltaElem);
+
+                    const detectedElem = document.createElement('span');
+                    detectedElem.textContent = 'Detected: ' + formatDate(anomaly.detected);
+                    card.appendChild(detectedElem);
+
+                    const statusElem = document.createElement('span');
+                    statusElem.className = 'status-pill';
+                    statusElem.setAttribute('data-status', status);
+                    statusElem.textContent = status;
+                    card.appendChild(statusElem);
+                    
                     ANOMALY_EVENTS.appendChild(card);
                 });
             }
