@@ -1570,7 +1570,6 @@ impl Gateway {
     }
 
     /// Establish an explicit connection if the policy allows it.
-    /// Establish an explicit connection if the policy allows it.
     pub fn connect(&self, connector_id: &str) -> Result<(), GatewayError> {
         let mut connectors = self.connectors_write()?;
         let record = connectors
@@ -1641,7 +1640,6 @@ impl Gateway {
         Ok(events)
     }
 
-    /// Calculate an optimized route for a given intent.
     /// Calculate an optimized route for a given intent.
     pub fn route_intent(&self, intent: &Intent) -> Result<RoutePlan, GatewayError> {
         #[derive(Clone)]
@@ -1802,7 +1800,6 @@ impl Gateway {
     }
 
     /// Digital twin style verification of a plan.
-    /// Digital twin style verification of a plan.
     fn formal_verification(&self, intent: &Intent, plan: &RoutePlan) -> Result<bool, GatewayError> {
         if plan.connectors.is_empty() {
             return Ok(false);
@@ -1825,7 +1822,6 @@ impl Gateway {
         Ok(plan.predicted_latency_ms <= intent.constraints.max_latency_ms)
     }
 
-    /// Run predictive self healing, returning any actions to be executed.
     /// Run predictive self healing, returning any actions to be executed.
     pub fn predictive_self_heal(&self) -> Result<Vec<SelfHealAction>, GatewayError> {
         let reliability = {
