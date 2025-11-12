@@ -290,10 +290,10 @@ mod tests {
     }
 }
 
-fn register_user_inner(user: User) -> Result<(), String> {
+fn register_user_inner(user: User) -> Result<(), &'static str> {
     let mut table = USER_TABLE
         .lock()
-        .map_err(|_| "user table mutex poisoned".to_string())?;
+        .map_err(|_| "user table mutex poisoned")?;
     table.insert(user.id, user);
     Ok(())
 }
