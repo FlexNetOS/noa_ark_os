@@ -20,7 +20,7 @@ Extend runtime controllers to detect host capabilities, adjust workload placemen
 - Owner: TBA
 - Priority: P1
 - Status: Proposed
-- Depends on: AGENTOS-1, AGENTOS-2
+- Depends on: [AGENTOS-1](../plans/gap_remediation_tasks.md#agentos-1), [AGENTOS-2](../plans/gap_remediation_tasks.md#agentos-2)
 
 ## Stakeholder Coordination
 - 2025-11-12: Loop-in sent to Systems Memory Crew (runtime) via systems-memory@noa-ark.example requesting estimation and staffing availability.
