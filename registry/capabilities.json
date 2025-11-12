@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "capabilities": [
+    {
+      "id": "digestor.openapi",
+      "type": "digestor",
+      "semver": "1.0.0",
+      "requires": ["tree-sitter"],
+      "provides": ["openapi", "http"]
+    },
+    {
+      "id": "transformer.ast_refactor",
+      "type": "transformer",
+      "semver": "0.2.0",
+      "requires": ["rust", "wasm"],
+      "provides": ["ast", "refactor"]
+    },
+    {
+      "id": "verifier.test_gen",
+      "type": "verifier",
+      "semver": "0.1.0",
+      "requires": ["cargo", "wasmtime"],
+      "provides": ["tests", "coverage"]
+    }
+  ]
+}

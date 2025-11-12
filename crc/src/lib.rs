@@ -12,9 +12,15 @@
 pub mod archive;
 pub mod build;
 pub mod commands;
+pub mod digestors;
+pub mod engine;
 pub mod error;
+pub mod graph;
+pub mod ir;
+pub mod orchestrator;
 pub mod parallel;
 pub mod processor;
+pub mod transform;
 pub mod types;
 pub mod watcher;
 

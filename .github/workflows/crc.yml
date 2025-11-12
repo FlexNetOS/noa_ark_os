@@ -1,0 +1,36 @@
+name: CRC
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - 'crc/**'
+      - 'crc-adapter-sdk/**'
+      - 'policies/crc/**'
+      - 'registry/**'
+
+jobs:
+  crc:
+    runs-on: ubuntu-latest
+    env:
+      OFFLINE_FIRST: "true"
+      AI_PROVIDER: llama.cpp
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - name: Build CRC
+        run: cargo build -p noa_crc
+      - name: Run CRC tests
+        run: cargo test -p noa_crc
+      - name: Run Adapter SDK tests
+        run: cargo test -p crc_adapter_sdk
+      - name: Generate CRC ingest report
+        run: cargo run -p noa_crc -- ingest --root . --report out/ci/ingest.json
+      - name: Archive artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: crc-artifacts
+          path: out/ci

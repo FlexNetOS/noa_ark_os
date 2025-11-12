@@ -1,17 +1,96 @@
-// CRC Service - Continuous ReCode Automation
-// Background service that monitors drop-in folders and automates code integration
-// Full automation: drop → detect → process → archive → CI/CD trigger → deploy
+use std::collections::HashMap;
+use std::path::PathBuf;
 
+use anyhow::anyhow;
+use clap::{Args, Parser, Subcommand};
+use noa_crc::digestors::api::ApiDigestor;
+use noa_crc::digestors::bin::BinaryDigestor;
+use noa_crc::digestors::config::ConfigDigestor;
+use noa_crc::digestors::git::GitDigestor;
+use noa_crc::digestors::sbom::SbomDigestor;
+use noa_crc::digestors::{AssetRecord, Digestor};
+use noa_crc::engine::Engine;
+use noa_crc::graph::{CRCGraph, GraphNode, NodeKind};
+use noa_crc::ir::Lane;
 use noa_crc::parallel::ParallelDropProcessor;
+use noa_crc::transform::{execute_plan, DummyVerifier, FileReplacePlan, TransformPlan};
 use noa_crc::watcher::spawn_watcher;
 use noa_crc::{CRCConfig, CRCSystem};
-use std::path::PathBuf;
-use tracing::{error, info, warn};
+use serde::Deserialize;
+use serde_json::json;
+use tokio::fs as async_fs;
+use tracing::{error, info};
 use tracing_subscriber;
+use walkdir::WalkDir;
+
+#[derive(Parser)]
+#[command(name = "crc", version, about = "Continuous ReCode System CLI")]
+struct Cli {
+    #[command(subcommand)]
+    command: Command,
+}
+
+#[derive(Subcommand)]
+enum Command {
+    /// Run the long-lived CRC service
+    Serve,
+    /// Execute a CRC plan once
+    Run(RunArgs),
+    /// Digest a repository or artifact root
+    Ingest(IngestArgs),
+    /// Execute structural migration flows
+    Migrate(MigrateArgs),
+    /// Inspect CRC graph plans
+    Graph(GraphArgs),
+}
+
+#[derive(Args)]
+struct RunArgs {
+    /// Path to the plan definition (metadata only)
+    #[arg(long)]
+    plan: Option<PathBuf>,
+    /// Checkpoint output directory
+    #[arg(long, default_value = "out/ckpt")]
+    checkpoint: PathBuf,
+}
+
+#[derive(Args)]
+struct IngestArgs {
+    #[arg(long)]
+    root: PathBuf,
+    #[arg(long)]
+    report: PathBuf,
+}
+
+#[derive(Args)]
+struct MigrateArgs {
+    #[arg(long = "plan")]
+    plans: Vec<PathBuf>,
+    #[arg(long)]
+    dry_run: bool,
+    #[arg(long)]
+    apply: bool,
+    #[arg(long)]
+    rollback: bool,
+    #[arg(long, default_value = ".")]
+    root: PathBuf,
+}
+
+#[derive(Args)]
+struct GraphArgs {
+    #[command(subcommand)]
+    command: GraphCommand,
+}
+
+#[derive(Subcommand)]
+enum GraphCommand {
+    Ls,
+    Show { node: String },
+    Trace { node: String },
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Initialize logging
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::from_default_env()
@@ -23,53 +102,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_line_number(true)
         .init();
 
-    info!("═══════════════════════════════════════════════════════");
-    info!("  CRC Service - Continuous ReCode Automation");
-    info!("  Version: 0.1.0");
-    info!("  Full Automation: Drop → Process → Archive → CI/CD");
-    info!("═══════════════════════════════════════════════════════");
+    let cli = Cli::parse();
+    match cli.command {
+        Command::Serve => run_service().await,
+        Command::Run(args) => run_once(args).await,
+        Command::Ingest(args) => ingest(args).await,
+        Command::Migrate(args) => migrate(args).await,
+        Command::Graph(args) => graph(args).await,
+    }
+}
 
-    // Verify directory structure
+async fn run_service() -> Result<(), Box<dyn std::error::Error>> {
+    info!("Starting CRC service");
     verify_directory_structure()?;
-
-    // Initialize CRC system with enhanced config
     let config = load_config();
-    info!("Configuration:");
-    info!("  Max concurrent drops: {}", config.max_concurrent);
-    info!("  Auto-archive: {}", config.auto_archive);
-    info!("  Trigger CI/CD: {}", config.trigger_cicd);
-    info!("  Archive compression: {}", config.compression_algorithm);
-
     let crc_system = CRCSystem::new(config.clone());
-    info!("✓ CRC System initialized");
-
-    // Start file watcher
-    info!("Starting file watcher...");
     let watcher_handle = spawn_watcher(crc_system.clone()).await?;
-    info!("✓ File watcher started");
-
-    // Display monitoring paths
-    info!("Monitoring paths:");
-    info!("  • crc/drop-in/incoming/repos    (External repositories)");
-    info!("  • crc/drop-in/incoming/forks    (Forked projects)");
-    info!("  • crc/drop-in/incoming/mirrors  (Mirror snapshots)");
-    info!("  • crc/drop-in/incoming/stale    (Legacy codebases)");
-
-    // Start parallel processor with enhanced capabilities
-    info!("Starting parallel drop processor...");
     let processor = ParallelDropProcessor::new_with_config(config);
-    info!(
-        "✓ Processor ready (max {} concurrent)",
-        processor.max_concurrent()
-    );
 
-    info!("═══════════════════════════════════════════════════════");
-    info!("  CRC Service is now running");
-    info!("  Automation: ENABLED ✓");
-    info!("  Press Ctrl+C to stop");
-    info!("═══════════════════════════════════════════════════════");
-
-    // Run until shutdown with enhanced monitoring
     tokio::select! {
         result = watcher_handle => {
             error!("File watcher stopped unexpectedly: {:?}", result);
@@ -82,25 +132,154 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    info!("═══════════════════════════════════════════════════════");
-    info!("  Initiating graceful shutdown...");
-    info!("  • Finishing current processing tasks");
-    info!("  • Archiving in-progress drops");
-    info!("  • Cleaning up temporary files");
-    info!("═══════════════════════════════════════════════════════");
-
-    // TODO: Graceful shutdown of processor and watcher
-
-    info!("✓ CRC Service stopped cleanly");
-
+    info!("CRC service stopped cleanly");
     Ok(())
 }
 
-/// Load configuration from environment and defaults
+async fn run_once(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
+    let mut graph = CRCGraph::new();
+    let analyze = graph.add_node(GraphNode::new("analyze", NodeKind::Analyze, Lane::Fast));
+    let decide = graph.add_node(GraphNode::new("decide", NodeKind::Decide, Lane::Fast));
+    let transform = graph.add_node(GraphNode::new("transform", NodeKind::Transform, Lane::Fast));
+    let verify = graph.add_node(GraphNode::new("verify", NodeKind::Verify, Lane::Deep));
+    let persist = graph.add_node(GraphNode::new("persist", NodeKind::Persist, Lane::Deep));
+    let _ = graph.add_edge(&analyze, &decide);
+    let _ = graph.add_edge(&decide, &transform);
+    let _ = graph.add_edge(&transform, &verify);
+    let _ = graph.add_edge(&verify, &persist);
+
+    if let Some(plan) = args.plan {
+        info!("Using plan hint: {}", plan.display());
+    }
+
+    let engine = Engine::new(graph);
+    let summary = engine.run(&args.checkpoint).await?;
+    info!("Executed {} nodes", summary.executed.len());
+    Ok(())
+}
+
+async fn ingest(args: IngestArgs) -> Result<(), Box<dyn std::error::Error>> {
+    let digestors: Vec<Box<dyn Digestor>> = vec![
+        Box::new(GitDigestor::default()),
+        Box::new(ConfigDigestor),
+        Box::new(ApiDigestor),
+        Box::new(SbomDigestor),
+        Box::new(BinaryDigestor),
+    ];
+    let mut assets: Vec<AssetRecord> = Vec::new();
+    for digestor in &digestors {
+        let mut records = digestor.digest(&args.root)?;
+        assets.append(&mut records);
+    }
+    let total_files = WalkDir::new(&args.root)
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.file_type().is_file())
+        .count();
+    let coverage = if total_files == 0 {
+        1.0
+    } else {
+        (assets.len() as f32 / total_files as f32).min(1.0)
+    };
+    let report = json!({
+        "root": args.root,
+        "assets": assets,
+        "coverage": coverage,
+        "trust_average": assets.iter().map(|a| a.trust as f64).sum::<f64>() / assets.len().max(1) as f64,
+    });
+    if let Some(parent) = args.report.parent() {
+        async_fs::create_dir_all(parent).await?;
+    }
+    async_fs::write(&args.report, serde_json::to_vec_pretty(&report)?).await?;
+    info!("Ingest report written to {}", args.report.display());
+    Ok(())
+}
+
+#[derive(Debug, Deserialize)]
+struct FilePlan {
+    id: String,
+    target: PathBuf,
+    replacement: String,
+}
+
+async fn migrate(args: MigrateArgs) -> Result<(), Box<dyn std::error::Error>> {
+    if args.plans.is_empty() {
+        return Err(anyhow!("no plans provided").into());
+    }
+    let mut outcomes = HashMap::new();
+    for plan_path in &args.plans {
+        let bytes = async_fs::read(plan_path).await?;
+        let plan: FilePlan = if plan_path
+            .extension()
+            .and_then(|e| e.to_str())
+            .map(|ext| ext.eq_ignore_ascii_case("json"))
+            .unwrap_or(false)
+        {
+            serde_json::from_slice(&bytes)?
+        } else {
+            serde_yaml::from_slice(&bytes)?
+        };
+        let transform = FileReplacePlan::new(&plan.id, &plan.target, &plan.replacement);
+        let verifier: Box<dyn noa_crc::transform::Verifier> = Box::new(DummyVerifier);
+        let result = execute_plan(
+            &transform,
+            &[verifier],
+            &args.root,
+            args.apply && !args.dry_run,
+        )?;
+        outcomes.insert(plan.id.clone(), result);
+        if args.rollback {
+            transform.rollback(&args.root)?;
+        }
+    }
+    info!("migration outcomes: {}", outcomes.len());
+    Ok(())
+}
+
+async fn graph(args: GraphArgs) -> Result<(), Box<dyn std::error::Error>> {
+    let mut graph = CRCGraph::new();
+    let analyze = graph.add_node(GraphNode::new("analyze", NodeKind::Analyze, Lane::Fast));
+    let decide = graph.add_node(GraphNode::new("decide", NodeKind::Decide, Lane::Fast));
+    let transform = graph.add_node(GraphNode::new("transform", NodeKind::Transform, Lane::Fast));
+    let verify = graph.add_node(GraphNode::new("verify", NodeKind::Verify, Lane::Deep));
+    let persist = graph.add_node(GraphNode::new("persist", NodeKind::Persist, Lane::Deep));
+    let _ = graph.add_edge(&analyze, &decide);
+    let _ = graph.add_edge(&decide, &transform);
+    let _ = graph.add_edge(&transform, &verify);
+    let _ = graph.add_edge(&verify, &persist);
+
+    match args.command {
+        GraphCommand::Ls => {
+            for node in graph.nodes() {
+                println!("{}\t{:?}\t{:?}", node.name, node.kind, node.lane);
+            }
+        }
+        GraphCommand::Show { node } => {
+            for graph_node in graph.nodes() {
+                if graph_node.name == node {
+                    println!(
+                        "Node {} => kind={:?} lane={:?}",
+                        graph_node.name, graph_node.kind, graph_node.lane
+                    );
+                }
+            }
+        }
+        GraphCommand::Trace { node } => {
+            let topo = graph.topo_order()?;
+            println!("trace for {}", node);
+            for id in topo {
+                if let Some(graph_node) = graph.node(&id) {
+                    println!(" - {}", graph_node.name);
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 fn load_config() -> CRCConfig {
     let mut config = CRCConfig::default();
 
-    // Override from environment variables
     if let Ok(max_concurrent) = std::env::var("CRC_MAX_CONCURRENT") {
         if let Ok(value) = max_concurrent.parse() {
             config.max_concurrent = value;
@@ -122,53 +301,37 @@ fn load_config() -> CRCConfig {
     config
 }
 
-/// Verify and create required directory structure
 fn verify_directory_structure() -> Result<(), Box<dyn std::error::Error>> {
-    info!("Verifying directory structure...");
-
     let required_dirs = vec![
-        // Incoming directories
         "crc/drop-in/incoming/repos",
         "crc/drop-in/incoming/forks",
         "crc/drop-in/incoming/mirrors",
         "crc/drop-in/incoming/stale",
-        // Processing directories
         "crc/drop-in/processing/adaptation",
         "crc/drop-in/processing/analysis",
         "crc/drop-in/processing/validation",
-        // Ready queues
         "crc/drop-in/ready/model-a-queue",
         "crc/drop-in/ready/model-b-queue",
         "crc/drop-in/ready/model-c-queue",
         "crc/drop-in/ready/model-d-queue",
-        // Archive directories
         "crc/archive/stale",
         "crc/archive/repos",
         "crc/archive/forks",
         "crc/archive/mirrors",
-        // Temporary directories
         "crc/temp/analysis-cache",
         "crc/temp/extracts",
         "crc/temp/logs",
-        // Artifact storage
         "storage/artifacts",
         "storage/artifacts/edge",
         "storage/artifacts/server",
     ];
 
-    let mut created_count = 0;
     for dir in required_dirs {
         let path = PathBuf::from(dir);
         if !path.exists() {
             std::fs::create_dir_all(&path)?;
-            created_count += 1;
         }
     }
-
-    if created_count > 0 {
-        info!("  Created {} missing directories", created_count);
-    }
-    info!("✓ Directory structure verified");
 
     Ok(())
 }
