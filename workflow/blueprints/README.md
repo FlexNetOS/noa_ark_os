@@ -18,7 +18,7 @@ The blueprint catalog enumerates curated, UI-ready workflow pipelines that opera
 - **Kernel Hooks:**
   - `build:containers`: container build templates with supply chain attestation.
   - `deploy:progressive`: orchestrated deployment with automated soak monitoring.
-  - `notify:executive-brief`: summarises release impact for leadership dashboards.
+  - `notify:executive-brief`: summarizes release impact for leadership dashboards.
 - **UI Surfaces:** Deployment overview tile, release readiness checklist, and artifact diff viewer.
 
 ### Data Processing – `data/stream-refinery`
