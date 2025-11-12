@@ -1,5 +1,5 @@
 //! ResearchAgent - Auto-generated
-//! 
+//!
 //! Performs research and retrieves actionable information from configured sources, fully autonomous unless encountering captchas or locked/private content.
 
 use crate::unified_types::*;
@@ -48,22 +48,22 @@ impl Researchagent {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Ready;
         Ok(())
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -78,13 +78,13 @@ impl Default for Researchagent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = Researchagent::new();
         assert_eq!(agent.metadata().name, "ResearchAgent");
     }
-    
+
     #[tokio::test]
     async fn test_agent_initialization() {
         let mut agent = Researchagent::new();

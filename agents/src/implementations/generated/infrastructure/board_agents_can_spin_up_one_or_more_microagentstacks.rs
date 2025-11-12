@@ -1,5 +1,5 @@
 //! Board Agents can spin up one or more MicroAgentStacks - Auto-generated
-//! 
+//!
 //! ['Performs Micro Agent functions']
 
 use crate::unified_types::*;
@@ -48,22 +48,22 @@ impl BoardAgentsCanSpinUpOneOrMoreMicroagentstacks {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Ready;
         Ok(())
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -78,13 +78,16 @@ impl Default for BoardAgentsCanSpinUpOneOrMoreMicroagentstacks {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = BoardAgentsCanSpinUpOneOrMoreMicroagentstacks::new();
-        assert_eq!(agent.metadata().name, "Board Agents can spin up one or more MicroAgentStacks");
+        assert_eq!(
+            agent.metadata().name,
+            "Board Agents can spin up one or more MicroAgentStacks"
+        );
     }
-    
+
     #[tokio::test]
     async fn test_agent_initialization() {
         let mut agent = BoardAgentsCanSpinUpOneOrMoreMicroagentstacks::new();

@@ -1,5 +1,5 @@
 //! By delegating model/tool choice to a dedicated ModelSelectorAgent - Auto-generated
-//! 
+//!
 //! ['Performs Micro Agent functions']
 
 use crate::unified_types::*;
@@ -17,7 +17,8 @@ impl ByDelegatingModelToolChoiceToADedicatedModelselectoragent {
     pub fn new() -> Self {
         let metadata = AgentMetadata {
             id: Uuid::new_v4(),
-            agent_id: "by_delegating_model_tool_choice_to_a_dedicated_modelselectoragent".to_string(),
+            agent_id: "by_delegating_model_tool_choice_to_a_dedicated_modelselectoragent"
+                .to_string(),
             name: "By delegating model/tool choice to a dedicated ModelSelectorAgent".to_string(),
             layer: AgentLayer::L5Infrastructure,
             category: AgentCategory::Other,
@@ -48,22 +49,22 @@ impl ByDelegatingModelToolChoiceToADedicatedModelselectoragent {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Ready;
         Ok(())
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -78,13 +79,16 @@ impl Default for ByDelegatingModelToolChoiceToADedicatedModelselectoragent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = ByDelegatingModelToolChoiceToADedicatedModelselectoragent::new();
-        assert_eq!(agent.metadata().name, "By delegating model/tool choice to a dedicated ModelSelectorAgent");
+        assert_eq!(
+            agent.metadata().name,
+            "By delegating model/tool choice to a dedicated ModelSelectorAgent"
+        );
     }
-    
+
     #[tokio::test]
     async fn test_agent_initialization() {
         let mut agent = ByDelegatingModelToolChoiceToADedicatedModelselectoragent::new();

@@ -1,5 +1,5 @@
 //! System Orchestrator Agent - Executive Layer
-//! 
+//!
 //! Simplified working version
 //! Coordinates system-wide operations and workflows
 
@@ -12,7 +12,7 @@ use tokio::sync::RwLock;
 use uuid::Uuid;
 
 /// System Orchestrator Agent - System-wide coordination
-/// 
+///
 /// Responsible for:
 /// - System workflow orchestration
 /// - Inter-agent coordination
@@ -104,7 +104,8 @@ impl OrchestratorAgent {
             category: AgentCategory::Operations,
             agent_type: AgentType::Master,
             language: AgentLanguage::Rust,
-            description: "System Orchestrator - Workflow coordination and system-wide operations".to_string(),
+            description: "System Orchestrator - Workflow coordination and system-wide operations"
+                .to_string(),
             role: "Executive Orchestrator".to_string(),
             purpose: "Coordinate system-wide workflows and agent operations".to_string(),
             state: AgentState::Created,
@@ -134,17 +135,17 @@ impl OrchestratorAgent {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
             orchestration_data: Arc::new(RwLock::new(OrchestrationData::default())),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Initializing;
-        
+
         // Initialize orchestration system
         let mut data = self.orchestration_data.write().await;
         data.metrics = OrchestrationMetrics {
@@ -152,33 +153,34 @@ impl OrchestratorAgent {
             completed_workflows: 0,
             active_coordinations: 0,
         };
-        
+
         *self.state.write().await = AgentState::Ready;
         tracing::info!("System Orchestrator Agent initialized");
         Ok(())
     }
-    
+
     pub async fn create_workflow(&self, workflow: Workflow) -> Result<()> {
         let mut data = self.orchestration_data.write().await;
-        
-        data.workflows.insert(workflow.workflow_id.to_string(), workflow);
+
+        data.workflows
+            .insert(workflow.workflow_id.to_string(), workflow);
         data.metrics.total_workflows += 1;
-        
+
         Ok(())
     }
-    
+
     pub async fn coordinate_agents(&self, coordination: Coordination) -> Result<()> {
         let mut data = self.orchestration_data.write().await;
-        
+
         data.coordinations.push(coordination);
         data.metrics.active_coordinations += 1;
-        
+
         Ok(())
     }
-    
+
     pub async fn generate_report(&self) -> Result<OrchestrationReport> {
         let data = self.orchestration_data.read().await;
-        
+
         Ok(OrchestrationReport {
             report_id: Uuid::new_v4(),
             metrics: data.metrics.clone(),
@@ -187,11 +189,11 @@ impl OrchestratorAgent {
             generated_at: chrono::Utc::now(),
         })
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -206,34 +208,34 @@ impl Default for OrchestratorAgent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_create_orchestrator_agent() {
         let agent = OrchestratorAgent::new();
         assert_eq!(agent.metadata().name, "System Orchestrator Agent");
     }
-    
+
     #[tokio::test]
     async fn test_initialize() {
         let mut agent = OrchestratorAgent::new();
         agent.initialize().await.unwrap();
         assert_eq!(agent.state().await, AgentState::Ready);
     }
-    
+
     #[tokio::test]
     async fn test_create_workflow() {
         let mut agent = OrchestratorAgent::new();
         agent.initialize().await.unwrap();
-        
+
         let workflow = Workflow {
             workflow_id: Uuid::new_v4(),
             name: "Test Workflow".to_string(),
             steps: vec![],
             status: WorkflowStatus::Pending,
         };
-        
+
         agent.create_workflow(workflow).await.unwrap();
-        
+
         let report = agent.generate_report().await.unwrap();
         assert_eq!(report.active_workflows, 1);
     }

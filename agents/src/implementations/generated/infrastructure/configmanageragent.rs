@@ -1,5 +1,5 @@
 //! ConfigManagerAgent - Auto-generated
-//! 
+//!
 //! Parses and validates app config, feature flags, and settings; escalates for novel configuration types or unclear environment variables.
 
 use crate::unified_types::*;
@@ -48,22 +48,22 @@ impl Configmanageragent {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Ready;
         Ok(())
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -78,13 +78,13 @@ impl Default for Configmanageragent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = Configmanageragent::new();
         assert_eq!(agent.metadata().name, "ConfigManagerAgent");
     }
-    
+
     #[tokio::test]
     async fn test_agent_initialization() {
         let mut agent = Configmanageragent::new();
