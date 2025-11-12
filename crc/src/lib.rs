@@ -11,6 +11,7 @@
 // Re-export modules
 pub mod archive;
 pub mod build;
+pub mod cas;
 pub mod commands;
 pub mod digestors;
 pub mod engine;

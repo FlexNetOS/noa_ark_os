@@ -3,6 +3,7 @@ use std::path::PathBuf;
 
 use anyhow::anyhow;
 use clap::{Args, Parser, Subcommand};
+use noa_crc::cas::Cas;
 use noa_crc::digestors::api::ApiDigestor;
 use noa_crc::digestors::bin::BinaryDigestor;
 use noa_crc::digestors::config::ConfigDigestor;
@@ -38,6 +39,8 @@ enum Command {
     Run(RunArgs),
     /// Digest a repository or artifact root
     Ingest(IngestArgs),
+    /// Interact with the content addressed store
+    Cas(CasArgs),
     /// Execute structural migration flows
     Migrate(MigrateArgs),
     /// Inspect CRC graph plans
@@ -60,6 +63,34 @@ struct IngestArgs {
     root: PathBuf,
     #[arg(long)]
     report: PathBuf,
+}
+
+#[derive(Args)]
+struct CasArgs {
+    #[command(subcommand)]
+    command: CasCommand,
+}
+
+#[derive(Subcommand)]
+enum CasCommand {
+    /// Store a file in the CAS
+    Put {
+        /// Path to the input file
+        input: PathBuf,
+    },
+    /// Retrieve a file from the CAS
+    Get {
+        /// Content hash to retrieve
+        hash: String,
+        /// Optional output path; defaults to base64 on stdout
+        #[arg(long)]
+        output: Option<PathBuf>,
+    },
+    /// Show metadata about a CAS object
+    Stat {
+        /// Content hash to inspect
+        hash: String,
+    },
 }
 
 #[derive(Args)]
@@ -107,9 +138,41 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Command::Serve => run_service().await,
         Command::Run(args) => run_once(args).await,
         Command::Ingest(args) => ingest(args).await,
+        Command::Cas(args) => cas_cli(args).await,
         Command::Migrate(args) => migrate(args).await,
         Command::Graph(args) => graph(args).await,
     }
+}
+
+async fn cas_cli(args: CasArgs) -> Result<(), Box<dyn std::error::Error>> {
+    let cas = Cas::default()?;
+    match args.command {
+        CasCommand::Put { input } => {
+            let bytes = async_fs::read(&input).await?;
+            let hash = cas.put_bytes(&bytes)?;
+            println!("{hash}");
+        }
+        CasCommand::Get { hash, output } => {
+            let bytes = cas.get(&hash)?;
+            if let Some(path) = output {
+                if let Some(parent) = path.parent() {
+                    async_fs::create_dir_all(parent).await?;
+                }
+                async_fs::write(&path, &bytes).await?;
+                println!("{}", path.display());
+            } else {
+                use base64::engine::general_purpose::STANDARD_NO_PAD;
+                use base64::Engine;
+                println!("{}", STANDARD_NO_PAD.encode(&bytes));
+            }
+        }
+        CasCommand::Stat { hash } => {
+            let entry = cas.stat(&hash)?;
+            let serialized = serde_json::to_string_pretty(&entry)?;
+            println!("{serialized}");
+        }
+    }
+    Ok(())
 }
 
 async fn run_service() -> Result<(), Box<dyn std::error::Error>> {

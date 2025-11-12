@@ -159,6 +159,7 @@ pub struct ExecutionSummary {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ir::Lane;
 
     #[tokio::test]
     async fn cache_hits_skip_execution() {
