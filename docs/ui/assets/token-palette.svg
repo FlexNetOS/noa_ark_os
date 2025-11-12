@@ -1,0 +1,30 @@
+<svg width="720" height="180" viewBox="0 0 720 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="720" height="180" rx="24" fill="#040109"/>
+  <g transform="translate(24 24)">
+    <text x="0" y="16" fill="#F8FAFC" font-family="Inter" font-size="14" opacity="0.8">Core palette extracted from ui/shared/tokens.ts</text>
+    <g transform="translate(0 36)">
+      <rect width="96" height="96" rx="18" fill="#6366F1"/>
+      <text x="0" y="120" fill="#F8FAFC" font-family="Inter" font-size="12">accent/primary</text>
+    </g>
+    <g transform="translate(120 36)">
+      <rect width="96" height="96" rx="18" fill="#A855F7"/>
+      <text x="0" y="120" fill="#F8FAFC" font-family="Inter" font-size="12">accent/secondary</text>
+    </g>
+    <g transform="translate(240 36)">
+      <rect width="96" height="96" rx="18" fill="#22D3EE"/>
+      <text x="0" y="120" fill="#F8FAFC" font-family="Inter" font-size="12">accent/tertiary</text>
+    </g>
+    <g transform="translate(360 36)">
+      <rect width="96" height="96" rx="18" fill="#141126"/>
+      <text x="0" y="120" fill="#F8FAFC" font-family="Inter" font-size="12">surface/primary</text>
+    </g>
+    <g transform="translate(480 36)">
+      <rect width="96" height="96" rx="18" fill="#0E0A19"/>
+      <text x="0" y="120" fill="#F8FAFC" font-family="Inter" font-size="12">background/elevated</text>
+    </g>
+    <g transform="translate(600 36)">
+      <rect width="96" height="96" rx="18" fill="#34D399"/>
+      <text x="0" y="120" fill="#F8FAFC" font-family="Inter" font-size="12">status/success</text>
+    </g>
+  </g>
+</svg>

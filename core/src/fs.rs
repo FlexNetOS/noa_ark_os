@@ -1,19 +1,72 @@
-//! File system interface
+//! File system interface with registry metadata syncing
 
+use crate::memory;
+use crate::memory::{RegistryGraph, RegistryNode};
 use std::collections::HashMap;
+use std::fmt;
 use std::sync::{Arc, Mutex};
+
+const DEFAULT_FILE_MODE: u32 = 0o644;
+
+#[derive(Debug, Clone, Default)]
+pub struct FileMetadata {
+    pub components: Vec<ComponentMetadata>,
+}
+
+impl FileMetadata {
+    pub fn add_component(&mut self, component: ComponentMetadata) {
+        if let Some(existing) = self
+            .components
+            .iter_mut()
+            .find(|metadata| metadata.id == component.id)
+        {
+            *existing = component;
+        } else {
+            self.components.push(component);
+        }
+    }
+
+    pub fn clear(&mut self) {
+        self.components.clear();
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ComponentMetadata {
+    pub id: String,
+    pub name: String,
+    pub version: String,
+    pub owners: Vec<String>,
+}
 
 #[derive(Debug, Clone)]
 pub struct FileDescriptor {
     pub path: String,
     pub permissions: u32,
     pub size: usize,
+    pub metadata: FileMetadata,
 }
 
 lazy_static::lazy_static! {
     static ref FILE_TABLE: Arc<Mutex<HashMap<String, FileDescriptor>>> =
         Arc::new(Mutex::new(HashMap::new()));
 }
+
+/// Errors surfaced by the virtual file system module.
+#[derive(Debug)]
+pub enum FsError {
+    StatePoisoned,
+}
+
+impl fmt::Display for FsError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FsError::StatePoisoned => write!(f, "file table mutex poisoned"),
+        }
+    }
+}
+
+impl std::error::Error for FsError {}
 
 /// Initialize file system
 pub fn init() -> Result<(), &'static str> {
@@ -24,10 +77,17 @@ pub fn init() -> Result<(), &'static str> {
         path: "/".to_string(),
         permissions: 0o755,
         size: 0,
+        metadata: FileMetadata::default(),
     };
 
     let mut table = FILE_TABLE.lock().unwrap();
     table.insert("/".to_string(), root);
+    drop(table);
+
+    if let Err(err) = sync_registry_metadata() {
+        eprintln!("[FS] Failed to sync registry metadata: {err}");
+        return Err("filesystem initialization failed");
+    }
 
     Ok(())
 }
@@ -38,12 +98,55 @@ pub fn create_file(path: String, permissions: u32) -> Result<(), &'static str> {
         path: path.clone(),
         permissions,
         size: 0,
+        metadata: FileMetadata::default(),
     };
 
     let mut table = FILE_TABLE.lock().unwrap();
     table.insert(path, descriptor);
 
     Ok(())
+}
+
+/// Synchronise file descriptors with registry metadata.
+pub fn sync_registry_metadata() -> Result<(), FsError> {
+    let snapshot = memory::registry_snapshot();
+    let mut table = FILE_TABLE.lock().map_err(|_| FsError::StatePoisoned)?;
+
+    for descriptor in table.values_mut() {
+        descriptor.metadata.clear();
+    }
+
+    for (path, nodes) in snapshot.file_component_mappings() {
+        let entry = table.entry(path.clone()).or_insert_with(|| FileDescriptor {
+            path: path.clone(),
+            permissions: DEFAULT_FILE_MODE,
+            size: 0,
+            metadata: FileMetadata::default(),
+        });
+
+        for node in nodes {
+            entry
+                .metadata
+                .add_component(to_component_metadata(&snapshot, &node));
+        }
+    }
+
+    Ok(())
+}
+
+fn to_component_metadata(graph: &RegistryGraph, node: &RegistryNode) -> ComponentMetadata {
+    let owners = graph
+        .owners_for(&node.owners)
+        .into_iter()
+        .map(|owner| owner.name)
+        .collect();
+
+    ComponentMetadata {
+        id: node.id.clone(),
+        name: node.name.clone(),
+        version: node.version.clone(),
+        owners,
+    }
 }
 
 /// Get file descriptor
