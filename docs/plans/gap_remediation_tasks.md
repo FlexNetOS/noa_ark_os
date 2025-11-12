@@ -367,7 +367,7 @@ Layer differentiated services and packaged workflows on top of the hardened core
 - Priority: P1
 - Status: Processing
 - Depends on: AGENTOS-2
-- Tracking: [Internal issue stub](../issues/AGENTOS-3-unified-ui-shell.md) _(replace anchor with external URL when published)_
+- Tracking: [Internal issue stub](../issues/AGENTOS-4-adaptive-runtime.md) _(replace anchor with external URL when published)_
 
 **Description:** Extend runtime controllers to detect host capabilities, adjust workload placement, and surface portability guidance tied to the kernel graph.
 
