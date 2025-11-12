@@ -67,9 +67,6 @@ impl proto::ui_schema_service_server::UiSchemaService for UiSchemaGrpc {
 
         let output = async_stream::try_stream! {
             let mut stream = bridge.subscribe();
-        let mut stream = bridge.subscribe();
-        let stream = bridge.subscribe();
-        let output = async_stream::try_stream! {
             tokio::pin!(stream);
             while let Some(event) = stream.next().await {
                 let event = match event {
