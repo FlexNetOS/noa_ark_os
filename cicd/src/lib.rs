@@ -18,6 +18,7 @@ pub enum PipelineStage {
     Deploy,
     Verify,
     Promote,
+    DocsRefresh,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -54,6 +55,13 @@ pub struct Pipeline {
     pub stages: Vec<Stage>,
     pub commit_sha: String,
     pub triggered_at: u64,
+    pub crc_job_id: Option<String>,  // new: link to CRC job
+    pub auto_approved: bool,          // new: AI auto-approval
+    pub ai_confidence: f32,           // new: AI confidence score
+    pub diff_summary: Option<String>,
+    pub approvals_required: Vec<String>,
+    #[serde(default)]
+    pub approvals_granted: Vec<String>,
     pub crc_job_id: Option<String>, // new: link to CRC job
     pub auto_approved: bool,        // new: AI auto-approval
     pub ai_confidence: f32,         // new: AI confidence score
@@ -200,6 +208,9 @@ impl CICDSystem {
             crc_job_id: None,
             auto_approved: false,
             ai_confidence: 0.0,
+            diff_summary: None,
+            approvals_required: Vec::new(),
+            approvals_granted: Vec::new(),
         };
 
         let mut pipelines = self.pipelines.lock().unwrap();
@@ -246,6 +257,86 @@ impl CICDSystem {
         Ok(id)
     }
 
+    pub fn trigger_doc_refresh_pipeline(
+        &self,
+        commit_sha: String,
+        diff_summary: String,
+        approvals_required: Vec<String>,
+    ) -> Result<String, String> {
+        let id = format!("doc_pipeline_{}", uuid::Uuid::new_v4());
+
+        let pipeline = Pipeline {
+            id: id.clone(),
+            name: "documentation-refresh".to_string(),
+            status: PipelineStatus::Pending,
+            stages: vec![
+                Stage {
+                    name: "validate".to_string(),
+                    stage_type: PipelineStage::Validate,
+                    status: PipelineStatus::Pending,
+                    duration_ms: None,
+                },
+                Stage {
+                    name: "docs-refresh".to_string(),
+                    stage_type: PipelineStage::DocsRefresh,
+                    status: PipelineStatus::Pending,
+                    duration_ms: None,
+                },
+                Stage {
+                    name: "verify".to_string(),
+                    stage_type: PipelineStage::Verify,
+                    status: PipelineStatus::Pending,
+                    duration_ms: None,
+                },
+            ],
+            commit_sha,
+            triggered_at: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+            crc_job_id: None,
+            auto_approved: false,
+            ai_confidence: 0.0,
+            diff_summary: Some(diff_summary),
+            approvals_required,
+            approvals_granted: Vec::new(),
+        };
+
+        let mut pipelines = self.pipelines.lock().unwrap();
+        pipelines.insert(id.clone(), pipeline);
+
+        println!("[CI/CD] Documentation pipeline triggered: {}", id);
+        Ok(id)
+    }
+
+    pub fn approve_pipeline(&self, pipeline_id: &str, approver: &str) -> Result<(), String> {
+        let mut pipelines = self.pipelines.lock().unwrap();
+        let pipeline = pipelines
+            .get_mut(pipeline_id)
+            .ok_or_else(|| format!("Pipeline not found: {}", pipeline_id))?;
+
+        if pipeline
+            .approvals_required
+            .iter()
+            .any(|required| required == approver)
+        {
+            if pipeline
+                .approvals_granted
+                .iter()
+                .all(|granted| granted != approver)
+            {
+                pipeline.approvals_granted.push(approver.to_string());
+                println!("[CI/CD] Approval added by {}", approver);
+            }
+            Ok(())
+        } else {
+            Err(format!(
+                "Approver {} is not required for pipeline {}",
+                approver, pipeline_id
+            ))
+        }
+    }
+    
     /// Execute pipeline with full automation
     pub fn execute_pipeline(&self, pipeline_id: &str) -> Result<(), String> {
         // Check if requires human review
@@ -254,6 +345,11 @@ impl CICDSystem {
             if let Some(pipeline) = pipelines.get(pipeline_id) {
                 if pipeline.status == PipelineStatus::HumanReview {
                     return Err("Pipeline requires human review before execution".to_string());
+                }
+                if !pipeline.approvals_required.is_empty()
+                    && !pipeline.approvals_required.iter().all(|required| pipeline.approvals_granted.contains(required))
+                {
+                    return Err("Pipeline is waiting for documentation approvals".to_string());
                 }
             }
         }
@@ -295,6 +391,7 @@ impl CICDSystem {
             PipelineStage::Test => self.test()?,
             PipelineStage::SingleHostAcceptance => self.single_host_acceptance()?,
             PipelineStage::Deploy => self.deploy()?,
+            PipelineStage::DocsRefresh => self.docs_refresh(pipeline_id)?,
             _ => {}
         }
 
@@ -372,6 +469,21 @@ impl CICDSystem {
         Ok(())
     }
 
+    fn docs_refresh(&self, pipeline_id: &str) -> Result<(), String> {
+        let diff_summary = {
+            let pipelines = self.pipelines.lock().unwrap();
+            pipelines
+                .get(pipeline_id)
+                .and_then(|p| p.diff_summary.clone())
+                .unwrap_or_else(|| "No diff summary provided".to_string())
+        };
+
+        println!("[CI/CD] Running documentation refresh...");
+        println!("[CI/CD] Diff summary: {}", diff_summary);
+        println!("[CI/CD] Invoking documentation agent to sync docs");
+        Ok(())
+    }
+    
     /// Deploy to environment with strategy and auto-approval
     pub fn deploy_to_environment(
         &self,
