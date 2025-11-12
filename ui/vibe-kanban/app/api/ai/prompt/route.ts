@@ -7,8 +7,8 @@ import { NextResponse } from "next/server";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-import { handlePromptRequest } from "../../../../../server/ai/controllers/prompt";
-import { getProvider } from "../../../../../server/ai/router";
+import { handlePromptRequest } from "../../../../server/ai/controllers/prompt";
+import { getProvider } from "../../../../server/ai/router";
 import { aiDatabase } from "../../../../server/ai-database";
 import { aiRateLimiter } from "../../../../server/rate-limiter";
 

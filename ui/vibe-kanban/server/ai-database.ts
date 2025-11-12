@@ -48,12 +48,8 @@ class AiDatabase {
       )`
     );
 
-    const applied = new Set<string>(
-      this.db
-        .prepare(`SELECT id FROM schema_migrations`)
-        .all()
-        .map((row: { id: string }) => row.id)
-    );
+    const appliedRows = this.db.prepare(`SELECT id FROM schema_migrations`).all() as Array<{ id: string }>;
+    const applied = new Set<string>(appliedRows.map((row) => row.id));
 
     const migrationFiles = readdirSync(this.migrationsDir)
       .filter((file) => file.endsWith(".sql"))

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 
-import { assertUser } from "../../../lib/session";
-import { getWorkspace } from "../../../../server/workspace-store";
-import { workspaceEventHub } from "../../../../server/workspace-events";
+import { assertUser } from "../../../../lib/session";
+import { getWorkspace } from "../../../../../server/workspace-store";
+import { workspaceEventHub } from "../../../../../server/workspace-events";
 
 export async function POST(
   request: Request,

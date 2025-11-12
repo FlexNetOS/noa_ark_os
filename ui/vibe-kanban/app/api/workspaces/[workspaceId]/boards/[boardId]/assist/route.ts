@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 
-import { assertUser } from "../../../../../lib/session";
-import { getBoard, getWorkspace } from "../../../../../../server/workspace-store";
-import type { VibeCard, WorkspaceBoard } from "../../../../../components/board-types";
+import { assertUser } from "../../../../../../lib/session";
+import { getBoard, getWorkspace } from "../../../../../../../server/workspace-store";
+import type { VibeCard, WorkspaceBoard } from "../../../../../../components/board-types";
 
 function generateSuggestions(board: WorkspaceBoard) {
   const suggestions: { title: string; detail: string }[] = [];
