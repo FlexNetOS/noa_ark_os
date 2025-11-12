@@ -82,7 +82,7 @@ def sop_digest() -> str:
 
 def build_handbook() -> str:
     sections = []
-    now = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     sections.append(
         "# Auditors' Handbook\n\n"
         "This handbook is generated automatically from the immutable relocation and "
