@@ -292,6 +292,8 @@ impl PipelineInstrumentation {
                 .append(true)
                 .open(path)?;
             file.write_all(payload.as_bytes())?;
+            file.flush()?;
+            file.sync_all()?;
         }
         Ok(())
     }
