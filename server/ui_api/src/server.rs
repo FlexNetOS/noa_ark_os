@@ -308,8 +308,17 @@ fn is_valid_filename(name: &str) -> bool {
     }
 
     // Reject characters forbidden in Windows filenames for cross-platform safety
-    if name.chars().any(|c| matches!(c, '<' | '>' | ':' | '"' | '|' | '?' | '*')) {
-        return false;
+    #[cfg(windows)]
+    {
+        if name.chars().any(|c| matches!(c, '<' | '>' | ':' | '"' | '|' | '?' | '*')) {
+            return false;
+        }
+    }
+    #[cfg(not(windows))]
+    {
+        if name.chars().any(|c| matches!(c, '<' | '>' | '"' | '|' | '?' | '*')) {
+            return false;
+        }
     }
     true
 }
