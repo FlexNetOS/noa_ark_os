@@ -65,9 +65,8 @@ impl proto::ui_schema_service_server::UiSchemaService for UiSchemaGrpc {
                 .ok_or_else(|| Status::unavailable("streaming disabled"))?
         };
 
-        let mut stream = bridge.subscribe();
-        let stream = bridge.subscribe();
         let output = async_stream::try_stream! {
+            let mut stream = bridge.subscribe();
             tokio::pin!(stream);
             while let Some(event) = stream.next().await {
                 let event = match event {
@@ -101,6 +100,12 @@ fn page_envelope_to_proto(envelope: PageEnvelope) -> Result<proto::PageEnvelope,
             let widgets = region
                 .widgets
                 .into_iter()
+                .map(|widget| -> Result<proto::WidgetSchema, Status> {
+                    let props = widget
+                        .props
+                        .map(json_to_struct)
+                        .transpose()?
+                        .unwrap_or_default();
                 .map(|widget| {
                     let props = widget
                         .props
@@ -141,6 +146,7 @@ fn page_envelope_to_proto(envelope: PageEnvelope) -> Result<proto::PageEnvelope,
 
     let resume_token = envelope
         .resume_token
+        .map(|token| -> Result<proto::ResumeToken, Status> {
         .map(|token| -> Result<_, Status> {
             Ok(proto::ResumeToken {
                 workflow_id: token.workflow_id,
@@ -197,6 +203,11 @@ fn timestamp_from_str(value: &str) -> Result<Timestamp, Status> {
     })
 }
 
+fn slot_to_string(slot: LayoutSlot) -> String {
+    slot.to_string()
+}
+
+fn json_to_struct(value: JsonValue) -> Result<Struct, Status> {
 fn json_to_struct(value: JsonValue) -> Result<Struct, Status> {
 fn value_to_struct(value: JsonValue) -> Result<Struct, Status> {
     match value {
@@ -235,6 +246,7 @@ fn value_to_prost_value(value: JsonValue) -> Result<ProstValue, Status> {
         JsonValue::Array(values) => {
             let values = values
                 .into_iter()
+                .map(json_to_value)
                 .map(value_to_prost_value)
                 .collect::<Result<Vec<_>, Status>>()?;
             ProstKind::ListValue(ListValue { values })
