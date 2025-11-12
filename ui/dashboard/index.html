@@ -84,7 +84,12 @@
       Object.entries(perProtocol).forEach(([protocol, value]) => {
         const div = document.createElement('div');
         div.className = 'metric';
-        div.innerHTML = `<strong>${protocol}</strong><span>${value}</span>`;
+        const strong = document.createElement('strong');
+        strong.textContent = protocol;
+        const span = document.createElement('span');
+        span.textContent = value;
+        div.appendChild(strong);
+        div.appendChild(span);
         protocolMetrics.appendChild(div);
       });
 
