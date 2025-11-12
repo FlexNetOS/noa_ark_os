@@ -19,6 +19,7 @@ pub mod metrics;
 pub mod process;
 pub mod runtime;
 pub mod security;
+pub mod time;
 
 /// Core OS version
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
