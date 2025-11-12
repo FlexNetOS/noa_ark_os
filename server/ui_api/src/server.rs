@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use axum::extract::ws::{Message, WebSocket};
-use axum::extract::{Multipart, Path as AxumPath, State, WebSocketUpgrade};
+use axum::extract::{DefaultBodyLimit, Multipart, Path as AxumPath, State, WebSocketUpgrade};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
@@ -20,6 +20,7 @@ use uuid::Uuid;
 use crate::schema::PageEnvelope;
 use crate::session::SessionBridge;
 
+/// Maximum upload file size (100 MB)
 /// Maximum file size for uploads (100 MB)
 const MAX_UPLOAD_SIZE: usize = 100 * 1024 * 1024;
 
@@ -35,7 +36,7 @@ struct CrcDropRegistry {
 
 impl DropRegistry for CrcDropRegistry {
     fn register(&self, path: PathBuf, manifest: DropManifest) -> Result<String, String> {
-        self.crc.register_drop(path, manifest)
+        self.crc.register_drop(path, manifest, None)
     }
 
     fn get_state(&self, drop_id: &str) -> Option<CRCState> {
@@ -144,7 +145,10 @@ impl UiApiServer {
         Router::new()
             .route("/ui/pages/:page_id", get(Self::get_page))
             .route("/ui/pages/:page_id/events", get(Self::stream_events))
-            .route("/ui/drop-in/upload", post(Self::upload_drop))
+            .route(
+                "/ui/drop-in/upload",
+                post(Self::upload_drop).layer(DefaultBodyLimit::max(MAX_UPLOAD_SIZE)),
+            )
             .with_state(self.state.clone())
     }
 
@@ -181,7 +185,7 @@ impl UiApiServer {
         let mut file_name: Option<String> = None;
         let mut file_bytes: Option<Bytes> = None;
 
-        while let Some(field) = multipart
+        while let Some(mut field) = multipart
             .next_field()
             .await
             .map_err(|err| bad_request(format!("failed to read multipart field: {err}")))?
@@ -196,6 +200,27 @@ impl UiApiServer {
                 }
                 Some("file") | Some("upload") => {
                     file_name = field.file_name().map(|name| name.to_string());
+                    
+                    // Read file in chunks with size validation to prevent memory exhaustion
+                    let mut file_data = Vec::with_capacity(8 * 1024); // Start with 8 KB, grows as needed
+                    let mut total_size = 0usize;
+                    
+                    while let Some(chunk) = field
+                        .chunk()
+                        .await
+                        .map_err(|err| internal_error(format!("failed to read upload chunk: {err}")))?
+                    {
+                        total_size += chunk.len();
+                        if total_size > MAX_UPLOAD_SIZE {
+                            return Err(bad_request(format!(
+                                "upload size exceeds maximum allowed size of {} MB",
+                                MAX_UPLOAD_SIZE / (1024 * 1024)
+                            )));
+                        }
+                        file_data.extend_from_slice(&chunk);
+                    }
+                    
+                    file_bytes = Some(Bytes::from(file_data));
                     let bytes = field.bytes().await.map_err(|err| {
                         internal_error(format!("failed to read upload contents: {err}"))
                     })?;
@@ -319,17 +344,6 @@ fn format_crc_state(state: &CRCState) -> String {
 async fn handle_websocket(mut socket: WebSocket, bridge: SessionBridge) {
     let mut events = bridge.subscribe();
     while let Some(event) = events.next().await {
-        match event.map(SessionBridge::map_event) {
-            Ok(event) => match serde_json::to_string(&event) {
-                Ok(payload) => {
-                    if socket.send(Message::Text(payload)).await.is_err() {
-                        break;
-                    }
-                }
-                Err(error) => {
-                    let _ = socket
-                        .send(Message::Text(format!("{{\"error\":\"{}\"}}", error)))
-                        .await;
         let Ok(event) = event.map(SessionBridge::map_event) else {
             continue;
         };
@@ -548,5 +562,41 @@ mod tests {
         let bytes = response.into_body().collect().await.unwrap().to_bytes();
         let error: ErrorResponse = serde_json::from_slice(&bytes).unwrap();
         assert!(error.message.contains("failed to register drop"));
+    }
+
+    #[tokio::test]
+    async fn upload_drop_accepts_files_within_size_limit() {
+        let boundary = "TESTBOUNDARY";
+        let temp_dir = tempfile::tempdir().unwrap();
+        let drop_root = temp_dir.path().to_path_buf();
+
+        let registry = MockRegistry::success("drop-456", CRCState::Incoming);
+        let server = UiApiServer::new()
+            .with_drop_root(drop_root)
+            .with_drop_registry(registry.clone());
+        let router = server.router();
+
+        // Test with a 2 MB file to verify the size validation logic works for valid files
+        // Testing rejection of 100+ MB files would be memory-intensive, so we rely on
+        // the DefaultBodyLimit layer's built-in enforcement and test the acceptance path
+        let content = "x".repeat(2 * 1024 * 1024); // 2 MB - well within 100 MB limit
+        let body = build_multipart_body(
+            boundary,
+            &[
+                ("type", "repos", None),
+                ("file", &content, Some("test.bin")),
+            ],
+        );
+        let request = multipart_request(boundary, &body);
+
+        let response = router.oneshot(request).await.unwrap();
+        assert_eq!(response.status(), HttpStatus::OK);
+        
+        // Verify file was registered (proves size check allows valid files)
+        assert!(registry.recorded_path().is_some());
+        
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let parsed: UploadResponseBody = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(parsed.drop_id, "drop-456");
     }
 }
