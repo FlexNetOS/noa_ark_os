@@ -48,4 +48,30 @@ The blueprint catalog enumerates curated, UI-ready workflow pipelines that opera
 ## Extensibility
 - Add new blueprints as subdirectories under this folder and register them in the index table above.
 - Include a `blueprint.yaml` file alongside implementation assets capturing inputs, dependencies, kernel hooks, and UI affordances.
+
+### `blueprint.yaml` Schema
+
+Each blueprint **must** include a `blueprint.yaml` file describing its metadata, configuration, and integration points. The expected schema is as follows:
+
+```yaml
+# blueprint.yaml
+name: <string>                # Unique identifier for the blueprint (e.g., "ci_cd/continuous-assurance")
+display_name: <string>        # Human-readable name for UI display
+description: <string>         # Brief summary of the blueprint's purpose
+category: <string>            # Category (e.g., "CI/CD", "Data Processing", "Agent Swarms")
+version: <string>             # Semantic version (e.g., "1.0.0")
+authors:
+  - name: <string>
+    contact: <string>         # (optional) Email or handle
+inputs:
+  - key: <string>             # Input parameter name
+    type: <string>            # Data type (e.g., string, int, bool, enum)
+    required: <bool>
+    description: <string>
+dependencies:
+  - <string>                  # List of required external systems or services
+kernel_hooks:
+  - <string>                  # List of kernel hook identifiers (see examples above)
+ui_affordances:
+  - <string>                  # List of UI features or surfaces provided
 - Use `docs/community/third-party-blueprints.md` for contribution guidelines and review policies.
