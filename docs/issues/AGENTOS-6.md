@@ -2,7 +2,7 @@
 
 **Labels:** ecosystem, release, partner-program
 **Priority:** P1
-Depends on: AGENTOS-3, AGENTOS-4, AGENTOS-5
+Depends on: [AGENTOS-3](AGENTOS-3.md), [AGENTOS-4](AGENTOS-4.md), [AGENTOS-5](AGENTOS-5.md)
 
 ## Acceptance Criteria
 - Ecosystem bundle artifact published with release notes, install instructions, and verification checklist.
