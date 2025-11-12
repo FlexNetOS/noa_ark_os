@@ -7,9 +7,9 @@ pub mod components;
 pub mod events;
 pub mod module;
 pub mod renderer;
+pub mod services;
 pub mod shell;
 pub mod state;
-pub mod services;
 pub mod workflows;
 
 use std::collections::HashMap;

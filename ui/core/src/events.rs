@@ -5,16 +5,40 @@ use crate::workflows::WorkflowRun;
 /// Events flowing through the unified shell event bus.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ShellEvent {
-    ModuleRegistered { module_id: String },
-    RouteActivated { route: String },
-    WorkflowTriggered { run: WorkflowRun },
-    NotificationDismissed { notification_id: String },
-    ChatCommandIssued { command: String },
-    LogStreamUpdate { stream_id: String, line: String },
-    DiffAvailable { artifact_id: String, summary: String },
-    ArtifactReady { artifact_id: String, url: String },
-    AgentSpawned { agent_id: String, role: String },
-    QuickActionTriggered { action: String },
+    ModuleRegistered {
+        module_id: String,
+    },
+    RouteActivated {
+        route: String,
+    },
+    WorkflowTriggered {
+        run: WorkflowRun,
+    },
+    NotificationDismissed {
+        notification_id: String,
+    },
+    ChatCommandIssued {
+        command: String,
+    },
+    LogStreamUpdate {
+        stream_id: String,
+        line: String,
+    },
+    DiffAvailable {
+        artifact_id: String,
+        summary: String,
+    },
+    ArtifactReady {
+        artifact_id: String,
+        url: String,
+    },
+    AgentSpawned {
+        agent_id: String,
+        role: String,
+    },
+    QuickActionTriggered {
+        action: String,
+    },
 }
 
 /// Lightweight client that resolves WebSocket endpoints for shell channels.

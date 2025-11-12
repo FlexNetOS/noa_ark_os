@@ -1,14 +1,12 @@
 use std::sync::Arc;
 
-use serde::{Deserialize, Serialize};
 use once_cell::sync::OnceCell;
+use serde::{Deserialize, Serialize};
 
 use crate::chat::{ChatAction, ChatCommandDescriptor};
 use crate::events::ShellEvent;
 use crate::services::ShellServices;
-use crate::state::{
-    GlobalStore, NavigationItem, NotificationLevel, Workspace, WorkspacePersona,
-};
+use crate::state::{GlobalStore, NavigationItem, NotificationLevel, Workspace, WorkspacePersona};
 use crate::workflows::{Workflow, WorkflowCatalog};
 
 /// Describes the capabilities surfaced by a module.
@@ -152,9 +150,7 @@ impl LazyModule {
     }
 
     fn ensure_loaded(&self) -> Arc<dyn ShellModule> {
-        self.instance
-            .get_or_init(|| (self.loader)())
-            .clone()
+        self.instance.get_or_init(|| (self.loader)()).clone()
     }
 }
 
@@ -308,6 +304,7 @@ impl DashboardModule {
                     base_path: "ui/noa-dashboard".into(),
                     entry: "index.html".into(),
                 },
+                vec!["executive".into(), "admin".into()],
             ),
         }
     }
@@ -347,6 +344,7 @@ impl KanbanModule {
                     base_path: "ui/vibe-kanban".into(),
                     entry: "app".into(),
                 },
+                vec!["developer".into(), "operator".into(), "admin".into()],
             ),
         }
     }
@@ -630,10 +628,12 @@ mod tests {
         store.update(|state| {
             state.session.roles = vec!["developer".into()];
         });
+        let sink: Arc<dyn Fn(ShellEvent) + Send + Sync> = Arc::new(|_| {});
         let context = ModuleContext {
             store: store.clone(),
             workflows: WorkflowCatalog::default(),
-            emit: Arc::new(|_| {}),
+            emit: sink.clone(),
+            services: use_shell_services(&store, sink),
         };
         let analytics = AnalyticsModule::new();
         analytics.hydrate(&context);
