@@ -9,10 +9,14 @@ use flate2::Compression;
 use noa_crc::extraction::prepare_artifact_for_processing;
 use noa_crc::processor::DropProcessor;
 use noa_crc::{CRCConfig, CRCSystem, DropManifest, Priority, SourceType};
+use serial_test::serial;
 use tar::Builder;
 use zip::write::FileOptions;
 use zip::CompressionMethod;
 
+#[tokio::test]
+#[serial]
+async fn processes_zip_archive_via_extraction() -> Result<()> {
 /// Helper function to test archive processing via extraction pipeline
 /// 
 /// # Arguments
@@ -150,6 +154,115 @@ where
 }
 
 #[tokio::test]
+#[serial]
+async fn processes_tar_gz_archive_via_extraction() -> Result<()> {
+    let drop_in = Path::new("crc/drop-in/incoming/repos");
+    fs::create_dir_all(drop_in)?;
+
+    let archive_path = drop_in.join("ingest-tar-archive.tar.gz");
+    create_tar_gz_archive(&archive_path)?;
+
+    let prepared = prepare_artifact_for_processing(archive_path.clone()).await?;
+    let processing_path = prepared.processing_path.clone();
+
+    let mut metadata = HashMap::new();
+    metadata.insert(
+        "processing_path".to_string(),
+        processing_path.display().to_string(),
+    );
+
+    if let Some(artifact) = prepared.original_artifact.as_ref() {
+        metadata.insert(
+            "original_artifact_path".to_string(),
+            artifact.path.display().to_string(),
+        );
+        if let Some(ext) = artifact.archive_type.as_ref() {
+            metadata.insert("original_artifact_type".to_string(), ext.clone());
+        }
+        if let Some(size) = artifact.size {
+            metadata.insert("original_artifact_size".to_string(), size.to_string());
+        }
+        if let Some(extracted) = artifact.extracted_path.as_ref() {
+            metadata.insert(
+                "extracted_path".to_string(),
+                extracted.display().to_string(),
+            );
+        }
+        if let Some(file_name) = artifact.path.file_name().and_then(|n| n.to_str()) {
+            metadata.insert("original_artifact_name".to_string(), file_name.to_string());
+        }
+    }
+
+    let name = prepared
+        .original_artifact
+        .as_ref()
+        .and_then(|artifact| artifact.path.file_stem()?.to_str())
+        .unwrap_or("ingest-tar-archive")
+        .to_string();
+
+    let manifest = DropManifest {
+        name,
+        source: processing_path.display().to_string(),
+        source_type: SourceType::ExternalRepo,
+        timestamp: std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)?
+            .as_secs(),
+        priority: Priority::High,
+        metadata,
+    };
+
+    let crc_system = CRCSystem::new(CRCConfig::default());
+    let drop_id = crc_system
+        .register_drop(
+            processing_path.clone(),
+            manifest,
+            prepared.original_artifact.clone(),
+        )
+        .expect("registration should succeed");
+
+    let drop_ids = crc_system.list_drop_ids();
+    assert_eq!(drop_ids.len(), 1);
+
+    let drop = crc_system
+        .get_drop(&drop_ids[0])
+        .expect("registered drop should be present");
+
+    assert!(drop.source_path.is_dir());
+    assert!(drop.source_path.join("Cargo.toml").exists());
+    assert_eq!(
+        drop.manifest
+            .metadata
+            .get("original_artifact_type")
+            .map(String::as_str),
+        Some("tar.gz")
+    );
+
+    let processor = DropProcessor::new(PathBuf::from("crc"));
+    let processing = processor
+        .process_drop(
+            &drop_id,
+            drop.source_type.clone(),
+            drop.source_path.clone(),
+            drop.original_artifact.clone(),
+        )
+        .await?;
+
+    assert!(processing.success);
+    assert_eq!(
+        processing
+            .metadata
+            .get("extracted_cleanup_performed")
+            .map(String::as_str),
+        Some("true")
+    );
+
+    assert!(!drop.source_path.exists());
+
+    if let Some(artifact) = drop.original_artifact.as_ref() {
+        if artifact.path.exists() {
+            fs::remove_file(&artifact.path)?;
+        }
+    }
 async fn processes_zip_archive_via_extraction() -> Result<()> {
     test_archive_processing(
         "ingest-zip-archive.zip",

@@ -106,6 +106,8 @@ crc/storage/
 crc/sandboxes/*/active/
 crc/drop-in/incoming/stale/
 crc/drop-in/incoming/forks/*/
+crc/crc/
+crc/storage/
 
 # Models & Large Files
 *.bin
