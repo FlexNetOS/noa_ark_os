@@ -1,11 +1,11 @@
 use noa_core::security::{self, OperationKind, OperationRecord, SignedOperation};
+use noa_core::utils::{current_timestamp_millis, simple_hash};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::fs::{self, OpenOptions};
 use std::io::{ErrorKind, Write};
 use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
-use std::time::{SystemTime, UNIX_EPOCH};
 
 const INDEX_DIR: &str = ".workspace/indexes";
 const STORAGE_MIRROR_DIR: &str = "storage/db";
@@ -313,6 +313,9 @@ fn with_log_lock<T>(
     f()
 }
 
+// Manual Clone implementation for PipelineInstrumentation.
+// While PathBuf implements Clone, this explicit implementation is provided for
+// clarity and future extensibility. PathBuf::clone is cheap (Arc-based internally).
 impl Clone for PipelineInstrumentation {
     fn clone(&self) -> Self {
         Self {
@@ -320,26 +323,6 @@ impl Clone for PipelineInstrumentation {
             mirror_dir: self.mirror_dir.clone(),
         }
     }
-}
-
-fn current_timestamp_millis() -> u128 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|duration| duration.as_millis())
-        .unwrap_or(0)
-}
-
-fn simple_hash(value: &str) -> String {
-    const OFFSET_BASIS: u64 = 14695981039346656037;
-    const FNV_PRIME: u64 = 1099511628211;
-
-    let mut hash = OFFSET_BASIS;
-    for byte in value.as_bytes() {
-        hash ^= u64::from(*byte);
-        hash = hash.wrapping_mul(FNV_PRIME);
-    }
-
-    format!("{:016x}", hash)
 }
 
 fn resolve_path(relative: &str) -> PathBuf {

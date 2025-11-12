@@ -1,5 +1,6 @@
 //! Security subsystem
 
+use crate::utils::{current_timestamp_millis, simple_hash};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -7,7 +8,6 @@ use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
-use std::time::{SystemTime, UNIX_EPOCH};
 
 pub type UserId = u64;
 
@@ -51,6 +51,11 @@ pub struct OperationRecord {
 
 impl OperationRecord {
     /// Construct a new record with sensible defaults.
+    /// 
+    /// NOTE: The timestamp generated here will be overwritten by `sign_and_register`
+    /// in the PolicyEnforcer when the operation is signed. This initial timestamp
+    /// represents when the record was created, but the final signed timestamp
+    /// represents when the operation was actually signed and registered.
     pub fn new(kind: OperationKind, actor: impl Into<String>, scope: impl Into<String>) -> Self {
         Self {
             operation_id: next_operation_id(),
@@ -193,24 +198,6 @@ fn next_operation_id() -> String {
     format!("op-{}-{}", timestamp, counter)
 }
 
-fn current_timestamp_millis() -> u128 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|duration| duration.as_millis())
-        .unwrap_or(0)
-}
-
-fn simple_hash(value: &str) -> String {
-    const OFFSET_BASIS: u64 = 14695981039346656037;
-    const FNV_PRIME: u64 = 1099511628211;
-
-    let mut hash = OFFSET_BASIS;
-    for byte in value.as_bytes() {
-        hash ^= u64::from(*byte);
-        hash = hash.wrapping_mul(FNV_PRIME);
-    }
-
-    format!("{:016x}", hash)
 lazy_static::lazy_static! {
     static ref USER_TABLE: Arc<Mutex<HashMap<UserId, User>>> =
         Arc::new(Mutex::new(HashMap::new()));
@@ -284,6 +271,8 @@ mod tests {
         assert!(verify_signed_operation(&signed));
         assert!(signed.signature.len() > 10);
     }
+}
+
 fn register_user_inner(user: User) {
     let mut table = USER_TABLE.lock().unwrap();
     table.insert(user.id, user);
