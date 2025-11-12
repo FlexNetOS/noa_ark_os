@@ -37,6 +37,10 @@ pub enum RuntimeComponent {
 }
 
 /// Available execution backends for each runtime component.
+///
+/// Note: `Eq` is intentionally NOT derived for this enum because the
+/// `LlamaCppGpu` variant contains a floating-point field (`memory_gb: Option<f64>`).
+/// Floating-point types do not implement `Eq` due to NaN and comparison semantics.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ExecutionBackend {
     LlamaCppCpu,
