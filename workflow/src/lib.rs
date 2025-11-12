@@ -405,6 +405,7 @@ impl WorkflowEngine {
             .entry(workflow_id.to_string())
             .or_insert_with(HashMap::new)
             .insert(stage_name.to_string(), state.clone());
+        drop(stage_states);
 
         let timestamp = now_iso();
         self.emit_event(WorkflowEvent::StageState {

@@ -132,6 +132,7 @@ fn page_envelope_to_proto(envelope: PageEnvelope) -> Result<proto::PageEnvelope,
                 surface: region.surface.unwrap_or_default(),
                 slot: region
                     .slot
+                    .map(|slot| slot as i32)
                     .map(slot_to_string)
                     .map(|slot| (slot as u8).to_string())
                     .unwrap_or_default(),
