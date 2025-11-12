@@ -6,13 +6,15 @@
       "id": "crew-systems-memory",
       "name": "Systems Memory Crew",
       "description": "Owns the runtime knowledge graph cache and memory orchestration layer.",
-      "contacts": ["systems-memory@noa-ark.example"]
+      "contacts": ["systems-memory@noa-ark.example"],
+      "note": "Contact email is a placeholder. Replace with a real address for production use."
     },
     {
       "id": "crew-vfs",
       "name": "Virtual Filesystem Crew",
       "description": "Maintains metadata propagation and file graph surfaces.",
-      "contacts": ["vfs@noa-ark.example"]
+      "contacts": ["vfs@noa-ark.example"],
+      "note": "Contact email is a placeholder. Replace with a real address for production use."
     }
   ],
   "components": [
