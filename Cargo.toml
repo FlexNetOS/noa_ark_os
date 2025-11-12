@@ -11,6 +11,7 @@ members = [
     "runtime/manager",
     "ui/core",
     "server/ai/inference",
+    "server/gateway",
     "services/relocation-daemon",
     "apps/cli",
     "server/relocation",
