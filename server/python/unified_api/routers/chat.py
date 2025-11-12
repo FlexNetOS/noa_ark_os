@@ -1,4 +1,3 @@
-"""Chat command acknowledgement endpoints."""
 """Chat workspace endpoints bridging UI and agents."""
 from __future__ import annotations
 

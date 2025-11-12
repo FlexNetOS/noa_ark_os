@@ -1,5 +1,5 @@
-"""Analytics and ROI endpoints."""
-"""Analytics and ROI surfaces."""
+"""Analytics endpoints exposed to the unified dashboard."""
+
 from __future__ import annotations
 
 from typing import Dict, List
@@ -32,6 +32,12 @@ METRICS: Dict[str, Metric] = {
         value=44.0,
         unit="credits/week",
     ),
+    "automation_coverage": Metric(
+        id="automation_coverage",
+        label="Automation Coverage",
+        value=92.0,
+        unit="percent",
+    ),
 }
 
 
@@ -43,13 +49,11 @@ async def list_metrics() -> List[Metric]:
 
 
 @router.get("/roi")
-async def calculate_roi() -> Dict[str, float]:
+async def calculate_roi() -> Dict[str, float | None]:
     """Return a simple ROI calculation for the dashboard spotlight."""
 
     productivity = METRICS["developer_productivity"].value
     infrastructure = METRICS["infrastructure_cost"].value
     if infrastructure == 0:
         return {"roi": None}
-    productivity = METRICS["developer_productivity"].value
-    infrastructure = METRICS["infrastructure_cost"].value
     return {"roi": round(productivity / infrastructure, 2)}
