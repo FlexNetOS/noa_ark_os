@@ -160,6 +160,37 @@ enum TarCompression {
     Gzip,
 }
 
+/// Extracts a ZIP archive to the specified destination directory.
+///
+/// This function handles the extraction of ZIP files in a blocking task to avoid blocking
+/// the async runtime. It preserves Unix file permissions on supported platforms and uses
+/// `mangled_name()` to sanitize file paths, preventing directory traversal attacks.
+///
+/// # Arguments
+///
+/// * `source` - Path to the source ZIP file to extract
+/// * `destination` - Target directory where the archive contents will be extracted
+///
+/// # Returns
+///
+/// Returns `Ok(())` on successful extraction, or an error if:
+/// - The source file cannot be opened or is not a valid ZIP archive
+/// - Any entry in the archive cannot be read or extracted
+/// - Directory or file creation fails during extraction
+/// - The blocking task fails to execute
+///
+/// # Security Considerations
+///
+/// - Uses `mangled_name()` to prevent directory traversal attacks by sanitizing paths
+/// - Validates and creates parent directories before extracting files
+/// - On Unix systems, preserves original file permissions from the archive
+///
+/// # Implementation Details
+///
+/// - Runs in a blocking task via `tokio::task::spawn_blocking` to avoid blocking async operations
+/// - Iterates through all entries in the archive sequentially
+/// - Creates directories for entries ending with '/'
+/// - Extracts regular files with their content and permissions
 async fn extract_zip(source: &Path, destination: &Path) -> Result<()> {
     let source = source.to_path_buf();
     let destination = destination.to_path_buf();
@@ -201,6 +232,39 @@ async fn extract_zip(source: &Path, destination: &Path) -> Result<()> {
     Ok(())
 }
 
+/// Extracts a TAR archive (optionally compressed) to the specified destination directory.
+///
+/// This function handles the extraction of TAR and TAR.GZ files in a blocking task to avoid
+/// blocking the async runtime. It supports both uncompressed TAR files and GZIP-compressed
+/// TAR files based on the compression parameter.
+///
+/// # Arguments
+///
+/// * `source` - Path to the source TAR or TAR.GZ file to extract
+/// * `destination` - Target directory where the archive contents will be extracted
+/// * `compression` - Compression type, either `TarCompression::None` for plain TAR or
+///   `TarCompression::Gzip` for GZIP-compressed TAR files
+///
+/// # Returns
+///
+/// Returns `Ok(())` on successful extraction, or an error if:
+/// - The source file cannot be opened or is not a valid TAR archive
+/// - The GZIP decompression fails (for TAR.GZ files)
+/// - The archive cannot be unpacked to the destination directory
+/// - The blocking task fails to execute
+///
+/// # Security Considerations
+///
+/// - The TAR library handles path validation internally to prevent directory traversal
+/// - All archive entries are unpacked relative to the destination directory
+/// - Symbolic links and special files are handled according to the TAR library's defaults
+///
+/// # Implementation Details
+///
+/// - Runs in a blocking task via `tokio::task::spawn_blocking` to avoid blocking async operations
+/// - For uncompressed TAR: Directly creates a `tar::Archive` from the file
+/// - For GZIP-compressed TAR: Wraps the file in a `GzDecoder` before creating the archive
+/// - Uses the `tar` crate's `unpack()` method which handles all entry types automatically
 async fn extract_tar(source: &Path, destination: &Path, compression: TarCompression) -> Result<()> {
     let source = source.to_path_buf();
     let destination = destination.to_path_buf();
