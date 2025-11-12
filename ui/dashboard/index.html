@@ -97,13 +97,28 @@
         const tbody = document.getElementById('activity-body');
         tbody.innerHTML = '';
         const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${latest.request_id}</td>
-          <td>${latest.protocol}</td>
-          <td>${(latest.route_targets || []).join(', ')}</td>
-          <td>${latest.agent_id || 'n/a'}</td>
-          <td>${latest.recorded_at}</td>
-        `;
+        
+        // Safely create each cell to avoid XSS
+        const tdRequestId = document.createElement('td');
+        tdRequestId.textContent = latest.request_id;
+        row.appendChild(tdRequestId);
+
+        const tdProtocol = document.createElement('td');
+        tdProtocol.textContent = latest.protocol;
+        row.appendChild(tdProtocol);
+
+        const tdTargets = document.createElement('td');
+        tdTargets.textContent = (latest.route_targets || []).join(', ');
+        row.appendChild(tdTargets);
+
+        const tdAgent = document.createElement('td');
+        tdAgent.textContent = latest.agent_id || 'n/a';
+        row.appendChild(tdAgent);
+
+        const tdRecorded = document.createElement('td');
+        tdRecorded.textContent = latest.recorded_at;
+        row.appendChild(tdRecorded);
+        
         tbody.appendChild(row);
       }
     }

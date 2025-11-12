@@ -130,7 +130,14 @@ impl TelemetrySink {
 
 impl Default for TelemetrySink {
     fn default() -> Self {
-        Self::new(default_storage_dir()).expect("telemetry directory should be creatable")
+        Self::new(default_storage_dir()).unwrap_or_else(|e| {
+            panic!(
+                "Failed to create telemetry directory at {:?}: {}. \
+                 Please check filesystem permissions, disk space, and path validity.",
+                default_storage_dir(),
+                e
+            )
+        })
     }
 }
 
