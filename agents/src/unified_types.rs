@@ -29,7 +29,7 @@ use uuid::Uuid;
 /// # Hierarchical Structure
 ///
 /// - **L1-L2**: Strategic governance and policy-making
-/// - **L3**: Tactical coordination and resource allocation  
+/// - **L3**: Tactical coordination and resource allocation
 /// - **L4**: Operational execution and domain expertise
 /// - **L5**: Infrastructure support and atomic tasks
 ///
