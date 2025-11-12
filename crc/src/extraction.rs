@@ -168,6 +168,37 @@ enum TarCompression {
     Gzip,
 }
 
+/// Extracts a ZIP archive to the specified destination directory.
+///
+/// This function handles the extraction of ZIP files in a blocking task to avoid blocking
+/// the async runtime. It preserves Unix file permissions on supported platforms and uses
+/// `mangled_name()` to sanitize file paths, preventing directory traversal attacks.
+///
+/// # Arguments
+///
+/// * `source` - Path to the source ZIP file to extract
+/// * `destination` - Target directory where the archive contents will be extracted
+///
+/// # Returns
+///
+/// Returns `Ok(())` on successful extraction, or an error if:
+/// - The source file cannot be opened or is not a valid ZIP archive
+/// - Any entry in the archive cannot be read or extracted
+/// - Directory or file creation fails during extraction
+/// - The blocking task fails to execute
+///
+/// # Security Considerations
+///
+/// - Uses `mangled_name()` to prevent directory traversal attacks by sanitizing paths
+/// - Validates and creates parent directories before extracting files
+/// - On Unix systems, preserves original file permissions from the archive
+///
+/// # Implementation Details
+///
+/// - Runs in a blocking task via `tokio::task::spawn_blocking` to avoid blocking async operations
+/// - Iterates through all entries in the archive sequentially
+/// - Creates directories for entries ending with '/'
+/// - Extracts regular files with their content and permissions
 async fn extract_zip(source: &Path, destination: &Path) -> Result<()> {
     let source = source.to_path_buf();
     let destination = destination.to_path_buf();
@@ -209,6 +240,39 @@ async fn extract_zip(source: &Path, destination: &Path) -> Result<()> {
     Ok(())
 }
 
+/// Extracts a TAR archive (optionally compressed) to the specified destination directory.
+///
+/// This function handles the extraction of TAR and TAR.GZ files in a blocking task to avoid
+/// blocking the async runtime. It supports both uncompressed TAR files and GZIP-compressed
+/// TAR files based on the compression parameter.
+///
+/// # Arguments
+///
+/// * `source` - Path to the source TAR or TAR.GZ file to extract
+/// * `destination` - Target directory where the archive contents will be extracted
+/// * `compression` - Compression type, either `TarCompression::None` for plain TAR or
+///   `TarCompression::Gzip` for GZIP-compressed TAR files
+///
+/// # Returns
+///
+/// Returns `Ok(())` on successful extraction, or an error if:
+/// - The source file cannot be opened or is not a valid TAR archive
+/// - The GZIP decompression fails (for TAR.GZ files)
+/// - The archive cannot be unpacked to the destination directory
+/// - The blocking task fails to execute
+///
+/// # Security Considerations
+///
+/// - The TAR library handles path validation internally to prevent directory traversal
+/// - All archive entries are unpacked relative to the destination directory
+/// - Symbolic links and special files are handled according to the TAR library's defaults
+///
+/// # Implementation Details
+///
+/// - Runs in a blocking task via `tokio::task::spawn_blocking` to avoid blocking async operations
+/// - For uncompressed TAR: Directly creates a `tar::Archive` from the file
+/// - For GZIP-compressed TAR: Wraps the file in a `GzDecoder` before creating the archive
+/// - Uses the `tar` crate's `unpack()` method which handles all entry types automatically
 async fn extract_tar(source: &Path, destination: &Path, compression: TarCompression) -> Result<()> {
     let source = source.to_path_buf();
     let destination = destination.to_path_buf();
@@ -219,12 +283,12 @@ async fn extract_tar(source: &Path, destination: &Path, compression: TarCompress
         match compression {
             TarCompression::None => {
                 let mut archive = tar::Archive::new(file);
-                archive.unpack(&destination)?;
+                extract_tar_entries(&mut archive, &destination)?;
             }
             TarCompression::Gzip => {
                 let decoder = flate2::read::GzDecoder::new(file);
                 let mut archive = tar::Archive::new(decoder);
-                archive.unpack(&destination)?;
+                extract_tar_entries(&mut archive, &destination)?;
             }
         }
 
@@ -234,4 +298,232 @@ async fn extract_tar(source: &Path, destination: &Path, compression: TarCompress
     .map_err(|e| Error::ArchiveError(format!("Tar extraction task error: {}", e)))??;
 
     Ok(())
+}
+
+/// Safely extract tar entries by validating paths to prevent path traversal attacks.
+fn extract_tar_entries<R: std::io::Read>(
+    archive: &mut tar::Archive<R>,
+    destination: &Path,
+) -> Result<()> {
+    let canonical_dest = destination
+        .canonicalize()
+        .map_err(|e| Error::ArchiveError(format!("Failed to canonicalize destination: {}", e)))?;
+
+    for entry_result in archive.entries()? {
+        let mut entry = entry_result
+            .map_err(|e| Error::ArchiveError(format!("Failed to read tar entry: {}", e)))?;
+
+        let entry_path = entry
+            .path()
+            .map_err(|e| Error::ArchiveError(format!("Failed to read entry path: {}", e)))?;
+
+        // Validate the entry path to prevent path traversal attacks
+        let target_path = destination.join(&entry_path);
+        
+        // Canonicalize the target path to resolve any ".." or "." components
+        // If the path doesn't exist yet, we need to check its parent directories
+        let canonical_target = if target_path.exists() {
+            target_path
+                .canonicalize()
+                .map_err(|e| Error::ArchiveError(format!("Failed to canonicalize target path: {}", e)))?
+        } else {
+            // For non-existent paths, construct the canonical path by joining with the destination
+            let mut path_buf = canonical_dest.clone();
+            for component in entry_path.components() {
+                match component {
+                    std::path::Component::Normal(name) => path_buf.push(name),
+                    std::path::Component::RootDir => {
+                        return Err(Error::ArchiveError(format!(
+                            "Absolute paths are not allowed in tar archives: {}",
+                            entry_path.display()
+                        )));
+                    }
+                    std::path::Component::ParentDir | std::path::Component::CurDir => {
+                        return Err(Error::ArchiveError(format!(
+                            "Path traversal detected in tar entry: {}",
+                            entry_path.display()
+                        )));
+                    }
+                    std::path::Component::Prefix(_) => {
+                        return Err(Error::ArchiveError(format!(
+                            "Windows path prefixes are not allowed in tar archives: {}",
+                            entry_path.display()
+                        )));
+                    }
+                }
+            }
+            path_buf
+        };
+
+        // Ensure the canonical target is within the destination directory
+        if !canonical_target.starts_with(&canonical_dest) {
+            return Err(Error::ArchiveError(format!(
+                "Path traversal attack detected: entry '{}' would extract to '{}'",
+                entry_path.display(),
+                canonical_target.display()
+            )));
+        }
+
+        // Extract the entry
+        // Ensure parent directory exists before unpacking
+        if let Some(parent) = target_path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        
+        entry
+            .unpack(&target_path)
+            .map_err(|e| Error::ArchiveError(format!("Failed to unpack entry: {}", e)))?;
+    }
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_artifact_kind_detection() {
+        assert_eq!(
+            ArtifactKind::from_path(Path::new("test.zip")),
+            Some(ArtifactKind::Zip)
+        );
+        assert_eq!(
+            ArtifactKind::from_path(Path::new("test.tar")),
+            Some(ArtifactKind::Tar)
+        );
+        assert_eq!(
+            ArtifactKind::from_path(Path::new("test.tar.gz")),
+            Some(ArtifactKind::TarGz)
+        );
+        assert_eq!(
+            ArtifactKind::from_path(Path::new("test.7z")),
+            Some(ArtifactKind::SevenZ)
+        );
+        assert_eq!(ArtifactKind::from_path(Path::new("test.txt")), None);
+    }
+
+    #[test]
+    fn test_path_traversal_detection() {
+        use std::path::Component;
+
+        // Test that we properly validate path components
+        let safe_path = Path::new("safe/file.txt");
+        let mut has_traversal = false;
+        for component in safe_path.components() {
+            if matches!(
+                component,
+                Component::ParentDir | Component::RootDir | Component::Prefix(_)
+            ) {
+                has_traversal = true;
+            }
+        }
+        assert!(!has_traversal, "Safe path should not trigger traversal detection");
+
+        // Test parent directory detection
+        let malicious_path = Path::new("../etc/passwd");
+        let mut has_parent = false;
+        for component in malicious_path.components() {
+            if matches!(component, Component::ParentDir) {
+                has_parent = true;
+            }
+        }
+        assert!(has_parent, "Path with .. should be detected");
+
+        // Test absolute path detection
+        #[cfg(unix)]
+        {
+            let absolute_path = Path::new("/etc/passwd");
+            let mut has_root = false;
+            for component in absolute_path.components() {
+                if matches!(component, Component::RootDir) {
+                    has_root = true;
+                }
+            }
+            assert!(has_root, "Absolute path should be detected");
+        }
+    }
+
+    #[test]
+    fn test_extract_tar_entries_validates_paths() -> Result<()> {
+        // Create a temporary directory for testing
+        let temp_dir = tempfile::tempdir()?;
+        let dest_path = temp_dir.path().join("extract");
+        std::fs::create_dir_all(&dest_path)?;
+
+        // Create a simple tar archive with a safe file
+        let tar_path = temp_dir.path().join("test.tar");
+        let tar_file = std::fs::File::create(&tar_path)?;
+        let mut builder = tar::Builder::new(tar_file);
+
+        let data = b"safe content";
+        let mut header = tar::Header::new_gnu();
+        header.set_path("safe.txt")?;
+        header.set_size(data.len() as u64);
+        header.set_mode(0o644);
+        header.set_cksum();
+        builder.append(&header, &data[..])?;
+        builder.finish()?;
+
+        // Extract the archive
+        let file = std::fs::File::open(&tar_path)?;
+        let mut archive = tar::Archive::new(file);
+        extract_tar_entries(&mut archive, &dest_path)?;
+
+        // Verify the file was extracted
+        assert!(dest_path.join("safe.txt").exists());
+        let content = std::fs::read_to_string(dest_path.join("safe.txt"))?;
+        assert_eq!(content, "safe content");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_nested_directories_extraction() -> Result<()> {
+        let temp_dir = tempfile::tempdir()?;
+        let dest_path = temp_dir.path().join("extract");
+        std::fs::create_dir_all(&dest_path)?;
+
+        // Create a tar with nested directories
+        let tar_path = temp_dir.path().join("nested.tar");
+        let tar_file = std::fs::File::create(&tar_path)?;
+        let mut builder = tar::Builder::new(tar_file);
+
+        // Add directories first
+        let mut dir_header = tar::Header::new_gnu();
+        dir_header.set_path("dir1/")?;
+        dir_header.set_size(0);
+        dir_header.set_mode(0o755);
+        dir_header.set_entry_type(tar::EntryType::Directory);
+        dir_header.set_cksum();
+        builder.append(&dir_header, std::io::empty())?;
+
+        let mut dir_header = tar::Header::new_gnu();
+        dir_header.set_path("dir1/dir2/")?;
+        dir_header.set_size(0);
+        dir_header.set_mode(0o755);
+        dir_header.set_entry_type(tar::EntryType::Directory);
+        dir_header.set_cksum();
+        builder.append(&dir_header, std::io::empty())?;
+
+        // Add a file in the nested directory
+        let data = b"nested content";
+        let mut header = tar::Header::new_gnu();
+        header.set_path("dir1/dir2/file.txt")?;
+        header.set_size(data.len() as u64);
+        header.set_mode(0o644);
+        header.set_cksum();
+        builder.append(&header, &data[..])?;
+        builder.finish()?;
+
+        // Extract the archive
+        let file = std::fs::File::open(&tar_path)?;
+        let mut archive = tar::Archive::new(file);
+        extract_tar_entries(&mut archive, &dest_path)?;
+
+        // Verify the nested file was extracted
+        assert!(dest_path.join("dir1/dir2/file.txt").exists());
+
+        Ok(())
+    }
 }

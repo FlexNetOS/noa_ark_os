@@ -7,7 +7,8 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::channel;
 use std::time::Duration;
-use tracing::{debug, error, info};
+use tokio::fs;
+use tracing::{debug, error, info, warn};
 
 use crate::{
     extraction::prepare_artifact_for_processing, CRCSystem, DropManifest, Error, Priority,
@@ -190,59 +191,99 @@ impl CRCWatcher {
         let prepared = prepare_artifact_for_processing(path.clone(), None).await?;
         let processing_path = prepared.processing_path.clone();
 
-        // Extract metadata from the processing directory
-        let mut metadata = self.extract_metadata(&processing_path).await?;
-        metadata.insert(
-            "processing_path".to_string(),
-            processing_path.display().to_string(),
-        );
+        // If extraction occurred, save the path for potential cleanup on error
+        let extracted_path = prepared
+            .original_artifact
+            .as_ref()
+            .and_then(|a| a.extracted_path.clone());
 
-        if let Some(artifact) = prepared.original_artifact.as_ref() {
+        // Wrap the rest of the processing in a closure to handle cleanup on error
+        let process_result = async {
+            // Extract metadata from the processing directory
+            let mut metadata = self.extract_metadata(&processing_path).await?;
             metadata.insert(
-                "original_artifact_path".to_string(),
-                artifact.path.display().to_string(),
+                "processing_path".to_string(),
+                processing_path.display().to_string(),
             );
-            if let Some(ext) = artifact.archive_type.as_ref() {
-                metadata.insert("original_artifact_type".to_string(), ext.clone());
-            }
-            if let Some(size) = artifact.size {
-                metadata.insert("original_artifact_size".to_string(), size.to_string());
-            }
-            if let Some(extracted) = artifact.extracted_path.as_ref() {
+
+            if let Some(artifact) = prepared.original_artifact.as_ref() {
                 metadata.insert(
-                    "extracted_path".to_string(),
-                    extracted.display().to_string(),
+                    "original_artifact_path".to_string(),
+                    artifact.path.display().to_string(),
                 );
+                if let Some(ext) = artifact.archive_type.as_ref() {
+                    metadata.insert("original_artifact_type".to_string(), ext.clone());
+                }
+                if let Some(size) = artifact.size {
+                    metadata.insert("original_artifact_size".to_string(), size.to_string());
+                }
+                if let Some(extracted) = artifact.extracted_path.as_ref() {
+                    metadata.insert(
+                        "extracted_path".to_string(),
+                        extracted.display().to_string(),
+                    );
+                }
+                if let Some(file_name) = artifact.path.file_name().and_then(|n| n.to_str()) {
+                    metadata.insert("original_artifact_name".to_string(), file_name.to_string());
+                }
             }
-            if let Some(file_name) = artifact.path.file_name().and_then(|n| n.to_str()) {
-                metadata.insert("original_artifact_name".to_string(), file_name.to_string());
+
+            // Generate manifest
+            let manifest = self
+                .generate_manifest(&processing_path, source_type.clone(), config, metadata)
+                .await?;
+
+            // Register drop with CRC system
+            let drop_id = self
+                .crc_system
+                .register_drop(
+                    processing_path.clone(),
+                    manifest,
+                    prepared.original_artifact.clone(),
+                )
+                .map_err(|e| Error::SystemError(e))?;
+
+            Ok::<_, Error>((drop_id, config))
+        }
+        .await;
+
+        // Handle the result and cleanup extracted directory on error
+        match process_result {
+            Ok((drop_id, config)) => {
+                info!("✓ Drop registered: {} ({})", drop_id, config.name);
+                info!("  Source type: {:?}", source_type);
+                info!("  Priority: {:?}", config.priority);
+                info!("  Default sandbox: {}", config.default_sandbox);
+
+                // TODO: Trigger processing via message queue or channel
+                // For now, processing will be handled by the parallel processor
+
+                Ok(())
+            }
+            Err(e) => {
+                // Clean up extracted directory if extraction occurred
+                if let Some(extract_dir) = extracted_path {
+                    if extract_dir.exists() {
+                        match fs::remove_dir_all(&extract_dir).await {
+                            Ok(_) => {
+                                warn!(
+                                    "Cleaned up extracted directory after error: {}",
+                                    extract_dir.display()
+                                );
+                            }
+                            Err(cleanup_err) => {
+                                error!(
+                                    "Failed to cleanup extracted directory {}: {}",
+                                    extract_dir.display(),
+                                    cleanup_err
+                                );
+                            }
+                        }
+                    }
+                }
+                Err(e)
             }
         }
-
-        // Generate manifest
-        let manifest = self
-            .generate_manifest(&processing_path, source_type.clone(), config, metadata)
-            .await?;
-
-        // Register drop with CRC system
-        let drop_id = self
-            .crc_system
-            .register_drop(
-                processing_path.clone(),
-                manifest,
-                prepared.original_artifact.clone(),
-            )
-            .map_err(|e| Error::SystemError(e))?;
-
-        info!("✓ Drop registered: {} ({})", drop_id, config.name);
-        info!("  Source type: {:?}", source_type);
-        info!("  Priority: {:?}", config.priority);
-        info!("  Default sandbox: {}", config.default_sandbox);
-
-        // TODO: Trigger processing via message queue or channel
-        // For now, processing will be handled by the parallel processor
-
-        Ok(())
     }
 
     /// Detect source type from file path
