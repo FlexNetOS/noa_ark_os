@@ -12,6 +12,7 @@ option php_namespace = "Google\\Protobuf\\WellKnownTypes";
 option php_metadata_namespace = "Google\\Protobuf\\Internal";
 option cc_enable_arenas = true;
 
+// Minimal copy of google.protobuf.Struct semantics for local compilation.
 message Struct {
   map<string, Value> fields = 1;
 }

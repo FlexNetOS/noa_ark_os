@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
-use noa_core::hardware::{
-    AcceleratorKind, CpuProfile, GpuBackend, GpuProfile, HardwareProfile, MemoryProfile,
-};
+use noa_core::hardware::{AcceleratorKind, HardwareProfile};
+#[cfg(test)]
+use noa_core::hardware::{CpuProfile, GpuBackend, GpuProfile, MemoryProfile};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -66,6 +66,12 @@ pub struct RuntimePlan {
     pub selections: Vec<BackendSelection>,
     pub fallbacks: Vec<ExecutionBackend>,
     pub notes: Vec<String>,
+}
+
+impl RuntimePlan {
+    pub fn new() -> Self {
+        Self::default()
+    }
 }
 /// Errors reported when a suitable backend cannot be selected.
 #[derive(Debug, Error)]

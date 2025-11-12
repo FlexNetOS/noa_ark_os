@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::{Mutex, OnceLock};
 
 pub type ChannelId = u64;
 
@@ -16,6 +17,10 @@ fn message_queues() -> &'static Arc<Mutex<HashMap<ChannelId, Vec<Message>>>> {
     static MESSAGE_QUEUES: OnceLock<Arc<Mutex<HashMap<ChannelId, Vec<Message>>>>> =
         OnceLock::new();
     MESSAGE_QUEUES.get_or_init(|| Arc::new(Mutex::new(HashMap::new())))
+static MESSAGE_QUEUES: OnceLock<Mutex<HashMap<ChannelId, Vec<Message>>>> = OnceLock::new();
+
+fn message_queues() -> &'static Mutex<HashMap<ChannelId, Vec<Message>>> {
+    MESSAGE_QUEUES.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
 /// Initialize IPC subsystem

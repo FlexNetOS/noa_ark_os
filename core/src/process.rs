@@ -3,6 +3,10 @@
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::{
+    atomic::{AtomicU64, Ordering},
+    Mutex, OnceLock,
+};
 
 pub type ProcessId = u64;
 
@@ -27,6 +31,12 @@ fn process_table() -> &'static Arc<Mutex<HashMap<ProcessId, Process>>> {
 }
 
 static NEXT_PID: AtomicU64 = AtomicU64::new(1);
+static PROCESS_TABLE: OnceLock<Mutex<HashMap<ProcessId, Process>>> = OnceLock::new();
+static NEXT_PID: AtomicU64 = AtomicU64::new(1);
+
+fn process_table() -> &'static Mutex<HashMap<ProcessId, Process>> {
+    PROCESS_TABLE.get_or_init(|| Mutex::new(HashMap::new()))
+}
 
 /// Initialize process management
 pub fn init() -> Result<(), &'static str> {

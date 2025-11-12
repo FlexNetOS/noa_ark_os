@@ -1,9 +1,12 @@
+use std::collections::BTreeMap;
 use std::pin::Pin;
 
 use axum::async_trait;
 use chrono::{DateTime, Utc};
 use futures::Stream;
 use prost_types::{ListValue, Struct, Timestamp};
+use prost_types::{value::Kind as ProstKind, ListValue, Struct, Timestamp, Value as ProstValue};
+use serde_json::Value as JsonValue;
 use tokio_stream::StreamExt;
 use tonic::{Request, Response, Status};
 
@@ -43,7 +46,7 @@ impl proto::ui_schema_service_server::UiSchemaService for UiSchemaGrpc {
     }
 
     type StreamEventsStream =
-        Pin<Box<dyn futures::Stream<Item = Result<proto::RealTimeEvent, Status>> + Send>>;
+        Pin<Box<dyn Stream<Item = Result<proto::RealTimeEvent, Status>> + Send>>;
 
     async fn stream_events(
         &self,
@@ -66,6 +69,16 @@ impl proto::ui_schema_service_server::UiSchemaService for UiSchemaGrpc {
             let mut stream = Box::pin(stream);
             while let Some(event) = stream.as_mut().next().await {
                 yield realtime_to_proto(event)?;
+        let mut stream = bridge.subscribe();
+        let output = async_stream::try_stream! {
+            while let Some(event) = stream.next().await {
+                match event {
+                    Ok(event) => {
+                        let mapped = SessionBridge::map_event(event);
+                        yield realtime_to_proto(mapped)?;
+                    }
+                    Err(_) => continue,
+                }
             }
         };
 
@@ -92,6 +105,9 @@ fn page_envelope_to_proto(envelope: PageEnvelope) -> Result<proto::PageEnvelope,
                 .widgets
                 .into_iter()
                 .map(|widget| {
+                .map(|widget| -> Result<proto::WidgetSchema, Status> {
+                    let props = widget.props.map(json_to_struct).transpose()?;
+
                     Ok(proto::WidgetSchema {
                         id: widget.id,
                         kind: format!("{:?}", widget.kind),
@@ -103,6 +119,10 @@ fn page_envelope_to_proto(envelope: PageEnvelope) -> Result<proto::PageEnvelope,
                     })
                 })
                 .collect::<Result<Vec<_>, Status>>()?;
+                        props,
+                    })
+                })
+                .collect::<Result<Vec<_>, _>>()?;
 
             Ok(proto::LayoutRegion {
                 id: region.id,
@@ -113,11 +133,13 @@ fn page_envelope_to_proto(envelope: PageEnvelope) -> Result<proto::PageEnvelope,
                 slot: region
                     .slot
                     .map(slot_to_string)
+                    .map(|slot| (slot as u8).to_string())
                     .unwrap_or_default(),
                 widgets,
             })
         })
         .collect::<Result<Vec<_>, Status>>()?;
+        .collect::<Result<Vec<_>, _>>()?;
 
     let realtime = envelope
         .realtime
@@ -126,12 +148,16 @@ fn page_envelope_to_proto(envelope: PageEnvelope) -> Result<proto::PageEnvelope,
         .collect::<Result<Vec<_>, _>>()?;
 
     let resume_token = if let Some(token) = envelope.resume_token {
+        let issued_at = timestamp_from_str(&token.issued_at)?;
+        let expires_at = timestamp_from_str(&token.expires_at)?;
         Some(proto::ResumeToken {
             workflow_id: token.workflow_id,
             stage_id: token.stage_id.unwrap_or_default(),
             checkpoint: token.checkpoint,
             issued_at: Some(timestamp_from_str(&token.issued_at)?),
             expires_at: Some(timestamp_from_str(&token.expires_at)?),
+            issued_at: Some(issued_at),
+            expires_at: Some(expires_at),
         })
     } else {
         None
@@ -155,6 +181,7 @@ fn realtime_to_proto(event: RealTimeEvent) -> Result<proto::RealTimeEvent, Statu
         event_type: event.event_type,
         workflow_id: event.workflow_id,
         payload: Some(value_to_struct(event.payload)?),
+        payload: Some(json_to_struct(event.payload)?),
         timestamp: Some(timestamp_from_str(&event.timestamp)?),
     })
 }
@@ -213,4 +240,49 @@ fn value_to_prost_value(value: serde_json::Value) -> Result<prost_types::Value, 
 
 fn slot_to_string(slot: LayoutSlot) -> String {
     format!("{:?}", slot)
+fn json_to_struct(value: JsonValue) -> Result<Struct, Status> {
+    match value {
+        JsonValue::Object(map) => {
+            let mut fields = BTreeMap::new();
+            for (key, val) in map {
+                fields.insert(key, json_to_value(val)?);
+            }
+            Ok(Struct { fields })
+        }
+        other => {
+            let mut fields = BTreeMap::new();
+            fields.insert("value".to_string(), json_to_value(other)?);
+            Ok(Struct { fields })
+        }
+    }
+}
+
+fn json_to_value(value: JsonValue) -> Result<ProstValue, Status> {
+    let kind = match value {
+        JsonValue::Null => ProstKind::NullValue(0),
+        JsonValue::Bool(b) => ProstKind::BoolValue(b),
+        JsonValue::Number(num) => {
+            let number = num
+                .as_f64()
+                .ok_or_else(|| Status::internal("invalid number"))?;
+            ProstKind::NumberValue(number)
+        }
+        JsonValue::String(s) => ProstKind::StringValue(s),
+        JsonValue::Array(items) => {
+            let values = items
+                .into_iter()
+                .map(json_to_value)
+                .collect::<Result<Vec<_>, _>>()?;
+            ProstKind::ListValue(ListValue { values })
+        }
+        JsonValue::Object(map) => {
+            let mut fields = BTreeMap::new();
+            for (key, val) in map {
+                fields.insert(key, json_to_value(val)?);
+            }
+            ProstKind::StructValue(Struct { fields })
+        }
+    };
+
+    Ok(ProstValue { kind: Some(kind) })
 }

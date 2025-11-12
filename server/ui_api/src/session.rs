@@ -1,7 +1,7 @@
 use chrono::{Duration, Utc};
 use noa_workflow::{WorkflowEvent, WorkflowEventStream, WorkflowResumeToken};
 use serde_json::json;
-use tokio_stream::{wrappers::BroadcastStream, Stream, StreamExt};
+use tokio_stream::wrappers::BroadcastStream;
 
 use crate::schema::{RealTimeEvent, ResumeToken};
 
@@ -67,15 +67,6 @@ impl SessionBridge {
                 }),
                 timestamp,
             },
-        }
-    }
-
-    pub fn forward_events(&self) -> impl Stream<Item = RealTimeEvent> {
-        let mut stream = self.subscribe();
-        async_stream::stream! {
-            while let Some(Ok(event)) = stream.next().await {
-                yield SessionBridge::map_event(event);
-            }
         }
     }
 }

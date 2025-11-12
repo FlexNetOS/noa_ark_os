@@ -56,9 +56,9 @@ pub struct Pipeline {
     pub stages: Vec<Stage>,
     pub commit_sha: String,
     pub triggered_at: u64,
-    pub crc_job_id: Option<String>,  // new: link to CRC job
-    pub auto_approved: bool,          // new: AI auto-approval
-    pub ai_confidence: f32,           // new: AI confidence score
+    pub crc_job_id: Option<String>, // new: link to CRC job
+    pub auto_approved: bool,        // new: AI auto-approval
+    pub ai_confidence: f32,         // new: AI confidence score
     pub diff_summary: Option<String>,
     pub approvals_required: Vec<String>,
     #[serde(default)]
@@ -334,7 +334,7 @@ impl CICDSystem {
             ))
         }
     }
-    
+
     /// Execute pipeline with full automation
     pub fn execute_pipeline(&self, pipeline_id: &str) -> Result<(), String> {
         // Check if requires human review
@@ -345,7 +345,10 @@ impl CICDSystem {
                     return Err("Pipeline requires human review before execution".to_string());
                 }
                 if !pipeline.approvals_required.is_empty()
-                    && !pipeline.approvals_required.iter().all(|required| pipeline.approvals_granted.contains(required))
+                    && !pipeline
+                        .approvals_required
+                        .iter()
+                        .all(|required| pipeline.approvals_granted.contains(required))
                 {
                     return Err("Pipeline is waiting for documentation approvals".to_string());
                 }
@@ -467,7 +470,7 @@ impl CICDSystem {
         Ok(())
     }
 
-     fn docs_refresh(&self, pipeline_id: &str) -> Result<(), String> {
+    fn docs_refresh(&self, pipeline_id: &str) -> Result<(), String> {
         let diff_summary = {
             let pipelines = self.pipelines.lock().unwrap();
             pipelines
@@ -481,7 +484,7 @@ impl CICDSystem {
         println!("[CI/CD] Invoking documentation agent to sync docs");
         Ok(())
     }
-    
+
     /// Deploy to environment with strategy and auto-approval
     pub fn deploy_to_environment(
         &self,
