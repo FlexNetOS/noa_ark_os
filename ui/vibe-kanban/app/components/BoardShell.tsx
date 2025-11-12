@@ -53,6 +53,7 @@ export function BoardShell({ state }: BoardShellProps) {
     return (snapshot?.columns ?? [])
       .filter((column) => /done|complete|finished/i.test(column.title))
       .reduce((count, column) => count + column.cards.length, 0);
+      .reduce((count, column) => count + column.cards.length, 0) ?? 0;
   }, [snapshot?.columns]);
   }, [snapshot]);
 
