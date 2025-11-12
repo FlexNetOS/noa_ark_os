@@ -289,8 +289,8 @@ fn is_valid_filename(name: &str) -> bool {
         return false;
     }
     
-    // Reject filenames with null bytes or control characters
-    if name.chars().any(|c| c.is_control() || c == '\0') {
+    // Reject filenames with control characters (including null bytes)
+    if name.chars().any(|c| c.is_control()) {
         return false;
     }
     
