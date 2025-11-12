@@ -1641,7 +1641,6 @@ impl Gateway {
     }
 
     /// Calculate an optimized route for a given intent.
-    /// Calculate an optimized route for a given intent.
     pub fn route_intent(&self, intent: &Intent) -> Result<RoutePlan, GatewayError> {
         #[derive(Clone)]
         struct CandidateView {
