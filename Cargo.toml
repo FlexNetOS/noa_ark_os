@@ -11,6 +11,7 @@ members = [
     "runtime/manager",
     "ui/core",
     "server/ai/inference",
+    "server/ui_api",
 ]
 
 [workspace.package]
