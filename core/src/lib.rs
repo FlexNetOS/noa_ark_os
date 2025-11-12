@@ -38,7 +38,8 @@ pub fn init() -> Result<capabilities::KernelHandle, kernel::KernelError> {
     ipc::init().map_err(|e| kernel::KernelError::Init(e.to_string()))?;
     fs::init().map_err(|e| kernel::KernelError::Init(e.to_string()))?;
     security::init().map_err(|e| kernel::KernelError::Init(e.to_string()))?;
-    gateway::init().map_err(|_| kernel::KernelError::Init("gateway initialization failed".to_string()))?;
+    gateway::init()
+        .map_err(|_| kernel::KernelError::Init("gateway initialization failed".to_string()))?;
 
     println!("Core OS initialized successfully");
     Ok(handle)
