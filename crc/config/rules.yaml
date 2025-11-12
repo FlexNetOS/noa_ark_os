@@ -1,5 +1,12 @@
 # CRC Adaptation Rules
 
+metadata:
+  version: 1
+  owners:
+    primary: crc-governance
+    storage_playbooks: storage-relocation
+    documentation_playbooks: documentation-automation
+
 adaptation_rules:
   # Naming conventions
   naming:
@@ -80,3 +87,21 @@ adaptation_rules:
     add_benchmarks: false
     mock_external_calls: true
     test_coverage_min: 80
+
+  # Automation Guardrails
+  automation:
+    storage_playbooks:
+      enforce_signed_runs: true
+      require_dry_run: true
+      relocation_window_minutes: 30
+      max_parallel_jobs: 5
+    documentation_playbooks:
+      enforce_reviewers:
+        - "tech-writer"
+        - "product-owner"
+      require_linked_ticket: true
+      auto_changelog_update: true
+    incident_recovery:
+      validate_checkpoint_integrity: true
+      require_post_incident_report: true
+      enforce_rollforward_preference: true

@@ -57,12 +57,12 @@ impl DataAnalyticsAgent {
             state: RwLock::new(AgentState::Created),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Ready;
         Ok(())
     }
-    
+
     pub async fn analyze(&self) -> Result<AnalyticsReport> {
         Ok(AnalyticsReport {
             report_id: Uuid::new_v4(),
@@ -70,19 +70,25 @@ impl DataAnalyticsAgent {
             insights: vec!["Key insight 1".to_string()],
         })
     }
-    
-    pub fn metadata(&self) -> &AgentMetadata { &self.metadata }
-    pub async fn state(&self) -> AgentState { self.state.read().await.clone() }
+
+    pub fn metadata(&self) -> &AgentMetadata {
+        &self.metadata
+    }
+    pub async fn state(&self) -> AgentState {
+        self.state.read().await.clone()
+    }
 }
 
 impl Default for DataAnalyticsAgent {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_agent() {
         let mut agent = DataAnalyticsAgent::new();

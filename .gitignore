@@ -30,6 +30,16 @@ dist/
 *.sln.docstates
 
 # Workspace indexes and temp files
+.workspace/
+.graphs/*
+!.graphs/metrics/
+!.graphs/metrics/**
+!.workspace/
+!.workspace/registry/
+!.workspace/registry/*.json
+!.workspace/sop/
+!.workspace/sop/*.md
+.graphs/
 
 # Rust
 **/*.rs.bk

@@ -1,5 +1,5 @@
 //! LegalComplianceBoardAgent - Auto-generated
-//! 
+//!
 //! Oversees legal and compliance issues; ensures all actions and policies meet regulatory requirements.
 
 use crate::unified_types::*;
@@ -48,22 +48,22 @@ impl Legalcomplianceboardagent {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Ready;
         Ok(())
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -78,13 +78,13 @@ impl Default for Legalcomplianceboardagent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = Legalcomplianceboardagent::new();
         assert_eq!(agent.metadata().name, "LegalComplianceBoardAgent");
     }
-    
+
     #[tokio::test]
     async fn test_agent_initialization() {
         let mut agent = Legalcomplianceboardagent::new();

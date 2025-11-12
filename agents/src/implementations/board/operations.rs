@@ -1,5 +1,5 @@
 //! Board Operations Agent
-//! 
+//!
 //! Simplified working version
 //! Operational oversight and excellence
 
@@ -11,7 +11,7 @@ use tokio::sync::RwLock;
 use uuid::Uuid;
 
 /// Operations Agent - Operational oversight
-/// 
+///
 /// Responsible for:
 /// - Operational performance monitoring
 /// - Process optimization
@@ -138,17 +138,17 @@ impl OperationsAgent {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
             operations_data: Arc::new(RwLock::new(OperationsData::default())),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Initializing;
-        
+
         // Initialize operational metrics
         let mut data = self.operations_data.write().await;
         data.metrics = OperationalMetrics {
@@ -158,15 +158,15 @@ impl OperationsAgent {
             error_rate: 0.01,
             resource_utilization: 0.75,
         };
-        
+
         *self.state.write().await = AgentState::Ready;
         tracing::info!("Operations Agent initialized");
         Ok(())
     }
-    
+
     pub async fn generate_report(&self) -> Result<OperationsReport> {
         let data = self.operations_data.read().await;
-        
+
         Ok(OperationsReport {
             report_id: Uuid::new_v4(),
             metrics: data.metrics.clone(),
@@ -176,11 +176,11 @@ impl OperationsAgent {
             generated_at: chrono::Utc::now(),
         })
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -195,20 +195,20 @@ impl Default for OperationsAgent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_create_operations_agent() {
         let agent = OperationsAgent::new();
         assert_eq!(agent.metadata().name, "Operations Board Agent");
     }
-    
+
     #[tokio::test]
     async fn test_initialize() {
         let mut agent = OperationsAgent::new();
         agent.initialize().await.unwrap();
         assert_eq!(agent.state().await, AgentState::Ready);
     }
-    
+
     #[tokio::test]
     async fn test_generate_report() {
         let mut agent = OperationsAgent::new();

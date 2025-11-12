@@ -1,5 +1,5 @@
 //! SecurityBoardAgent - Auto-generated
-//! 
+//!
 //! Handles all information, infrastructure, and cybersecurity matters.
 
 use crate::unified_types::*;
@@ -23,9 +23,11 @@ impl Securityboardagent {
             category: AgentCategory::Other,
             agent_type: AgentType::Worker,
             language: AgentLanguage::Rust,
-            description: "Handles all information, infrastructure, and cybersecurity matters.".to_string(),
+            description: "Handles all information, infrastructure, and cybersecurity matters."
+                .to_string(),
             role: "Micro Agent".to_string(),
-            purpose: "Handles all information, infrastructure, and cybersecurity matters.".to_string(),
+            purpose: "Handles all information, infrastructure, and cybersecurity matters."
+                .to_string(),
             state: AgentState::Created,
             health_status: HealthStatus::Unknown,
             parent_id: None,
@@ -48,22 +50,22 @@ impl Securityboardagent {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Ready;
         Ok(())
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -78,13 +80,13 @@ impl Default for Securityboardagent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = Securityboardagent::new();
         assert_eq!(agent.metadata().name, "SecurityBoardAgent");
     }
-    
+
     #[tokio::test]
     async fn test_agent_initialization() {
         let mut agent = Securityboardagent::new();

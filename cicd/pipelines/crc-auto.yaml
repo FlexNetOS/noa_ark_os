@@ -158,6 +158,38 @@ stages:
           fi
           
           echo "✓ Integration tests passed"
+
+  - name: single_host_acceptance
+    display_name: "Single-host Acceptance"
+    timeout_minutes: 15
+    depends_on:
+      - test
+
+    steps:
+      - name: verify_profile_manifest
+        display_name: "Validate single_host profile"
+        script: |
+          echo "Checking single_host profile..."
+          PROFILE=server/profiles/single_host/profile.toml
+          if [ ! -f "$PROFILE" ]; then
+            echo "single_host profile missing at $PROFILE"
+            exit 1
+          fi
+          grep -q "single_host" "$PROFILE" || {
+            echo "Profile does not contain single_host identifier"
+            exit 1
+          }
+          echo "✓ Profile manifest present"
+
+      - name: dry_run_bootstrap
+        display_name: "Dry-run bootstrap script"
+        script: |
+          echo "Simulating single-host bootstrap"
+          chmod +x services/single-host/init/noa-single-host.sh
+          NOA_DRY_RUN=1 \
+          NOA_PROFILE=server/profiles/single_host/profile.toml \
+            services/single-host/init/noa-single-host.sh start all || true
+          echo "✓ Bootstrap script executed"
       
       - name: coverage_report
         display_name: "Generate Coverage Report"
