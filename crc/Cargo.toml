@@ -56,3 +56,6 @@ path = "src/lib.rs"
 [[bin]]
 name = "crc-server"
 path = "src/main.rs"
+
+[dev-dependencies]
+serial_test = "3.0"

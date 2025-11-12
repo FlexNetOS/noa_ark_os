@@ -113,23 +113,39 @@ impl DropProcessor {
 
         let archive_root = self.base_path.join("archive");
         let mut archive_manager = ArchiveManager::new(archive_root, ArchiveConfig::default());
-        let archive_info = archive_manager
+        let archive_result = archive_manager
             .archive_drop(drop_id, &source_path, source_type.clone())
-            .await?;
+            .await;
+
+        if cleanup_after_processing {
+            // Always attempt cleanup, even if archiving failed
+            if let Err(e) = archive_manager.cleanup_source(&source_path).await {
+                warn!(
+                    "Failed to remove temporary extraction directory {}: {}",
+                    source_path.display(),
+                    e
+                );
+            } else {
+                info!(
+                    "✓ Removed temporary extraction directory {}",
+                    source_path.display()
+                );
+            }
+        }
+
+        let archive_info = match archive_result {
+            Ok(info) => info,
+            Err(e) => {
+                // Propagate the original error after cleanup
+                return Err(e.into());
+            }
+        };
+
         info!(
             "✓ Archived drop at {} (hash: {})",
             archive_info.archive_path.display(),
             archive_info.hash
         );
-
-        if cleanup_after_processing {
-            archive_manager.cleanup_source(&source_path).await?;
-            info!(
-                "✓ Removed temporary extraction directory {}",
-                source_path.display()
-            );
-        }
-
         let mut metadata = validation.metadata;
         match serde_json::to_string(&build_artifacts) {
             Ok(serialized) => {
