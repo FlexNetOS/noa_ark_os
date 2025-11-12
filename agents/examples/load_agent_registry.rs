@@ -2,7 +2,24 @@
 //!
 //! Demonstrates loading the 928-agent directory embedded in the crate
 //!
-//! Usage:
+//! ## Layer Hierarchy
+//!
+//! NOA ARK OS organizes agents into a 5-layer technical hierarchy (L1-L5),
+//! which evolved from the original organizational naming:
+//!
+//! | Layer | Technical Name   | Original Name | Purpose                           |
+//! |-------|------------------|---------------|-----------------------------------|
+//! | L1    | L1Autonomy       | Executive     | Root governance, constitutional   |
+//! | L2    | L2Reasoning      | Board         | Strategic planning, policy        |
+//! | L3    | L3Orchestration  | Stack-Chief   | Cross-domain coordination         |
+//! | L4    | L4Operations     | Specialist    | Domain-specific operations        |
+//! | L5    | L5Infrastructure | Micro         | Task-specific micro agents        |
+//!
+//! The agent directory CSV uses the original names, but the registry automatically
+//! maps them to the L1-L5 system for consistency.
+//!
+//! ## Usage
+//!
 //!   cargo run --example load_agent_registry
 //!   cargo run --example load_agent_registry -- path\to\agent_directory.csv
 
@@ -70,6 +87,17 @@ fn main() -> anyhow::Result<()> {
 
             // Show sample agents from each layer
             println!("🔍 Sample Agents by Layer:\n");
+
+            // NOA uses a 5-layer hierarchy (L1-L5) that maps from the original
+            // organizational naming (Executive/Board/Stack-Chief/Specialist/Micro):
+            //
+            // L1Autonomy (Executive)    → Root governance, constitutional oversight
+            // L2Reasoning (Board)       → Strategic planning, policy formation
+            // L3Orchestration (Stack-Chief) → Cross-domain coordination
+            // L4Operations (Specialist) → Domain-specific operations
+            // L5Infrastructure (Micro)  → Task-specific micro agents
+            //
+            // The registry automatically maps legacy names to the L1-L5 system.
 
             for layer in [
                 AgentLayer::L1Autonomy,
