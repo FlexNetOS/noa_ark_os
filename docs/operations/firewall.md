@@ -29,6 +29,8 @@ The script:
 - Backs up every modified file to `/etc/apt/noa-backups/` with a timestamp.
 - Comments out any non-disabled entries that reference `esm.ubuntu.com` in
   `/etc/apt/sources.list` and `/etc/apt/sources.list.d/*.list`.
+- Marks any Ubuntu `.sources` definitions that point to `esm.ubuntu.com`
+  as disabled.
 - Neutralizes the `20apt-esm-hook.conf` file so future `apt update` runs do
   not re-enable the hook.
 
