@@ -305,9 +305,9 @@ pub struct SecurityService;
 impl SecurityService {
     /// Register or update a user.
     pub fn register_user(&self, user: User) {
-        // Ignore errors for backward compatibility
-        // In production, consider logging the error
-        let _ = register_user_inner(user);
+        if let Err(err) = register_user_inner(user.clone()) {
+            eprintln!("[SECURITY] Failed to register user {}: {}", user.name, err);
+        }
     }
 
     /// Validate a permission check.
