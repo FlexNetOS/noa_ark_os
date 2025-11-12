@@ -156,7 +156,7 @@ fn detect_gpus(_system: &System) -> Vec<GpuProfile> {
 
     // Note: sysinfo graphics_cards() API not available in this version
     // Falling back to nvidia-smi detection.
-    
+
     gpus.extend(query_nvidia_smi());
 
     gpus

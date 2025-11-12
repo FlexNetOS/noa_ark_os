@@ -1,7 +1,10 @@
 //! Process management subsystem
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::{
+    atomic::{AtomicU64, Ordering},
+    Mutex, OnceLock,
+};
 
 pub type ProcessId = u64;
 
@@ -20,12 +23,12 @@ pub enum ProcessState {
     Terminated,
 }
 
-lazy_static::lazy_static! {
-    static ref PROCESS_TABLE: Arc<Mutex<HashMap<ProcessId, Process>>> =
-        Arc::new(Mutex::new(HashMap::new()));
-}
+static PROCESS_TABLE: OnceLock<Mutex<HashMap<ProcessId, Process>>> = OnceLock::new();
+static NEXT_PID: AtomicU64 = AtomicU64::new(1);
 
-static mut NEXT_PID: ProcessId = 1;
+fn process_table() -> &'static Mutex<HashMap<ProcessId, Process>> {
+    PROCESS_TABLE.get_or_init(|| Mutex::new(HashMap::new()))
+}
 
 /// Initialize process management
 pub fn init() -> Result<(), &'static str> {
@@ -34,11 +37,7 @@ pub fn init() -> Result<(), &'static str> {
 }
 
 fn create_process_inner(name: String) -> Result<ProcessId, &'static str> {
-    let pid = unsafe {
-        let pid = NEXT_PID;
-        NEXT_PID += 1;
-        pid
-    };
+    let pid = NEXT_PID.fetch_add(1, Ordering::SeqCst);
 
     let process = Process {
         id: pid,
@@ -46,14 +45,14 @@ fn create_process_inner(name: String) -> Result<ProcessId, &'static str> {
         state: ProcessState::Ready,
     };
 
-    let mut table = PROCESS_TABLE.lock().unwrap();
+    let mut table = process_table().lock().unwrap();
     table.insert(pid, process);
 
     Ok(pid)
 }
 
 fn get_process_inner(pid: ProcessId) -> Option<Process> {
-    let table = PROCESS_TABLE.lock().unwrap();
+    let table = process_table().lock().unwrap();
     table.get(&pid).cloned()
 }
 
@@ -74,7 +73,7 @@ impl ProcessService {
 
     /// List all tracked processes.
     pub fn list_processes(&self) -> Vec<Process> {
-        let table = PROCESS_TABLE.lock().unwrap();
+        let table = process_table().lock().unwrap();
         table.values().cloned().collect()
     }
 }

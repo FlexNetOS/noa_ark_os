@@ -34,18 +34,6 @@ use uuid::Uuid;
 /// - **L5**: Infrastructure support and atomic tasks
 ///
 /// Agents escalate upward through layers when decisions exceed their authority level.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum AgentLayer {
-    /// L1: Root CECCA, Constitutional authority (formerly "Executive")
-    L1Autonomy,
-    /// L2: Board agents, high-level governance (formerly "Board")
-    L2Reasoning,
-    /// L3: Chief Commanders, Orchestrators, tactical coordination (formerly "Stack-Chief")
-    L3Orchestration,
-    /// L4: Specialists, Workers, operational execution (formerly "Specialist")
-    L4Operations,
-    /// L5: Micro agents, Subject domain, infrastructure tasks (formerly "Micro")
-    L5Infrastructure,
 /// The NOA ARK OS organizes its 928 agents into a five-layer hierarchy that maps
 /// organizational roles to technical capabilities:
 ///
