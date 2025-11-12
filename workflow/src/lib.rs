@@ -400,22 +400,24 @@ impl WorkflowEngine {
 
     /// Set stage state
     fn set_stage_state(&self, workflow_id: &str, stage_name: &str, state: StageState) {
-        let mut stage_states = self.stage_states.lock().unwrap();
-        stage_states
-            .entry(workflow_id.to_string())
-            .or_insert_with(HashMap::new)
-            .insert(stage_name.to_string(), state.clone());
-        drop(stage_states);
+        let state_clone = state.clone();
+        {
+            let mut stage_states = self.stage_states.lock().unwrap();
+            stage_states
+                .entry(workflow_id.to_string())
+                .or_insert_with(HashMap::new)
+                .insert(stage_name.to_string(), state);
+        }
 
         let timestamp = now_iso();
         self.emit_event(WorkflowEvent::StageState {
             workflow_id: workflow_id.to_string(),
             stage_id: stage_name.to_string(),
-            state: state.clone(),
+            state: state_clone.clone(),
             timestamp: timestamp.clone(),
         });
 
-        if state == StageState::Completed {
+        if state_clone == StageState::Completed {
             let token = WorkflowResumeToken {
                 workflow_id: workflow_id.to_string(),
                 stage_id: Some(stage_name.to_string()),
