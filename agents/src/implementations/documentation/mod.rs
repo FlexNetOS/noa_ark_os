@@ -21,11 +21,9 @@ fn pushln(buffer: &mut String, args: std::fmt::Arguments<'_>) -> Result<()> {
     Ok(())
 }
 
-fn push_blank(buffer: &mut String) -> Result<()> {
+fn push_blank(buffer: &mut String) {
     buffer.push('\n');
-    Ok(())
 }
-
 /// Structured output emitted by the documentation pipelines.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DocumentationPipelineOutput {
