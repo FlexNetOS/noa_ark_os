@@ -15,13 +15,6 @@ pub trait PlatformAdapter {
         chrome: &ShellChrome,
         state: &UIState,
     ) -> Result<(), String>;
-use crate::components::ShellChrome;
-use crate::renderer::renderer::Renderer;
-use crate::UIState;
-
-/// Trait describing how shells are mounted on different targets.
-pub trait PlatformAdapter {
-    fn mount(&self, renderer: &Renderer, chrome: &ShellChrome, state: &UIState);
 }
 
 /// No-op adapter used for server orchestration surfaces.
@@ -35,10 +28,6 @@ impl PlatformAdapter for ServerAdapter {
         _state: &UIState,
     ) -> Result<(), String> {
         renderer.render("server-shell")
-    fn mount(&self, renderer: &Renderer, _chrome: &ShellChrome, _state: &UIState) {
-        renderer
-            .render("server-shell")
-            .expect("render server shell");
     }
 }
 
@@ -63,7 +52,7 @@ impl PlatformAdapter for ReactAdapter {
         }
 
         renderer.render(&format!(
-            "react-shell:{} routes knowledge:{}",
+            "react-shell:{} knowledge:{}",
             chrome.navigation.items.len(),
             chrome.knowledge.articles.len()
         ))
@@ -183,11 +172,6 @@ impl PlatformAdapter for ReactNativeAdapter {
             chrome.navigation.items.len(),
             capabilities
         ))
-    fn mount(&self, renderer: &Renderer, chrome: &ShellChrome, _state: &UIState) {
-        let _ = renderer.render(&format!(
-            "react-shell:{} routes",
-            chrome.navigation.items.len()
-        ));
     }
 }
 
@@ -255,13 +239,67 @@ fn workspace_root() -> Result<PathBuf, String> {
         .and_then(|path| path.parent())
         .map(|path| path.to_path_buf())
         .ok_or_else(|| "failed to resolve workspace root".into())
-pub struct SpatialAdapter;
+}
 
-impl PlatformAdapter for SpatialAdapter {
-    fn mount(&self, renderer: &Renderer, chrome: &ShellChrome, _state: &UIState) {
-        let _ = renderer.render(&format!(
-            "spatial-shell:{} workspaces",
-            chrome.workspace_switcher.workspaces.len()
-        ));
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::components::{KnowledgeOverlay, NavigationRail, ShellChrome, WorkspaceSwitcher};
+    use crate::state::{NavigationItem, Workspace, WorkspacePersona};
+    use crate::{Capability, Platform, UIContext, UIState};
+
+    fn chrome_fixture() -> ShellChrome {
+        ShellChrome::new(
+            NavigationRail::new(
+                vec![NavigationItem {
+                    id: "ai-studio".into(),
+                    label: "AI Ops Studio".into(),
+                    icon: "message-circle".into(),
+                    route: "/chat".into(),
+                    allowed_roles: vec!["developer".into()],
+                }],
+                None,
+            ),
+            WorkspaceSwitcher::new(
+                vec![Workspace {
+                    id: "ai-studio".into(),
+                    label: "AI Ops Studio".into(),
+                    persona: WorkspacePersona::Developer,
+                    routes: vec!["/chat".into()],
+                    allowed_roles: vec!["developer".into()],
+                }],
+                Some("ai-studio".into()),
+            ),
+            KnowledgeOverlay::new(WorkspacePersona::Developer, vec![]),
+        )
+    }
+
+    fn renderer_fixture() -> Renderer {
+        let context = UIContext {
+            platform: Platform::Web,
+            screen_width: 1920,
+            screen_height: 1080,
+            dpi: 1.0,
+            capabilities: vec![Capability::Mouse],
+        };
+        Renderer::new(context)
+    }
+
+    fn state_fixture() -> UIState {
+        UIState::new(UIContext {
+            platform: Platform::Web,
+            screen_width: 1920,
+            screen_height: 1080,
+            dpi: 1.0,
+            capabilities: vec![Capability::Mouse],
+        })
+    }
+
+    #[test]
+    fn server_adapter_renders_shell() {
+        let adapter = ServerAdapter;
+        adapter
+            .mount(&renderer_fixture(), &chrome_fixture(), &state_fixture())
+            .expect("server render succeeds");
     }
 }

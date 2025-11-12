@@ -13,10 +13,42 @@ pub struct Metric {
     pub unit: String,
 }
 
+/// Usage intensity at a specific surface area of the interface.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct HeatmapPoint {
+    pub area: String,
+    pub intensity: f64,
+}
+
+/// Agent efficiency measurement for value tracking.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct AgentEfficiency {
+    pub agent_id: String,
+    pub utilization: f64,
+    pub impact_score: f64,
+}
+
+/// ROI analysis for deployed foundation models.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ModelRoi {
+    pub model: String,
+    pub generated_value: f64,
+    pub operational_cost: f64,
+}
+
+/// Aggregated telemetry insights layered on top of base metrics.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+pub struct TelemetryInsights {
+    pub usage_heatmap: Vec<HeatmapPoint>,
+    pub agent_efficiency: Vec<AgentEfficiency>,
+    pub model_roi: Vec<ModelRoi>,
+}
+
 /// Analytics engine to compute product value metrics.
 #[derive(Default)]
 pub struct AnalyticsEngine {
     pub metrics: HashMap<String, Metric>,
+    pub insights: TelemetryInsights,
 }
 
 impl AnalyticsEngine {
@@ -33,6 +65,10 @@ impl AnalyticsEngine {
         Some(productivity / infrastructure)
     }
 
+    pub fn layer_insights(&mut self, insights: TelemetryInsights) {
+        self.insights = insights;
+    }
+
     pub fn export(&self) -> Vec<Metric> {
         self.metrics.values().cloned().collect()
     }
@@ -42,6 +78,10 @@ impl AnalyticsEngine {
             "analytics.metrics",
             serde_json::json!(self.metrics.values().collect::<Vec<_>>()),
         );
+        store.put_data("analytics.insights", serde_json::json!(&self.insights));
+        if let Some(roi) = self.compute_roi() {
+            store.put_data("analytics.roi", serde_json::json!({ "ratio": roi }));
+        }
     }
 }
 
@@ -70,6 +110,34 @@ mod tests {
 
         let store = GlobalStore::new(GlobalState::default());
         engine.sync_to_state(&store);
-        assert!(store.read().data.contains_key("analytics.metrics"));
+        let snapshot = store.read();
+        assert!(snapshot.data.contains_key("analytics.metrics"));
+        assert!(snapshot.data.contains_key("analytics.roi"));
+    }
+
+    #[test]
+    fn layered_insights_are_exported() {
+        let mut engine = AnalyticsEngine::default();
+        engine.layer_insights(TelemetryInsights {
+            usage_heatmap: vec![HeatmapPoint {
+                area: "workflow.canvas".into(),
+                intensity: 0.82,
+            }],
+            agent_efficiency: vec![AgentEfficiency {
+                agent_id: "deploy-coordinator".into(),
+                utilization: 0.91,
+                impact_score: 8.7,
+            }],
+            model_roi: vec![ModelRoi {
+                model: "gpt-ops".into(),
+                generated_value: 122_000.0,
+                operational_cost: 34_000.0,
+            }],
+        });
+
+        let store = GlobalStore::new(GlobalState::default());
+        engine.sync_to_state(&store);
+        let snapshot = store.read();
+        assert!(snapshot.data.contains_key("analytics.insights"));
     }
 }
