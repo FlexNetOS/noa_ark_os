@@ -151,13 +151,31 @@ impl AgentRegistry {
     }
 
     /// Parse agent layer from string
+    ///
+    /// Supports both legacy organizational naming and modern L1-L5 technical naming:
+    /// - "Executive" (legacy) / "L1" / "L1Autonomy" → L1Autonomy (root governance)
+    /// - "Board" (legacy) / "L2" / "L2Reasoning" → L2Reasoning (strategic planning)
+    /// - "Stack-Chief" (legacy) / "L3" / "L3Orchestration" → L3Orchestration (coordination)
+    /// - "Specialist" (legacy) / "L4" / "L4Operations" → L4Operations (domain experts)
+    /// - "Micro" (legacy) / "L5" / "L5Infrastructure" → L5Infrastructure (task-specific)
     fn parse_layer(s: &str) -> AgentLayer {
         match s.to_lowercase().as_str() {
-            "board" | "l2" | "l2reasoning" => AgentLayer::L2Reasoning,
+            // L1Autonomy: Root governance (was: Executive)
             "executive" | "l1" | "l1autonomy" => AgentLayer::L1Autonomy,
+
+            // L2Reasoning: Strategic planning (was: Board)
+            "board" | "l2" | "l2reasoning" => AgentLayer::L2Reasoning,
+
+            // L3Orchestration: Coordination (was: Stack-Chief)
             "stack-chief" | "stack_chief" | "l3" | "l3orchestration" => AgentLayer::L3Orchestration,
+
+            // L4Operations: Domain experts (was: Specialist)
             "specialist" | "l4" | "l4operations" => AgentLayer::L4Operations,
+
+            // L5Infrastructure: Task-specific (was: Micro)
             "micro" | "l5" | "l5infrastructure" => AgentLayer::L5Infrastructure,
+
+            // Default to L4Operations for unrecognized layers
             _ => AgentLayer::L4Operations,
         }
     }

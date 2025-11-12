@@ -10,13 +10,50 @@ use uuid::Uuid;
 // ============================================================================
 
 /// Agent layer in NOA 5-layer architecture
+///
+/// The NOA ARK OS organizes its 928 agents into a five-layer hierarchy that maps
+/// organizational roles to technical capabilities:
+///
+/// ## Layer Hierarchy (L1 → L5)
+///
+/// - **L1Autonomy**: Root governance and constitutional agents
+///   - Legacy name: "Executive"
+///   - Examples: CECCA (Chief Executive Constitutional Compliance Agent)
+///   - Role: Constitutional oversight, highest-level decision making
+///
+/// - **L2Reasoning**: Strategic planning and board-level agents
+///   - Legacy name: "Board"
+///   - Examples: Board members, strategic planners
+///   - Role: Strategic decision-making, policy formation
+///
+/// - **L3Orchestration**: Coordination and orchestration agents
+///   - Legacy name: "Stack-Chief" / "StackChief"
+///   - Examples: Chief Commanders, Stack VPs, orchestrators
+///   - Role: Cross-domain coordination, workflow orchestration
+///
+/// - **L4Operations**: Operational and specialist agents
+///   - Legacy name: "Specialist"
+///   - Examples: Domain experts, operational workers
+///   - Role: Specific domain tasks, operational execution
+///
+/// - **L5Infrastructure**: Task-specific micro agents
+///   - Legacy name: "Micro"
+///   - Examples: Subject-domain micro agents, utility agents
+///   - Role: Fine-grained task execution, infrastructure services
+///
+/// ## Migration Note
+///
+/// The L1-L5 naming convention replaced the original organizational naming
+/// (Executive, Board, Stack-Chief, Specialist, Micro) to provide a clearer
+/// technical hierarchy. The registry parser maintains backward compatibility
+/// with both naming schemes.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum AgentLayer {
-    L1Autonomy,       // Root CECCA, Constitutional
-    L2Reasoning,      // Board & Executive agents
-    L3Orchestration,  // Chief Commanders, Orchestrators
-    L4Operations,     // Specialists, Workers
-    L5Infrastructure, // Micro agents, Subject domain
+    L1Autonomy,       // Root CECCA, Constitutional (was: Executive)
+    L2Reasoning,      // Board & Executive agents (was: Board)
+    L3Orchestration,  // Chief Commanders, Orchestrators (was: Stack-Chief)
+    L4Operations,     // Specialists, Workers (was: Specialist)
+    L5Infrastructure, // Micro agents, Subject domain (was: Micro)
 }
 
 impl Default for AgentLayer {
