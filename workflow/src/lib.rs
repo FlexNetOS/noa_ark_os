@@ -9,6 +9,10 @@ use noa_core::config::manifest::CAPABILITY_PROCESS;
 use noa_core::process::ProcessService;
 use chrono::{Duration, Utc};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
+
+mod instrumentation;
+use instrumentation::PipelineInstrumentation;
 use tokio::sync::broadcast;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -114,16 +118,27 @@ pub struct WorkflowEngine {
     workflows: Arc<Mutex<HashMap<String, Workflow>>>,
     states: Arc<Mutex<HashMap<String, WorkflowState>>>,
     stage_states: Arc<Mutex<HashMap<String, HashMap<String, StageState>>>>,
+    instrumentation: Arc<PipelineInstrumentation>,
     kernel: Option<KernelHandle>,
     event_stream: Arc<Mutex<Option<WorkflowEventStream>>>,
 }
 
 impl WorkflowEngine {
     pub fn new() -> Self {
+        let instrumentation = PipelineInstrumentation::new()
+            .expect("failed to initialise pipeline instrumentation");
         Self {
             workflows: Arc::new(Mutex::new(HashMap::new())),
             states: Arc::new(Mutex::new(HashMap::new())),
             stage_states: Arc::new(Mutex::new(HashMap::new())),
+            instrumentation: Arc::new(instrumentation),
+        }
+    }
+
+    pub fn instrumentation(&self) -> Arc<PipelineInstrumentation> {
+        Arc::clone(&self.instrumentation)
+    }
+    
             kernel: None,
         }
     }
@@ -286,6 +301,8 @@ impl WorkflowEngine {
 
     /// Execute a single task
     fn execute_task(&self, task: &Task) -> Result<(), String> {
+        println!("[WORKFLOW] Executing task: agent={}, action={}", task.agent, task.action);
+        self.observe_task(task)?;
         println!(
             "[WORKFLOW] Executing task via kernel: agent={}, action={}",
             task.agent, task.action
@@ -311,6 +328,46 @@ impl WorkflowEngine {
         Ok(())
     }
 
+    fn observe_task(&self, task: &Task) -> Result<(), String> {
+        let action_lower = task.action.to_lowercase();
+        let metadata = parameters_to_value(&task.parameters);
+
+        if action_lower.contains("relocat") {
+            let source = task
+                .parameters
+                .get("source")
+                .and_then(Value::as_str)
+                .unwrap_or("unknown-source");
+            let target = task
+                .parameters
+                .get("target")
+                .or_else(|| task.parameters.get("destination"))
+                .and_then(Value::as_str)
+                .unwrap_or("unknown-target");
+            self.instrumentation
+                .log_relocation(&task.agent, source, target, metadata.clone())
+                .map_err(|err| format!("relocation instrumentation failed: {}", err))?;
+        }
+
+        if action_lower.contains("doc")
+            || action_lower.contains("handbook")
+            || action_lower.contains("update")
+        {
+            let document_path = task
+                .parameters
+                .get("document")
+                .or_else(|| task.parameters.get("doc"))
+                .or_else(|| task.parameters.get("path"))
+                .and_then(Value::as_str)
+                .unwrap_or("docs/unknown.md");
+            self.instrumentation
+                .log_document_update(&task.agent, document_path, metadata)
+                .map_err(|err| format!("documentation instrumentation failed: {}", err))?;
+        }
+
+        Ok(())
+    }
+    
     /// Check if dependencies are met
     fn check_dependencies(&self, workflow_id: &str, depends_on: &[String]) -> Result<bool, String> {
         if depends_on.is_empty() {
@@ -379,6 +436,8 @@ impl WorkflowEngine {
     }
 }
 
+fn parameters_to_value(parameters: &HashMap<String, Value>) -> Value {
+    serde_json::to_value(parameters).unwrap_or(Value::Null)
 fn now_iso() -> String {
     Utc::now().to_rfc3339()
 }
@@ -392,6 +451,8 @@ impl Default for WorkflowEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use noa_core::security;
+    use serde_json::json;
 
     #[test]
     fn test_workflow_creation() {
@@ -404,5 +465,30 @@ mod tests {
         let engine = WorkflowEngine::new();
         let id = engine.load_workflow(workflow).unwrap();
         assert_eq!(engine.get_state(&id), Some(WorkflowState::Pending));
+    }
+
+    #[test]
+    fn test_instrumentation_generates_signed_operations() {
+        let engine = WorkflowEngine::new();
+        let instrumentation = engine.instrumentation();
+
+        let relocation = instrumentation
+            .log_relocation(
+                "tester",
+                "/tmp/source",
+                "/tmp/target",
+                json!({ "ticket": "rel-001" }),
+            )
+            .expect("relocation log should succeed");
+        assert!(security::verify_signed_operation(&relocation));
+
+        let documentation = instrumentation
+            .log_document_update(
+                "tester",
+                "docs/audits/AUDITORS_HANDBOOK.md",
+                json!({ "change": "test" }),
+            )
+            .expect("documentation log should succeed");
+        assert!(security::verify_signed_operation(&documentation));
     }
 }
