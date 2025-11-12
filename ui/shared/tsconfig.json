@@ -12,7 +12,7 @@
     "strict": true,
     "jsx": "react-jsx",
     "resolveJsonModule": true,
-    "types": []
+    "types": ["react"]
   },
   "include": ["src/**/*"],
   "exclude": ["dist", "node_modules"]
