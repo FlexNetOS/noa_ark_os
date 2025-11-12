@@ -298,7 +298,11 @@ fn is_valid_filename(name: &str) -> bool {
     if name == "." || name == ".." {
         return false;
     }
-    
+
+    // Reject characters forbidden in Windows filenames for cross-platform safety
+    if name.chars().any(|c| matches!(c, '<' | '>' | ':' | '"' | '|' | '?' | '*')) {
+        return false;
+    }
     true
 }
 
