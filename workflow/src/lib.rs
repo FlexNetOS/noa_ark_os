@@ -3,11 +3,11 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
+use chrono::{Duration, Utc};
 use noa_agents::{AgentFactory, AGENT_FACTORY_CAPABILITY};
 use noa_core::capabilities::KernelHandle;
 use noa_core::config::manifest::CAPABILITY_PROCESS;
 use noa_core::process::ProcessService;
-use chrono::{Duration, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -125,8 +125,8 @@ pub struct WorkflowEngine {
 
 impl WorkflowEngine {
     pub fn new() -> Self {
-        let instrumentation = PipelineInstrumentation::new()
-            .expect("failed to initialise pipeline instrumentation");
+        let instrumentation =
+            PipelineInstrumentation::new().expect("failed to initialise pipeline instrumentation");
         Self {
             workflows: Arc::new(Mutex::new(HashMap::new())),
             states: Arc::new(Mutex::new(HashMap::new())),
@@ -145,6 +145,8 @@ impl WorkflowEngine {
     pub fn with_kernel(kernel: KernelHandle) -> Self {
         let instrumentation = PipelineInstrumentation::new()
             .expect("failed to initialise pipeline instrumentation");
+        let instrumentation =
+            PipelineInstrumentation::new().expect("failed to initialise pipeline instrumentation");
         Self {
             workflows: Arc::new(Mutex::new(HashMap::new())),
             states: Arc::new(Mutex::new(HashMap::new())),
@@ -301,7 +303,10 @@ impl WorkflowEngine {
 
     /// Execute a single task
     fn execute_task(&self, task: &Task) -> Result<(), String> {
-        println!("[WORKFLOW] Executing task: agent={}, action={}", task.agent, task.action);
+        println!(
+            "[WORKFLOW] Executing task: agent={}, action={}",
+            task.agent, task.action
+        );
         self.observe_task(task)?;
         println!(
             "[WORKFLOW] Executing task via kernel: agent={}, action={}",
@@ -363,7 +368,7 @@ impl WorkflowEngine {
 
         Ok(())
     }
-    
+
     /// Check if dependencies are met
     fn check_dependencies(&self, workflow_id: &str, depends_on: &[String]) -> Result<bool, String> {
         if depends_on.is_empty() {
@@ -395,21 +400,24 @@ impl WorkflowEngine {
 
     /// Set stage state
     fn set_stage_state(&self, workflow_id: &str, stage_name: &str, state: StageState) {
-        let mut stage_states = self.stage_states.lock().unwrap();
-        stage_states
-            .entry(workflow_id.to_string())
-            .or_insert_with(HashMap::new)
-            .insert(stage_name.to_string(), state.clone());
+        let state_clone = state.clone();
+        {
+            let mut stage_states = self.stage_states.lock().unwrap();
+            stage_states
+                .entry(workflow_id.to_string())
+                .or_insert_with(HashMap::new)
+                .insert(stage_name.to_string(), state);
+        }
 
         let timestamp = now_iso();
         self.emit_event(WorkflowEvent::StageState {
             workflow_id: workflow_id.to_string(),
             stage_id: stage_name.to_string(),
-            state: state.clone(),
+            state: state_clone.clone(),
             timestamp: timestamp.clone(),
         });
 
-        if state == StageState::Completed {
+        if state_clone == StageState::Completed {
             let token = WorkflowResumeToken {
                 workflow_id: workflow_id.to_string(),
                 stage_id: Some(stage_name.to_string()),

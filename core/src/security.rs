@@ -1,12 +1,14 @@
 //! Security subsystem
 
 use crate::utils::{current_timestamp_millis, simple_hash};
+use crate::time::current_timestamp_millis;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::{Mutex, OnceLock};
 
 pub type UserId = u64;
 
@@ -220,6 +222,21 @@ fn policy_enforcer() -> &'static Arc<Mutex<PolicyEnforcer>> {
 fn operation_counter() -> &'static AtomicU64 {
     static OPERATION_COUNTER: OnceLock<AtomicU64> = OnceLock::new();
     OPERATION_COUNTER.get_or_init(|| AtomicU64::new(1))
+static USER_TABLE: OnceLock<Mutex<HashMap<UserId, User>>> = OnceLock::new();
+static POLICY_ENFORCER: OnceLock<Mutex<PolicyEnforcer>> = OnceLock::new();
+static OPERATION_COUNTER: AtomicU64 = AtomicU64::new(1);
+
+fn user_table() -> &'static Mutex<HashMap<UserId, User>> {
+    USER_TABLE.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn policy_enforcer() -> &'static Mutex<PolicyEnforcer> {
+    POLICY_ENFORCER.get_or_init(|| {
+        Mutex::new(PolicyEnforcer::new(
+            std::env::var("NOA_POLICY_SECRET")
+                .unwrap_or_else(|_| "noa-ark-default-policy".to_string()),
+        ))
+    })
 }
 
 fn next_operation_id() -> String {
@@ -240,6 +257,8 @@ pub fn init() -> Result<(), &'static str> {
     };
 
     let mut table = user_table()
+    let mut table = user_table().lock().unwrap();
+    let mut table = USER_TABLE
         .lock()
         .map_err(|_| "user table mutex poisoned")?;
     table.insert(0, root);
@@ -249,6 +268,10 @@ pub fn init() -> Result<(), &'static str> {
 
 fn check_permission_inner(user_id: UserId, permission: Permission) -> bool {
     let table = user_table().lock();
+    let table = user_table().lock().unwrap();
+    if let Some(user) = table.get(&user_id) {
+        user.permissions.contains(&Permission::Admin) || user.permissions.contains(&permission)
+    let table = USER_TABLE.lock();
     if let Ok(table) = table {
         if let Some(user) = table.get(&user_id) {
             user.permissions.contains(&Permission::Admin) || user.permissions.contains(&permission)
@@ -259,6 +282,11 @@ fn check_permission_inner(user_id: UserId, permission: Permission) -> bool {
         // If mutex is poisoned, deny permission for safety
         false
     }
+}
+
+fn register_user_inner(user: User) {
+    let mut table = user_table().lock().unwrap();
+    table.insert(user.id, user);
 }
 
 /// Sign and register an operation in the policy ledger.

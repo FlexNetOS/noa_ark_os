@@ -110,7 +110,10 @@ impl DropProcessor {
                 metadata.insert("build_artifacts".to_string(), serialized);
             }
             Err(e) => {
-                warn!("Failed to serialize build_artifacts for drop {}: {}", drop_id, e);
+                warn!(
+                    "Failed to serialize build_artifacts for drop {}: {}",
+                    drop_id, e
+                );
             }
         }
 
