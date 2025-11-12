@@ -1,6 +1,12 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
+use crate::adapters::{
+    PlatformAdapter, ReactAdapter, ReactNativeAdapter, ServerAdapter, SpatialAdapter, TauriAdapter,
+};
+use crate::analytics::{AnalyticsEngine, Metric};
+use crate::chat::ChatWorkspace;
+use crate::components::{KnowledgeOverlay, NavigationRail, ShellChrome, WorkspaceSwitcher};
 use crate::adapters::{PlatformAdapter, ReactAdapter, ServerAdapter, SpatialAdapter};
 use crate::analytics::{AnalyticsEngine, Metric};
 use crate::chat::ChatWorkspace;
@@ -9,6 +15,7 @@ use crate::events::ShellEvent;
 use crate::module::{default_modules, ModuleContext, ShellModule};
 use crate::renderer::renderer::Renderer;
 use crate::renderer::RenderFrame;
+use crate::state::{GlobalState, GlobalStore, KnowledgeArticle, UserSession, WorkspacePersona};
 use crate::state::{GlobalState, GlobalStore, UserSession, WorkspacePersona};
 use crate::workflows::WorkflowCatalog;
 use crate::{init, Platform, UIContext, UIState};
@@ -17,6 +24,7 @@ use crate::{init, Platform, UIContext, UIState};
 pub struct ShellBuilder {
     platform: Platform,
     modules: Option<Vec<Arc<dyn ShellModule>>>,
+    session: Option<UserSession>,
 }
 
 impl ShellBuilder {
@@ -24,6 +32,7 @@ impl ShellBuilder {
         Self {
             platform,
             modules: None,
+            session: None,
         }
     }
 
@@ -32,6 +41,17 @@ impl ShellBuilder {
         self
     }
 
+    pub fn with_session(mut self, session: UserSession) -> Self {
+        self.session = Some(session);
+        self
+    }
+
+    pub fn build(self) -> Result<UnifiedShell, &'static str> {
+        UnifiedShell::new(
+            self.platform,
+            self.modules.unwrap_or_else(default_modules),
+            self.session,
+        )
     pub fn build(self) -> Result<UnifiedShell, &'static str> {
         UnifiedShell::new(self.platform, self.modules.unwrap_or_else(default_modules))
     }
@@ -51,11 +71,23 @@ pub struct UnifiedShell {
 }
 
 impl UnifiedShell {
+    fn new(
+        platform: Platform,
+        modules: Vec<Arc<dyn ShellModule>>,
+        session: Option<UserSession>,
+    ) -> Result<Self, &'static str> {
     fn new(platform: Platform, modules: Vec<Arc<dyn ShellModule>>) -> Result<Self, &'static str> {
         let context = init(platform.clone())?;
         let renderer = Renderer::new(context.clone());
         let state = UIState::new(context.clone());
         let store = GlobalStore::new(GlobalState {
+            session: session.unwrap_or(UserSession {
+                user_id: "ops-admin".into(),
+                display_name: "Ops Admin".into(),
+                roles: vec!["admin".into(), "developer".into(), "operator".into()],
+                active_workspace: None,
+                auth_token: None,
+            }),
             session: UserSession {
                 user_id: "ops-admin".into(),
                 display_name: "Ops Admin".into(),
@@ -94,6 +126,7 @@ impl UnifiedShell {
 
         shell.bootstrap_modules(event_sink);
         shell.seed_analytics();
+        shell.seed_knowledge_base();
 
         Ok(shell)
     }
@@ -158,6 +191,60 @@ impl UnifiedShell {
         analytics.sync_to_state(&self.store);
     }
 
+    fn seed_knowledge_base(&self) {
+        let developer_articles = vec![
+            KnowledgeArticle {
+                id: "dev-workflow".into(),
+                title: "Ship workflows from chat".into(),
+                summary: "Use the AI Ops Studio to run builds, tests, and deployments without leaving the conversation.".into(),
+                link: "docs/workflows/ai-ops-studio.md".into(),
+            },
+            KnowledgeArticle {
+                id: "dev-sandboxes".into(),
+                title: "Validate in sandboxes".into(),
+                summary: "Trigger sandbox validations and monitor status with real-time telemetry widgets.".into(),
+                link: "docs/sandboxes/overview.md".into(),
+            },
+        ];
+
+        let operator_articles = vec![
+            KnowledgeArticle {
+                id: "ops-incident".into(),
+                title: "Handle incidents with workflow overrides".into(),
+                summary: "Learn how to pause, resume, or reroute workflows directly from the command center.".into(),
+                link: "docs/workflows/incident-response.md".into(),
+            },
+            KnowledgeArticle {
+                id: "ops-agents".into(),
+                title: "Scale the agent hive".into(),
+                summary: "Best practices for scaling or draining agents during peak load.".into(),
+                link: "docs/agents/scaling.md".into(),
+            },
+        ];
+
+        let executive_articles = vec![
+            KnowledgeArticle {
+                id: "exec-roi".into(),
+                title: "Interpreting ROI analytics".into(),
+                summary: "Understand how value analytics converts telemetry into business impact dashboards.".into(),
+                link: "docs/analytics/roi.md".into(),
+            },
+            KnowledgeArticle {
+                id: "exec-governance".into(),
+                title: "Storage governance".into(),
+                summary: "Review retention policies and compliance guardrails enforced by the artifact hub.".into(),
+                link: "docs/storage/governance.md".into(),
+            },
+        ];
+
+        self.store
+            .set_knowledge_base(WorkspacePersona::Developer, developer_articles);
+        self.store
+            .set_knowledge_base(WorkspacePersona::Operator, operator_articles);
+        self.store
+            .set_knowledge_base(WorkspacePersona::Executive, executive_articles);
+    }
+
     pub fn builder(platform: Platform) -> ShellBuilder {
         ShellBuilder::new(platform)
     }
@@ -199,6 +286,76 @@ impl UnifiedShell {
 
     pub fn render(&self, adapter: &dyn PlatformAdapter) -> Result<(), String> {
         let state = self.store.read();
+        let session_roles = state.session.roles.clone();
+        let nav_state = state.navigation.clone();
+        let mut nav_items: Vec<_> = nav_state
+            .primary_items
+            .into_iter()
+            .filter(|item| {
+                item.allowed_roles.is_empty()
+                    || item
+                        .allowed_roles
+                        .iter()
+                        .any(|role| session_roles.iter().any(|r| r == role))
+            })
+            .collect();
+        nav_items.sort_by_key(|item| item.label.clone());
+
+        let active_route = nav_items
+            .iter()
+            .find(|item| Some(item.route.clone()) == nav_state.active_route)
+            .map(|item| item.route.clone())
+            .or_else(|| nav_items.first().map(|item| item.route.clone()));
+
+        let mut workspaces: Vec<_> = state
+            .workspaces
+            .values()
+            .cloned()
+            .filter(|workspace| {
+                workspace.allowed_roles.is_empty()
+                    || workspace
+                        .allowed_roles
+                        .iter()
+                        .any(|role| session_roles.iter().any(|r| r == role))
+            })
+            .collect();
+        workspaces.sort_by_key(|workspace| workspace.label.clone());
+
+        let mut active_workspace = state
+            .session
+            .active_workspace
+            .clone()
+            .filter(|id| workspaces.iter().any(|workspace| &workspace.id == id));
+
+        if active_workspace.is_none() {
+            active_workspace = workspaces.first().map(|workspace| workspace.id.clone());
+        }
+
+        if let Some(active) = &active_workspace {
+            self.store.set_active_workspace(active.clone());
+        }
+
+        let persona = active_workspace
+            .as_ref()
+            .and_then(|id| workspaces.iter().find(|workspace| &workspace.id == id))
+            .map(|workspace| workspace.persona)
+            .unwrap_or(WorkspacePersona::Developer);
+
+        let knowledge_articles = state
+            .knowledge_base
+            .get(&persona)
+            .cloned()
+            .unwrap_or_default();
+
+        let navigation = NavigationRail::new(nav_items, active_route);
+        let workspace_switcher = WorkspaceSwitcher::new(workspaces, active_workspace);
+        let chrome = ShellChrome::new(
+            navigation,
+            workspace_switcher,
+            KnowledgeOverlay::new(persona, knowledge_articles),
+        );
+        let frame = RenderFrame { chrome: &chrome };
+        adapter.mount(&self.renderer, &chrome, &self.state)?;
         let navigation = NavigationRail::from_state(&state.navigation);
         let workspaces = WorkspaceSwitcher::new(state.workspaces.values().cloned().collect());
         let chrome = ShellChrome::new(navigation, workspaces);
@@ -210,6 +367,10 @@ impl UnifiedShell {
     pub fn recommended_adapter(&self) -> Box<dyn PlatformAdapter> {
         match self.context.platform {
             Platform::Server => Box::new(ServerAdapter),
+            Platform::Desktop => Box::new(TauriAdapter::default()),
+            Platform::Web => Box::new(ReactAdapter),
+            Platform::Mobile => Box::new(ReactNativeAdapter::default()),
+            Platform::ARGlasses | Platform::XRHeadset => Box::new(SpatialAdapter::default()),
             Platform::Desktop | Platform::Web | Platform::Mobile => Box::new(ReactAdapter),
             Platform::ARGlasses | Platform::XRHeadset => Box::new(SpatialAdapter),
         }
@@ -265,5 +426,41 @@ mod tests {
             response,
             Some("Workflow 'build' triggered successfully.".into())
         );
+    }
+
+    #[test]
+    fn persona_specific_navigation_filters_modules() {
+        let session = UserSession {
+            user_id: "dev-user".into(),
+            display_name: "Dev".into(),
+            roles: vec!["developer".into()],
+            active_workspace: None,
+            auth_token: None,
+        };
+        let shell = UnifiedShell::builder(Platform::Web)
+            .with_session(session)
+            .build()
+            .unwrap();
+        let state = shell.store.read();
+        assert!(state
+            .navigation
+            .primary_items
+            .iter()
+            .all(|item| item.allowed_roles.is_empty()
+                || item.allowed_roles.contains(&"developer".into())));
+        assert!(state
+            .workspaces
+            .values()
+            .all(|workspace| workspace.allowed_roles.is_empty()
+                || workspace.allowed_roles.contains(&"developer".into())));
+    }
+
+    #[test]
+    fn desktop_adapter_mounts_tauri_manifest() {
+        let shell = UnifiedShell::builder(Platform::Desktop).build().unwrap();
+        let adapter = shell.recommended_adapter();
+        shell
+            .render(adapter.as_ref())
+            .expect("desktop adapter mounts tauri config");
     }
 }

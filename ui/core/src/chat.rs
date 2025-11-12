@@ -155,6 +155,7 @@ mod tests {
             label: "Chat".into(),
             icon: "message-square".into(),
             route: "/chat".into(),
+            allowed_roles: vec![],
         });
         let store = GlobalStore::new(state);
         let catalog = WorkflowCatalog::default();
