@@ -302,12 +302,8 @@ fn sanitize_file_name(file_name: Option<&str>) -> String {
         .and_then(|name| Path::new(name).file_name().and_then(|value| value.to_str()))
         .filter(|name| !name.is_empty())
         .filter(|name| {
-            // Reject filenames containing path separators or other suspicious characters
-            !name.contains('/') 
-                && !name.contains('\\')
-                && !name.contains("..")
-                && *name != "."
-                && *name != ".."
+            // Extra safety: reject special directory names
+            !name.is_empty() && *name != "." && *name != ".."
         })
         .map(|name| name.to_string())
         .unwrap_or_else(|| format!("upload-{}.bin", Uuid::new_v4()))
