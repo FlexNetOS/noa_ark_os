@@ -135,10 +135,8 @@ main() {
 
     for path in /etc/apt/sources.list.d/*.sources; do
         if [ -e "$path" ]; then
-            if grep -qE 'esm\.ubuntu\.com' "$path"; then
-                disable_yaml_sources "$path"
-                changed=1
-            fi
+            disable_yaml_sources "$path"
+            changed=1
         fi
     done
 
