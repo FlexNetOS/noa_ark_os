@@ -1,0 +1,18 @@
+{
+  "name": "noa-ark-os",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@8.15.4",
+  "scripts": {
+    "export:roadmap": "tsx scripts/export_roadmap.ts",
+    "lint": "pnpm --filter vibe-kanban lint && pnpm --filter vibe-kanban lint:eslint",
+    "typecheck": "pnpm --filter vibe-kanban typecheck",
+    "test": "pnpm --filter vibe-kanban test",
+    "build": "pnpm --filter vibe-kanban build",
+    "format": "pnpm --filter vibe-kanban format"
+  },
+  "devDependencies": {
+    "tsx": "4.7.1",
+    "typescript": "5.4.5"
+  }
+}

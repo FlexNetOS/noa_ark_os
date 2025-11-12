@@ -67,6 +67,35 @@ We are committed to providing a welcoming and inclusive environment for all cont
    > **Troubleshooting:** If you encounter `gh: GitHub authentication is required. Run "gh auth login".`, rerun the login command above with a valid fine-grained PAT and ensure the `GH_TOKEN`/`GITHUB_TOKEN` variables are exported in non-interactive environments.
 
 5. Install development dependencies:
+4. Install the GitHub CLI if it is not already available:
+
+   ```bash
+   ./scripts/install_gh_cli.sh
+   ```
+
+   The script requires `sudo` privileges and supports Debian/Ubuntu environments (used by CI and the development container).
+   For other platforms follow the [official installation guide](https://cli.github.com/manual/installation).
+
+5. Authenticate the GitHub CLI (required for `gh` commands and automation scripts):
+   1. Create a fine-grained personal access token (PAT) with **`repo`**, **`workflow`**, and **`project`** read/write scopes.
+   2. Run an interactive login:
+
+      ```bash
+      gh auth login --hostname github.com --git-protocol https
+      ```
+
+      Select GitHub.com → HTTPS → “Paste an authentication token” and paste the PAT when prompted.
+   3. For non-interactive environments, export the token before running scripts:
+
+      ```bash
+      export GH_TOKEN="<your-token>"
+      export GITHUB_TOKEN="$GH_TOKEN"
+      gh auth status --hostname github.com
+      ```
+
+      The status command should report “Logged in to github.com”.
+
+6. Install development dependencies:
    ```bash
    # Python components
    pip install -r requirements-dev.txt
@@ -74,6 +103,43 @@ We are committed to providing a welcoming and inclusive environment for all cont
    # Rust components
    cd repos/agentaskit && cargo build
    ```
+
+5. Create a fine-grained personal access token (PAT) following [GitHub's official documentation](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens). Grant the token the scopes required to read and write to this repository and set an expiration reminder so you can renew it before it lapses.
+
+6. Authenticate the GitHub CLI using the token:
+   ```bash
+   gh auth login --hostname github.com --with-token
+   ```
+   When prompted, paste the PAT you created in the previous step.
+
+7. For non-interactive environments (CI jobs, scripts, etc.), export the token so the GitHub CLI can reuse it without prompts, and verify your session:
+   ```bash
+   export GH_TOKEN="<your-token>"
+   export GITHUB_TOKEN="<your-token>"
+   gh auth status --hostname github.com
+   ```
+
+> **Troubleshooting:** If you see `GitHub authentication is required` while running `gh` commands, your session has expired or was never initialized. Re-run steps 5–7 to refresh your credentials.
+#### Troubleshooting GitHub CLI authentication
+
+- Error: `GitHub authentication is required` → rerun the login command in step 4 or refresh your PAT and re-export `GH_TOKEN`/`GITHUB_TOKEN`.
+- Error persists in CI or automation → confirm the token has not expired and still includes the `repo` and `workflow` scopes.
+
+### Automating AGENTOS roadmap issue creation
+
+Run `scripts/create_agentos_tasks.py` to convert the six AGENTOS roadmap entries in `docs/plans/gap_remediation_tasks.md` into live GitHub issues. The helper defaults to a dry-run so you can preview the generated payloads:
+
+```bash
+scripts/create_agentos_tasks.py --dry-run
+```
+
+When you are ready to create (or reuse) issues in this repository and append the URLs next to the in-document anchors, execute:
+
+```bash
+scripts/create_agentos_tasks.py --repo FlexNetOS/noa_ark_os --execute --update-doc
+```
+
+The script expects the GitHub CLI to be authenticated (see the prerequisites above) and will reuse existing issues whose titles already match `AGENTOS-# — …`.
 
 ## How to Contribute
 
