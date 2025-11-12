@@ -10,6 +10,7 @@ This document tracks actionable tasks to resolve outstanding gaps and quality is
 - **AGENTOS-4 — Seed Telemetry Storage Samples** ([View task](#task-agentos-4))
 - **AGENTOS-5 — Fix CICD Pipeline Struct Duplication** ([View task](#task-agentos-5))
 - **AGENTOS-6 — Extend GPU Detection Beyond NVIDIA** ([View task](#task-agentos-6))
+- **AGENTOS-7 — Deliver Value-Add Ecosystem Content** ([View task](#task-agentos-7))
 
 ---
 
