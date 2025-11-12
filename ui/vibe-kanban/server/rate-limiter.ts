@@ -15,12 +15,15 @@ export class RateLimiter {
     const refill = Math.floor(elapsed / this.refillIntervalMs);
 
     let tokens = existing.tokens;
+    let updatedAt = existing.updatedAt;
     if (refill > 0) {
+      const refillApplied = Math.min(refill, this.capacity - tokens);
       tokens = Math.min(this.capacity, tokens + refill);
+      updatedAt = existing.updatedAt + (refillApplied * this.refillIntervalMs);
     }
 
     if (tokens <= 0) {
-      this.buckets.set(identity, { tokens, updatedAt: now });
+      this.buckets.set(identity, { tokens, updatedAt });
       return false;
     }
 
