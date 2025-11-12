@@ -53,7 +53,7 @@ install:
     - id: fetch
       action: pull-artifact
       params:
-        source: artifacts/srt/2.3.1.tgz
+        source: crc://artifacts/arklabs/srt/2.3.1.tgz
     - id: verify
       action: verify-attestation
       params:
