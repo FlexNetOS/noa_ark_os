@@ -113,7 +113,7 @@ fn get_file_inner(path: &str) -> Option<FileDescriptor> {
 
 /// Synchronise file descriptors with registry metadata.
 pub fn sync_registry_metadata() -> Result<(), FsError> {
-    let snapshot = memory::registry_snapshot();
+    let snapshot = memory::registry_snapshot().map_err(|_| FsError::StatePoisoned)?;
     let mut table = FILE_TABLE.lock().map_err(|_| FsError::StatePoisoned)?;
 
     for descriptor in table.values_mut() {
@@ -151,12 +151,6 @@ fn to_component_metadata(graph: &RegistryGraph, node: &RegistryNode) -> Componen
         version: node.version.clone(),
         owners,
     }
-}
-
-/// Get file descriptor
-pub fn get_file(path: &str) -> Option<FileDescriptor> {
-    let table = FILE_TABLE.lock().unwrap();
-    table.get(path).cloned()
 }
 
 /// Kernel-managed file-system capability.
