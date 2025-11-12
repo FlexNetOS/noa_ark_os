@@ -185,6 +185,9 @@ fn query_nvidia_smi() -> Vec<GpuProfile> {
             let stdout = String::from_utf8_lossy(&output.stdout);
             for line in stdout.lines() {
                 let parts: Vec<_> = line.split(',').map(|s| s.trim()).collect();
+                if parts.len() < 3 || parts[0].is_empty() {
+                // Skip empty lines and lines with empty first field
+                // Also ensure we have at least the name field
                 if parts.is_empty() || parts[0].is_empty() {
                     continue;
                 }
