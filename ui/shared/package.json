@@ -44,13 +44,15 @@
   },
   "scripts": {
     "build": "tsc --project tsconfig.json",
-    "lint": "tsc --noEmit --project tsconfig.json"
+    "lint": "tsc --noEmit --project tsconfig.json",
+    "test": "node --import tsx --test tests/unified-shell.test.ts"
   },
   "peerDependencies": {
     "react": ">=18"
   },
   "devDependencies": {
     "@types/react": "18.2.73",
+    "tsx": "4.7.1",
     "typescript": "5.4.5"
   },
   "dependencies": {}

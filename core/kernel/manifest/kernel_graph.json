@@ -1,0 +1,215 @@
+{
+  "version": "2024.06",
+  "schemaVersion": "1.0",
+  "generatedAt": "2024-06-01T00:00:00Z",
+  "targets": ["linux", "macos", "container"],
+  "services": [
+    {
+      "id": "kernel",
+      "name": "AgentOS Kernel",
+      "category": "core",
+      "version": "1.0.0",
+      "interfaces": [
+        {"name": "kernel-api", "version": "1.0.0"},
+        {"name": "kernel-events", "version": "1.0.0"}
+      ],
+      "dependencies": [],
+      "optionalDependencies": ["observability"],
+      "artifacts": {
+        "container": {"image": "registry.local/agentos/kernel:1.0.0", "digest": "sha256:kernel"},
+        "tarball": {"file": "kernel-1.0.0.tar.gz"},
+        "ociLayout": {"path": "oci/kernel/1.0.0"}
+      },
+      "healthChecks": [
+        {"type": "state-file", "path": "state/kernel.ready"}
+      ],
+      "compatibility": {
+        "linux": {"status": "supported", "notes": "Validated on Ubuntu 22.04"},
+        "macos": {"status": "supported", "notes": "Validated on macOS 14"},
+        "container": {"status": "supported", "notes": "Runs under container runtime"}
+      },
+      "boot": {"order": 1, "role": "foundation"},
+      "resources": {"cpu": 2, "memoryMb": 2048}
+    },
+    {
+      "id": "agent-registry",
+      "name": "Agent Registry",
+      "category": "service",
+      "version": "0.8.0",
+      "interfaces": [
+        {"name": "registry-api", "version": "1.2.0"},
+        {"name": "kernel-api", "version": "1.0.0"}
+      ],
+      "dependencies": ["kernel"],
+      "optionalDependencies": [],
+      "artifacts": {
+        "container": {"image": "registry.local/agentos/agent-registry:0.8.0", "digest": "sha256:agent-registry"},
+        "tarball": {"file": "agent-registry-0.8.0.tar.gz"},
+        "ociLayout": {"path": "oci/agent-registry/0.8.0"}
+      },
+      "healthChecks": [
+        {"type": "state-file", "path": "state/agent-registry.ready"}
+      ],
+      "compatibility": {
+        "linux": {"status": "supported"},
+        "macos": {"status": "supported"},
+        "container": {"status": "supported"}
+      },
+      "boot": {"order": 2, "role": "registry"},
+      "resources": {"cpu": 1, "memoryMb": 1024}
+    },
+    {
+      "id": "runtime-manager",
+      "name": "Adaptive Runtime Manager",
+      "category": "runtime",
+      "version": "1.1.0",
+      "interfaces": [
+        {"name": "runtime-policy", "version": "1.0.0"},
+        {"name": "kernel-events", "version": "1.0.0"}
+      ],
+      "dependencies": ["kernel"],
+      "optionalDependencies": ["observability"],
+      "artifacts": {
+        "container": {"image": "registry.local/agentos/runtime-manager:1.1.0", "digest": "sha256:runtime-manager"},
+        "tarball": {"file": "runtime-manager-1.1.0.tar.gz"},
+        "ociLayout": {"path": "oci/runtime-manager/1.1.0"}
+      },
+      "healthChecks": [
+        {"type": "state-file", "path": "state/runtime-manager.ready"}
+      ],
+      "compatibility": {
+        "linux": {"status": "supported"},
+        "macos": {"status": "supported"},
+        "container": {"status": "supported"}
+      },
+      "boot": {"order": 3, "role": "scheduler"},
+      "resources": {"cpu": 2, "memoryMb": 1536}
+    },
+    {
+      "id": "gateway",
+      "name": "Policy Gateway",
+      "category": "edge",
+      "version": "0.6.0",
+      "interfaces": [
+        {"name": "gateway-api", "version": "0.6.0"},
+        {"name": "telemetry-export", "version": "1.0.0"}
+      ],
+      "dependencies": ["kernel", "runtime-manager"],
+      "optionalDependencies": ["observability"],
+      "artifacts": {
+        "container": {"image": "registry.local/agentos/gateway:0.6.0", "digest": "sha256:gateway"},
+        "tarball": {"file": "gateway-0.6.0.tar.gz"},
+        "ociLayout": {"path": "oci/gateway/0.6.0"}
+      },
+      "healthChecks": [
+        {"type": "state-file", "path": "state/gateway.ready"}
+      ],
+      "compatibility": {
+        "linux": {"status": "supported"},
+        "macos": {"status": "supported"},
+        "container": {"status": "supported"}
+      },
+      "boot": {"order": 4, "role": "ingress"},
+      "resources": {"cpu": 1, "memoryMb": 768}
+    },
+    {
+      "id": "observability",
+      "name": "Observability Bundle",
+      "category": "observability",
+      "version": "0.5.0",
+      "interfaces": [
+        {"name": "metrics-export", "version": "1.0.0"},
+        {"name": "logs-export", "version": "1.0.0"}
+      ],
+      "dependencies": ["kernel"],
+      "optionalDependencies": [],
+      "artifacts": {
+        "container": {"image": "registry.local/agentos/observability:0.5.0", "digest": "sha256:observability"},
+        "tarball": {"file": "observability-0.5.0.tar.gz"},
+        "ociLayout": {"path": "oci/observability/0.5.0"}
+      },
+      "healthChecks": [
+        {"type": "state-file", "path": "state/observability.ready"}
+      ],
+      "compatibility": {
+        "linux": {"status": "supported"},
+        "macos": {"status": "supported"},
+        "container": {"status": "supported"}
+      },
+      "boot": {"order": 5, "role": "telemetry"},
+      "resources": {"cpu": 1, "memoryMb": 1024}
+    },
+    {
+      "id": "ui-shell",
+      "name": "Unified UI Shell",
+      "category": "ui",
+      "version": "0.4.0",
+      "interfaces": [
+        {"name": "ui-navigation", "version": "0.4.0"},
+        {"name": "session-sync", "version": "1.0.0"}
+      ],
+      "dependencies": ["kernel", "agent-registry"],
+      "optionalDependencies": ["observability"],
+      "artifacts": {
+        "container": {"image": "registry.local/agentos/ui-shell:0.4.0", "digest": "sha256:ui-shell"},
+        "tarball": {"file": "ui-shell-0.4.0.tar.gz"},
+        "ociLayout": {"path": "oci/ui-shell/0.4.0"}
+      },
+      "healthChecks": [
+        {"type": "state-file", "path": "state/ui-shell.ready"}
+      ],
+      "compatibility": {
+        "linux": {"status": "supported"},
+        "macos": {"status": "supported"},
+        "container": {"status": "supported"}
+      },
+      "boot": {"order": 6, "role": "experience"},
+      "resources": {"cpu": 1, "memoryMb": 512}
+    },
+    {
+      "id": "ecosystem",
+      "name": "Value Ecosystem Bundle",
+      "category": "bundle",
+      "version": "0.3.0",
+      "interfaces": [
+        {"name": "feature-toggle", "version": "1.0.0"},
+        {"name": "analytics", "version": "1.0.0"}
+      ],
+      "dependencies": ["ui-shell", "runtime-manager", "gateway"],
+      "optionalDependencies": ["observability"],
+      "artifacts": {
+        "container": {"image": "registry.local/agentos/ecosystem:0.3.0", "digest": "sha256:ecosystem"},
+        "tarball": {"file": "ecosystem-0.3.0.tar.gz"},
+        "ociLayout": {"path": "oci/ecosystem/0.3.0"}
+      },
+      "healthChecks": [
+        {"type": "state-file", "path": "state/ecosystem.ready"}
+      ],
+      "compatibility": {
+        "linux": {"status": "supported"},
+        "macos": {"status": "supported"},
+        "container": {"status": "supported"}
+      },
+      "boot": {"order": 7, "role": "value"},
+      "resources": {"cpu": 1, "memoryMb": 512}
+    }
+  ],
+  "profiles": {
+    "single-host": {
+      "description": "Deterministic single-host layout",
+      "bootOrder": [
+        "kernel",
+        "agent-registry",
+        "runtime-manager",
+        "gateway",
+        "observability",
+        "ui-shell",
+        "ecosystem"
+      ],
+      "health": {
+        "timeoutSeconds": 30,
+        "retry": 3
+      }
+    }
+  }
+}
