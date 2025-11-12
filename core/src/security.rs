@@ -211,9 +211,6 @@ fn simple_hash(value: &str) -> String {
     }
 
     format!("{:016x}", hash)
-lazy_static::lazy_static! {
-    static ref USER_TABLE: Arc<Mutex<HashMap<UserId, User>>> =
-        Arc::new(Mutex::new(HashMap::new()));
 }
 
 /// Initialize security subsystem
@@ -227,17 +224,24 @@ pub fn init() -> Result<(), &'static str> {
         permissions: vec![Permission::Admin],
     };
 
-    let mut table = USER_TABLE.lock().unwrap();
+    let mut table = USER_TABLE
+        .lock()
+        .map_err(|_| "user table mutex poisoned")?;
     table.insert(0, root);
 
     Ok(())
 }
 
 fn check_permission_inner(user_id: UserId, permission: Permission) -> bool {
-    let table = USER_TABLE.lock().unwrap();
-    if let Some(user) = table.get(&user_id) {
-        user.permissions.contains(&Permission::Admin) || user.permissions.contains(&permission)
+    let table = USER_TABLE.lock();
+    if let Ok(table) = table {
+        if let Some(user) = table.get(&user_id) {
+            user.permissions.contains(&Permission::Admin) || user.permissions.contains(&permission)
+        } else {
+            false
+        }
     } else {
+        // If mutex is poisoned, deny permission for safety
         false
     }
 }
@@ -284,9 +288,14 @@ mod tests {
         assert!(verify_signed_operation(&signed));
         assert!(signed.signature.len() > 10);
     }
-fn register_user_inner(user: User) {
-    let mut table = USER_TABLE.lock().unwrap();
+}
+
+fn register_user_inner(user: User) -> Result<(), String> {
+    let mut table = USER_TABLE
+        .lock()
+        .map_err(|_| "user table mutex poisoned".to_string())?;
     table.insert(user.id, user);
+    Ok(())
 }
 
 /// Kernel-managed security capability.
@@ -296,7 +305,9 @@ pub struct SecurityService;
 impl SecurityService {
     /// Register or update a user.
     pub fn register_user(&self, user: User) {
-        register_user_inner(user);
+        // Ignore errors for backward compatibility
+        // In production, consider logging the error
+        let _ = register_user_inner(user);
     }
 
     /// Validate a permission check.
