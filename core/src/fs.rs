@@ -107,6 +107,14 @@ fn create_file_inner(path: String, permissions: u32) -> Result<(), &'static str>
 }
 
 fn get_file_inner(path: &str) -> Option<FileDescriptor> {
+    Ok(())
+}
+
+fn get_file_inner(path: &str) -> Option<FileDescriptor> {
+    Ok(())
+}
+
+fn get_file_inner(path: &str) -> Option<FileDescriptor> {
 /// Synchronise file descriptors with registry metadata.
 pub fn sync_registry_metadata() -> Result<(), FsError> {
     let snapshot = memory::registry_snapshot();
