@@ -1,5 +1,5 @@
 //! Emergency Responder Agent - Executive Layer
-//! 
+//!
 //! Simplified working version
 //! Handles emergency response and crisis management
 
@@ -11,7 +11,7 @@ use tokio::sync::RwLock;
 use uuid::Uuid;
 
 /// Emergency Responder Agent - Crisis management and response
-/// 
+///
 /// Responsible for:
 /// - Emergency detection and response
 /// - Crisis coordination
@@ -108,7 +108,8 @@ impl EmergencyAgent {
             category: AgentCategory::Operations,
             agent_type: AgentType::Master,
             language: AgentLanguage::Rust,
-            description: "Emergency Response Agent - Crisis management and system recovery".to_string(),
+            description: "Emergency Response Agent - Crisis management and system recovery"
+                .to_string(),
             role: "Executive Emergency".to_string(),
             purpose: "Detect, respond to, and manage system emergencies".to_string(),
             state: AgentState::Created,
@@ -138,44 +139,52 @@ impl EmergencyAgent {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
             emergency_data: Arc::new(RwLock::new(EmergencyData::default())),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Initializing;
-        
+
         // Initialize response protocols
         let mut data = self.emergency_data.write().await;
         data.response_protocols.push(ResponseProtocol {
             protocol_id: "system-failure".to_string(),
             emergency_type: EmergencyType::SystemFailure,
-            actions: vec!["isolate".to_string(), "diagnose".to_string(), "recover".to_string()],
+            actions: vec![
+                "isolate".to_string(),
+                "diagnose".to_string(),
+                "recover".to_string(),
+            ],
         });
-        
+
         *self.state.write().await = AgentState::Ready;
         tracing::info!("Emergency Responder Agent initialized");
         Ok(())
     }
-    
+
     pub async fn handle_emergency(&self, emergency: Emergency) -> Result<()> {
         let mut data = self.emergency_data.write().await;
-        
+
         data.active_emergencies.push(emergency.clone());
         data.metrics.total_emergencies += 1;
-        
-        tracing::warn!("Emergency detected: {:?} - {}", emergency.emergency_type, emergency.description);
-        
+
+        tracing::warn!(
+            "Emergency detected: {:?} - {}",
+            emergency.emergency_type,
+            emergency.description
+        );
+
         Ok(())
     }
-    
+
     pub async fn generate_report(&self) -> Result<EmergencyReport> {
         let data = self.emergency_data.read().await;
-        
+
         Ok(EmergencyReport {
             report_id: Uuid::new_v4(),
             active_emergencies: data.active_emergencies.len(),
@@ -185,11 +194,11 @@ impl EmergencyAgent {
             generated_at: chrono::Utc::now(),
         })
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -204,25 +213,25 @@ impl Default for EmergencyAgent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_create_emergency_agent() {
         let agent = EmergencyAgent::new();
         assert_eq!(agent.metadata().name, "Emergency Responder Agent");
     }
-    
+
     #[tokio::test]
     async fn test_initialize() {
         let mut agent = EmergencyAgent::new();
         agent.initialize().await.unwrap();
         assert_eq!(agent.state().await, AgentState::Ready);
     }
-    
+
     #[tokio::test]
     async fn test_handle_emergency() {
         let mut agent = EmergencyAgent::new();
         agent.initialize().await.unwrap();
-        
+
         let emergency = Emergency {
             emergency_id: Uuid::new_v4(),
             emergency_type: EmergencyType::SystemFailure,
@@ -231,9 +240,9 @@ mod tests {
             status: EmergencyStatus::Detected,
             detected_at: chrono::Utc::now(),
         };
-        
+
         agent.handle_emergency(emergency).await.unwrap();
-        
+
         let report = agent.generate_report().await.unwrap();
         assert_eq!(report.active_emergencies, 1);
     }

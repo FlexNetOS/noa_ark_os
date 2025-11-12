@@ -1,5 +1,5 @@
 //! Resource Allocator Agent - Executive Layer
-//! 
+//!
 //! Simplified working version
 //! Manages system resource allocation and optimization
 
@@ -12,7 +12,7 @@ use tokio::sync::RwLock;
 use uuid::Uuid;
 
 /// Resource Allocator Agent - Resource management and optimization
-/// 
+///
 /// Responsible for:
 /// - Resource allocation management
 /// - Capacity planning
@@ -81,7 +81,8 @@ impl ResourceAgent {
             category: AgentCategory::Operations,
             agent_type: AgentType::Master,
             language: AgentLanguage::Rust,
-            description: "Resource Allocator - System resource management and optimization".to_string(),
+            description: "Resource Allocator - System resource management and optimization"
+                .to_string(),
             role: "Executive Resources".to_string(),
             purpose: "Manage and optimize system resource allocation".to_string(),
             state: AgentState::Created,
@@ -111,65 +112,74 @@ impl ResourceAgent {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
             resource_data: Arc::new(RwLock::new(ResourceData::default())),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Initializing;
-        
+
         // Initialize resource pools
         let mut data = self.resource_data.write().await;
-        data.pools.insert("cpu".to_string(), ResourcePool {
-            pool_id: "cpu-pool".to_string(),
-            resource_type: "CPU".to_string(),
-            total_capacity: 100.0,
-            allocated: 60.0,
-            available: 40.0,
-        });
-        
-        data.pools.insert("memory".to_string(), ResourcePool {
-            pool_id: "memory-pool".to_string(),
-            resource_type: "Memory".to_string(),
-            total_capacity: 100.0,
-            allocated: 70.0,
-            available: 30.0,
-        });
-        
+        data.pools.insert(
+            "cpu".to_string(),
+            ResourcePool {
+                pool_id: "cpu-pool".to_string(),
+                resource_type: "CPU".to_string(),
+                total_capacity: 100.0,
+                allocated: 60.0,
+                available: 40.0,
+            },
+        );
+
+        data.pools.insert(
+            "memory".to_string(),
+            ResourcePool {
+                pool_id: "memory-pool".to_string(),
+                resource_type: "Memory".to_string(),
+                total_capacity: 100.0,
+                allocated: 70.0,
+                available: 30.0,
+            },
+        );
+
         *self.state.write().await = AgentState::Ready;
         tracing::info!("Resource Allocator Agent initialized");
         Ok(())
     }
-    
+
     pub async fn allocate_resource(&self, allocation: ResourceAllocation) -> Result<()> {
         let mut data = self.resource_data.write().await;
-        
-        data.allocations.insert(allocation.allocation_id.to_string(), allocation);
+
+        data.allocations
+            .insert(allocation.allocation_id.to_string(), allocation);
         data.metrics.total_allocations += 1;
-        
+
         Ok(())
     }
-    
+
     pub async fn generate_report(&self) -> Result<ResourceReport> {
         let data = self.resource_data.read().await;
-        
+
         Ok(ResourceReport {
             report_id: Uuid::new_v4(),
             metrics: data.metrics.clone(),
             active_allocations: data.allocations.len(),
-            recommendations: vec!["Monitor resource utilization for optimization opportunities".to_string()],
+            recommendations: vec![
+                "Monitor resource utilization for optimization opportunities".to_string(),
+            ],
             generated_at: chrono::Utc::now(),
         })
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -184,25 +194,25 @@ impl Default for ResourceAgent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_create_resource_agent() {
         let agent = ResourceAgent::new();
         assert_eq!(agent.metadata().name, "Resource Allocator Agent");
     }
-    
+
     #[tokio::test]
     async fn test_initialize() {
         let mut agent = ResourceAgent::new();
         agent.initialize().await.unwrap();
         assert_eq!(agent.state().await, AgentState::Ready);
     }
-    
+
     #[tokio::test]
     async fn test_allocate_resource() {
         let mut agent = ResourceAgent::new();
         agent.initialize().await.unwrap();
-        
+
         let allocation = ResourceAllocation {
             allocation_id: Uuid::new_v4(),
             resource_type: "CPU".to_string(),
@@ -210,9 +220,9 @@ mod tests {
             amount: 2.0,
             utilization: 0.75,
         };
-        
+
         agent.allocate_resource(allocation).await.unwrap();
-        
+
         let report = agent.generate_report().await.unwrap();
         assert_eq!(report.active_allocations, 1);
     }
