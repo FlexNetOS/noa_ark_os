@@ -16,6 +16,7 @@ pub mod commands;
 pub mod digestors;
 pub mod engine;
 pub mod error;
+pub mod extraction;
 pub mod graph;
 pub mod ir;
 pub mod orchestrator;
@@ -32,7 +33,7 @@ pub use types::*;
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -86,6 +87,15 @@ pub enum CRCState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OriginalArtifact {
+    pub path: PathBuf,
+    pub archive_type: Option<String>,
+    pub size: Option<u64>,
+    pub extracted_path: Option<PathBuf>,
+    pub cleanup_after_processing: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CodeDrop {
     pub id: String,
     pub source_type: SourceType,
@@ -95,6 +105,7 @@ pub struct CodeDrop {
     pub manifest: DropManifest,
     pub analysis: Option<AnalysisResult>,
     pub adaptation: Option<AdaptationResult>,
+    pub original_artifact: Option<OriginalArtifact>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -292,6 +303,7 @@ impl CRCSystem {
         &self,
         path: PathBuf,
         manifest: DropManifest,
+        original_artifact: Option<OriginalArtifact>,
     ) -> std::result::Result<String, String> {
         let id = format!("drop_{}", uuid::Uuid::new_v4());
 
@@ -304,6 +316,7 @@ impl CRCSystem {
             manifest,
             analysis: None,
             adaptation: None,
+            original_artifact,
         };
 
         let mut drops = self.drops.lock().unwrap();
@@ -356,6 +369,12 @@ impl CRCSystem {
     pub fn get_drop(&self, drop_id: &str) -> Option<CodeDrop> {
         let drops = self.drops.lock().unwrap();
         drops.get(drop_id).cloned()
+    }
+
+    /// List all registered drop identifiers (for testing and diagnostics).
+    pub fn list_drop_ids(&self) -> Vec<String> {
+        let drops = self.drops.lock().unwrap();
+        drops.keys().cloned().collect()
     }
 }
 

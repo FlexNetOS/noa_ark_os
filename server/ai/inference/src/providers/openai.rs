@@ -24,7 +24,7 @@ impl OpenAiProvider {
 #[async_trait]
 impl Provider for OpenAiProvider {
     async fn complete(&self, request: CompletionRequest) -> anyhow::Result<CompletionResponse> {
-        info!("openai offline completion", model = %self.config.model);
+        info!(model = %self.config.model, "openai offline completion");
         Ok(CompletionResponse {
             content: format!("[openai:{}]: {}", self.config.model, request.prompt),
             model: self.config.model.clone(),
