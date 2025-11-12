@@ -49,6 +49,9 @@ Establish one strict operating policy for every agent-driven action so each task
 ### Contained Environment & Dependency Governance
 
 * Treat NOA ARK OS as a **self-contained system**—all runtimes, libraries, assets, and secrets must live inside or be routed through the repository's managed gateways.
+* Provision dependencies via gateway-managed manifests (see `services/gateway/service.py`, `server/gateway/`, `.workspace/config/`, `.workspace/registry/*.json`, `tools/portable_builder.py`) so nothing bypasses archival or verification controls.
+* Route every environment variable, credential, configuration knob, dependent runtime, and secret through gateway shims and adapters maintained in `server/gateway/src/*.rs`, `services/gateway/`, `agents/src/implementations/generated/infrastructure/*gateway*`, and related tooling; no ad-hoc `.env` or external service dependencies.
+* Record environmental assumptions and manifest updates in the Evidence Ledger and mirror them in `.workspace/registry/` (or corresponding gateway config files) whenever a task introduces or changes gateway-managed configuration.
 * Provision dependencies via gateway-managed manifests (package registries, build kits, toolchains) so nothing bypasses archival or verification controls.
 * Route every environment variable, credential, configuration knob, and secret through gateway shims (`agents/gateways/`, `tools/`, `.workspace/registry/`) with auditable definitions and fallbacks; no ad-hoc `.env` or external service dependencies.
 * Record environmental assumptions in the Evidence Ledger whenever a task introduces or changes gateway-managed configuration.
@@ -80,19 +83,20 @@ Establish one strict operating policy for every agent-driven action so each task
 Grounded in the current repository layout:
 
 ```
-agents/              # Orchestrators, planners, gateways, worker runtimes
+agents/              # Orchestrators, planners, worker runtimes, generated gateway agents
 ai/                  # AI engine integrations, llama.cpp bindings, model control
 apps/                # System applications and UI frameworks
-archive/             # Compressed superseded assets + ledger
+crc/archive/         # Compressed superseded assets + ledger
 cicd/                # CI/CD orchestration, pipelines, deployment assets
 core/                # Kernel/core OS services (process, memory, IPC, security)
 crc/                 # Continuous ReCode (ingest, DAGs, transforms, sandboxes)
 crc-adapter-sdk/     # SDK for CRC integrations
 docs/                # Architecture, plans, SOPs, roadmaps, onboarding
 runtime/             # Multi-language runtime environments
-server/              # Unified application/MCP server, transport routers
+server/              # Unified application/MCP server, transport routers, gateway policy (see `server/gateway/`)
 sandbox/             # Sandbox system libraries and isolation layers
 storage/             # File system, databases, configuration engines
+services/gateway/    # Python service wrapper for manifest/policy enforcement and telemetry export
 tools/               # Build kits, utilities, safety tools, developer helpers
 ui/                  # Multi-surface UI shells (web/desktop/mobile/AR/XR)
 workflow/            # Workflow automation and coordination assets
@@ -210,8 +214,8 @@ Set environment variables when supported:
 ## 8) Execution Guardrails
 
 * **Non-destructive editing:** No deletions or history-dropping renames; archive superseded assets first.
-* **Gateways, not copies:** Provider runtimes import from shared gateways under `agents/gateways/` (or equivalent) to avoid duplication, and **all connections must be routed through the gateway** (paths, routing, hooks, shims, auth, CAS, agents, providers, front-end, back-end, etc.).
-* **Gateway-managed environments:** Configure dependencies, secrets, environment variables, and external integrations exclusively via gateway adapters and repository-contained manifests; document updates in `.workspace/registry/` or equivalent control points.
+* **Gateways, not copies:** Provider runtimes integrate through the shared gateway stack (`server/gateway/`, `services/gateway/`, generated gateway agents under `agents/src/implementations/generated/infrastructure/`) to avoid duplication, and **all connections must be routed through the gateway** (paths, routing, hooks, shims, auth, CAS, agents, providers, front-end, back-end, etc.).
+* **Gateway-managed environments:** Configure dependencies, secrets, environment variables, and external integrations exclusively via gateway adapters and repository-contained manifests (`services/gateway/service.py`, `.workspace/config/`, `.workspace/registry/*.json`, `tools/portable_builder.py`); document updates in the Evidence Ledger and workspace registry checkpoints.
 * **Conventional Commits:** Use `feat`, `fix`, `refactor`, `docs`, `test`, `perf`, `chore`; include archival notes and feature-flag status in commit messages.
 * **CI Acceptance:** Lint, type checks, unit tests, duplicate detectors, and offline jobs must pass. Linux job mandatory; macOS/Windows matrix best-effort.
 * **Dead-code-aware stubs:** Wrap inactive pathways and document them for quick reactivation of archived features.
