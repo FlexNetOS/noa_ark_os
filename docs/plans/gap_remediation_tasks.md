@@ -255,34 +255,38 @@ The following remediation items align to the roadmap themes and ensure prerequis
 ## Ensure everything depends on the kernel/service graph, simplify deployment, and make the platform portable across environments by default.
 Ground platform evolution in a single kernel-first dependency graph that packages services consistently for any environment.
 **Suggested task**
-- Establish kernel-first dependency graph and portable packaging — [View task](#task-kernel-first)
+- Establish kernel-first dependency graph and portable packaging — [View task](#task-kernel-first) · [Issue stub](../issues/AGENTOS-1-kernel-first-graph.md)
 
 ## Single-Host AgentOS Server Orchestration
 Deliver a constrained, single-host deployment profile that keeps the complete stack healthy without external orchestration.
 **Suggested task**
-- Design single-host AgentOS server profile — [View task](#task-single-host)
+- Design single-host AgentOS server profile — [View task](#task-single-host) · [Issue stub](../issues/AGENTOS-2-single-host-profile.md)
 
 ## Unified UI/UX Shell & Interaction Model
 Present a cohesive operator experience across desktop, web, and terminal surfaces that reuses the same interaction vocabulary.
 **Suggested task**
+- Ship unified multi-surface UI shell — [View task](#task-ui-shell) · [Issue stub](../issues/AGENTOS-3-unified-ui-shell.md)
 - Ship unified multi-surface UI shell — [View task](#task-ui-shell)
 - Ship unified multi-surface UI shell — https://github.com/noa-ark/noa_ark_os/issues/103
 
 ## Adaptive Runtime & Portability Enhancements
 Add runtime intelligence to detect host capabilities, tune workloads, and keep deployments portable across infrastructure classes.
 **Suggested task**
+- Implement adaptive runtime orchestration — [View task](#task-adaptive-runtime) · [Issue stub](../issues/AGENTOS-4-adaptive-runtime.md)
 - Implement adaptive runtime orchestration — [View task](#task-adaptive-runtime)
 - Implement adaptive runtime orchestration — https://github.com/noa-ark/noa_ark_os/issues/104
 
 ## Advanced Gateway & Observability
 Upgrade ingress, policy, and telemetry flows so operators gain real-time insight and can enforce controls without friction.
 **Suggested task**
+- Develop advanced gateway with observability — [View task](#task-gateway-observability) · [Issue stub](../issues/AGENTOS-5-gateway-observability.md)
 - Develop advanced gateway with observability — [View task](#task-gateway-observability)
 - Develop advanced gateway with observability — https://github.com/noa-ark/noa_ark_os/issues/105
 
 ## Value-Added Service Ecosystem
 Layer differentiated services and packaged workflows on top of the hardened core to accelerate customer value delivery.
 **Suggested task**
+- Launch value-add ecosystem features — [View task](#task-value-ecosystem) · [Issue stub](../issues/AGENTOS-6-value-ecosystem.md)
 - Launch value-add ecosystem features — [View task](#task-value-ecosystem)
 - Launch value-add ecosystem features — https://github.com/noa-ark/noa_ark_os/issues/106
 
@@ -317,6 +321,7 @@ Layer differentiated services and packaged workflows on top of the hardened core
 - Priority: P0
 - Status: Processing
 - Depends on: None
+- Tracking: [Internal issue stub](../issues/AGENTOS-1-kernel-first-graph.md) _(replace anchor with external URL when published)_
 
 ### <a id="task-single-host"></a>AGENTOS-2 — Design single-host AgentOS server profile
 - Owner: TBA
@@ -348,6 +353,7 @@ Layer differentiated services and packaged workflows on top of the hardened core
 - Priority: P0
 - Status: Processing
 - Depends on: AGENTOS-1
+- Tracking: [Internal issue stub](../issues/AGENTOS-2-single-host-profile.md) _(replace anchor with external URL when published)_
 
 ### <a id="task-ui-shell"></a>AGENTOS-3 — Ship unified multi-surface UI shell
 - Owner: TBA
@@ -375,6 +381,7 @@ Layer differentiated services and packaged workflows on top of the hardened core
 - Priority: P1
 - Status: Processing
 - Depends on: AGENTOS-2
+- Tracking: [Internal issue stub](../issues/AGENTOS-3-unified-ui-shell.md) _(replace anchor with external URL when published)_
 
 ### <a id="task-adaptive-runtime"></a>AGENTOS-4 — Implement adaptive runtime orchestration
 - Owner: TBA
@@ -403,6 +410,7 @@ Layer differentiated services and packaged workflows on top of the hardened core
 - Priority: P1
 - Status: Processing
 - Depends on: AGENTOS-1, AGENTOS-2
+- Tracking: [Internal issue stub](../issues/AGENTOS-4-adaptive-runtime.md) _(replace anchor with external URL when published)_
 
 ### <a id="task-gateway-observability"></a>AGENTOS-5 — Develop advanced gateway with observability
 - Owner: TBA
@@ -430,6 +438,7 @@ Layer differentiated services and packaged workflows on top of the hardened core
 - Priority: P1
 - Status: Processing
 - Depends on: AGENTOS-2
+- Tracking: [Internal issue stub](../issues/AGENTOS-5-gateway-observability.md) _(replace anchor with external URL when published)_
 
 ### <a id="task-value-ecosystem"></a>AGENTOS-6 — Launch value-add ecosystem features
 - Owner: TBA
@@ -460,6 +469,7 @@ Layer differentiated services and packaged workflows on top of the hardened core
 - Priority: P1
 - Status: Processing
 - Depends on: AGENTOS-3, AGENTOS-4, AGENTOS-5
+- Tracking: [Internal issue stub](../issues/AGENTOS-6-value-ecosystem.md) _(replace anchor with external URL when published)_
 
 ### Task Links
 
