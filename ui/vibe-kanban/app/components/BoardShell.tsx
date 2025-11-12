@@ -50,9 +50,9 @@ export function BoardShell({ state }: BoardShellProps) {
     [snapshot]
   );
   const completedCount = useMemo(() => {
-    return snapshot?.columns
+    return (snapshot?.columns ?? [])
       .filter((column) => /done|complete|finished/i.test(column.title))
-      .reduce((count, column) => count + column.cards.length, 0) ?? 0;
+      .reduce((count, column) => count + column.cards.length, 0);
   }, [snapshot?.columns]);
   }, [snapshot]);
 
