@@ -1,0 +1,22 @@
+{
+  "last_updated": "2025-01-12T08:45:00Z",
+  "overall_score": 0.94,
+  "trend": [0.89, 0.91, 0.92, 0.94],
+  "control_status": [
+    {
+      "control": "Access policy signatures",
+      "status": "pass",
+      "evidence": "relocation ledger anchor 2025-01-12T08:44:12Z"
+    },
+    {
+      "control": "Document provenance",
+      "status": "pass",
+      "evidence": "documentation ledger anchor 2025-01-12T08:44:20Z"
+    },
+    {
+      "control": "Audit handbook freshness",
+      "status": "attention",
+      "evidence": "handbook generated 2025-01-12T08:40:00Z"
+    }
+  ]
+}

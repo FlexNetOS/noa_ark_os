@@ -30,8 +30,6 @@ dist/
 *.sln.docstates
 
 # Workspace indexes and temp files
-.workspace/
-.graphs/
 
 # Rust
 **/*.rs.bk
