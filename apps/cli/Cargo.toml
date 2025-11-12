@@ -1,0 +1,15 @@
+[package]
+name = "noa-cli"
+version = "0.1.0"
+edition = "2021"
+authors = ["NOA ARK OS Team"]
+description = "Command line tooling for the NOA Ark OS relocation daemon"
+license = "MIT"
+
+[dependencies]
+anyhow = { workspace = true }
+clap = { version = "4.5", features = ["derive"] }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+relocation-daemon = { path = "../../services/relocation-daemon" }
+uuid = { version = "1.6", features = ["v4"] }

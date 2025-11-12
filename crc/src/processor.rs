@@ -9,6 +9,7 @@ use tokio::fs;
 use tracing::{debug, error, info, instrument, warn};
 
 use crate::{
+    build::{self, BuildArtifact},
     AdaptationResult, AnalysisResult, CRCState, Dependency, Error, Priority, Result, SandboxModel,
     SourceType,
 };
@@ -84,19 +85,55 @@ impl DropProcessor {
             "✓ Assigned to {:?} ({:.1}% confidence)",
             sandbox,
             validation.confidence * 100.0
+        let validation_confidence = validation.confidence;
+        info!(
+            "✓ Validation complete (confidence: {:.1}%)",
+            validation_confidence * 100.0
+        );
+
+        // Stage 4: Determine sandbox assignment
+        let sandbox = self.assign_sandbox(&source_type, validation_confidence);
+        info!(
+            "✓ Assigned to {:?} ({:.1}% confidence)",
+            sandbox,
+            validation_confidence * 100.0
         );
 
         // Stage 5: Move to ready queue
         let ready_path = self.move_to_ready(drop_id, &source_path, &sandbox).await?;
         info!("✓ Moved to ready queue: {}", ready_path.display());
 
+        // Stage 6: Produce hardware-optimized builds
+        let build_artifacts = self.produce_profile_builds(drop_id, &source_path).await?;
+
+        for artifact in &build_artifacts {
+            info!(
+                "✓ Generated {:?} artifact at {}",
+                artifact.manifest.profile,
+                artifact.artifact_path.display()
+            );
+        }
+
+        let mut metadata = validation.metadata;
+        match serde_json::to_string(&build_artifacts) {
+            Ok(serialized) => {
+                metadata.insert("build_artifacts".to_string(), serialized);
+            }
+            Err(e) => {
+                warn!("Failed to serialize build_artifacts for drop {}: {}", drop_id, e);
+            }
+        }
+
+        let errors = validation.errors;
+        let warnings = validation.warnings;
+
         Ok(ProcessingResult {
             success: true,
             stage: "completed".to_string(),
-            confidence: validation.confidence,
-            errors: validation.errors,
-            warnings: validation.warnings,
-            metadata: validation.metadata,
+            confidence: validation_confidence,
+            errors,
+            warnings,
+            metadata,
         })
     }
 
@@ -441,6 +478,15 @@ impl DropProcessor {
         // Would actually run cargo check
         // For now, simulate success
         Ok(())
+    }
+
+    async fn produce_profile_builds(
+        &self,
+        drop_id: &str,
+        source_path: &Path,
+    ) -> Result<Vec<BuildArtifact>> {
+        let artifact_root = Path::new("storage").join("artifacts");
+        build::generate_optimized_builds(drop_id, source_path, &artifact_root).await
     }
 
     async fn has_valid_structure(&self, path: &Path) -> bool {

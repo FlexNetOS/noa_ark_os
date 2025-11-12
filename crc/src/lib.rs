@@ -10,6 +10,7 @@
 
 // Re-export modules
 pub mod archive;
+pub mod build;
 pub mod commands;
 pub mod error;
 pub mod parallel;
@@ -18,6 +19,7 @@ pub mod types;
 pub mod watcher;
 
 // Re-export common types
+pub use build::{BuildArtifact, BuildManifest, TargetProfile};
 pub use error::{Error, Result};
 pub use types::*;
 

@@ -1,5 +1,11 @@
 # CRC Source Type Configuration
 
+metadata:
+  version: 1
+  owners:
+    intake: crc-intake
+    automation: automation-observability
+
 sources:
   repos:
     name: "Fresh Repositories"
@@ -53,6 +59,34 @@ sources:
       dependency_update: true
       compatibility_check: true
 
+  storage_automation:
+    name: "Storage Relocation Playbooks"
+    description: "Infrastructure-as-code bundles for automated storage moves"
+    priority: high
+    auto_approve_threshold: 0.92
+    default_sandbox: model-relocation
+    max_parallel_workers: 2
+    validation:
+      min_confidence: 0.88
+      required_tests: true
+      security_scan: true
+      relocation_simulation: true
+      change_management_ticket: true
+
+  documentation_automation:
+    name: "Documentation Automation Pipelines"
+    description: "Templates and bots that generate and govern documentation"
+    priority: medium
+    auto_approve_threshold: 0.90
+    default_sandbox: model-documentation
+    max_parallel_workers: 3
+    validation:
+      min_confidence: 0.85
+      required_tests: true
+      security_scan: true
+      doc_style_enforced: true
+      stakeholder_signoff: true
+
 # Worker Configuration
 workers:
   analysis:
@@ -80,6 +114,8 @@ watcher:
     - "crc/drop-in/incoming/forks"
     - "crc/drop-in/incoming/mirrors"
     - "crc/drop-in/incoming/stale"
+    - "crc/drop-in/incoming/storage_automation"
+    - "crc/drop-in/incoming/documentation_automation"
   
   file_filters:
     include:
