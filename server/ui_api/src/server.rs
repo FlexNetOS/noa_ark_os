@@ -48,7 +48,7 @@ impl UiApiServer {
         }
     }
 
-    pub fn with_session(mut self, bridge: SessionBridge) -> Self {
+    pub fn with_session(self, bridge: SessionBridge) -> Self {
         if let Ok(mut session) = self.state.session.lock() {
             *session = Some(bridge);
         }
@@ -89,28 +89,23 @@ impl UiApiServer {
 }
 
 async fn handle_websocket(mut socket: WebSocket, bridge: SessionBridge) {
-    let mut events = Box::pin(bridge.forward_events());
-    while let Some(event) = events.as_mut().next().await {
+    let mut events = bridge.subscribe();
+    while let Some(event) = events.next().await {
+        let Ok(event) = event.map(SessionBridge::map_event) else {
+            continue;
+        };
+
         match serde_json::to_string(&event) {
             Ok(payload) => {
                 if socket.send(Message::Text(payload)).await.is_err() {
                     break;
-    let mut events = bridge.subscribe();
-    while let Some(event) = events.next().await {
-        match event.map(SessionBridge::map_event) {
-            Ok(event) => match serde_json::to_string(&event) {
-                Ok(payload) => {
-                    if socket.send(Message::Text(payload)).await.is_err() {
-                        break;
-                    }
                 }
-                Err(error) => {
-                    let _ = socket
-                        .send(Message::Text(format!("{{\"error\":\"{}\"}}", error)))
-                        .await;
-                }
-            },
-            Err(_) => continue,
+            }
+            Err(error) => {
+                let _ = socket
+                    .send(Message::Text(format!("{{\"error\":\"{}\"}}", error)))
+                    .await;
+            }
         }
     }
 }
