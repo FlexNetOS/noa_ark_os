@@ -11,9 +11,6 @@ static KERNEL_RUNNING: AtomicBool = AtomicBool::new(false);
 
 fn global_kernel() -> &'static Mutex<Option<KernelHandle>> {
     static GLOBAL_KERNEL: OnceLock<Mutex<Option<KernelHandle>>> = OnceLock::new();
-static GLOBAL_KERNEL: OnceLock<Mutex<Option<KernelHandle>>> = OnceLock::new();
-
-fn global_kernel() -> &'static Mutex<Option<KernelHandle>> {
     GLOBAL_KERNEL.get_or_init(|| Mutex::new(None))
 }
 

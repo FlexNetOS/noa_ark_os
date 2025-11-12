@@ -6,3 +6,4 @@ export * from "./renderers/native";
 export * from "./renderers/xr";
 export * from "./session";
 export * from "./samples";
+export * from "./shell";

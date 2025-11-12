@@ -7,9 +7,6 @@ const MAX_HISTORY: usize = 32;
 
 fn registry() -> &'static RwLock<TelemetryRegistry> {
     static REGISTRY: OnceLock<RwLock<TelemetryRegistry>> = OnceLock::new();
-static REGISTRY: OnceLock<RwLock<TelemetryRegistry>> = OnceLock::new();
-
-fn registry() -> &'static RwLock<TelemetryRegistry> {
     REGISTRY.get_or_init(|| RwLock::new(TelemetryRegistry::default()))
 }
 

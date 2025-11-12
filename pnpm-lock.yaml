@@ -17,9 +17,6 @@ importers:
 
   ui/shared:
     dependencies:
-      mitt:
-        specifier: 3.0.0
-        version: 3.0.0
       react:
         specifier: '>=18'
         version: 18.2.0
@@ -27,6 +24,9 @@ importers:
       '@types/react':
         specifier: 18.2.73
         version: 18.2.73
+      tsx:
+        specifier: 4.7.1
+        version: 4.7.1
       typescript:
         specifier: 5.4.5
         version: 5.4.5
@@ -58,8 +58,6 @@ importers:
       '@types/better-sqlite3':
         specifier: 7.6.8
         version: 7.6.8
-        specifier: ^7.6.13
-        version: 7.6.13
       '@types/node':
         specifier: 20.12.7
         version: 20.12.7
@@ -1247,8 +1245,6 @@ packages:
 
   /@types/better-sqlite3@7.6.8:
     resolution: {integrity: sha512-ASndM4rdGrzk7iXXqyNC4fbwt4UEjpK0i3j4q4FyeQrLAthfB6s7EF135ZJE0qQxtKIMFwmyT6x0switET7uIw==}
-  /@types/better-sqlite3@7.6.13:
-    resolution: {integrity: sha512-NMv9ASNARoKksWtsq/SHakpYAYnhBrQgGD8zkLYk/jaK8jUGn08CfEdTRgYhMypUQAfzSP8W6gNLe0q19/t4VA==}
     dependencies:
       '@types/node': 20.12.7
     dev: true
@@ -3435,10 +3431,6 @@ packages:
     resolution: {integrity: sha512-qOOzS1cBTWYF4BH8fVePDBOO9iptMnGUEZwNc/cMWnTV2nVLZ7VoNWEPHkYczZA0pdoA7dl6e7FL659nX9S2aw==}
     engines: {node: '>=16 || 14 >=14.17'}
     dev: true
-
-  /mitt@3.0.0:
-    resolution: {integrity: sha512-7dX2/10ITVyqh4aOSVI9gdape+t9l2/8QxHrFmUXu4EEUpdlxl6RudZUPZoc+zuY2hk1j7XxVroIVIan/pD/SQ==}
-    dev: false
 
   /mkdirp-classic@0.5.3:
     resolution: {integrity: sha512-gKLcREMhtuZRwRAfqP3RFW+TK4JqApVBtOIftVgjuABpAtpxhPGaDcfvbhNvD0B8iD1oUr/txX35NjcaY6Ns/A==}

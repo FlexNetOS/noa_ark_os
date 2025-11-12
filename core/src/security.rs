@@ -1,13 +1,12 @@
 //! Security subsystem
 
-use crate::utils::{current_timestamp_millis, simple_hash};
 use crate::time::current_timestamp_millis;
+use crate::utils::simple_hash;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex, OnceLock};
 use std::sync::{Mutex, OnceLock};
 
 pub type UserId = u64;
@@ -52,11 +51,6 @@ pub struct OperationRecord {
 
 impl OperationRecord {
     /// Construct a new record with sensible defaults.
-    /// 
-    /// NOTE: The timestamp generated here will be overwritten by `sign_and_register`
-    /// in the PolicyEnforcer when the operation is signed. This initial timestamp
-    /// represents when the record was created, but the final signed timestamp
-    /// represents when the operation was actually signed and registered.
     pub fn new(kind: OperationKind, actor: impl Into<String>, scope: impl Into<String>) -> Self {
         Self {
             operation_id: next_operation_id(),
@@ -121,16 +115,8 @@ impl Display for PolicyError {
 impl std::error::Error for PolicyError {}
 
 /// Maximum number of signed operations to keep in memory.
-/// Older operations are evicted in FIFO order when this limit is reached.
-/// For complete audit trails, use persistent ledger storage.
-const MAX_IN_MEMORY_RECORDS: usize = 1000;
+const MAX_IN_MEMORY_RECORDS: usize = 1_000;
 
-/// Policy enforcer that signs operations and maintains a bounded in-memory audit trail.
-///
-/// **Memory Management**: This enforcer keeps only the most recent operations in memory
-/// (up to `MAX_IN_MEMORY_RECORDS`). When the limit is reached, the oldest operations
-/// are evicted in FIFO order. For production systems requiring complete audit trails,
-/// integrate with persistent ledger storage (e.g., blockchain, append-only database).
 #[derive(Debug)]
 struct PolicyEnforcer {
     secret: String,
@@ -172,13 +158,12 @@ impl PolicyEnforcer {
             previous_signature: self.last_signature.clone(),
         };
         self.last_signature = signature;
-        
-        // Implement bounded buffer with FIFO eviction
+
         if self.records.len() >= MAX_IN_MEMORY_RECORDS {
-            self.records.remove(0); // Remove oldest record
+            self.records.remove(0);
         }
         self.records.push(signed.clone());
-        
+
         Ok(signed)
     }
 
@@ -195,48 +180,29 @@ impl PolicyEnforcer {
         }
     }
 
-    /// Returns the in-memory audit trail of recent operations.
-    ///
-    /// Note: This only includes the most recent operations (up to MAX_IN_MEMORY_RECORDS).
-    /// For complete historical audit trails, retrieve records from persistent ledger storage.
     fn audit_trail(&self) -> Vec<SignedOperation> {
         self.records.clone()
     }
 }
 
-fn user_table() -> &'static Arc<Mutex<HashMap<UserId, User>>> {
-    static USER_TABLE: OnceLock<Arc<Mutex<HashMap<UserId, User>>>> = OnceLock::new();
-    USER_TABLE.get_or_init(|| Arc::new(Mutex::new(HashMap::new())))
-}
-
-fn policy_enforcer() -> &'static Arc<Mutex<PolicyEnforcer>> {
-    static POLICY_ENFORCER: OnceLock<Arc<Mutex<PolicyEnforcer>>> = OnceLock::new();
-    POLICY_ENFORCER.get_or_init(|| {
-        Arc::new(Mutex::new(PolicyEnforcer::new(
-            std::env::var("NOA_POLICY_SECRET")
-                .unwrap_or_else(|_| "noa-ark-default-policy".to_string()),
-        )))
-    })
-}
-
-fn operation_counter() -> &'static AtomicU64 {
-    static OPERATION_COUNTER: OnceLock<AtomicU64> = OnceLock::new();
-    OPERATION_COUNTER.get_or_init(|| AtomicU64::new(1))
-static USER_TABLE: OnceLock<Mutex<HashMap<UserId, User>>> = OnceLock::new();
-static POLICY_ENFORCER: OnceLock<Mutex<PolicyEnforcer>> = OnceLock::new();
-static OPERATION_COUNTER: AtomicU64 = AtomicU64::new(1);
-
 fn user_table() -> &'static Mutex<HashMap<UserId, User>> {
+    static USER_TABLE: OnceLock<Mutex<HashMap<UserId, User>>> = OnceLock::new();
     USER_TABLE.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
 fn policy_enforcer() -> &'static Mutex<PolicyEnforcer> {
-    POLICY_ENFORCER.get_or_init(|| {
+    static ENFORCER: OnceLock<Mutex<PolicyEnforcer>> = OnceLock::new();
+    ENFORCER.get_or_init(|| {
         Mutex::new(PolicyEnforcer::new(
             std::env::var("NOA_POLICY_SECRET")
                 .unwrap_or_else(|_| "noa-ark-default-policy".to_string()),
         ))
     })
+}
+
+fn operation_counter() -> &'static AtomicU64 {
+    static COUNTER: OnceLock<AtomicU64> = OnceLock::new();
+    COUNTER.get_or_init(|| AtomicU64::new(1))
 }
 
 fn next_operation_id() -> String {
@@ -249,7 +215,6 @@ fn next_operation_id() -> String {
 pub fn init() -> Result<(), &'static str> {
     println!("[SECURITY] Initializing security subsystem...");
 
-    // Create root user
     let root = User {
         id: 0,
         name: "root".to_string(),
@@ -257,8 +222,6 @@ pub fn init() -> Result<(), &'static str> {
     };
 
     let mut table = user_table()
-    let mut table = user_table().lock().unwrap();
-    let mut table = USER_TABLE
         .lock()
         .map_err(|_| "user table mutex poisoned")?;
     table.insert(0, root);
@@ -267,26 +230,24 @@ pub fn init() -> Result<(), &'static str> {
 }
 
 fn check_permission_inner(user_id: UserId, permission: Permission) -> bool {
-    let table = user_table().lock();
-    let table = user_table().lock().unwrap();
-    if let Some(user) = table.get(&user_id) {
-        user.permissions.contains(&Permission::Admin) || user.permissions.contains(&permission)
-    let table = USER_TABLE.lock();
-    if let Ok(table) = table {
-        if let Some(user) = table.get(&user_id) {
-            user.permissions.contains(&Permission::Admin) || user.permissions.contains(&permission)
-        } else {
-            false
-        }
-    } else {
-        // If mutex is poisoned, deny permission for safety
-        false
+    match user_table().lock() {
+        Ok(table) => table
+            .get(&user_id)
+            .map(|user| {
+                user.permissions.contains(&Permission::Admin)
+                    || user.permissions.contains(&permission)
+            })
+            .unwrap_or(false),
+        Err(_) => false,
     }
 }
 
-fn register_user_inner(user: User) {
-    let mut table = user_table().lock().unwrap();
+fn register_user_inner(user: User) -> Result<(), &'static str> {
+    let mut table = user_table()
+        .lock()
+        .map_err(|_| "user table mutex poisoned")?;
     table.insert(user.id, user);
+    Ok(())
 }
 
 /// Sign and register an operation in the policy ledger.
@@ -299,94 +260,18 @@ pub fn enforce_operation(record: OperationRecord) -> Result<SignedOperation, Pol
 
 /// Verify a signed operation using the policy enforcement secret.
 pub fn verify_signed_operation(operation: &SignedOperation) -> bool {
-    let enforcer = policy_enforcer().lock();
-    if let Ok(enforcer) = enforcer {
-        enforcer.verify(operation)
-    } else {
-        false
-    }
+    policy_enforcer()
+        .lock()
+        .map(|enforcer| enforcer.verify(operation))
+        .unwrap_or(false)
 }
 
 /// Retrieve a snapshot of recent operations from the in-memory audit trail.
-///
-/// **Important**: This returns only the most recent operations kept in memory
-/// (up to 1000 records). For complete historical audit trails across the entire
-/// system lifetime, retrieve signed operations from persistent ledger storage
-/// (e.g., blockchain, append-only database, or external audit systems).
 pub fn audit_trail() -> Vec<SignedOperation> {
-    let enforcer = policy_enforcer().lock();
-    if let Ok(enforcer) = enforcer {
-        enforcer.audit_trail()
-    } else {
-        Vec::new()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_policy_enforcer_signs_and_verifies() {
-        init().unwrap();
-        let record = OperationRecord::new(OperationKind::DocumentUpdate, "tester", "docs/test")
-            .with_context(Some("/tmp/source".into()), Some("docs/test.md".into()))
-            .with_metadata(json!({ "change": "unit-test" }));
-        let signed = enforce_operation(record).expect("operation should sign");
-        assert!(verify_signed_operation(&signed));
-        assert!(signed.signature.len() > 10);
-    }
-
-    #[test]
-    fn test_policy_enforcer_bounded_memory() {
-        init().unwrap();
-        
-        // Clear any existing records by creating a fresh enforcer
-        let mut enforcer = PolicyEnforcer::new("test-secret".to_string());
-        
-        // Add more records than MAX_IN_MEMORY_RECORDS
-        let test_count = MAX_IN_MEMORY_RECORDS + 100;
-        for i in 0..test_count {
-            let record = OperationRecord::new(
-                OperationKind::FileMove,
-                format!("user-{}", i),
-                format!("scope-{}", i),
-            );
-            enforcer.sign_and_register(record).expect("should sign");
-        }
-        
-        // Verify that only MAX_IN_MEMORY_RECORDS are kept
-        assert_eq!(
-            enforcer.records.len(),
-            MAX_IN_MEMORY_RECORDS,
-            "Records should be bounded to MAX_IN_MEMORY_RECORDS"
-        );
-        
-        // Verify that the oldest records were evicted (first 100 should be gone)
-        // and the most recent records are kept
-        let trail = enforcer.audit_trail();
-        assert_eq!(trail.len(), MAX_IN_MEMORY_RECORDS);
-        
-        // The first record in memory should be from iteration 100 (0-99 evicted)
-        assert!(
-            trail[0].record.actor.contains("100"),
-            "First record should be from iteration 100 after eviction"
-        );
-        
-        // The last record should be from the last iteration
-        assert!(
-            trail.last().unwrap().record.actor.contains(&format!("{}", test_count - 1)),
-            "Last record should be from the final iteration"
-        );
-    }
-}
-
-fn register_user_inner(user: User) -> Result<(), &'static str> {
-    let mut table = user_table()
+    policy_enforcer()
         .lock()
-        .map_err(|_| "user table mutex poisoned")?;
-    table.insert(user.id, user);
-    Ok(())
+        .map(|enforcer| enforcer.audit_trail())
+        .unwrap_or_default()
 }
 
 /// Kernel-managed security capability.
@@ -410,4 +295,45 @@ impl SecurityService {
 /// Check if user has permission.
 pub fn check_permission(user_id: UserId, permission: Permission) -> bool {
     SecurityService::default().check_permission(user_id, permission)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn policy_enforcer_signs_and_verifies() {
+        init().unwrap();
+        let record = OperationRecord::new(OperationKind::DocumentUpdate, "tester", "docs/test")
+            .with_context(Some("/tmp/source".into()), Some("docs/test.md".into()))
+            .with_metadata(json!({ "change": "unit-test" }));
+        let signed = enforce_operation(record).expect("operation should sign");
+        assert!(verify_signed_operation(&signed));
+        assert!(signed.signature.len() > 10);
+    }
+
+    #[test]
+    fn policy_enforcer_bounded_memory() {
+        let mut enforcer = PolicyEnforcer::new("test-secret".to_string());
+        let test_count = MAX_IN_MEMORY_RECORDS + 100;
+        for i in 0..test_count {
+            let record = OperationRecord::new(
+                OperationKind::FileMove,
+                format!("user-{}", i),
+                format!("scope-{}", i),
+            );
+            enforcer.sign_and_register(record).expect("should sign");
+        }
+
+        assert_eq!(enforcer.records.len(), MAX_IN_MEMORY_RECORDS);
+        let trail = enforcer.audit_trail();
+        assert_eq!(trail.len(), MAX_IN_MEMORY_RECORDS);
+        assert!(trail[0].record.actor.contains("100"));
+        assert!(trail
+            .last()
+            .unwrap()
+            .record
+            .actor
+            .contains(&(test_count - 1).to_string()));
+    }
 }
