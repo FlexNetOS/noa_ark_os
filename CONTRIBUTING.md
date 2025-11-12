@@ -49,6 +49,24 @@ We are committed to providing a welcoming and inclusive environment for all cont
    git remote add upstream https://github.com/FlexNetOS/noa_ark_os.git
    ```
 
+4. Authenticate the GitHub CLI (`gh`) using a fine-grained personal access token (PAT):
+   - In a browser, navigate to **Settings → Developer settings → Personal access tokens → Fine-grained tokens** and create a new token scoped to `github.com`.
+   - Grant the token access to the fork you will push to, with at least **Repository permissions → Contents (Read and write)** and **Pull requests (Read and write)**. Refer to the [GitHub PAT scope documentation](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token#creating-a-fine-grained-personal-access-token) for detailed guidance on selecting scopes and renewal cadence.
+   - Run `gh auth login --hostname github.com --with-token`, then paste the token when prompted.
+   - For headless or CI environments, export the token before running `gh auth login`:
+     ```bash
+     export GH_TOKEN=YOUR_FINE_GRAINED_TOKEN
+     export GITHUB_TOKEN="$GH_TOKEN"
+     printf '%s\n' "$GH_TOKEN" | gh auth login --hostname github.com --with-token
+     ```
+   - Verify authentication:
+     ```bash
+     gh auth status --hostname github.com
+     ```
+
+   > **Troubleshooting:** If you encounter `gh: GitHub authentication is required. Run "gh auth login".`, rerun the login command above with a valid fine-grained PAT and ensure the `GH_TOKEN`/`GITHUB_TOKEN` variables are exported in non-interactive environments.
+
+5. Install development dependencies:
 4. Install the GitHub CLI if it is not already available:
 
    ```bash
