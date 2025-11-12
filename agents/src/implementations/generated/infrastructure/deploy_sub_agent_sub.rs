@@ -1,6 +1,5 @@
-//! Deploy Sub-Agent
-                SUB - Auto-generated
-//! 
+//! Deploy Sub-Agent SUB - Auto-generated
+//!
 //! ['Performs Micro Agent functions']
 
 use crate::unified_types::*;
@@ -8,8 +7,7 @@ use crate::Result;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
-/// Deploy Sub-Agent
-                SUB
+/// Deploy Sub-Agent SUB
 pub struct DeploySubAgentSub {
     metadata: AgentMetadata,
     state: RwLock<AgentState>,
@@ -20,8 +18,7 @@ impl DeploySubAgentSub {
         let metadata = AgentMetadata {
             id: Uuid::new_v4(),
             agent_id: "deploy_sub_agent_sub".to_string(),
-            name: "Deploy Sub-Agent
-                SUB".to_string(),
+            name: "Deploy Sub-Agent SUB".to_string(),
             layer: AgentLayer::L5Infrastructure,
             category: AgentCategory::Other,
             agent_type: AgentType::Worker,
@@ -85,8 +82,7 @@ mod tests {
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = DeploySubAgentSub::new();
-        assert_eq!(agent.metadata().name, "Deploy Sub-Agent
-                SUB");
+        assert_eq!(agent.metadata().name, "Deploy Sub-Agent SUB");
     }
     
     #[tokio::test]
