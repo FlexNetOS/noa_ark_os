@@ -1823,7 +1823,6 @@ impl Gateway {
     }
 
     /// Run predictive self healing, returning any actions to be executed.
-    /// Run predictive self healing, returning any actions to be executed.
     pub fn predictive_self_heal(&self) -> Result<Vec<SelfHealAction>, GatewayError> {
         let reliability = {
             let feeds = self.reliability_read()?;
