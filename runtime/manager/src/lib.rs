@@ -61,23 +61,12 @@ pub struct BackendSelection {
 }
 
 /// Complete execution plan for a deployment.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct RuntimePlan {
     pub selections: Vec<BackendSelection>,
     pub fallbacks: Vec<ExecutionBackend>,
     pub notes: Vec<String>,
 }
-
-impl RuntimePlan {
-    pub fn new() -> Self {
-        Self {
-            selections: Vec::new(),
-            fallbacks: Vec::new(),
-            notes: Vec::new(),
-        }
-    }
-}
-
 /// Errors reported when a suitable backend cannot be selected.
 #[derive(Debug, Error)]
 pub enum RuntimeSelectionError {
