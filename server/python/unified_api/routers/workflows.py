@@ -76,6 +76,13 @@ class OverrideRequest(BaseModel):
     notes: Optional[str] = None
 
 
+class WorkflowGraph(BaseModel):
+    """Unified graph response consumed by the UI."""
+
+    workflows: List[Workflow]
+    runs: List[WorkflowRun]
+
+
 WORKFLOWS: Dict[str, Workflow] = {
     "build": Workflow(
         id="build",
@@ -162,17 +169,40 @@ async def list_workflows() -> List[Workflow]:
     return list(WORKFLOWS.values())
 
 
+@router.get("/graph", response_model=WorkflowGraph)
+async def workflow_graph() -> WorkflowGraph:
+    """Return workflows and runs for unified graph consumption."""
+
+    return WorkflowGraph(
+        workflows=list(WORKFLOWS.values()),
+        runs=list(RUN_HISTORY.values()),
+    )
+
+
 @router.post("/{workflow_id}/trigger", response_model=WorkflowRun)
 async def trigger_workflow(workflow_id: str, request: TriggerRequest) -> WorkflowRun:
     """Kick off a workflow and broadcast the event bus notification."""
 
+    workflow = WORKFLOWS.get(workflow_id)
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+
+    run = WorkflowRun(
+        id=f"run-{len(RUN_HISTORY) + 1}",
+        workflow_id=workflow_id,
+        payload=payload or {},
+        triggered_at=datetime.utcnow(),
+        status="running",
+    )
+    RUN_HISTORY[run.id] = run
     run = _create_run(workflow_id, request.payload)
     await GLOBAL_EVENT_BUS.publish(
-        "shell",
+        "workflows",
         {
             "type": "workflow_triggered",
             "workflow_id": workflow_id,
             "run_id": run.id,
+            "stages": [stage.id for stage in workflow.stages],
         },
     )
     return run

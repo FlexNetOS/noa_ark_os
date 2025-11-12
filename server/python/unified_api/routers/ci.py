@@ -1,3 +1,4 @@
+"""CI/CD orchestration endpoints."""
 """Continuous integration and sandbox orchestration endpoints."""
 
 from __future__ import annotations
@@ -6,6 +7,7 @@ from datetime import datetime
 from typing import Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 from pydantic import BaseModel, Field
 
 from ..event_bus import GLOBAL_EVENT_BUS
@@ -193,8 +195,10 @@ async def rerun_pipeline(pipeline_id: str) -> RerunResponse:
         update={"status": "queued", "queued_runs": PIPELINES[pipeline_id].queued_runs + 1}
     )
     await GLOBAL_EVENT_BUS.publish(
-        "shell", {"type": "ci_rerun", "pipeline_id": pipeline_id}
+        "ci",
+        {"type": "ci_rerun", "pipeline_id": pipeline_id},
     )
+    return {"status": "queued", "pipeline_id": pipeline_id}
     return RerunResponse(status="queued", pipeline_id=pipeline_id)
 
 

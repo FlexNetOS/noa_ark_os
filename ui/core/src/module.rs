@@ -1,11 +1,13 @@
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
+use once_cell::sync::OnceCell;
 
 use crate::chat::{ChatAction, ChatCommandDescriptor};
 use crate::events::ShellEvent;
+use crate::services::ShellServices;
 use crate::state::{
-    GlobalStore, NavigationItem, Notification, NotificationLevel, Workspace, WorkspacePersona,
+    GlobalStore, NavigationItem, NotificationLevel, Workspace, WorkspacePersona,
 };
 use crate::workflows::{Workflow, WorkflowCatalog};
 
@@ -21,6 +23,14 @@ pub enum ModuleCapability {
     Chat,
 }
 
+/// Describes how a module should be mounted within the shell.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum ModuleMount {
+    InternalComponent { name: String },
+    StaticAsset { base_path: String, entry: String },
+    ExternalUrl { url: String },
+}
+
 /// Static descriptor for shell modules used by navigation and workspace planners.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ModuleDescriptor {
@@ -30,6 +40,7 @@ pub struct ModuleDescriptor {
     pub routes: Vec<String>,
     pub persona: WorkspacePersona,
     pub capabilities: Vec<ModuleCapability>,
+    pub mount: ModuleMount,
     pub allowed_roles: Vec<String>,
 }
 
@@ -41,6 +52,7 @@ impl ModuleDescriptor {
         persona: WorkspacePersona,
         routes: Vec<String>,
         capabilities: Vec<ModuleCapability>,
+        mount: ModuleMount,
         allowed_roles: Vec<String>,
     ) -> Self {
         Self {
@@ -50,6 +62,7 @@ impl ModuleDescriptor {
             persona,
             routes,
             capabilities,
+            mount,
             allowed_roles,
         }
     }
@@ -61,6 +74,7 @@ pub struct ModuleContext {
     pub store: GlobalStore,
     pub workflows: WorkflowCatalog,
     pub emit: Arc<dyn Fn(ShellEvent) + Send + Sync>,
+    pub services: ShellServices,
 }
 
 impl ModuleContext {
@@ -110,8 +124,55 @@ impl ModuleContext {
     }
 
     pub fn notify(&self, message: impl Into<String>, level: NotificationLevel) {
-        self.store
-            .push_notification(Notification::new(level, message.into()));
+        self.services.notify(message, level);
+    }
+
+    pub fn services(&self) -> ShellServices {
+        self.services.clone()
+    }
+}
+
+/// Wrapper that defers module hydration until first use.
+pub struct LazyModule {
+    descriptor: ModuleDescriptor,
+    loader: Arc<dyn Fn() -> Arc<dyn ShellModule> + Send + Sync>,
+    instance: OnceCell<Arc<dyn ShellModule>>,
+}
+
+impl LazyModule {
+    pub fn new(
+        descriptor: ModuleDescriptor,
+        loader: Arc<dyn Fn() -> Arc<dyn ShellModule> + Send + Sync>,
+    ) -> Self {
+        Self {
+            descriptor,
+            loader,
+            instance: OnceCell::new(),
+        }
+    }
+
+    fn ensure_loaded(&self) -> Arc<dyn ShellModule> {
+        self.instance
+            .get_or_init(|| (self.loader)())
+            .clone()
+    }
+}
+
+impl ShellModule for LazyModule {
+    fn descriptor(&self) -> &ModuleDescriptor {
+        &self.descriptor
+    }
+
+    fn hydrate(&self, context: &ModuleContext) {
+        self.ensure_loaded().hydrate(context);
+    }
+
+    fn handle_event(&self, event: &ShellEvent, context: &ModuleContext) {
+        self.ensure_loaded().handle_event(event, context);
+    }
+
+    fn chat_commands(&self) -> Vec<ChatCommandDescriptor> {
+        self.ensure_loaded().chat_commands()
     }
 }
 
@@ -141,6 +202,9 @@ impl WorkflowModule {
                 WorkspacePersona::Operator,
                 vec!["/workflows".into(), "/workflows/history".into()],
                 vec![ModuleCapability::Workflows, ModuleCapability::Sandbox],
+                ModuleMount::InternalComponent {
+                    name: "WorkflowCommandCenter".into(),
+                },
                 vec!["operator".into(), "admin".into()],
             ),
             workflows,
@@ -194,6 +258,9 @@ impl AgentModule {
                 WorkspacePersona::Operator,
                 vec!["/agents".into(), "/agents/runtime".into()],
                 vec![ModuleCapability::Agents],
+                ModuleMount::InternalComponent {
+                    name: "AgentHiveExplorer".into(),
+                },
                 vec!["operator".into(), "admin".into()],
             ),
         }
@@ -222,6 +289,80 @@ impl ShellModule for AgentModule {
     }
 }
 
+/// Module bridging the legacy dashboard into the unified shell.
+pub struct DashboardModule {
+    descriptor: ModuleDescriptor,
+}
+
+impl DashboardModule {
+    pub fn new() -> Self {
+        Self {
+            descriptor: ModuleDescriptor::new(
+                "noa-dashboard",
+                "NOA Dashboard",
+                "layout-dashboard",
+                WorkspacePersona::Executive,
+                vec!["/dashboard".into()],
+                vec![ModuleCapability::Analytics, ModuleCapability::Workflows],
+                ModuleMount::StaticAsset {
+                    base_path: "ui/noa-dashboard".into(),
+                    entry: "index.html".into(),
+                },
+            ),
+        }
+    }
+}
+
+impl ShellModule for DashboardModule {
+    fn descriptor(&self) -> &ModuleDescriptor {
+        &self.descriptor
+    }
+
+    fn hydrate(&self, context: &ModuleContext) {
+        context.register_navigation(&self.descriptor);
+        context.register_workspace(&self.descriptor);
+        context.services().notify(
+            "NOA Dashboard available as a lazy-mounted surface.",
+            NotificationLevel::Success,
+        );
+    }
+}
+
+/// Module wrapping the Vibe Kanban Next.js experience.
+pub struct KanbanModule {
+    descriptor: ModuleDescriptor,
+}
+
+impl KanbanModule {
+    pub fn new() -> Self {
+        Self {
+            descriptor: ModuleDescriptor::new(
+                "vibe-kanban",
+                "Vibe Kanban",
+                "columns",
+                WorkspacePersona::Developer,
+                vec!["/kanban".into()],
+                vec![ModuleCapability::Workflows, ModuleCapability::Agents],
+                ModuleMount::StaticAsset {
+                    base_path: "ui/vibe-kanban".into(),
+                    entry: "app".into(),
+                },
+            ),
+        }
+    }
+}
+
+impl ShellModule for KanbanModule {
+    fn descriptor(&self) -> &ModuleDescriptor {
+        &self.descriptor
+    }
+
+    fn hydrate(&self, context: &ModuleContext) {
+        context.register_navigation(&self.descriptor);
+        context.register_workspace(&self.descriptor);
+    }
+}
+
 /// Module providing CI/CD observability and controls.
 pub struct CiModule {
     descriptor: ModuleDescriptor,
@@ -240,6 +381,9 @@ impl CiModule {
                     ModuleCapability::ContinuousDelivery,
                     ModuleCapability::Sandbox,
                 ],
+                ModuleMount::InternalComponent {
+                    name: "CiConsole".into(),
+                },
                 vec!["developer".into(), "admin".into()],
             ),
         }
@@ -287,6 +431,9 @@ impl StorageModule {
                 WorkspacePersona::Executive,
                 vec!["/storage".into(), "/storage/audit".into()],
                 vec![ModuleCapability::Storage],
+                ModuleMount::InternalComponent {
+                    name: "StorageHub".into(),
+                },
                 vec!["executive".into(), "admin".into()],
             ),
         }
@@ -330,6 +477,9 @@ impl AnalyticsModule {
                 WorkspacePersona::Executive,
                 vec!["/analytics".into()],
                 vec![ModuleCapability::Analytics],
+                ModuleMount::InternalComponent {
+                    name: "ValueAnalytics".into(),
+                },
                 vec!["executive".into(), "admin".into()],
             ),
         }
@@ -373,6 +523,9 @@ impl ChatModule {
                 WorkspacePersona::Developer,
                 vec!["/chat".into()],
                 vec![ModuleCapability::Chat, ModuleCapability::Workflows],
+                ModuleMount::InternalComponent {
+                    name: "AiOpsStudio".into(),
+                },
                 vec!["developer".into(), "operator".into(), "admin".into()],
             ),
         }
@@ -403,7 +556,17 @@ impl ShellModule for ChatModule {
 
 /// Helper for bundling the stock modules shipped with the shell.
 pub fn default_modules() -> Vec<Arc<dyn ShellModule>> {
-    vec![
+    fn wrap(module: Arc<dyn ShellModule>) -> Arc<dyn ShellModule> {
+        let descriptor = module.descriptor().clone();
+        let loader: Arc<dyn Fn() -> Arc<dyn ShellModule> + Send + Sync> = Arc::new({
+            let module = module.clone();
+            move || module.clone()
+        });
+        let lazy: Arc<dyn ShellModule> = Arc::new(LazyModule::new(descriptor, loader));
+        lazy
+    }
+
+    let modules: Vec<Arc<dyn ShellModule>> = vec![
         Arc::new(ChatModule::new()),
         Arc::new(WorkflowModule::new(vec![
             Workflow::builder("build")
@@ -422,24 +585,32 @@ pub fn default_modules() -> Vec<Arc<dyn ShellModule>> {
                 .finish(),
         ])),
         Arc::new(AgentModule::new()),
+        Arc::new(DashboardModule::new()),
+        Arc::new(KanbanModule::new()),
         Arc::new(CiModule::new()),
         Arc::new(StorageModule::new()),
         Arc::new(AnalyticsModule::new()),
-    ]
+    ];
+
+    modules.into_iter().map(wrap).collect()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::events::ShellEvent;
+    use crate::services::use_shell_services;
     use crate::state::GlobalState;
 
     #[test]
     fn workflow_module_registers_navigation() {
         let store = GlobalStore::new(GlobalState::default());
+        let sink: Arc<dyn Fn(ShellEvent) + Send + Sync> = Arc::new(|_| {});
         let context = ModuleContext {
             store: store.clone(),
             workflows: WorkflowCatalog::default(),
-            emit: Arc::new(|_| {}),
+            emit: sink.clone(),
+            services: use_shell_services(&store, sink.clone()),
         };
         let module =
             WorkflowModule::new(vec![Workflow::builder("test").with_stage("lint").finish()]);

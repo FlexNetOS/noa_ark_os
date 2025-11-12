@@ -9,6 +9,7 @@ pub mod module;
 pub mod renderer;
 pub mod shell;
 pub mod state;
+pub mod services;
 pub mod workflows;
 
 use std::collections::HashMap;

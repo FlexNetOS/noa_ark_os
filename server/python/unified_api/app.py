@@ -33,11 +33,11 @@ def create_app() -> FastAPI:
     async def health() -> Dict[str, str]:
         return {"status": "ok"}
 
-    @app.websocket("/ws/events")
-    async def websocket_events(websocket: WebSocket) -> None:
+    @app.websocket("/ws/{channel}")
+    async def websocket_events(channel: str, websocket: WebSocket) -> None:
         await websocket.accept()
         try:
-            async for event in GLOBAL_EVENT_BUS.subscribe("shell"):
+            async for event in GLOBAL_EVENT_BUS.subscribe(channel):
                 await websocket.send_json(event)
         except WebSocketDisconnect:
             return

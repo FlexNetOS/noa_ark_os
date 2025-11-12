@@ -15,6 +15,8 @@ use crate::events::ShellEvent;
 use crate::module::{default_modules, ModuleContext, ShellModule};
 use crate::renderer::renderer::Renderer;
 use crate::renderer::RenderFrame;
+use crate::services::ShellServices;
+use crate::state::{GlobalStore, NavigationState, UserSession, WorkspacePersona};
 use crate::state::{GlobalState, GlobalStore, KnowledgeArticle, UserSession, WorkspacePersona};
 use crate::state::{GlobalState, GlobalStore, UserSession, WorkspacePersona};
 use crate::workflows::WorkflowCatalog;
@@ -68,6 +70,7 @@ pub struct UnifiedShell {
     chat_workspace: Arc<Mutex<ChatWorkspace>>,
     analytics: Mutex<AnalyticsEngine>,
     event_log: Arc<Mutex<Vec<ShellEvent>>>,
+    services: ShellServices,
 }
 
 impl UnifiedShell {
@@ -80,6 +83,9 @@ impl UnifiedShell {
         let context = init(platform.clone())?;
         let renderer = Renderer::new(context.clone());
         let state = UIState::new(context.clone());
+        let store = GlobalStore::global().clone();
+        store.update(|global| {
+            global.session = UserSession {
         let store = GlobalStore::new(GlobalState {
             session: session.unwrap_or(UserSession {
                 user_id: "ops-admin".into(),
@@ -92,10 +98,16 @@ impl UnifiedShell {
                 user_id: "ops-admin".into(),
                 display_name: "Ops Admin".into(),
                 roles: vec!["admin".into(), "developer".into()],
-                active_workspace: None,
-                auth_token: None,
-            },
-            ..GlobalState::default()
+                active_workspace: global
+                    .session
+                    .active_workspace
+                    .clone()
+                    .or_else(|| Some("ai-studio".into())),
+                auth_token: global.session.auth_token.clone(),
+            };
+            global.navigation = NavigationState::default();
+            global.notifications.clear();
+            global.workspaces.clear();
         });
         let workflow_catalog = WorkflowCatalog::default();
         let event_log: Arc<Mutex<Vec<ShellEvent>>> = Arc::new(Mutex::new(vec![]));
@@ -105,6 +117,8 @@ impl UnifiedShell {
                 log.lock().unwrap().push(event);
             })
         };
+
+        let services = ShellServices::new(store.clone(), event_sink.clone());
 
         let chat_workspace = Arc::new(Mutex::new(ChatWorkspace::new(
             store.clone(),
@@ -122,6 +136,7 @@ impl UnifiedShell {
             chat_workspace,
             analytics: Mutex::new(AnalyticsEngine::default()),
             event_log,
+            services,
         };
 
         shell.bootstrap_modules(event_sink);
@@ -135,7 +150,8 @@ impl UnifiedShell {
         let context = ModuleContext {
             store: self.store.clone(),
             workflows: self.workflow_catalog.clone(),
-            emit: event_sink,
+            emit: event_sink.clone(),
+            services: self.services.clone(),
         };
 
         let mut commands = vec![];
@@ -258,6 +274,7 @@ impl UnifiedShell {
                     store: self.store.clone(),
                     workflows: self.workflow_catalog.clone(),
                     emit: Arc::new(|_| {}),
+                    services: self.services.clone(),
                 },
             );
         }
@@ -395,6 +412,10 @@ impl UnifiedShell {
 
     pub fn store_handle(&self) -> GlobalStore {
         self.store.clone()
+    }
+
+    pub fn services(&self) -> ShellServices {
+        self.services.clone()
     }
 }
 

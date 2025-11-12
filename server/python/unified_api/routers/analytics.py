@@ -1,3 +1,4 @@
+"""Analytics and ROI endpoints."""
 """Analytics endpoints exposed to the unified dashboard."""
 
 from __future__ import annotations
@@ -17,6 +18,15 @@ class Metric(BaseModel):
     label: str
     value: float
     unit: str
+
+
+class InferenceStat(BaseModel):
+    """Inference telemetry for model monitoring."""
+
+    model: str
+    latency_ms: float
+    throughput: float
+    last_updated: str
 
 
 METRICS: Dict[str, Metric] = {
@@ -40,6 +50,21 @@ METRICS: Dict[str, Metric] = {
     ),
 }
 
+INFERENCE: List[InferenceStat] = [
+    InferenceStat(
+        model="code-assistant",
+        latency_ms=142.0,
+        throughput=28.0,
+        last_updated="2023-11-14T10:05:00Z",
+    ),
+    InferenceStat(
+        model="deployment-critic",
+        latency_ms=88.5,
+        throughput=42.0,
+        last_updated="2023-11-14T10:02:00Z",
+    ),
+]
+
 
 @router.get("/metrics", response_model=List[Metric])
 async def list_metrics() -> List[Metric]:
@@ -57,3 +82,10 @@ async def calculate_roi() -> Dict[str, float | None]:
     if infrastructure == 0:
         return {"roi": None}
     return {"roi": round(productivity / infrastructure, 2)}
+
+
+@router.get("/inference", response_model=List[InferenceStat])
+async def list_inference_stats() -> List[InferenceStat]:
+    """Expose inference telemetry for model management screens."""
+
+    return INFERENCE

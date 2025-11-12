@@ -24,7 +24,7 @@ class ChatResponse(BaseModel):
 @router.post("/message", response_model=ChatResponse)
 async def send_message(body: ChatMessage) -> ChatResponse:
     await GLOBAL_EVENT_BUS.publish(
-        "shell",
+        "chat",
         {"type": "chat_command", "message": body.message},
     )
     reply = f"Acknowledged command '{body.message}'."
