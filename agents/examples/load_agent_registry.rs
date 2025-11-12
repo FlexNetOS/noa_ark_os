@@ -73,7 +73,7 @@ fn main() -> anyhow::Result<()> {
 
             // NOA 5-Layer Architecture Mapping:
             // L1Autonomy       ← Executive      (Root CECCA, Constitutional authority)
-            // L2Reasoning      ← Board          (Board & Executive decision-making agents)
+            // L2Reasoning      ← Board          (Board decision-making agents)
             // L3Orchestration  ← Stack-Chief    (Chief Commanders, Orchestrators)
             // L4Operations     ← Specialist     (Domain specialists, Worker agents)
             // L5Infrastructure ← Micro          (Micro agents, Subject domain tasks)
