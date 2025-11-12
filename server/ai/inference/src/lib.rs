@@ -14,5 +14,8 @@ mod tests {
 }
 
 pub mod client;
+pub mod providers;
+pub mod router;
 
 pub use client::{CompletionRequest, CompletionResponse, LlamaClient};
+pub use router::ProviderRouter;

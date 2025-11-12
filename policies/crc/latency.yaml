@@ -1,0 +1,6 @@
+version: 1
+name: latency
+bounds:
+  latency_ms: 1200
+  retries: 2
+  max_parallel: 4

@@ -159,6 +159,20 @@ stages:
           
           echo "✓ Integration tests passed"
 
+  # Stage 4: CRC DAG execution
+  - name: crc_dag
+    display_name: "Execute CRC DAG Offline"
+    timeout_minutes: 15
+    depends_on:
+      - test
+    steps:
+      - name: orchestrate_crc
+        display_name: "Run CRC orchestrator"
+        script: |
+          echo "Running CRC orchestrator offline"
+          cargo run -p noa_crc -- run --checkpoint out/ckpt
+          cargo run -p noa_crc -- graph ls
+
   - name: single_host_acceptance
     display_name: "Single-host Acceptance"
     timeout_minutes: 15

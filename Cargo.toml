@@ -8,6 +8,7 @@ members = [
     "sandbox",
     "cicd",
     "crc",
+    "crc-adapter-sdk",
     "runtime/manager",
     "ui/core",
     "server/ai/inference",

@@ -12,6 +12,9 @@ uuid = { version = "1.6", features = ["v4", "serde"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
+serde_with = "3.4"
+chrono = { version = "0.4", features = ["serde"] }
+tempfile = "3.10"
 
 # Async runtime
 tokio = { version = "1.35", features = ["full"] }
@@ -21,6 +24,13 @@ notify = "6.1"
 
 # CLI
 clap = { version = "4.4", features = ["derive"] }
+
+# Graphs and hashing
+petgraph = "0.6"
+blake3 = "1.5"
+
+# Filesystem utilities
+walkdir = "2.4"
 
 # Logging
 tracing = "0.1"
