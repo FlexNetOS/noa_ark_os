@@ -10,11 +10,16 @@ export class OpenAIProvider implements AIProvider {
   private readonly apiKey: string | undefined;
   private readonly baseUrl: string;
   private readonly model: string;
+  private readonly fetchImpl: typeof fetch;
 
-  constructor(private readonly env: NodeJS.ProcessEnv = process.env) {
+  constructor(
+    private readonly env: NodeJS.ProcessEnv = process.env,
+    options: { fetchImpl?: typeof fetch } = {}
+  ) {
     this.apiKey = this.env.OPENAI_API_KEY;
     this.baseUrl = this.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1";
-    this.model = this.env.OPENAI_MODEL ?? "gpt-4o-mini";
+    this.model = this.env.OPENAI_MODEL ?? "gpt-5";
+    this.fetchImpl = options.fetchImpl ?? fetch;
   }
 
   isConfigured(): boolean {
@@ -26,7 +31,7 @@ export class OpenAIProvider implements AIProvider {
       throw new ProviderConfigurationError("OPENAI_API_KEY is not configured");
     }
 
-    const response = await fetch(`${this.baseUrl.replace(/\/$/, "")}/chat/completions`, {
+    const response = await this.fetchImpl(`${this.baseUrl.replace(/\/$/, "")}/chat/completions`, {
       method: "POST",
       headers: {
         authorization: `Bearer ${this.apiKey}`,

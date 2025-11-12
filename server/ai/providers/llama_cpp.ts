@@ -8,9 +8,14 @@ import { AIProvider, ProviderConfigurationError, ProviderRequestError, ProviderC
 export class LlamaCppProvider implements AIProvider {
   readonly name = "llama.cpp";
   private readonly endpoint: string | undefined;
+  private readonly fetchImpl: typeof fetch;
 
-  constructor(private readonly env: NodeJS.ProcessEnv = process.env) {
-    this.endpoint = this.env.LLAMA_CPP_ENDPOINT;
+  constructor(
+    private readonly env: NodeJS.ProcessEnv = process.env,
+    options: { fetchImpl?: typeof fetch } = {}
+  ) {
+    this.endpoint = this.env.LLAMA_CPP_ENDPOINT ?? "http://127.0.0.1:8080/v1";
+    this.fetchImpl = options.fetchImpl ?? fetch;
   }
 
   isConfigured(): boolean {
@@ -22,7 +27,7 @@ export class LlamaCppProvider implements AIProvider {
       throw new ProviderConfigurationError("LLAMA_CPP_ENDPOINT is not configured");
     }
 
-    const response = await fetch(`${this.endpoint!.replace(/\/$/, "")}/completions`, {
+    const response = await this.fetchImpl(`${this.endpoint!.replace(/\/$/, "")}/completions`, {
       method: "POST",
       headers: {
         "content-type": "application/json",

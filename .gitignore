@@ -61,6 +61,8 @@ downloads/
 eggs/
 .eggs/
 lib/
+!tools/offline_pr_queue/lib/
+!tools/offline_pr_queue/lib/**
 lib64/
 parts/
 sdist/

@@ -10,6 +10,11 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    env:
+      OFFLINE_FIRST: "true"
+      ONLINE_GITHUB_MODE: "false"
+      AI_PROVIDER: "llama.cpp"
+      LLAMA_CPP_ENDPOINT: "http://127.0.0.1:8080/v1"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,7 +31,7 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile --offline || pnpm install --frozen-lockfile
 
       - name: Build
         run: pnpm build
@@ -39,6 +44,9 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+      - name: Enforce Conventional Commits
+        run: pnpm exec tsx tools/commit_copilot/cli.ts enforce
 
       - name: Export roadmap
         run: pnpm export:roadmap
