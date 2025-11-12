@@ -194,7 +194,7 @@
             transform: none;
         }
 
-        select, input[type=\"number\"], input[type=\"text\"], textarea {
+        select, input[type=\"number\"], input[type=\"text\"], input[type=\"file\"], textarea {
             border-radius: 10px;
             border: 1px solid rgba(148, 163, 184, 0.2);
             background: rgba(15, 23, 42, 0.75);
@@ -211,6 +211,24 @@
         .chat-panel {
             display: grid;
             gap: 12px;
+        }
+
+        .chat-actions {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chat-actions select,
+        .chat-actions input[type=\"file\"] {
+            flex: 1 1 180px;
+            min-width: 160px;
+            color: var(--muted);
+        }
+
+        .chat-actions button {
+            flex-shrink: 0;
         }
 
         .chat-output {
@@ -705,6 +723,13 @@
                 <h2>AI Co-Developer Chat</h2>
                 <textarea id=\"chatInput\" placeholder=\"Ask NOA to trigger workflows, open modules, or explain capabilities.\"></textarea>
                 <div class=\"chat-actions\">
+                    <input type=\"file\" id=\"chatUpload\" aria-label=\"Upload file for NOA\" />
+                    <select id=\"chatUploadType\" aria-label=\"File type\">
+                        <option value=\"auto\">Auto Detect</option>
+                        <option value=\"workflow\">Workflow</option>
+                        <option value=\"dataset\">Dataset</option>
+                        <option value=\"document\">Document</option>
+                    </select>
                     <button id=\"chatSend\">Send Message</button>
                 </div>
                 <div id=\"chatOutput\" class=\"chat-output\">Awaiting command…</div>
@@ -740,6 +765,8 @@
         const STORAGE_PLAN = document.getElementById('storagePlan');
         const AUDIT_TABLE = document.getElementById('auditTable');
         const CHAT_INPUT = document.getElementById('chatInput');
+        const CHAT_UPLOAD = document.getElementById('chatUpload');
+        const CHAT_UPLOAD_TYPE = document.getElementById('chatUploadType');
         const CHAT_OUTPUT = document.getElementById('chatOutput');
         const EVENT_LOG = document.getElementById('eventLog');
         const AGENT_FAMILY_FILTER = document.getElementById('agentFamilyFilter');
@@ -1784,21 +1811,71 @@
 
         async function sendChat() {
             const message = CHAT_INPUT.value.trim();
-            if (!message) {
-                CHAT_OUTPUT.textContent = 'Enter a prompt to send to the co-developer.';
+            const file = CHAT_UPLOAD.files[0];
+            const uploadType = CHAT_UPLOAD_TYPE.value || 'auto';
+
+            if (!message && !file) {
+                CHAT_OUTPUT.textContent = 'Enter a prompt or choose a file to upload for the co-developer.';
                 return;
             }
-            CHAT_OUTPUT.textContent = 'Sending…';
-            try {
-                const response = await fetchJson(`${API_URL}/api/chat/message`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message }),
-                });
-                CHAT_OUTPUT.textContent = response.reply;
-                CHAT_INPUT.value = '';
-            } catch (error) {
-                CHAT_OUTPUT.textContent = `Failed to send message: ${error.message}`;
+
+            const feedback = [];
+
+            if (file) {
+                CHAT_OUTPUT.textContent = 'Uploading asset…';
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('type', uploadType);
+                if (message) {
+                    formData.append('message', message);
+                }
+                try {
+                    const response = await fetch(`${API_URL}/ui/drop-in/upload`, {
+                        method: 'POST',
+                        body: formData,
+                    });
+                    if (!response.ok) {
+                        const text = await response.text();
+                        throw new Error(`${response.status}: ${text}`);
+                    }
+                    let uploadFeedback = 'Upload completed.';
+                    const contentType = response.headers.get('content-type') || '';
+                    if (contentType.includes('application/json')) {
+                        const data = await response.json();
+                        uploadFeedback = data.message || data.status || JSON.stringify(data, null, 2);
+                    } else {
+                        const text = await response.text();
+                        uploadFeedback = text || uploadFeedback;
+                    }
+                    feedback.push(uploadFeedback);
+                    CHAT_UPLOAD.value = '';
+                    CHAT_UPLOAD_TYPE.value = 'auto';
+                } catch (error) {
+                    CHAT_OUTPUT.textContent = `Upload failed: ${error.message}`;
+                    return;
+                }
+            }
+
+            if (message) {
+                CHAT_OUTPUT.textContent = feedback.length ? `${feedback.join('\n')}\nSending chat…` : 'Sending…';
+                try {
+                    const response = await fetchJson(`${API_URL}/api/chat/message`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message }),
+                    });
+                    feedback.push(response.reply || 'No response received.');
+                    CHAT_INPUT.value = '';
+                } catch (error) {
+                    CHAT_OUTPUT.textContent = `Failed to send message: ${error.message}`;
+                    return;
+                }
+            }
+
+            if (feedback.length) {
+                CHAT_OUTPUT.textContent = feedback.join('\n');
+            } else {
+                CHAT_OUTPUT.textContent = 'Ready.';
             }
         }
 
