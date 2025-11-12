@@ -220,6 +220,8 @@ Layer differentiated services and packaged workflows on top of the hardened core
 
 ## Task Details
 
+<a id="task-kernel-first"></a>
+### AGENTOS-1 — Establish kernel-first dependency graph & portable packaging
 ### <a id="task-kernel-first"></a>AGENTOS-1 — Establish kernel-first dependency graph & portable packaging
 **Description:** Build a canonical dependency map anchored on the kernel/service graph and package baselines that run identically on local, cloud, and air-gapped hosts.
 
@@ -237,6 +239,13 @@ Layer differentiated services and packaged workflows on top of the hardened core
 - Downstream task owners acknowledge the manifest as their source of truth.
 
 **Meta**
+- Owner: codex
+- Priority: P0
+- Status: Processing
+- Depends on: None
+
+<a id="task-single-host"></a>
+### AGENTOS-2 — Design single-host AgentOS server profile
 - Owner: TBA
 - Priority: P0
 - Status: Proposed
@@ -259,6 +268,13 @@ Layer differentiated services and packaged workflows on top of the hardened core
 - Documentation references AGENTOS-1 manifest without divergence.
 
 **Meta**
+- Owner: codex
+- Priority: P0
+- Status: Processing
+- Depends on: AGENTOS-1
+
+<a id="task-ui-shell"></a>
+### AGENTOS-3 — Ship unified multi-surface UI shell
 - Owner: TBA
 - Priority: P0
 - Status: Proposed
@@ -281,10 +297,18 @@ Layer differentiated services and packaged workflows on top of the hardened core
 - Usage telemetry spans all surfaces and reports into the observability stack.
 
 **Meta**
+- Owner: codex
+- Priority: P1
+- Status: Processing
+- Depends on: AGENTOS-2
+
+<a id="task-adaptive-runtime"></a>
+### AGENTOS-4 — Implement adaptive runtime orchestration
 - Owner: TBA
 - Priority: P1
 - Status: Proposed
 - Depends on: AGENTOS-2
+- Tracking: [Internal issue stub](../issues/AGENTOS-3-unified-ui-shell.md) _(replace anchor with external URL when published)_
 
 ### <a id="task-adaptive-runtime"></a>AGENTOS-4 — Implement adaptive runtime orchestration
 **Description:** Extend runtime controllers to detect host capabilities, adjust workload placement, and surface portability guidance tied to the kernel graph.
@@ -303,6 +327,13 @@ Layer differentiated services and packaged workflows on top of the hardened core
 - Adaptive controls remain configurable via the single-host profile without manual patching.
 
 **Meta**
+- Owner: codex
+- Priority: P1
+- Status: Processing
+- Depends on: AGENTOS-1, AGENTOS-2
+
+<a id="task-gateway-observability"></a>
+### AGENTOS-5 — Develop advanced gateway with observability
 - Owner: TBA
 - Priority: P1
 - Status: Proposed
@@ -325,6 +356,13 @@ Layer differentiated services and packaged workflows on top of the hardened core
 - Gateway configuration references AGENTOS-2 baseline without duplicating definitions.
 
 **Meta**
+- Owner: codex
+- Priority: P1
+- Status: Processing
+- Depends on: AGENTOS-2
+
+<a id="task-value-ecosystem"></a>
+### AGENTOS-6 — Launch value-add ecosystem features
 - Owner: TBA
 - Priority: P1
 - Status: Proposed
@@ -347,6 +385,9 @@ Layer differentiated services and packaged workflows on top of the hardened core
 - Adoption dashboards expose tracked metrics sourced from the observability stack.
 
 **Meta**
+- Owner: codex
+- Priority: P1
+- Status: Processing
 - Owner: TBA
 - Priority: P1
 - Status: Proposed
