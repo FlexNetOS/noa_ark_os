@@ -10,7 +10,7 @@ The marketplace showcases kernel-vetted applications and agents. Publishers must
 
 ## Manifest Requirements
 
-- Supply a `manifest.yaml` adhering to the schema defined in `apps/marketplace/README.md`.
+- Supply a `manifest.yaml` adhering to the schema demonstrated by the example in `apps/marketplace/README.md`.
 - Include compatibility matrices for kernel versions, UI targets, and dependent blueprints.
 - Reference CRC attestation bundles for every binary, container image, or workflow script.
 - Provide localized summaries and highlight bullet points for the UI catalog card.
