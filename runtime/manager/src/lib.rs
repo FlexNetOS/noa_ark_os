@@ -37,6 +37,18 @@ pub enum RuntimeComponent {
 }
 
 /// Available execution backends for each runtime component.
+///
+/// Note: `Eq` is intentionally NOT derived for this enum because the
+/// `LlamaCppGpu` variant contains a floating-point field (`memory_gb: Option<f64>`).
+/// Floating-point types do not implement `Eq` due to NaN and comparison semantics.
+///
+/// # Important
+/// - This enum derives `PartialEq` but **not** `Eq`. This means equality comparisons are possible,
+///   but may behave unexpectedly if any `memory_gb` field contains `NaN` (since `NaN != NaN`).
+/// - As a result, two otherwise identical `ExecutionBackend::LlamaCppGpu` values with `memory_gb: Some(NaN)`
+///   will not compare equal.
+/// - **Do not use this type as a key in `HashMap` or `HashSet`**, as these collections require `Eq` for correct behavior.
+///   Using this type as a key may result in subtle bugs or incorrect behavior.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ExecutionBackend {
     LlamaCppCpu,
@@ -87,7 +99,7 @@ pub fn select_execution_plan(
     profile: &HardwareProfile,
     policy: &RuntimePolicy,
 ) -> Result<RuntimePlan> {
-    let mut plan = RuntimePlan::new();
+    let mut plan = RuntimePlan::default();
 
     // Language model backend selection
     let llama_backend = choose_llama_backend(profile, policy);

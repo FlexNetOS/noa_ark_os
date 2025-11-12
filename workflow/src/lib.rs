@@ -143,6 +143,8 @@ impl WorkflowEngine {
 
     /// Create a workflow engine that interacts with kernel capabilities.
     pub fn with_kernel(kernel: KernelHandle) -> Self {
+        let instrumentation = PipelineInstrumentation::new()
+            .expect("failed to initialise pipeline instrumentation");
         let instrumentation =
             PipelineInstrumentation::new().expect("failed to initialise pipeline instrumentation");
         Self {
@@ -350,7 +352,7 @@ impl WorkflowEngine {
 
         if action_lower.contains("doc")
             || action_lower.contains("handbook")
-            || action_lower.contains("update")
+            || action_lower.contains("documentation")
         {
             let document_path = task
                 .parameters

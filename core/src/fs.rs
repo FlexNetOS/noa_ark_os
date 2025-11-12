@@ -4,6 +4,7 @@ use crate::memory;
 use crate::memory::{RegistryGraph, RegistryNode};
 use std::collections::HashMap;
 use std::fmt;
+use std::sync::{Arc, Mutex, OnceLock};
 use std::sync::{Mutex, OnceLock};
 
 const DEFAULT_FILE_MODE: u32 = 0o644;
@@ -47,6 +48,9 @@ pub struct FileDescriptor {
     pub metadata: FileMetadata,
 }
 
+fn file_table() -> &'static Arc<Mutex<HashMap<String, FileDescriptor>>> {
+    static FILE_TABLE: OnceLock<Arc<Mutex<HashMap<String, FileDescriptor>>>> = OnceLock::new();
+    FILE_TABLE.get_or_init(|| Arc::new(Mutex::new(HashMap::new())))
 static FILE_TABLE: OnceLock<Mutex<HashMap<String, FileDescriptor>>> = OnceLock::new();
 
 fn file_table() -> &'static Mutex<HashMap<String, FileDescriptor>> {

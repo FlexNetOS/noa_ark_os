@@ -124,7 +124,7 @@ def build_handbook() -> str:
     sections.append("\n````markdown\n{}\n````\n".format(sop_digest()))
 
     sections.append("## Verification Checklist\n")
-    sections.append("- Confirm ledger signatures chain correctly against the policy secret." )
+    sections.append("- Confirm ledger signatures chain correctly against the policy secret.")
     sections.append("- Validate that handbook regeneration runs after each SOP execution.")
     sections.append("- Cross-check relocation destinations with signed documentation targets.")
 
