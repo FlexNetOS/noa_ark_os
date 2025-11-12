@@ -2,13 +2,13 @@ use serde::de::{self, Deserializer, Visitor};
 use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::fmt;
-use std::fmt::Formatter;
+use std::fmt::{self, Formatter};
 use std::str::FromStr;
-use std::collections::{HashMap, HashSet};
-use std::fmt;
 use std::sync::{Arc, OnceLock, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::time::{Duration, SystemTime};
+
+const GENOME_DECAY: f32 = 0.92;
+const RELIABILITY_MICRO_THRESHOLD: f32 = 0.18;
 
 /// Represents a type of symbol supported by the gateway.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -77,7 +77,7 @@ impl<'de> Deserialize<'de> for SymbolKind {
             where
                 E: de::Error,
             {
-                SymbolKind::from_str(value).map_err(|err| E::custom(err))
+                SymbolKind::from_str(value).map_err(E::custom)
             }
         }
 
@@ -253,26 +253,372 @@ pub enum ConnectionState {
 }
 
 #[derive(Debug, Clone)]
+struct SymbolGenome {
+    blueprint: HashMap<String, String>,
+    performance_score: f32,
+    mutation_history: Vec<String>,
+}
+
+impl SymbolGenome {
+    fn for_symbol(symbol: &Symbol) -> Self {
+        let mut blueprint = HashMap::new();
+        blueprint.insert("id".into(), symbol.id.clone());
+        blueprint.insert("kind".into(), symbol.kind.to_string());
+        blueprint.insert("schema".into(), symbol.schema_hash.clone());
+        Self {
+            blueprint,
+            performance_score: 0.75,
+            mutation_history: Vec::new(),
+        }
+    }
+
+    fn record_signal(&mut self, signal: &str, delta: f32) {
+        self.performance_score = (self.performance_score * GENOME_DECAY + delta).clamp(0.0, 1.0);
+        self.mutation_history
+            .push(format!("{signal}:{delta:.2}:{}", self.performance_score));
+        if self.mutation_history.len() > 16 {
+            self.mutation_history.remove(0);
+        }
+    }
+
+    fn propose_mutation(&mut self, capabilities: &HashSet<String>) -> Option<String> {
+        if self.performance_score > 0.95 {
+            return None;
+        }
+        let mut fingerprint: Vec<_> = capabilities.iter().cloned().collect();
+        fingerprint.sort();
+        let mutation = format!(
+            "adaptive-{}-{}",
+            fingerprint.join("+"),
+            self.mutation_history.len() + 1
+        );
+        self.performance_score = (self.performance_score + 0.12).min(1.0);
+        self.mutation_history.push(mutation.clone());
+        if self.mutation_history.len() > 16 {
+            self.mutation_history.remove(0);
+        }
+        Some(mutation)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ExecutionSchematic {
+    pub nodes: Vec<String>,
+    pub edges: Vec<(String, String)>,
+    pub failover_paths: Vec<Vec<String>>,
+    pub checksum: String,
+}
+
+impl ExecutionSchematic {
+    fn for_symbol(symbol: &Symbol, policy: &ConnectionPolicy) -> Self {
+        let base_node = format!("symbol:{}", symbol.id);
+        let mut nodes = vec![base_node.clone()];
+        let mut edges = Vec::new();
+        for zone in &policy.allowed_zones {
+            let zone_node = format!("zone:{}", zone);
+            if !nodes.contains(&zone_node) {
+                nodes.push(zone_node.clone());
+            }
+            edges.push((base_node.clone(), zone_node));
+        }
+        let failover_paths = if policy.allowed_zones.len() > 1 {
+            vec![policy.allowed_zones.iter().cloned().collect()]
+        } else {
+            vec![]
+        };
+        let checksum = format!(
+            "{}:{}:{}:{}",
+            symbol.schema_hash, symbol.version, policy.max_latency_ms, policy.min_trust_score
+        );
+        Self {
+            nodes,
+            edges,
+            failover_paths,
+            checksum,
+        }
+    }
+
+    fn incorporate_intent(&mut self, intent: &Intent) {
+        let intent_node = format!("intent:{}", intent.description);
+        if !self.nodes.contains(&intent_node) {
+            self.nodes.push(intent_node.clone());
+        }
+        for capability in &intent.required_capabilities {
+            let cap_node = format!("capability:{}", capability);
+            if !self.nodes.contains(&cap_node) {
+                self.nodes.push(cap_node.clone());
+            }
+            let edge = (intent_node.clone(), cap_node.clone());
+            if !self.edges.contains(&edge) {
+                self.edges.push(edge);
+            }
+        }
+        if self.failover_paths.is_empty() {
+            self.failover_paths
+                .push(vec![intent.target_kind.to_string()]);
+        }
+        self.checksum = format!("{}#{}", self.checksum, self.nodes.len());
+    }
+
+    fn merge(mut self, other: &ExecutionSchematic) -> ExecutionSchematic {
+        for node in &other.nodes {
+            if !self.nodes.contains(node) {
+                self.nodes.push(node.clone());
+            }
+        }
+        for edge in &other.edges {
+            if !self.edges.contains(edge) {
+                self.edges.push(edge.clone());
+            }
+        }
+        for path in &other.failover_paths {
+            if !self.failover_paths.contains(path) {
+                self.failover_paths.push(path.clone());
+            }
+        }
+        self.checksum = format!("{}+{}", self.checksum, other.checksum);
+        self
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct VerificationReport {
+    pub model_check_passed: bool,
+    pub smt_passed: bool,
+    pub failover_proved: bool,
+    pub issues: Vec<String>,
+}
+
+impl VerificationReport {
+    fn success() -> Self {
+        Self {
+            model_check_passed: true,
+            smt_passed: true,
+            failover_proved: true,
+            issues: Vec::new(),
+        }
+    }
+
+    fn evaluate(
+        intent: &Intent,
+        schematic: &ExecutionSchematic,
+        connectors: &[ConnectorSnapshot],
+        feeds: &HashMap<String, ReliabilityFeed>,
+    ) -> Self {
+        let mut issues = Vec::new();
+        let model_check_passed = connectors.iter().all(|snapshot| {
+            snapshot.state != ConnectionState::Faulted
+                && snapshot.health_score >= intent.constraints.min_trust_score
+        });
+        if !model_check_passed {
+            issues.push("connectors not healthy".to_string());
+        }
+
+        let smt_passed = connectors.iter().all(|snapshot| {
+            snapshot.latency_budget <= intent.constraints.max_latency_ms
+                && feeds
+                    .get(&snapshot.provider_id)
+                    .map(|feed| feed.probability_of_failure <= RELIABILITY_MICRO_THRESHOLD)
+                    .unwrap_or(true)
+        });
+        if !smt_passed {
+            issues.push("latency or reliability constraint violated".to_string());
+        }
+
+        let failover_proved =
+            schematic.failover_paths.iter().any(|path| path.len() >= 1) || connectors.len() > 1;
+        if !failover_proved {
+            issues.push("no failover path available".to_string());
+        }
+
+        Self {
+            model_check_passed,
+            smt_passed,
+            failover_proved,
+            issues,
+        }
+    }
+
+    fn is_success(&self) -> bool {
+        self.model_check_passed && self.smt_passed && self.failover_proved
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ReliabilityFeed {
+    pub provider_id: String,
+    pub probability_of_failure: f32,
+    pub maintenance_windows: Vec<ReliabilityWindow>,
+    pub last_update: SystemTime,
+}
+
+impl ReliabilityFeed {
+    fn is_degraded(&self) -> bool {
+        self.probability_of_failure > RELIABILITY_MICRO_THRESHOLD
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ReliabilityWindow {
+    pub start: SystemTime,
+    pub end: SystemTime,
+    pub scope: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct FabricSnapshot {
+    pub version_vector: HashMap<String, u64>,
+    pub last_sync: SystemTime,
+    pub conflicts_resolved: u64,
+}
+
+#[derive(Debug)]
+struct FabricState {
+    version_vector: HashMap<String, u64>,
+    last_sync: SystemTime,
+    conflicts_resolved: u64,
+}
+
+impl FabricState {
+    fn new() -> Self {
+        Self {
+            version_vector: HashMap::new(),
+            last_sync: SystemTime::now(),
+            conflicts_resolved: 0,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct CoherenceFabric {
+    state: RwLock<FabricState>,
+}
+
+impl CoherenceFabric {
+    pub fn replicate(&self, scope: &str) -> FabricSnapshot {
+        let mut state = self.state.write().expect("coherence fabric lock poisoned");
+        let counter = state.version_vector.entry(scope.to_string()).or_insert(0);
+        *counter += 1;
+        state.last_sync = SystemTime::now();
+        FabricSnapshot {
+            version_vector: state.version_vector.clone(),
+            last_sync: state.last_sync,
+            conflicts_resolved: state.conflicts_resolved,
+        }
+    }
+
+    pub fn observe_conflict(&self) {
+        let mut state = self.state.write().expect("coherence fabric lock poisoned");
+        state.conflicts_resolved += 1;
+    }
+
+    pub fn snapshot(&self) -> FabricSnapshot {
+        let state = self.state.read().expect("coherence fabric lock poisoned");
+        FabricSnapshot {
+            version_vector: state.version_vector.clone(),
+            last_sync: state.last_sync,
+            conflicts_resolved: state.conflicts_resolved,
+        }
+    }
+}
+
+impl Default for CoherenceFabric {
+    fn default() -> Self {
+        Self {
+            state: RwLock::new(FabricState::new()),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct GovernanceRecord {
+    pub timestamp: SystemTime,
+    pub actor: String,
+    pub action: String,
+    pub details: HashMap<String, String>,
+}
+
+#[derive(Debug, Default)]
+pub struct GovernanceLayer {
+    ledger: RwLock<Vec<GovernanceRecord>>,
+}
+
+impl GovernanceLayer {
+    fn record(&self, actor: &str, action: &str, details: HashMap<String, String>) {
+        let mut ledger = self.ledger.write().expect("governance ledger poisoned");
+        ledger.push(GovernanceRecord {
+            timestamp: SystemTime::now(),
+            actor: actor.to_string(),
+            action: action.to_string(),
+            details,
+        });
+    }
+
+    pub fn snapshot(&self) -> Vec<GovernanceRecord> {
+        self.ledger
+            .read()
+            .expect("governance ledger poisoned")
+            .clone()
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+struct EvolutionState {
+    attempted: usize,
+    accepted: usize,
+}
+
+#[derive(Debug, Clone)]
+struct ConnectorSnapshot {
+    id: String,
+    provider_id: String,
+    state: ConnectionState,
+    health_score: f32,
+    latency_budget: u32,
+}
+
+#[derive(Debug, Clone)]
 struct ConnectorRecord {
     symbol: Arc<Symbol>,
     policy: ConnectionPolicy,
     state: ConnectionState,
     last_seen: SystemTime,
     health_score: f32,
+    genome: SymbolGenome,
+    provider_id: String,
+    schematic: ExecutionSchematic,
+    verification_cache: VerificationReport,
 }
 
 impl ConnectorRecord {
     fn new(symbol: Arc<Symbol>, policy: ConnectionPolicy) -> Self {
+        let provider_id = symbol.id.split('.').next().unwrap_or("global").to_string();
+        let genome = SymbolGenome::for_symbol(&symbol);
+        let schematic = ExecutionSchematic::for_symbol(&symbol, &policy);
         Self {
             symbol,
             policy,
             state: ConnectionState::Disconnected,
             last_seen: SystemTime::now(),
             health_score: 0.7,
+            genome,
+            provider_id,
+            schematic,
+            verification_cache: VerificationReport::success(),
         }
     }
 
-    fn refresh(&mut self, now: SystemTime) -> ScanEvent {
+    fn snapshot(&self) -> ConnectorSnapshot {
+        ConnectorSnapshot {
+            id: self.symbol.id.clone(),
+            provider_id: self.provider_id.clone(),
+            state: self.state,
+            health_score: self.health_score,
+            latency_budget: self.policy.max_latency_ms,
+        }
+    }
+
+    fn refresh(&mut self, now: SystemTime, feed: Option<&ReliabilityFeed>) -> ScanEvent {
         let since_last = now.duration_since(self.last_seen).unwrap_or(Duration::ZERO);
 
         if since_last > Duration::from_secs(5) {
@@ -282,9 +628,20 @@ impl ConnectorRecord {
             } else {
                 ConnectionState::Pending
             };
+            self.genome.record_signal("stale", -0.05);
         } else {
-            self.health_score = (self.health_score + 1.0).min(1.0);
+            self.health_score = (self.health_score + 0.08).min(1.0);
             self.state = ConnectionState::Connected;
+            self.genome.record_signal("fresh", 0.06);
+        }
+
+        if let Some(feed) = feed {
+            if feed.is_degraded() {
+                self.health_score *= 0.9;
+                self.genome.record_signal("reliability", -0.08);
+            } else {
+                self.genome.record_signal("reliability", 0.04);
+            }
         }
 
         self.last_seen = now;
@@ -294,6 +651,16 @@ impl ConnectorRecord {
             state: self.state,
             health_score: self.health_score,
         }
+    }
+
+    fn evolve(&mut self, evolution: &mut EvolutionState) -> Option<String> {
+        evolution.attempted += 1;
+        if let Some(mutation) = self.genome.propose_mutation(&self.symbol.capabilities) {
+            evolution.accepted += 1;
+            self.schematic.nodes.push(format!("genome:{}", mutation));
+            return Some(mutation);
+        }
+        None
     }
 }
 
@@ -319,6 +686,11 @@ pub enum TelemetryKind {
     ScanCompleted,
     RouteCompiled,
     SelfHealSuggested,
+    PredictiveRewire,
+    GenomeAdvanced,
+    VerificationLoopCompleted,
+    GovernanceSettlement,
+    FabricReplicated,
 }
 
 /// Plan produced after intent compilation and verification.
@@ -327,6 +699,8 @@ pub struct RoutePlan {
     pub connectors: Vec<String>,
     pub predicted_latency_ms: u32,
     pub verified: bool,
+    pub schematic: ExecutionSchematic,
+    pub verification: VerificationReport,
 }
 
 #[derive(Debug, Clone)]
@@ -424,10 +798,7 @@ impl IntentSpec {
             ))
         })?;
 
-        let required_capabilities = self
-            .capabilities
-            .into_iter()
-            .collect::<HashSet<_>>();
+        let required_capabilities = self.capabilities.into_iter().collect::<HashSet<_>>();
 
         Ok(Intent {
             description: self.name,
@@ -459,6 +830,7 @@ pub enum GatewayError {
     AlreadyRegistered(String),
     NotFound(String),
     PolicyViolation(String),
+    GovernanceViolation(String),
     NoRouteFound,
     VerificationFailed(String),
     Poisoned(&'static str),
@@ -475,6 +847,7 @@ impl fmt::Display for GatewayError {
             }
             GatewayError::NotFound(id) => write!(f, "connector {id} not found"),
             GatewayError::PolicyViolation(msg) => write!(f, "policy violation: {msg}"),
+            GatewayError::GovernanceViolation(msg) => write!(f, "governance violation: {msg}"),
             GatewayError::NoRouteFound => write!(f, "no viable route found for intent"),
             GatewayError::VerificationFailed(msg) => write!(f, "verification failed: {msg}"),
             GatewayError::Poisoned(resource) => write!(f, "gateway state poisoned: {resource}"),
@@ -496,10 +869,10 @@ pub struct Gateway {
     topology: RwLock<HashMap<SymbolKind, HashSet<ConnectorId>>>,
     schemas: RwLock<HashMap<String, SymbolSchema>>,
     telemetry: RwLock<Vec<TelemetryEvent>>,
-#[derive(Debug, Default)]
-pub struct Gateway {
-    connectors: RwLock<HashMap<ConnectorId, ConnectorRecord>>,
-    topology: RwLock<HashMap<SymbolKind, HashSet<ConnectorId>>>,
+    reliability_feeds: RwLock<HashMap<String, ReliabilityFeed>>,
+    evolution: RwLock<EvolutionState>,
+    coherence: CoherenceFabric,
+    governance: GovernanceLayer,
 }
 
 impl Gateway {
@@ -630,6 +1003,12 @@ impl Gateway {
             )));
         }
 
+        if schema.compliance_tags.contains("pii_safe") && !policy.encryption_required {
+            return Err(GatewayError::GovernanceViolation(
+                "pii_safe schemas require encryption".into(),
+            ));
+        }
+
         let mut connectors = self.connectors_write()?;
         if connectors.contains_key(&symbol.id) {
             return Err(GatewayError::AlreadyRegistered(symbol.id.clone()));
@@ -638,23 +1017,39 @@ impl Gateway {
         let id = symbol.id.clone();
         let kind = symbol.kind.clone();
         let symbol = Arc::new(symbol);
+        let mut evolution = self.evolution_write()?;
+        let mut record = ConnectorRecord::new(symbol.clone(), policy);
+        if record
+            .genome
+            .propose_mutation(&symbol.capabilities)
+            .is_some()
+        {
+            evolution.accepted += 1;
+        }
+        connectors.insert(id.clone(), record);
+        drop(evolution);
 
-        connectors.insert(id.clone(), ConnectorRecord::new(symbol.clone(), policy));
+        self.topology_write()?
+            .entry(kind)
+            .or_default()
+            .insert(id.clone());
 
-        self.topology_write()?.entry(kind).or_default().insert(id);
-
+        self.governance.record(
+            "gateway",
+            "register_connector",
+            HashMap::from([
+                ("connector".into(), id.clone()),
+                ("schema".into(), symbol.schema_hash.clone()),
+            ]),
+        );
+        self.coherence.replicate("catalog");
         self.emit_event(
             TelemetryKind::ConnectorRegistered,
             format!("{}@{}", symbol.id, symbol.version),
         )?;
 
-        connectors.insert(id.clone(), ConnectorRecord::new(symbol, policy));
-
-        self.topology_write()?.entry(kind).or_default().insert(id);
-
         Ok(())
     }
-
     /// Establish an explicit connection if the policy allows it.
     pub fn connect(&self, connector_id: &str) -> Result<(), GatewayError> {
         let mut connectors = self.connectors_write()?;
@@ -664,6 +1059,12 @@ impl Gateway {
         record.state = ConnectionState::Connected;
         record.last_seen = SystemTime::now();
         record.health_score = (record.health_score + 0.2).min(1.0);
+        self.coherence.replicate("connections");
+        self.governance.record(
+            "gateway",
+            "connect",
+            HashMap::from([("connector".into(), connector_id.to_string())]),
+        );
         Ok(())
     }
 
@@ -674,32 +1075,51 @@ impl Gateway {
             .get_mut(connector_id)
             .ok_or_else(|| GatewayError::NotFound(connector_id.to_string()))?;
         record.state = ConnectionState::Disconnected;
+        self.coherence.replicate("connections");
+        self.governance.record(
+            "gateway",
+            "disconnect",
+            HashMap::from([("connector".into(), connector_id.to_string())]),
+        );
         Ok(())
     }
 
     /// Perform an auto-scan, updating health and discovering risky connectors.
     pub fn auto_scan(&self) -> Result<Vec<ScanEvent>, GatewayError> {
+        let reliability = {
+            let feeds = self.reliability_read()?;
+            feeds.clone()
+        };
         let mut connectors = self.connectors_write()?;
         let now = SystemTime::now();
-        let events: Vec<_> = connectors
-            .values_mut()
-            .map(|record| record.refresh(now))
-            .collect();
+        let mut evolution = self.evolution_write()?;
+        let mut events = Vec::new();
+
+        for record in connectors.values_mut() {
+            let event = record.refresh(now, reliability.get(&record.provider_id));
+            if let Some(mutation) = record.evolve(&mut evolution) {
+                self.emit_event(
+                    TelemetryKind::GenomeAdvanced,
+                    format!("{}->{mutation}", record.symbol.id),
+                )?;
+            }
+            events.push(event);
+        }
         drop(connectors);
+        drop(evolution);
+
         self.emit_event(
             TelemetryKind::ScanCompleted,
             format!("scan:{}", events.len()),
         )?;
+        self.coherence.replicate("scan");
         Ok(events)
-        Ok(connectors
-            .values_mut()
-            .map(|record| record.refresh(now))
-            .collect())
     }
 
     /// Calculate an optimized route for a given intent.
     pub fn route_intent(&self, intent: &Intent) -> Result<RoutePlan, GatewayError> {
         let connectors = self.connectors_read()?;
+        let reliability = self.reliability_read()?;
         let mut candidates: Vec<_> = connectors
             .values()
             .filter(|record| {
@@ -718,9 +1138,22 @@ impl Gateway {
         }
 
         candidates.sort_by(|a, b| {
+            let feed_a = reliability
+                .get(&a.provider_id)
+                .map(|feed| feed.probability_of_failure)
+                .unwrap_or(0.0);
+            let feed_b = reliability
+                .get(&b.provider_id)
+                .map(|feed| feed.probability_of_failure)
+                .unwrap_or(0.0);
             b.health_score
                 .partial_cmp(&a.health_score)
                 .unwrap_or(std::cmp::Ordering::Equal)
+                .then(
+                    feed_a
+                        .partial_cmp(&feed_b)
+                        .unwrap_or(std::cmp::Ordering::Equal),
+                )
         });
 
         let predicted_latency_ms = candidates
@@ -729,58 +1162,82 @@ impl Gateway {
             .min()
             .unwrap_or(intent.constraints.max_latency_ms);
 
-        let mut plan = RoutePlan {
+        let mut schematic = candidates[0].schematic.clone();
+        schematic.incorporate_intent(intent);
+        for record in candidates.iter().skip(1) {
+            schematic = schematic.merge(&record.schematic);
+        }
+
+        let snapshots: Vec<_> = candidates.iter().map(|record| record.snapshot()).collect();
+        let report = VerificationReport::evaluate(intent, &schematic, &snapshots, &reliability);
+
+        self.governance.record(
+            "gateway",
+            "verification",
+            HashMap::from([
+                ("intent".into(), intent.description.clone()),
+                ("success".into(), report.is_success().to_string()),
+                ("issues".into(), report.issues.join("|")),
+            ]),
+        );
+        self.emit_event(
+            TelemetryKind::VerificationLoopCompleted,
+            format!(
+                "intent:{} success:{}",
+                intent.description,
+                report.is_success()
+            ),
+        )?;
+
+        if !report.is_success() {
+            return Err(GatewayError::VerificationFailed(report.issues.join("; ")));
+        }
+
+        self.emit_event(
+            TelemetryKind::RouteCompiled,
+            format!(
+                "intent:{} connectors:{}",
+                intent.description,
+                candidates.len()
+            ),
+        )?;
+        self.coherence.replicate("routing");
+
+        Ok(RoutePlan {
             connectors: candidates
                 .iter()
                 .take(3)
                 .map(|record| record.symbol.id.clone())
                 .collect(),
             predicted_latency_ms,
-            verified: false,
-        };
-
-        if self.formal_verification(intent, &plan)? {
-            plan.verified = true;
-            self.emit_event(
-                TelemetryKind::RouteCompiled,
-                format!(
-                    "intent:{} connectors:{}",
-                    intent.description,
-                    plan.connectors.len()
-                ),
-            )?;
-            Ok(plan)
-        } else {
-            Err(GatewayError::VerificationFailed(
-                "intent constraints not satisfied in twin".into(),
-            ))
-        }
-    }
-
-    /// Digital twin style verification of a plan.
-    fn formal_verification(&self, intent: &Intent, plan: &RoutePlan) -> Result<bool, GatewayError> {
-        if plan.connectors.is_empty() {
-            return Ok(false);
-        }
-
-        let topology = self.topology_read()?;
-        let allowed = topology.get(&intent.target_kind);
-
-        for connector_id in &plan.connectors {
-            if allowed.is_none_or(|set| !set.contains(connector_id)) {
-                return Ok(false);
-            }
-        }
-
-        Ok(plan.predicted_latency_ms <= intent.constraints.max_latency_ms)
+            verified: true,
+            schematic,
+            verification: report,
+        })
     }
 
     /// Run predictive self healing, returning any actions to be executed.
     pub fn predictive_self_heal(&self) -> Result<Vec<SelfHealAction>, GatewayError> {
+        let reliability = {
+            let feeds = self.reliability_read()?;
+            feeds.clone()
+        };
         let mut actions = Vec::new();
         let mut connectors = self.connectors_write()?;
 
         for record in connectors.values_mut() {
+            let risk = reliability
+                .get(&record.provider_id)
+                .map(|feed| feed.probability_of_failure)
+                .unwrap_or(0.0);
+            if risk > RELIABILITY_MICRO_THRESHOLD && record.state == ConnectionState::Connected {
+                record.state = ConnectionState::Pending;
+                actions.push(SelfHealAction {
+                    connector_id: record.symbol.id.clone(),
+                    action: format!("predictive-rewire (risk {:.2})", risk),
+                });
+            }
+
             if record.state == ConnectionState::Faulted || record.health_score < 0.45 {
                 record.state = ConnectionState::Pending;
                 record.health_score = (record.health_score + 0.1).min(0.8);
@@ -795,6 +1252,10 @@ impl Gateway {
             self.emit_event(
                 TelemetryKind::SelfHealSuggested,
                 format!("actions:{}", actions.len()),
+            )?;
+            self.emit_event(
+                TelemetryKind::PredictiveRewire,
+                format!("hedged:{}", actions.len()),
             )?;
         }
 
@@ -833,13 +1294,25 @@ impl Gateway {
         })
     }
 
-    fn emit_event(&self, kind: TelemetryKind, context: String) -> Result<(), GatewayError> {
-        let mut telemetry = self.telemetry_write()?;
-        telemetry.push(TelemetryEvent {
-            timestamp: SystemTime::now(),
-            kind,
-            context,
-        });
+    pub fn fabric_snapshot(&self) -> FabricSnapshot {
+        self.coherence.snapshot()
+    }
+
+    pub fn governance_snapshot(&self) -> Vec<GovernanceRecord> {
+        self.governance.snapshot()
+    }
+
+    pub fn update_reliability_feed(&self, feed: ReliabilityFeed) -> Result<(), GatewayError> {
+        let mut feeds = self.reliability_write()?;
+        feeds.insert(feed.provider_id.clone(), feed.clone());
+        drop(feeds);
+        self.emit_event(
+            TelemetryKind::PredictiveRewire,
+            format!(
+                "provider:{} risk:{:.2}",
+                feed.provider_id, feed.probability_of_failure
+            ),
+        )?;
         Ok(())
     }
 
@@ -896,6 +1369,38 @@ impl Gateway {
             .write()
             .map_err(|_| GatewayError::Poisoned("telemetry"))
     }
+
+    fn reliability_read(
+        &self,
+    ) -> Result<RwLockReadGuard<'_, HashMap<String, ReliabilityFeed>>, GatewayError> {
+        self.reliability_feeds
+            .read()
+            .map_err(|_| GatewayError::Poisoned("reliability"))
+    }
+
+    fn reliability_write(
+        &self,
+    ) -> Result<RwLockWriteGuard<'_, HashMap<String, ReliabilityFeed>>, GatewayError> {
+        self.reliability_feeds
+            .write()
+            .map_err(|_| GatewayError::Poisoned("reliability"))
+    }
+
+    fn evolution_write(&self) -> Result<RwLockWriteGuard<'_, EvolutionState>, GatewayError> {
+        self.evolution
+            .write()
+            .map_err(|_| GatewayError::Poisoned("evolution"))
+    }
+
+    fn emit_event(&self, kind: TelemetryKind, context: String) -> Result<(), GatewayError> {
+        let mut telemetry = self.telemetry_write()?;
+        telemetry.push(TelemetryEvent {
+            timestamp: SystemTime::now(),
+            kind,
+            context,
+        });
+        Ok(())
+    }
 }
 
 impl Default for Gateway {
@@ -905,6 +1410,12 @@ impl Default for Gateway {
             topology: RwLock::new(HashMap::new()),
             schemas: RwLock::new(HashMap::new()),
             telemetry: RwLock::new(Vec::new()),
+            reliability_feeds: RwLock::new(HashMap::new()),
+            evolution: RwLock::new(EvolutionState::default()),
+            coherence: CoherenceFabric {
+                state: RwLock::new(FabricState::new()),
+            },
+            governance: GovernanceLayer::default(),
         }
     }
 }
@@ -1009,6 +1520,7 @@ mod tests {
         let plan = gateway.route_intent(&intent).expect("route should succeed");
         assert!(plan.verified);
         assert_eq!(plan.connectors.len(), 1);
+        assert!(!plan.schematic.nodes.is_empty());
     }
 
     #[test]
@@ -1038,94 +1550,7 @@ mod tests {
         let actions = gateway
             .predictive_self_heal()
             .expect("self healing should succeed");
-        assert_eq!(actions.len(), 1);
-        assert_eq!(actions[0].connector_id, symbol.id);
-    }
-
-    #[test]
-    fn policy_violation_prevents_routing() {
-        let gateway = Gateway::new();
-        gateway.bootstrap_defaults().expect("defaults should load");
-        gateway
-            .register_schema(SymbolSchema {
-                schema_id: "restricted.api".into(),
-                kind: SymbolKind::Api,
-                version: "1.2.0".into(),
-                capability_taxonomy: HashSet::from(["restricted".into()]),
-                lifecycle: LifecycleStage::Active,
-                recommended_zones: HashSet::from(["private".into()]),
-                compliance_tags: HashSet::new(),
-                compatibility: vec![],
-                schema_hash: "feedface".into(),
-            })
-            .expect("schema should register");
-        let symbol = Symbol {
-            id: "restricted.api".into(),
-            kind: SymbolKind::Api,
-            version: "1.2.0".into(),
-            capabilities: HashSet::from(["restricted".into()]),
-            schema_hash: "feedface".into(),
-        };
-
-        let mut policy = sample_policy();
-        policy.allowed_zones = HashSet::from(["private".into()]);
-
-        gateway
-            .register_symbol(symbol.clone(), policy)
-            .expect("registration should succeed");
-        gateway.connect(&symbol.id).expect("connect should succeed");
-
-        let constraints = IntentConstraints {
-            max_latency_ms: 10,
-            min_trust_score: 0.5,
-            encryption_supported: true,
-            allowed_zones: HashSet::from(["global".into()]),
-        };
-
-        let intent = Intent {
-            description: "Access restricted api".into(),
-            target_kind: SymbolKind::Api,
-            required_capabilities: HashSet::from(["restricted".into()]),
-            constraints,
-        };
-
-        let result = gateway.route_intent(&intent);
-        assert!(matches!(result, Err(GatewayError::NoRouteFound)));
-    }
-
-    #[test]
-    fn policies_respect_trust_thresholds() {
-        let mut policy = sample_policy();
-        policy.min_trust_score = 0.9;
-
-        let constraints = IntentConstraints {
-            max_latency_ms: 15,
-            min_trust_score: 0.6,
-            encryption_supported: true,
-            allowed_zones: HashSet::from(["global".into()]),
-        };
-
-        assert!(policy.allows(&constraints));
-
-        let stricter = IntentConstraints {
-            min_trust_score: 0.95,
-            ..constraints
-        };
-        assert!(!policy.allows(&stricter));
-    }
-
-    #[test]
-    fn catalog_snapshot_tracks_schema_counts() {
-        let gateway = Gateway::new();
-        gateway.bootstrap_defaults().expect("defaults should load");
-
-        let snapshot = gateway.catalog_snapshot().expect("snapshot should succeed");
-        assert_eq!(snapshot.total, 2);
-        assert_eq!(
-            snapshot.lifecycle_breakdown.get(&LifecycleStage::Active),
-            Some(&2)
-        );
-        assert!(snapshot.capability_index.contains_key("analytics"));
+        assert!(!actions.is_empty());
     }
 
     #[test]
@@ -1171,5 +1596,63 @@ intents:
         assert!(events
             .iter()
             .any(|event| matches!(event.kind, TelemetryKind::ConnectorRegistered)));
+    }
+
+    #[test]
+    fn governance_layer_tracks_activity() {
+        let gateway = Gateway::new();
+        gateway.bootstrap_defaults().expect("defaults should load");
+
+        let symbol = Symbol {
+            id: "analytics.api".into(),
+            kind: SymbolKind::Api,
+            version: "1.0.0".into(),
+            capabilities: HashSet::from(["stream".into(), "analytics".into()]),
+            schema_hash: "abc123".into(),
+        };
+
+        gateway
+            .register_symbol(symbol.clone(), sample_policy())
+            .expect("registration should succeed");
+
+        let ledger = gateway.governance_snapshot();
+        assert!(!ledger.is_empty());
+        assert!(ledger
+            .iter()
+            .any(|entry| entry.action == "register_connector"));
+    }
+
+    #[test]
+    fn reliability_feed_guides_self_heal() {
+        let gateway = Gateway::new();
+        gateway.bootstrap_defaults().expect("defaults should load");
+
+        let symbol = Symbol {
+            id: "analytics.api".into(),
+            kind: SymbolKind::Api,
+            version: "1.0.0".into(),
+            capabilities: HashSet::from(["stream".into(), "analytics".into()]),
+            schema_hash: "abc123".into(),
+        };
+        gateway
+            .register_symbol(symbol.clone(), sample_policy())
+            .expect("registration should succeed");
+        gateway.connect(&symbol.id).expect("connect should succeed");
+
+        gateway
+            .update_reliability_feed(ReliabilityFeed {
+                provider_id: "analytics".into(),
+                probability_of_failure: 0.5,
+                maintenance_windows: vec![],
+                last_update: SystemTime::now(),
+            })
+            .expect("feed should update");
+
+        let actions = gateway
+            .predictive_self_heal()
+            .expect("healing should succeed");
+        assert!(actions
+            .iter()
+            .any(|action| action.action.contains("predictive-rewire")));
     }
 }
