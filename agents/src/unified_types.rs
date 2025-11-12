@@ -21,7 +21,7 @@ use uuid::Uuid;
 ///   - Examples: CECCA (Chief Executive Constitutional Compliance Agent)
 ///   - Role: Constitutional oversight, highest-level decision making
 ///
-/// - **L2Reasoning**: Strategic planning and board-level agents  
+/// - **L2Reasoning**: Strategic planning and board-level agents
 ///   - Legacy name: "Board"
 ///   - Examples: Board members, strategic planners
 ///   - Role: Strategic decision-making, policy formation
