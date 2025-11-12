@@ -1,30 +1,78 @@
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use axum::extract::ws::{Message, WebSocket};
-use axum::extract::{Path, State, WebSocketUpgrade};
+use axum::extract::{Multipart, Path as AxumPath, State, WebSocketUpgrade};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::{Json, Router};
+use bytes::Bytes;
+use chrono::Utc;
+use noa_crc::{CRCState, CRCSystem, DropManifest, Priority, SourceType};
+use serde::{Deserialize, Serialize};
+use tokio::fs;
 use tokio::sync::RwLock;
 use tokio_stream::StreamExt;
+use uuid::Uuid;
 
 use crate::schema::PageEnvelope;
 use crate::session::SessionBridge;
+
+pub trait DropRegistry: Send + Sync {
+    fn register(&self, path: PathBuf, manifest: DropManifest) -> Result<String, String>;
+    fn get_state(&self, drop_id: &str) -> Option<CRCState>;
+}
+
+#[derive(Clone, Default)]
+struct CrcDropRegistry {
+    crc: CRCSystem,
+}
+
+impl DropRegistry for CrcDropRegistry {
+    fn register(&self, path: PathBuf, manifest: DropManifest) -> Result<String, String> {
+        self.crc.register_drop(path, manifest)
+    }
+
+    fn get_state(&self, drop_id: &str) -> Option<CRCState> {
+        self.crc.get_drop(drop_id).map(|drop| drop.state)
+    }
+}
 
 #[derive(Clone)]
 pub struct UiApiState {
     pages: Arc<RwLock<HashMap<String, PageEnvelope>>>,
     session: Arc<Mutex<Option<SessionBridge>>>,
+    drop_registry: Arc<dyn DropRegistry>,
+    drop_root: PathBuf,
 }
 
 impl UiApiState {
     pub fn new() -> Self {
+        let drop_registry: Arc<dyn DropRegistry> = Arc::new(CrcDropRegistry::default());
         Self {
             pages: Arc::new(RwLock::new(HashMap::new())),
             session: Arc::new(Mutex::new(None)),
+            drop_registry,
+            drop_root: PathBuf::from("crc/drop-in/incoming"),
         }
+    }
+
+    pub fn with_drop_registry<R>(mut self, registry: R) -> Self
+    where
+        R: DropRegistry + 'static,
+    {
+        self.drop_registry = Arc::new(registry) as Arc<dyn DropRegistry>;
+        self
+    }
+
+    pub fn with_drop_root<P>(mut self, drop_root: P) -> Self
+    where
+        P: Into<PathBuf>,
+    {
+        self.drop_root = drop_root.into();
+        self
     }
 
     pub fn pages(&self) -> &Arc<RwLock<HashMap<String, PageEnvelope>>> {
@@ -33,6 +81,14 @@ impl UiApiState {
 
     pub fn session(&self) -> &Arc<Mutex<Option<SessionBridge>>> {
         &self.session
+    }
+
+    pub fn drop_registry(&self) -> Arc<dyn DropRegistry> {
+        Arc::clone(&self.drop_registry)
+    }
+
+    pub fn drop_root(&self) -> &PathBuf {
+        &self.drop_root
     }
 }
 
@@ -48,10 +104,26 @@ impl UiApiServer {
         }
     }
 
-    pub fn with_session(mut self, bridge: SessionBridge) -> Self {
+    pub fn with_session(self, bridge: SessionBridge) -> Self {
         if let Ok(mut session) = self.state.session.lock() {
             *session = Some(bridge);
         }
+        self
+    }
+
+    pub fn with_drop_registry<R>(mut self, registry: R) -> Self
+    where
+        R: DropRegistry + 'static,
+    {
+        self.state = self.state.clone().with_drop_registry(registry);
+        self
+    }
+
+    pub fn with_drop_root<P>(mut self, drop_root: P) -> Self
+    where
+        P: Into<PathBuf>,
+    {
+        self.state = self.state.clone().with_drop_root(drop_root);
         self
     }
 
@@ -59,12 +131,13 @@ impl UiApiServer {
         Router::new()
             .route("/ui/pages/:page_id", get(Self::get_page))
             .route("/ui/pages/:page_id/events", get(Self::stream_events))
+            .route("/ui/drop-in/upload", post(Self::upload_drop))
             .with_state(self.state.clone())
     }
 
     async fn get_page(
         State(state): State<UiApiState>,
-        Path(page_id): Path<String>,
+        AxumPath(page_id): AxumPath<String>,
     ) -> Json<PageEnvelope> {
         let mut pages = state.pages.write().await;
         let envelope = pages
@@ -77,7 +150,7 @@ impl UiApiServer {
     async fn stream_events(
         ws: WebSocketUpgrade,
         State(state): State<UiApiState>,
-        Path(_page_id): Path<String>,
+        AxumPath(_page_id): AxumPath<String>,
     ) -> impl IntoResponse {
         let bridge = state.session.lock().ok().and_then(|guard| guard.clone());
         if let Some(bridge) = bridge {
@@ -86,15 +159,137 @@ impl UiApiServer {
             (StatusCode::NOT_FOUND, "workflow streaming disabled").into_response()
         }
     }
+
+    async fn upload_drop(
+        State(state): State<UiApiState>,
+        mut multipart: Multipart,
+    ) -> Result<Json<DropUploadResponse>, (StatusCode, Json<ErrorResponse>)> {
+        let mut drop_type_value: Option<String> = None;
+        let mut file_name: Option<String> = None;
+        let mut file_bytes: Option<Bytes> = None;
+
+        while let Some(field) = multipart
+            .next_field()
+            .await
+            .map_err(|err| bad_request(format!("failed to read multipart field: {err}")))?
+        {
+            match field.name() {
+                Some("type") | Some("drop_type") => {
+                    let value = field
+                        .text()
+                        .await
+                        .map_err(|err| bad_request(format!("invalid drop type field: {err}")))?;
+                    drop_type_value = Some(value);
+                }
+                Some("file") | Some("upload") => {
+                    file_name = field.file_name().map(|name| name.to_string());
+                    let bytes = field.bytes().await.map_err(|err| {
+                        internal_error(format!("failed to read upload contents: {err}"))
+                    })?;
+                    file_bytes = Some(bytes);
+                }
+                _ => {}
+            }
+        }
+
+        let drop_type_value = drop_type_value
+            .ok_or_else(|| bad_request("missing required form field: type".to_string()))?;
+        let file_bytes = file_bytes
+            .ok_or_else(|| bad_request("missing required form field: file".to_string()))?;
+
+        let (source_type, directory_name) = parse_drop_type(&drop_type_value)
+            .ok_or_else(|| bad_request(format!("unsupported drop type: {}", drop_type_value)))?;
+
+        let drop_root = state.drop_root().clone();
+        let target_dir = drop_root.join(directory_name);
+        fs::create_dir_all(&target_dir)
+            .await
+            .map_err(|err| internal_error(format!("failed to prepare drop directory: {err}")))?;
+
+        let sanitized_name = sanitize_file_name(file_name.as_deref());
+        let file_path = target_dir.join(&sanitized_name);
+        fs::write(&file_path, &file_bytes)
+            .await
+            .map_err(|err| internal_error(format!("failed to persist upload: {err}")))?;
+
+        let mut metadata = HashMap::new();
+        metadata.insert("original_filename".to_string(), sanitized_name.clone());
+        metadata.insert("drop_type".to_string(), drop_type_value.clone());
+
+        let timestamp = Utc::now().timestamp();
+        let manifest = DropManifest {
+            name: sanitized_name.clone(),
+            source: "ui/upload".to_string(),
+            source_type,
+            timestamp: if timestamp >= 0 { timestamp as u64 } else { 0 },
+            priority: Priority::Normal,
+            metadata,
+        };
+
+        let registry = state.drop_registry();
+        let drop_id = registry
+            .register(file_path.clone(), manifest)
+            .map_err(|err| internal_error(format!("failed to register drop: {err}")))?;
+
+        let status = registry
+            .get_state(&drop_id)
+            .map(|state| format_crc_state(&state))
+            .unwrap_or_else(|| format_crc_state(&CRCState::Incoming));
+
+        Ok(Json(DropUploadResponse { drop_id, status }))
+    }
+}
+
+#[derive(Serialize)]
+struct DropUploadResponse {
+    drop_id: String,
+    status: String,
+}
+
+#[derive(Serialize, Deserialize)]
+struct ErrorResponse {
+    message: String,
+}
+
+fn bad_request(message: String) -> (StatusCode, Json<ErrorResponse>) {
+    (StatusCode::BAD_REQUEST, Json(ErrorResponse { message }))
+}
+
+fn internal_error(message: String) -> (StatusCode, Json<ErrorResponse>) {
+    (
+        StatusCode::INTERNAL_SERVER_ERROR,
+        Json(ErrorResponse { message }),
+    )
+}
+
+fn parse_drop_type(value: &str) -> Option<(SourceType, &'static str)> {
+    let normalized = value.trim().to_lowercase();
+    match normalized.as_str() {
+        "repo" | "repos" | "external_repo" => Some((SourceType::ExternalRepo, "repos")),
+        "fork" | "forks" => Some((SourceType::Fork, "forks")),
+        "mirror" | "mirrors" => Some((SourceType::Mirror, "mirrors")),
+        "stale" | "stale_codebase" => Some((SourceType::StaleCodebase, "stale")),
+        "internal" => Some((SourceType::Internal, "internal")),
+        _ => None,
+    }
+}
+
+fn sanitize_file_name(file_name: Option<&str>) -> String {
+    file_name
+        .and_then(|name| Path::new(name).file_name().and_then(|value| value.to_str()))
+        .filter(|name| !name.is_empty())
+        .map(|name| name.to_string())
+        .unwrap_or_else(|| format!("upload-{}.bin", Uuid::new_v4()))
+}
+
+fn format_crc_state(state: &CRCState) -> String {
+    match state {
+        CRCState::InSandbox(model) => format!("in_sandbox::{:?}", model).to_lowercase(),
+        other => format!("{:?}", other).to_lowercase(),
+    }
 }
 
 async fn handle_websocket(mut socket: WebSocket, bridge: SessionBridge) {
-    let mut events = Box::pin(bridge.forward_events());
-    while let Some(event) = events.as_mut().next().await {
-        match serde_json::to_string(&event) {
-            Ok(payload) => {
-                if socket.send(Message::Text(payload)).await.is_err() {
-                    break;
     let mut events = bridge.subscribe();
     while let Some(event) = events.next().await {
         match event.map(SessionBridge::map_event) {
@@ -112,5 +307,207 @@ async fn handle_websocket(mut socket: WebSocket, bridge: SessionBridge) {
             },
             Err(_) => continue,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode as HttpStatus};
+    use http_body_util::BodyExt;
+    use serde::Deserialize;
+    use std::sync::Mutex as StdMutex;
+    use tower::ServiceExt;
+
+    #[derive(Clone)]
+    struct MockRegistry {
+        drop_id: String,
+        state: Option<CRCState>,
+        registered_path: Arc<StdMutex<Option<PathBuf>>>,
+        registered_manifest: Arc<StdMutex<Option<DropManifest>>>,
+        fail_with: Option<String>,
+    }
+
+    impl MockRegistry {
+        fn success(drop_id: &str, state: CRCState) -> Self {
+            Self {
+                drop_id: drop_id.to_string(),
+                state: Some(state),
+                registered_path: Arc::new(StdMutex::new(None)),
+                registered_manifest: Arc::new(StdMutex::new(None)),
+                fail_with: None,
+            }
+        }
+
+        fn failing(message: &str) -> Self {
+            Self {
+                drop_id: "failing".to_string(),
+                state: None,
+                registered_path: Arc::new(StdMutex::new(None)),
+                registered_manifest: Arc::new(StdMutex::new(None)),
+                fail_with: Some(message.to_string()),
+            }
+        }
+
+        fn recorded_path(&self) -> Option<PathBuf> {
+            self.registered_path.lock().unwrap().clone()
+        }
+
+        fn recorded_manifest(&self) -> Option<DropManifest> {
+            self.registered_manifest.lock().unwrap().clone()
+        }
+    }
+
+    impl DropRegistry for MockRegistry {
+        fn register(&self, path: PathBuf, manifest: DropManifest) -> Result<String, String> {
+            *self.registered_path.lock().unwrap() = Some(path);
+            *self.registered_manifest.lock().unwrap() = Some(manifest.clone());
+            if let Some(error) = &self.fail_with {
+                return Err(error.clone());
+            }
+            Ok(self.drop_id.clone())
+        }
+
+        fn get_state(&self, _drop_id: &str) -> Option<CRCState> {
+            self.state.clone()
+        }
+    }
+
+    #[derive(Deserialize)]
+    struct UploadResponseBody {
+        drop_id: String,
+        status: String,
+    }
+
+    fn multipart_request(boundary: &str, body: &str) -> Request<Body> {
+        Request::builder()
+            .method("POST")
+            .uri("/ui/drop-in/upload")
+            .header(
+                "content-type",
+                format!("multipart/form-data; boundary={boundary}"),
+            )
+            .body(Body::from(body.to_string()))
+            .unwrap()
+    }
+
+    fn build_multipart_body(boundary: &str, parts: &[(&str, &str, Option<&str>)]) -> String {
+        let mut body = String::new();
+        for (name, value, filename) in parts {
+            body.push_str(&format!("--{boundary}\r\n"));
+            if let Some(filename) = filename {
+                body.push_str(&format!(
+                    "Content-Disposition: form-data; name=\"{name}\"; filename=\"{filename}\"\r\n"
+                ));
+                body.push_str("Content-Type: application/octet-stream\r\n\r\n");
+                body.push_str(value);
+                body.push_str("\r\n");
+            } else {
+                body.push_str(&format!(
+                    "Content-Disposition: form-data; name=\"{name}\"\r\n\r\n{value}\r\n"
+                ));
+            }
+        }
+        body.push_str(&format!("--{boundary}--\r\n"));
+        body
+    }
+
+    #[tokio::test]
+    async fn upload_drop_persists_and_registers() {
+        let boundary = "TESTBOUNDARY";
+        let temp_dir = tempfile::tempdir().unwrap();
+        let drop_root = temp_dir.path().to_path_buf();
+
+        let registry = MockRegistry::success("drop-123", CRCState::Incoming);
+        let server = UiApiServer::new()
+            .with_drop_root(drop_root.clone())
+            .with_drop_registry(registry.clone());
+        let router = server.router();
+
+        let body = build_multipart_body(
+            boundary,
+            &[
+                ("type", "repos", None),
+                ("file", "hello-world", Some("example.txt")),
+            ],
+        );
+        let request = multipart_request(boundary, &body);
+
+        let response = router.oneshot(request).await.unwrap();
+        assert_eq!(response.status(), HttpStatus::OK);
+
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let parsed: UploadResponseBody = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(parsed.drop_id, "drop-123");
+        assert_eq!(parsed.status, "incoming");
+
+        let saved_path = drop_root.join("repos").join("example.txt");
+        let saved = fs::read(&saved_path).await.unwrap();
+        assert_eq!(saved, b"hello-world");
+
+        let recorded_path = registry.recorded_path().unwrap();
+        assert!(recorded_path.ends_with("example.txt"));
+        let manifest = registry.recorded_manifest().unwrap();
+        assert!(matches!(manifest.source_type, SourceType::ExternalRepo));
+    }
+
+    #[tokio::test]
+    async fn upload_drop_rejects_unknown_type() {
+        let boundary = "TESTBOUNDARY";
+        let temp_dir = tempfile::tempdir().unwrap();
+        let drop_root = temp_dir.path().to_path_buf();
+
+        let registry = MockRegistry::success("drop-ignored", CRCState::Incoming);
+        let server = UiApiServer::new()
+            .with_drop_root(drop_root)
+            .with_drop_registry(registry.clone());
+        let router = server.router();
+
+        let body = build_multipart_body(
+            boundary,
+            &[
+                ("type", "unknown", None),
+                ("file", "payload", Some("example.txt")),
+            ],
+        );
+        let request = multipart_request(boundary, &body);
+
+        let response = router.oneshot(request).await.unwrap();
+        assert_eq!(response.status(), HttpStatus::BAD_REQUEST);
+
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let error: ErrorResponse = serde_json::from_slice(&bytes).unwrap();
+        assert!(error.message.contains("unsupported drop type"));
+        assert!(registry.recorded_path().is_none());
+    }
+
+    #[tokio::test]
+    async fn upload_drop_propagates_registration_error() {
+        let boundary = "TESTBOUNDARY";
+        let temp_dir = tempfile::tempdir().unwrap();
+        let drop_root = temp_dir.path().to_path_buf();
+
+        let registry = MockRegistry::failing("boom");
+        let server = UiApiServer::new()
+            .with_drop_root(drop_root)
+            .with_drop_registry(registry);
+        let router = server.router();
+
+        let body = build_multipart_body(
+            boundary,
+            &[
+                ("type", "repos", None),
+                ("file", "payload", Some("example.txt")),
+            ],
+        );
+        let request = multipart_request(boundary, &body);
+
+        let response = router.oneshot(request).await.unwrap();
+        assert_eq!(response.status(), HttpStatus::INTERNAL_SERVER_ERROR);
+
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let error: ErrorResponse = serde_json::from_slice(&bytes).unwrap();
+        assert!(error.message.contains("failed to register drop"));
     }
 }

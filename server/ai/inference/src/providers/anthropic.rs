@@ -24,7 +24,7 @@ impl AnthropicProvider {
 #[async_trait]
 impl Provider for AnthropicProvider {
     async fn complete(&self, request: CompletionRequest) -> anyhow::Result<CompletionResponse> {
-        info!("anthropic offline completion", model = %self.config.model);
+        info!("anthropic offline completion model={}", self.config.model);
         Ok(CompletionResponse {
             content: format!("[anthropic:{}]: {}", self.config.model, request.prompt),
             model: self.config.model.clone(),
