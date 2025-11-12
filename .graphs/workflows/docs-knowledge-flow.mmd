@@ -1,0 +1,36 @@
+```mermaid
+graph TD
+    subgraph Services
+        API[services/api]
+        CICD[services/cicd]
+        Runtime[services/runtime]
+    end
+
+    subgraph SOPs
+        DevSOP[.workspace/sop/development.md]
+        ReleaseSOP[.workspace/sop/release.md]
+        IncidentSOP[.workspace/sop/incident-response.md]
+    end
+
+    subgraph Workflows
+        CRC[workflow/crc]
+        MergeWF[workflow/merge]
+        DocsWF[workflow/docs-refresh]
+    end
+
+    API --> DevSOP
+    CICD --> ReleaseSOP
+    Runtime --> IncidentSOP
+
+    DevSOP --> CRC
+    ReleaseSOP --> MergeWF
+    IncidentSOP --> MergeWF
+
+    DocsWF --> DevSOP
+    DocsWF --> ReleaseSOP
+
+    CICD -. triggers .-> DocsWF
+    CRC -. publishes .-> DocsWF
+    DocsWF -->|Updates| docs/wiki
+    DocsWF -->|Syncs| docs/runbook
+```
