@@ -51,11 +51,19 @@ pub struct UiApiState {
 impl UiApiState {
     pub fn new() -> Self {
         let drop_registry: Arc<dyn DropRegistry> = Arc::new(CrcDropRegistry::default());
+        
+        // Use environment variable if available, otherwise fall back to relative path.
+        // The relative path is resolved from the current working directory when the process starts.
+        // Set NOA_DROP_ROOT environment variable to specify an absolute path for production.
+        let drop_root = std::env::var("NOA_DROP_ROOT")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| PathBuf::from("crc/drop-in/incoming"));
+        
         Self {
             pages: Arc::new(RwLock::new(HashMap::new())),
             session: Arc::new(Mutex::new(None)),
             drop_registry,
-            drop_root: PathBuf::from("crc/drop-in/incoming"),
+            drop_root,
         }
     }
 

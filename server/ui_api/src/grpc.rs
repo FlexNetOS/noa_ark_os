@@ -107,15 +107,11 @@ fn page_envelope_to_proto(envelope: PageEnvelope) -> Result<proto::PageEnvelope,
                         .map(json_to_struct)
                         .transpose()?
                         .unwrap_or_else(empty_struct);
-                .map(|widget| -> Result<proto::WidgetSchema, Status> {
-                    let props = widget.props.map(value_to_struct).transpose()?;
-
                     Ok(proto::WidgetSchema {
                         id: widget.id,
                         kind: format!("{:?}", widget.kind),
                         variant: widget.variant.unwrap_or_default(),
                         props: Some(props),
-                        props,
                     })
                 })
                 .collect::<Result<Vec<_>, Status>>()?;
@@ -127,7 +123,6 @@ fn page_envelope_to_proto(envelope: PageEnvelope) -> Result<proto::PageEnvelope,
                 gap: region.gap.unwrap_or_default(),
                 surface: region.surface.unwrap_or_default(),
                 slot: region.slot.map(slot_to_string).unwrap_or_default(),
-                slot: region.slot.map(|slot| slot.to_string()).unwrap_or_default(),
                 widgets,
             })
         })
@@ -259,6 +254,9 @@ fn slot_to_string(slot: LayoutSlot) -> String {
 fn empty_struct() -> Struct {
     Struct {
         fields: BTreeMap::new(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
