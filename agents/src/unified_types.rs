@@ -38,7 +38,7 @@ use uuid::Uuid;
 pub enum AgentLayer {
     /// L1: Root CECCA, Constitutional authority (formerly "Executive")
     L1Autonomy,
-    /// L2: Board & Executive agents, high-level governance (formerly "Board")
+    /// L2: Board agents, high-level governance (formerly "Board")
     L2Reasoning,
     /// L3: Chief Commanders, Orchestrators, tactical coordination (formerly "Stack-Chief")
     L3Orchestration,
