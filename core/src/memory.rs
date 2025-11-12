@@ -78,6 +78,8 @@ pub fn deallocate(size: usize) -> Result<(), &'static str> {
 /// Get total allocated memory.
 pub fn get_allocated() -> usize {
     MemoryManager::default().total_allocated()
+}
+
 /// Load registry data from the provided directory path.
 pub fn load_registry<P: AsRef<Path>>(root: P) -> Result<(), RegistryError> {
     let root = root.as_ref();

@@ -2,6 +2,23 @@
 //!
 //! Demonstrates loading the 928-agent directory embedded in the crate
 //!
+//! ## Layer Mapping
+//!
+//! The NOA ARK OS uses a 5-layer architecture. Historical layer names map to
+//! the new L1-L5 naming convention as follows:
+//!
+//! - **L1 (Autonomy)**: Executive layer - Root CECCA, Constitutional agents
+//! - **L2 (Reasoning)**: Board layer - Board & Executive decision-making agents
+//! - **L3 (Orchestration)**: Stack-Chief layer - Chief Commanders, Orchestrators
+//! - **L4 (Operations)**: Specialist layer - Specialists, Workers, domain experts
+//! - **L5 (Infrastructure)**: Micro layer - Micro agents, infrastructure services
+//!
+//! **Note:** The names "Executive", "Board", "Stack-Chief", "Specialist", and "Micro" are historical names from a previous version of the codebase. In the current code, these correspond to the following `AgentLayer` enum variants (see `unified_types.rs`):
+//! - `AgentLayer::L1Autonomy` (formerly Executive)
+//! - `AgentLayer::L2Reasoning` (formerly Board)
+//! - `AgentLayer::L3Orchestration` (formerly Stack-Chief)
+//! - `AgentLayer::L4Operations` (formerly Specialist)
+//! - `AgentLayer::L5Infrastructure` (formerly Micro)
 //! ## Layer Hierarchy
 //!
 //! NOA ARK OS organizes agents into a 5-layer technical hierarchy (L1-L5),

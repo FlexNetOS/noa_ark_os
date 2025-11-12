@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::process::Command;
-use sysinfo::{CpuExt, System, SystemExt};
+use sysinfo::System;
 
 /// Summary of CPU capabilities discovered on the host system.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -151,22 +151,13 @@ pub fn detect_hardware_profile() -> HardwareProfile {
     }
 }
 
-fn detect_gpus(system: &System) -> Vec<GpuProfile> {
+fn detect_gpus(_system: &System) -> Vec<GpuProfile> {
     let mut gpus = Vec::new();
 
-    for card in system.graphics_cards() {
-        let backend = GpuBackend::from_vendor_hint(card.vendor_id(), card.name());
-        gpus.push(GpuProfile {
-            name: card.name().to_string(),
-            backend,
-            memory_total_bytes: card.memory_total(),
-            driver: card.driver_version().map(|d| d.to_string()),
-        });
-    }
-
-    if gpus.is_empty() {
-        gpus.extend(query_nvidia_smi());
-    }
+    // Note: sysinfo graphics_cards() API not available in this version
+    // Falling back to nvidia-smi detection.
+    
+    gpus.extend(query_nvidia_smi());
 
     gpus
 }
@@ -185,7 +176,6 @@ fn query_nvidia_smi() -> Vec<GpuProfile> {
             let stdout = String::from_utf8_lossy(&output.stdout);
             for line in stdout.lines() {
                 let parts: Vec<_> = line.split(',').map(|s| s.trim()).collect();
-                if parts.len() < 3 || parts[0].is_empty() {
                 // Skip empty lines and lines with empty first field
                 // Also ensure we have at least the name field
                 if parts.is_empty() || parts[0].is_empty() {
