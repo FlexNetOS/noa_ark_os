@@ -1,6 +1,5 @@
 //! Security subsystem
 
-use crate::utils::{current_timestamp_millis, simple_hash};
 use crate::time::current_timestamp_millis;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -52,11 +51,6 @@ pub struct OperationRecord {
 
 impl OperationRecord {
     /// Construct a new record with sensible defaults.
-    /// 
-    /// NOTE: The timestamp generated here will be overwritten by `sign_and_register`
-    /// in the PolicyEnforcer when the operation is signed. This initial timestamp
-    /// represents when the record was created, but the final signed timestamp
-    /// represents when the operation was actually signed and registered.
     pub fn new(kind: OperationKind, actor: impl Into<String>, scope: impl Into<String>) -> Self {
         Self {
             operation_id: next_operation_id(),
@@ -120,17 +114,6 @@ impl Display for PolicyError {
 
 impl std::error::Error for PolicyError {}
 
-/// Maximum number of signed operations to keep in memory.
-/// Older operations are evicted in FIFO order when this limit is reached.
-/// For complete audit trails, use persistent ledger storage.
-const MAX_IN_MEMORY_RECORDS: usize = 1000;
-
-/// Policy enforcer that signs operations and maintains a bounded in-memory audit trail.
-///
-/// **Memory Management**: This enforcer keeps only the most recent operations in memory
-/// (up to `MAX_IN_MEMORY_RECORDS`). When the limit is reached, the oldest operations
-/// are evicted in FIFO order. For production systems requiring complete audit trails,
-/// integrate with persistent ledger storage (e.g., blockchain, append-only database).
 #[derive(Debug)]
 struct PolicyEnforcer {
     secret: String,
@@ -172,13 +155,7 @@ impl PolicyEnforcer {
             previous_signature: self.last_signature.clone(),
         };
         self.last_signature = signature;
-        
-        // Implement bounded buffer with FIFO eviction
-        if self.records.len() >= MAX_IN_MEMORY_RECORDS {
-            self.records.remove(0); // Remove oldest record
-        }
         self.records.push(signed.clone());
-        
         Ok(signed)
     }
 
@@ -195,10 +172,6 @@ impl PolicyEnforcer {
         }
     }
 
-    /// Returns the in-memory audit trail of recent operations.
-    ///
-    /// Note: This only includes the most recent operations (up to MAX_IN_MEMORY_RECORDS).
-    /// For complete historical audit trails, retrieve records from persistent ledger storage.
     fn audit_trail(&self) -> Vec<SignedOperation> {
         self.records.clone()
     }
@@ -258,9 +231,6 @@ pub fn init() -> Result<(), &'static str> {
 
     let mut table = user_table()
     let mut table = user_table().lock().unwrap();
-    let mut table = USER_TABLE
-        .lock()
-        .map_err(|_| "user table mutex poisoned")?;
     table.insert(0, root);
 
     Ok(())
@@ -271,15 +241,7 @@ fn check_permission_inner(user_id: UserId, permission: Permission) -> bool {
     let table = user_table().lock().unwrap();
     if let Some(user) = table.get(&user_id) {
         user.permissions.contains(&Permission::Admin) || user.permissions.contains(&permission)
-    let table = USER_TABLE.lock();
-    if let Ok(table) = table {
-        if let Some(user) = table.get(&user_id) {
-            user.permissions.contains(&Permission::Admin) || user.permissions.contains(&permission)
-        } else {
-            false
-        }
     } else {
-        // If mutex is poisoned, deny permission for safety
         false
     }
 }
@@ -307,12 +269,7 @@ pub fn verify_signed_operation(operation: &SignedOperation) -> bool {
     }
 }
 
-/// Retrieve a snapshot of recent operations from the in-memory audit trail.
-///
-/// **Important**: This returns only the most recent operations kept in memory
-/// (up to 1000 records). For complete historical audit trails across the entire
-/// system lifetime, retrieve signed operations from persistent ledger storage
-/// (e.g., blockchain, append-only database, or external audit systems).
+/// Retrieve a snapshot of the audit trail.
 pub fn audit_trail() -> Vec<SignedOperation> {
     let enforcer = policy_enforcer().lock();
     if let Ok(enforcer) = enforcer {
@@ -396,9 +353,7 @@ pub struct SecurityService;
 impl SecurityService {
     /// Register or update a user.
     pub fn register_user(&self, user: User) {
-        if let Err(err) = register_user_inner(user.clone()) {
-            eprintln!("[SECURITY] Failed to register user {}: {}", user.name, err);
-        }
+        register_user_inner(user);
     }
 
     /// Validate a permission check.
