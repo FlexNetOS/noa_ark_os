@@ -372,9 +372,30 @@ impl RegistryGraph {
 
 fn normalize_path(input: &str) -> String {
     let path = Path::new(input);
-    let mut normalized = PathBuf::new();
+    let mut stack = Vec::new();
     for component in path.components() {
-        normalized.push(component.as_os_str());
+        use std::path::Component;
+        match component {
+            Component::ParentDir => {
+                if let Some(last) = stack.last() {
+                    // Don't pop root or prefix
+                    match last {
+                        Component::RootDir | Component::Prefix(_) => {}
+                        _ => { stack.pop(); }
+                    }
+                }
+            }
+            Component::CurDir => {
+                // Skip
+            }
+            Component::Normal(_) | Component::RootDir | Component::Prefix(_) => {
+                stack.push(component);
+            }
+        }
+    }
+    let mut normalized = PathBuf::new();
+    for c in stack {
+        normalized.push(c.as_os_str());
     }
     normalized.to_string_lossy().replace('\\', "/")
 }
