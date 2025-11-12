@@ -1,5 +1,5 @@
 //! CommanderChiefAgent_DevOps - Auto-generated
-//! 
+//!
 //! Local director/VP for DevOps Stack; manages DevOps agents and operations.
 
 use crate::unified_types::*;
@@ -23,9 +23,12 @@ impl CommanderchiefagentDevops {
             category: AgentCategory::Other,
             agent_type: AgentType::Worker,
             language: AgentLanguage::Rust,
-            description: "Local director/VP for DevOps Stack; manages DevOps agents and operations.".to_string(),
+            description:
+                "Local director/VP for DevOps Stack; manages DevOps agents and operations."
+                    .to_string(),
             role: "Micro Agent".to_string(),
-            purpose: "Local director/VP for DevOps Stack; manages DevOps agents and operations.".to_string(),
+            purpose: "Local director/VP for DevOps Stack; manages DevOps agents and operations."
+                .to_string(),
             state: AgentState::Created,
             health_status: HealthStatus::Unknown,
             parent_id: None,
@@ -48,22 +51,22 @@ impl CommanderchiefagentDevops {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Ready;
         Ok(())
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -78,13 +81,13 @@ impl Default for CommanderchiefagentDevops {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = CommanderchiefagentDevops::new();
         assert_eq!(agent.metadata().name, "CommanderChiefAgent_DevOps");
     }
-    
+
     #[tokio::test]
     async fn test_agent_initialization() {
         let mut agent = CommanderchiefagentDevops::new();

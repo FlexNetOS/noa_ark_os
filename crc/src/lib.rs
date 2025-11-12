@@ -1,7 +1,7 @@
-﻿//! CRC - Continuous ReCode System with Sandbox Models
-//! 
+//! CRC - Continuous ReCode System with Sandbox Models
+//!
 //! Intelligent code adaptation with AI supervision and sandbox model isolation.
-//! 
+//!
 //! ## Sandbox Models:
 //! - Model A: Feature development sandbox
 //! - Model B: Bug fix sandbox
@@ -9,22 +9,22 @@
 //! - Model D: Integration sandbox (merged from A, B, C)
 
 // Re-export modules
-pub mod types;
-pub mod error;
-pub mod watcher;
-pub mod parallel;
-pub mod commands;
-pub mod processor;
 pub mod archive;
+pub mod commands;
+pub mod error;
+pub mod parallel;
+pub mod processor;
+pub mod types;
+pub mod watcher;
 
 // Re-export common types
-pub use types::*;
 pub use error::{Error, Result};
+pub use types::*;
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
-use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum SourceType {
@@ -37,10 +37,10 @@ pub enum SourceType {
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum SandboxModel {
-    ModelA,  // Feature development
-    ModelB,  // Bug fixes
-    ModelC,  // Experimental
-    ModelD,  // Integration (merged from A, B, C)
+    ModelA, // Feature development
+    ModelB, // Bug fixes
+    ModelC, // Experimental
+    ModelD, // Integration (merged from A, B, C)
 }
 
 impl SandboxModel {
@@ -52,9 +52,12 @@ impl SandboxModel {
             SandboxModel::ModelD => "Integration Sandbox (A+B+C)",
         }
     }
-    
+
     pub fn can_merge_to_d(&self) -> bool {
-        matches!(self, SandboxModel::ModelA | SandboxModel::ModelB | SandboxModel::ModelC)
+        matches!(
+            self,
+            SandboxModel::ModelA | SandboxModel::ModelB | SandboxModel::ModelC
+        )
     }
 }
 
@@ -213,7 +216,7 @@ impl Default for CRCConfig {
         retention.insert(SourceType::Fork, 90);
         retention.insert(SourceType::Mirror, 30);
         retention.insert(SourceType::Internal, 365);
-        
+
         Self {
             drop_in_path: PathBuf::from("crc/drop-in"),
             archive_path: PathBuf::from("crc/archive"),
@@ -233,17 +236,25 @@ impl Default for CRCConfig {
 impl CRCSystem {
     pub fn new(config: CRCConfig) -> Self {
         let mut sandboxes = HashMap::new();
-        
+
         // Initialize sandbox models
-        for model in [SandboxModel::ModelA, SandboxModel::ModelB, SandboxModel::ModelC, SandboxModel::ModelD] {
-            sandboxes.insert(model, SandboxState {
+        for model in [
+            SandboxModel::ModelA,
+            SandboxModel::ModelB,
+            SandboxModel::ModelC,
+            SandboxModel::ModelD,
+        ] {
+            sandboxes.insert(
                 model,
-                drops: vec![],
-                validated: false,
-                ready_to_merge: false,
-            });
+                SandboxState {
+                    model,
+                    drops: vec![],
+                    validated: false,
+                    ready_to_merge: false,
+                },
+            );
         }
-        
+
         Self {
             drops: Arc::new(Mutex::new(HashMap::new())),
             archives: Arc::new(Mutex::new(HashMap::new())),
@@ -251,22 +262,22 @@ impl CRCSystem {
             config: Arc::new(Mutex::new(config)),
         }
     }
-    
+
     /// Create test instance
     #[cfg(test)]
     pub fn new_test() -> Self {
         Self::new(CRCConfig::default())
     }
-    
+
     /// Scan for new drops in incoming folder
     pub fn scan_incoming(&self) -> std::result::Result<Vec<String>, String> {
         println!("[CRC] Scanning for new code drops...");
-        
+
         // In real implementation, scan filesystem
         // For now, return empty
         Ok(vec![])
     }
-    
+
     /// Register a new code drop
     pub fn register_drop(
         &self,
@@ -274,7 +285,7 @@ impl CRCSystem {
         manifest: DropManifest,
     ) -> std::result::Result<String, String> {
         let id = format!("drop_{}", uuid::Uuid::new_v4());
-        
+
         let drop = CodeDrop {
             id: id.clone(),
             source_type: manifest.source_type.clone(),
@@ -285,21 +296,21 @@ impl CRCSystem {
             analysis: None,
             adaptation: None,
         };
-        
+
         let mut drops = self.drops.lock().unwrap();
         drops.insert(id.clone(), drop);
-        
+
         println!("[CRC] Registered code drop: {}", id);
         Ok(id)
     }
-    
+
     /// Analyze code drop
     pub fn analyze(&self, drop_id: &str) -> std::result::Result<AnalysisResult, String> {
         println!("[CRC] Analyzing code drop: {}", drop_id);
-        
+
         // Update state
         self.update_state(drop_id, CRCState::Analyzing)?;
-        
+
         // Simulate analysis
         let analysis = AnalysisResult {
             files_count: 100,
@@ -310,17 +321,17 @@ impl CRCSystem {
             issues: vec![],
             ai_confidence: 0.90,
         };
-        
+
         // Store analysis
         let mut drops = self.drops.lock().unwrap();
         if let Some(drop) = drops.get_mut(drop_id) {
             drop.analysis = Some(analysis.clone());
             drop.state = CRCState::Validating;
         }
-        
+
         Ok(analysis)
     }
-    
+
     /// Update drop state
     fn update_state(&self, drop_id: &str, state: CRCState) -> std::result::Result<(), String> {
         let mut drops = self.drops.lock().unwrap();
@@ -331,7 +342,7 @@ impl CRCSystem {
             Err(format!("Drop not found: {}", drop_id))
         }
     }
-    
+
     /// Get drop by ID
     pub fn get_drop(&self, drop_id: &str) -> Option<CodeDrop> {
         let drops = self.drops.lock().unwrap();

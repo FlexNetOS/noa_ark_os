@@ -1,13 +1,13 @@
 //! Sandbox System - Multi-branch isolation and merge
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum SandboxType {
-    Feature,    // Sandbox A
-    BugFix,     // Sandbox B
+    Feature,      // Sandbox A
+    BugFix,       // Sandbox B
     Experimental, // Sandbox C
     Integration,  // Sandbox D
 }
@@ -78,7 +78,7 @@ impl SandboxManager {
             integration: Arc::new(Mutex::new(None)),
         }
     }
-    
+
     /// Create a new sandbox
     pub fn create_sandbox(
         &self,
@@ -93,24 +93,24 @@ impl SandboxManager {
             base_branch,
             validation_results: ValidationResults::default(),
         };
-        
+
         let mut sandboxes = self.sandboxes.lock().unwrap();
         sandboxes.insert(name.clone(), sandbox);
-        
+
         println!("[SANDBOX] Created sandbox: {}", name);
         Ok(())
     }
-    
+
     /// Validate a sandbox
     pub fn validate(&self, name: &str) -> Result<ValidationResults, String> {
         let mut sandboxes = self.sandboxes.lock().unwrap();
-        
+
         if let Some(sandbox) = sandboxes.get_mut(name) {
             sandbox.state = SandboxState::Validating;
-            
+
             // Run validation checks (simulated)
             println!("[SANDBOX] Validating sandbox: {}", name);
-            
+
             // Simulate validation
             let results = ValidationResults {
                 tests_passed: true,
@@ -120,27 +120,24 @@ impl SandboxManager {
                 code_review: true,
                 documentation: true,
             };
-            
+
             sandbox.validation_results = results.clone();
             sandbox.state = if results.is_ready() {
                 SandboxState::Ready
             } else {
                 SandboxState::Failed
             };
-            
+
             Ok(results)
         } else {
             Err(format!("Sandbox not found: {}", name))
         }
     }
-    
+
     /// Merge multiple sandboxes to integration (D)
-    pub fn merge_to_integration(
-        &self,
-        sandbox_names: Vec<String>,
-    ) -> Result<(), String> {
+    pub fn merge_to_integration(&self, sandbox_names: Vec<String>) -> Result<(), String> {
         println!("[SANDBOX] Merging sandboxes: {:?}", sandbox_names);
-        
+
         // Check all sandboxes are ready
         let sandboxes = self.sandboxes.lock().unwrap();
         for name in &sandbox_names {
@@ -152,9 +149,9 @@ impl SandboxManager {
                 return Err(format!("Sandbox not found: {}", name));
             }
         }
-        
+
         drop(sandboxes); // Release lock
-        
+
         // Create integration sandbox
         let integration = Sandbox {
             name: "integration_d".to_string(),
@@ -163,14 +160,14 @@ impl SandboxManager {
             base_branch: "main".to_string(),
             validation_results: ValidationResults::default(),
         };
-        
+
         // Perform merge (simulated)
         println!("[SANDBOX] Performing merge...");
-        
+
         // Update integration
         let mut int = self.integration.lock().unwrap();
         *int = Some(integration);
-        
+
         // Mark source sandboxes as merged
         let mut sandboxes = self.sandboxes.lock().unwrap();
         for name in &sandbox_names {
@@ -178,11 +175,11 @@ impl SandboxManager {
                 sandbox.state = SandboxState::Merged;
             }
         }
-        
+
         println!("[SANDBOX] Merge completed successfully");
         Ok(())
     }
-    
+
     /// Check if integration is ready
     pub fn is_integration_ready(&self) -> bool {
         let integration = self.integration.lock().unwrap();
@@ -192,41 +189,41 @@ impl SandboxManager {
             false
         }
     }
-    
+
     /// Get sandbox status
     pub fn get_status(&self, name: &str) -> Option<Sandbox> {
         let sandboxes = self.sandboxes.lock().unwrap();
         sandboxes.get(name).cloned()
     }
-    
+
     /// Get integration status
     pub fn get_integration_status(&self) -> Option<Sandbox> {
         let integration = self.integration.lock().unwrap();
         integration.clone()
     }
-    
+
     /// List all sandboxes
     pub fn list_sandboxes(&self) -> Vec<Sandbox> {
         let sandboxes = self.sandboxes.lock().unwrap();
         sandboxes.values().cloned().collect()
     }
-    
+
     /// Check for merge conflicts
     pub fn check_conflicts(&self, sandbox_names: Vec<String>) -> Result<bool, String> {
         println!("[SANDBOX] Checking for conflicts in: {:?}", sandbox_names);
         // Implementation would check for actual conflicts
         Ok(false) // No conflicts found
     }
-    
+
     /// Promote integration to production
     pub fn promote_to_production(&self) -> Result<(), String> {
         let integration = self.integration.lock().unwrap();
-        
+
         if let Some(int) = &*integration {
             if !int.validation_results.is_ready() {
                 return Err("Integration is not ready for production".to_string());
             }
-            
+
             println!("[SANDBOX] Promoting integration to production");
             // Implementation would deploy to production
             Ok(())
@@ -249,25 +246,29 @@ mod tests {
     #[test]
     fn test_sandbox_creation() {
         let manager = SandboxManager::new();
-        manager.create_sandbox(
-            "test_a".to_string(),
-            SandboxType::Feature,
-            "main".to_string(),
-        ).unwrap();
-        
+        manager
+            .create_sandbox(
+                "test_a".to_string(),
+                SandboxType::Feature,
+                "main".to_string(),
+            )
+            .unwrap();
+
         let sandbox = manager.get_status("test_a").unwrap();
         assert_eq!(sandbox.state, SandboxState::Active);
     }
-    
+
     #[test]
     fn test_validation() {
         let manager = SandboxManager::new();
-        manager.create_sandbox(
-            "test_b".to_string(),
-            SandboxType::BugFix,
-            "main".to_string(),
-        ).unwrap();
-        
+        manager
+            .create_sandbox(
+                "test_b".to_string(),
+                SandboxType::BugFix,
+                "main".to_string(),
+            )
+            .unwrap();
+
         let results = manager.validate("test_b").unwrap();
         assert!(results.is_ready());
     }

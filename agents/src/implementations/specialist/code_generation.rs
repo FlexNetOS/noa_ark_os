@@ -1,5 +1,5 @@
 //! Code Generation Specialist Agent
-//! 
+//!
 //! Simplified working version
 //! Handles code generation and synthesis
 
@@ -83,35 +83,38 @@ impl CodeGenerationAgent {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
             generation_data: Arc::new(RwLock::new(GenerationData::default())),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Ready;
         tracing::info!("Code Generation Agent initialized");
         Ok(())
     }
-    
+
     pub async fn generate_code(&self, request: GenerationRequest) -> Result<GeneratedCode> {
         let mut data = self.generation_data.write().await;
         data.generated_count += 1;
-        
+
         Ok(GeneratedCode {
-            code: format!("// Generated {} code\n// TODO: Implementation", request.language),
+            code: format!(
+                "// Generated {} code\n// TODO: Implementation",
+                request.language
+            ),
             language: request.language,
             confidence: 0.85,
         })
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -126,24 +129,24 @@ impl Default for CodeGenerationAgent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_create_agent() {
         let agent = CodeGenerationAgent::new();
         assert_eq!(agent.metadata().name, "Code Generation Agent");
     }
-    
+
     #[tokio::test]
     async fn test_generate() {
         let mut agent = CodeGenerationAgent::new();
         agent.initialize().await.unwrap();
-        
+
         let request = GenerationRequest {
             language: "Rust".to_string(),
             description: "Test function".to_string(),
             requirements: vec![],
         };
-        
+
         let result = agent.generate_code(request).await.unwrap();
         assert_eq!(result.language, "Rust");
     }

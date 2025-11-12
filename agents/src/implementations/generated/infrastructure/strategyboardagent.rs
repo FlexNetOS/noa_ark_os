@@ -1,5 +1,5 @@
 //! StrategyBoardAgent - Auto-generated
-//! 
+//!
 //! Focuses on strategic direction, risk assessment, and high-level planning.
 
 use crate::unified_types::*;
@@ -23,9 +23,12 @@ impl Strategyboardagent {
             category: AgentCategory::Other,
             agent_type: AgentType::Worker,
             language: AgentLanguage::Rust,
-            description: "Focuses on strategic direction, risk assessment, and high-level planning.".to_string(),
+            description:
+                "Focuses on strategic direction, risk assessment, and high-level planning."
+                    .to_string(),
             role: "Micro Agent".to_string(),
-            purpose: "Focuses on strategic direction, risk assessment, and high-level planning.".to_string(),
+            purpose: "Focuses on strategic direction, risk assessment, and high-level planning."
+                .to_string(),
             state: AgentState::Created,
             health_status: HealthStatus::Unknown,
             parent_id: None,
@@ -48,22 +51,22 @@ impl Strategyboardagent {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Ready;
         Ok(())
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -78,13 +81,13 @@ impl Default for Strategyboardagent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = Strategyboardagent::new();
         assert_eq!(agent.metadata().name, "StrategyBoardAgent");
     }
-    
+
     #[tokio::test]
     async fn test_agent_initialization() {
         let mut agent = Strategyboardagent::new();

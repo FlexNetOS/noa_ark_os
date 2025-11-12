@@ -1,5 +1,5 @@
 //! Board Agents Module
-//! 
+//!
 //! Board-level agents (L2 Reasoning layer)
 //! Strategic intelligence and governance
 
@@ -15,4 +15,3 @@ pub use finance::FinanceAgent;
 pub use legal::LegalAgent;
 pub use operations::OperationsAgent;
 pub use strategy::StrategyAgent;
-

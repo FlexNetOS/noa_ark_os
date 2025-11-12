@@ -1,5 +1,5 @@
 //! Board Digest Agent - Strategic Intelligence Synthesizer
-//! 
+//!
 //! Simplified working version - Phase 3A
 //! Original: 1,345 lines with 100+ structs
 //! This version: ~250 lines, room to grow
@@ -13,7 +13,7 @@ use tokio::sync::RwLock;
 use uuid::Uuid;
 
 /// Board Digest Agent - Knowledge synthesis and strategic intelligence
-/// 
+///
 /// Responsible for:
 /// - Aggregating information from all agent layers
 /// - Synthesizing strategic insights and recommendations
@@ -31,7 +31,7 @@ pub struct DigestAgent {
 pub struct DigestAgentConfig {
     /// Digest generation interval (seconds)
     pub digest_interval: u64,
-    
+
     /// Minimum confidence for insights
     pub confidence_threshold: f64,
 }
@@ -50,10 +50,10 @@ impl Default for DigestAgentConfig {
 struct KnowledgeBase {
     /// Knowledge domains
     domains: HashMap<String, KnowledgeDomain>,
-    
+
     /// Generated insights
     insights: Vec<StrategicInsight>,
-    
+
     /// Synthesis metrics
     metrics: SynthesisMetrics,
 }
@@ -134,7 +134,7 @@ impl DigestAgent {
     pub fn new() -> Self {
         Self::with_config(DigestAgentConfig::default())
     }
-    
+
     /// Create Digest Agent with custom config
     pub fn with_config(config: DigestAgentConfig) -> Self {
         let metadata = AgentMetadata {
@@ -145,9 +145,12 @@ impl DigestAgent {
             category: AgentCategory::Analysis,
             agent_type: AgentType::Master,
             language: AgentLanguage::Rust,
-            description: "Strategic Intelligence Synthesizer - Knowledge synthesis and insights".to_string(),
+            description: "Strategic Intelligence Synthesizer - Knowledge synthesis and insights"
+                .to_string(),
             role: "Board Digest".to_string(),
-            purpose: "Aggregate information and synthesize strategic insights for board-level decisions".to_string(),
+            purpose:
+                "Aggregate information and synthesize strategic insights for board-level decisions"
+                    .to_string(),
             state: AgentState::Created,
             health_status: HealthStatus::Unknown,
             parent_id: None,
@@ -161,9 +164,16 @@ impl DigestAgent {
                 "report-generation".to_string(),
             ],
             tools: vec![],
-            tags: vec!["board".to_string(), "digest".to_string(), "intelligence".to_string()],
+            tags: vec![
+                "board".to_string(),
+                "digest".to_string(),
+                "intelligence".to_string(),
+            ],
             inputs: vec!["agent-reports".to_string(), "system-metrics".to_string()],
-            outputs: vec!["strategic-digest".to_string(), "executive-briefing".to_string()],
+            outputs: vec![
+                "strategic-digest".to_string(),
+                "executive-briefing".to_string(),
+            ],
             dependencies: vec![],
             cpu_min: "1".to_string(),
             ram_min: "1GB".to_string(),
@@ -176,7 +186,7 @@ impl DigestAgent {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
@@ -184,14 +194,14 @@ impl DigestAgent {
             config,
         }
     }
-    
+
     /// Initialize the agent
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Initializing;
-        
+
         // Initialize knowledge domains
         let mut kb = self.knowledge_base.write().await;
-        
+
         kb.domains.insert(
             "strategic".to_string(),
             KnowledgeDomain {
@@ -201,7 +211,7 @@ impl DigestAgent {
                 insights_count: 0,
             },
         );
-        
+
         kb.domains.insert(
             "operational".to_string(),
             KnowledgeDomain {
@@ -211,7 +221,7 @@ impl DigestAgent {
                 insights_count: 0,
             },
         );
-        
+
         kb.domains.insert(
             "financial".to_string(),
             KnowledgeDomain {
@@ -221,31 +231,32 @@ impl DigestAgent {
                 insights_count: 0,
             },
         );
-        
+
         *self.state.write().await = AgentState::Ready;
-        
+
         tracing::info!("Digest Agent initialized successfully");
         Ok(())
     }
-    
+
     /// Start the agent
     pub async fn start(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Running;
-        
+
         tracing::info!("Digest Agent started");
         Ok(())
     }
-    
+
     /// Generate strategic digest
     pub async fn generate_digest(&self, digest_type: DigestType) -> Result<StrategicDigest> {
         let kb = self.knowledge_base.read().await;
-        
+
         // Generate digest based on current knowledge
         let digest = StrategicDigest {
             digest_id: Uuid::new_v4(),
             digest_type,
             title: "Strategic Intelligence Digest".to_string(),
-            executive_summary: "Strategic overview of current organizational state and opportunities".to_string(),
+            executive_summary:
+                "Strategic overview of current organizational state and opportunities".to_string(),
             key_insights: vec![
                 "System performance remains strong with consistent uptime".to_string(),
                 "Agent coordination efficiency has improved significantly".to_string(),
@@ -261,15 +272,15 @@ impl DigestAgent {
             confidence_score: 0.85,
             generated_at: chrono::Utc::now(),
         };
-        
+
         tracing::info!("Strategic digest generated: {}", digest.digest_id);
         Ok(digest)
     }
-    
+
     /// Get digest status
     pub async fn get_status(&self) -> Result<DigestStatus> {
         let kb = self.knowledge_base.read().await;
-        
+
         Ok(DigestStatus {
             active_domains: kb.domains.len(),
             total_insights: kb.metrics.insights_generated,
@@ -278,22 +289,22 @@ impl DigestAgent {
             synthesis_accuracy: kb.metrics.synthesis_accuracy,
         })
     }
-    
+
     /// Add insight to knowledge base
     pub async fn add_insight(&self, insight: StrategicInsight) -> Result<()> {
         let mut kb = self.knowledge_base.write().await;
-        
+
         kb.insights.push(insight);
         kb.metrics.insights_generated += 1;
-        
+
         Ok(())
     }
-    
+
     /// Get metadata
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     /// Get current state
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
@@ -309,41 +320,41 @@ impl Default for DigestAgent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_create_digest_agent() {
         let agent = DigestAgent::new();
         assert_eq!(agent.metadata().name, "Digest Agent");
         assert_eq!(agent.metadata().layer, AgentLayer::L2Reasoning);
     }
-    
+
     #[tokio::test]
     async fn test_initialize() {
         let mut agent = DigestAgent::new();
         agent.initialize().await.unwrap();
-        
+
         let state = agent.state().await;
         assert_eq!(state, AgentState::Ready);
-        
+
         let status = agent.get_status().await.unwrap();
         assert_eq!(status.active_domains, 3);
     }
-    
+
     #[tokio::test]
     async fn test_generate_digest() {
         let mut agent = DigestAgent::new();
         agent.initialize().await.unwrap();
-        
+
         let digest = agent.generate_digest(DigestType::Daily).await.unwrap();
-        
+
         assert!(!digest.key_insights.is_empty());
         assert!(digest.confidence_score > 0.0);
     }
-    
+
     #[tokio::test]
     async fn test_add_insight() {
         let agent = DigestAgent::new();
-        
+
         let insight = StrategicInsight {
             insight_id: Uuid::new_v4(),
             title: "Test Insight".to_string(),
@@ -352,9 +363,9 @@ mod tests {
             confidence: 0.85,
             generated_at: chrono::Utc::now(),
         };
-        
+
         agent.add_insight(insight).await.unwrap();
-        
+
         let status = agent.get_status().await.unwrap();
         assert_eq!(status.total_insights, 1);
     }

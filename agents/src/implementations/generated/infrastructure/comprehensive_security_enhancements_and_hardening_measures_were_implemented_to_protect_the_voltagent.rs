@@ -1,5 +1,5 @@
 //! Comprehensive security enhancements and hardening measures were implemented to protect the VoltAgent - Auto-generated
-//! 
+//!
 //! ['Performs Micro Agent functions']
 
 use crate::unified_types::*;
@@ -8,7 +8,8 @@ use tokio::sync::RwLock;
 use uuid::Uuid;
 
 /// Comprehensive security enhancements and hardening measures were implemented to protect the VoltAgent
-pub struct ComprehensiveSecurityEnhancementsAndHardeningMeasuresWereImplementedToProtectTheVoltagent {
+pub struct ComprehensiveSecurityEnhancementsAndHardeningMeasuresWereImplementedToProtectTheVoltagent
+{
     metadata: AgentMetadata,
     state: RwLock<AgentState>,
 }
@@ -48,28 +49,30 @@ impl ComprehensiveSecurityEnhancementsAndHardeningMeasuresWereImplementedToProte
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Ready;
         Ok(())
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
 }
 
-impl Default for ComprehensiveSecurityEnhancementsAndHardeningMeasuresWereImplementedToProtectTheVoltagent {
+impl Default
+    for ComprehensiveSecurityEnhancementsAndHardeningMeasuresWereImplementedToProtectTheVoltagent
+{
     fn default() -> Self {
         Self::new()
     }
@@ -78,13 +81,13 @@ impl Default for ComprehensiveSecurityEnhancementsAndHardeningMeasuresWereImplem
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = ComprehensiveSecurityEnhancementsAndHardeningMeasuresWereImplementedToProtectTheVoltagent::new();
         assert_eq!(agent.metadata().name, "Comprehensive security enhancements and hardening measures were implemented to protect the VoltAgent");
     }
-    
+
     #[tokio::test]
     async fn test_agent_initialization() {
         let mut agent = ComprehensiveSecurityEnhancementsAndHardeningMeasuresWereImplementedToProtectTheVoltagent::new();

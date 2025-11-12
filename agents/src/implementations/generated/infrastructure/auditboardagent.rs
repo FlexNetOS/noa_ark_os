@@ -1,5 +1,5 @@
 //! AuditBoardAgent - Auto-generated
-//! 
+//!
 //! Responsible for compliance, audit trails, and reporting to external regulators.
 
 use crate::unified_types::*;
@@ -23,9 +23,13 @@ impl Auditboardagent {
             category: AgentCategory::Other,
             agent_type: AgentType::Worker,
             language: AgentLanguage::Rust,
-            description: "Responsible for compliance, audit trails, and reporting to external regulators.".to_string(),
+            description:
+                "Responsible for compliance, audit trails, and reporting to external regulators."
+                    .to_string(),
             role: "Micro Agent".to_string(),
-            purpose: "Responsible for compliance, audit trails, and reporting to external regulators.".to_string(),
+            purpose:
+                "Responsible for compliance, audit trails, and reporting to external regulators."
+                    .to_string(),
             state: AgentState::Created,
             health_status: HealthStatus::Unknown,
             parent_id: None,
@@ -48,22 +52,22 @@ impl Auditboardagent {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Ready;
         Ok(())
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -78,13 +82,13 @@ impl Default for Auditboardagent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = Auditboardagent::new();
         assert_eq!(agent.metadata().name, "AuditBoardAgent");
     }
-    
+
     #[tokio::test]
     async fn test_agent_initialization() {
         let mut agent = Auditboardagent::new();
