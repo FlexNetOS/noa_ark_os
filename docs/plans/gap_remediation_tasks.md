@@ -2,6 +2,17 @@
 
 This document tracks actionable tasks to resolve outstanding gaps and quality issues identified during verification of the NOA ARK OS roadmap implementation.
 
+## Task Overview
+
+- **AGENTOS-1 — Populate Workflow Blueprint Catalog** ([View task](#task-agentos-1))
+- **AGENTOS-2 — Deliver Marketplace Assets & Tooling** ([View task](#task-agentos-2))
+- **AGENTOS-3 — Implement Analytics Pipelines** ([View task](#task-agentos-3))
+- **AGENTOS-4 — Seed Telemetry Storage Samples** ([View task](#task-agentos-4))
+- **AGENTOS-5 — Fix CICD Pipeline Struct Duplication** ([View task](#task-agentos-5))
+- **AGENTOS-6 — Extend GPU Detection Beyond NVIDIA** ([View task](#task-agentos-6))
+
+---
+
 ## 1. Populate Workflow Blueprint Catalog
 
 **Objective:** Stand up a curated library of reusable workflow definitions that contributors can extend without duplicating schemas or discovery logic.
@@ -185,3 +196,35 @@ This document tracks actionable tasks to resolve outstanding gaps and quality is
   - [ ] Establish ecosystem contribution guidelines, reviewer rotation, triage board, and SLAs for incoming submissions.
 
 **Risks & mitigation:** Launch alignment may slip due to upstream blockers → maintain dependency tracker and contingency date; community guidelines adoption risk → run office hours/webinars post-launch.
+
+## Task Details
+
+<a id="task-agentos-1"></a>
+### AGENTOS-1 — Populate Workflow Blueprint Catalog
+
+See [Populate Workflow Blueprint Catalog](#1-populate-workflow-blueprint-catalog) for objectives, success criteria, dependencies, milestones, and risks.
+
+<a id="task-agentos-2"></a>
+### AGENTOS-2 — Deliver Marketplace Assets & Tooling
+
+See [Deliver Marketplace Assets & Tooling](#2-deliver-marketplace-assets--tooling) for objectives, success criteria, dependencies, milestones, and risks.
+
+<a id="task-agentos-3"></a>
+### AGENTOS-3 — Implement Analytics Pipelines
+
+See [Implement Analytics Pipelines](#3-implement-analytics-pipelines) for objectives, success criteria, dependencies, milestones, and risks.
+
+<a id="task-agentos-4"></a>
+### AGENTOS-4 — Seed Telemetry Storage Samples
+
+See [Seed Telemetry Storage Samples](#4-seed-telemetry-storage-samples) for objectives, success criteria, dependencies, milestones, and risks.
+
+<a id="task-agentos-5"></a>
+### AGENTOS-5 — Fix CICD Pipeline Struct Duplication
+
+See [Fix CICD Pipeline Struct Duplication](#5-fix-cicd-pipeline-struct-duplication) for objectives, success criteria, dependencies, milestones, and risks.
+
+<a id="task-agentos-6"></a>
+### AGENTOS-6 — Extend GPU Detection Beyond NVIDIA
+
+See [Extend GPU Detection Beyond NVIDIA](#6-extend-gpu-detection-beyond-nvidia) for objectives, success criteria, dependencies, milestones, and risks.
