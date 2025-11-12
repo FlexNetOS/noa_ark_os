@@ -14,6 +14,7 @@
     "module": "esnext",
     "moduleResolution": "node",
     "resolveJsonModule": true,
+    "baseUrl": "../..",
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
@@ -27,10 +28,10 @@
     ],
     "paths": {
       "@/*": [
-        "./*"
+        "ui/vibe-kanban/*"
       ],
       "@noa-ark/shared-ui/*": [
-        "../shared/src/*"
+        "ui/shared/src/*"
       ],
       "@noa-ark/shared-ui": [
         "../shared/src/index"

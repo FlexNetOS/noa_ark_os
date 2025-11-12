@@ -12,6 +12,8 @@ import { BoardHeader } from "./BoardHeader";
 import { isFeatureEnabled } from "./featureFlags";
 import { readDragData, setDragData } from "./drag-utils";
 
+const COMPLETED_COLUMN_PATTERN = /done|complete|finished/i;
+
 type CardTarget = {
   columnId: string;
   cardId: string;
@@ -44,15 +46,30 @@ export function BoardShell({ state }: BoardShellProps) {
   const [columnDropTarget, setColumnDropTarget] = useState<string | null>(null);
   const [columnCardDropTarget, setColumnCardDropTarget] = useState<string | null>(null);
 
-  const totalCards = useMemo(
-    () => snapshot?.columns.reduce((acc, column) => acc + column.cards.length, 0) ?? 0,
-    [snapshot],
-  );
+  const totalCards = useMemo(() => {
+    if (!snapshot) return 0;
+    return snapshot.columns.reduce((acc, column) => acc + column.cards.length, 0);
+  }, [snapshot]);
+
   const completedCount = useMemo(() => {
-    return snapshot?.columns
+    if (!snapshot) return 0;
+
+    return snapshot.columns.reduce((count, column) => {
+      if (!COMPLETED_COLUMN_PATTERN.test(column.title)) {
+        return count;
+      }
+
+      return count + column.cards.length;
+    }, 0);
+    return (snapshot?.columns ?? [])
       .filter((column) => /done|complete|finished/i.test(column.title))
+      .reduce((count, column) => count + column.cards.length, 0);
       .reduce((count, column) => count + column.cards.length, 0) ?? 0;
   }, [snapshot]);
+
+  const ambientBackdropEnabled = isFeatureEnabled("ambientBackdrop");
+  const boardMetricsEnabled = isFeatureEnabled("boardMetrics");
+  const quickComposerEnabled = isFeatureEnabled("quickComposer");
 
   if (!snapshot) {
     return null;
@@ -160,7 +177,7 @@ export function BoardShell({ state }: BoardShellProps) {
 
   return (
     <div className="relative min-h-screen pb-24">
-      {isFeatureEnabled("ambientBackdrop") && <AmbientBackground />}
+      {ambientBackdropEnabled && <AmbientBackground />}
 
       <div className="relative mx-auto flex max-w-7xl flex-col gap-10 px-6 pt-12">
         <BoardHeader
@@ -171,7 +188,7 @@ export function BoardShell({ state }: BoardShellProps) {
           columnCount={snapshot.columns.length}
           totalCardCount={totalCards}
           completedCount={completedCount}
-          showMetrics={isFeatureEnabled("boardMetrics")}
+          showMetrics={boardMetricsEnabled}
           metrics={snapshot.metrics}
         />
 
@@ -188,7 +205,7 @@ export function BoardShell({ state }: BoardShellProps) {
                   setActiveCard(card);
                   setActiveColumnId(column.id);
                 }}
-                enableComposer={isFeatureEnabled("quickComposer")}
+                enableComposer={quickComposerEnabled}
                 onCardDragStart={(card, event) => handleCardDragStart(column.id, card, event)}
                 onCardDragOver={(cardId, event) => handleCardDragOver(column.id, cardId, event)}
                 onCardDragLeave={(cardId) => handleCardDragLeave(column.id, cardId)}
