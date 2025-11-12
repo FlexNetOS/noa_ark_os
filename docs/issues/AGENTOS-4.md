@@ -10,7 +10,7 @@ Extend runtime controllers to detect host capabilities, adjust workload placemen
 - [ ] Add simulation tests covering heterogeneous hosts and failure cases.
 - [ ] Publish operator documentation for tuning adaptive policies.
 
-## Acceptance criteria
+## Acceptance Criteria
 - Runtime automatically selects compatible workloads per host profile with auditable decisions.
 - Portability guidance updates documentation and CLI feedback in sync.
 - Simulation suite covers at least three heterogeneous scenarios and passes in CI.
@@ -24,3 +24,14 @@ Extend runtime controllers to detect host capabilities, adjust workload placemen
 - Depends on: #101, #102
 - Blocked by: #101, #102
 - Blocks: #106
+- Owner: TBA
+- Priority: P1
+- Status: Proposed
+- Depends on: [AGENTOS-1](../plans/gap_remediation_tasks.md#agentos-1), [AGENTOS-2](../plans/gap_remediation_tasks.md#agentos-2)
+
+## Stakeholder Coordination
+- 2025-11-12: Loop-in sent to Systems Memory Crew (runtime) via systems-memory@noa-ark.example requesting estimation and staffing availability.
+- 2025-11-12: Loop-in sent to Virtual Filesystem Crew (infrastructure) via vfs@noa-ark.example requesting deployment portability staffing.
+
+## Documentation Alignment
+- 2025-11-12: Architecture & Docs Guild (docs@noa-ark.example) notified so roadmap materials can link to this tracking item.
