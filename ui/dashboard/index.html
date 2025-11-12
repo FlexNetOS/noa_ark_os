@@ -97,6 +97,7 @@
         const tbody = document.getElementById('activity-body');
         tbody.innerHTML = '';
         const row = document.createElement('tr');
+        
         // Safely create each cell to avoid XSS
         const tdRequestId = document.createElement('td');
         tdRequestId.textContent = latest.request_id;
@@ -117,6 +118,7 @@
         const tdRecorded = document.createElement('td');
         tdRecorded.textContent = latest.recorded_at;
         row.appendChild(tdRecorded);
+        
         tbody.appendChild(row);
       }
     }
