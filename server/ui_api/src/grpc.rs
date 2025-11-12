@@ -9,7 +9,7 @@ use serde_json::Value as JsonValue;
 use tokio_stream::StreamExt;
 use tonic::{Request, Response, Status};
 
-use crate::schema::{LayoutSlot, PageEnvelope, RealTimeEvent};
+use crate::schema::{PageEnvelope, RealTimeEvent};
 use crate::server::UiApiState;
 use crate::session::SessionBridge;
 
@@ -62,19 +62,20 @@ impl proto::ui_schema_service_server::UiSchemaService for UiSchemaGrpc {
                 .map_err(|_| Status::internal("session poisoned"))?;
             guard
                 .clone()
-                .ok_or(Status::unavailable("streaming disabled"))?
+                .ok_or_else(|| Status::unavailable("streaming disabled"))?
         };
 
         let mut stream = bridge.subscribe();
+        let stream = bridge.subscribe();
         let output = async_stream::try_stream! {
+            tokio::pin!(stream);
             while let Some(event) = stream.next().await {
-                match event {
-                    Ok(event) => {
-                        let mapped = SessionBridge::map_event(event);
-                        yield realtime_to_proto(mapped)?;
-                    }
+                let event = match event {
+                    Ok(event) => SessionBridge::map_event(event),
                     Err(_) => continue,
-                }
+                };
+
+                yield realtime_to_proto(event)?;
             }
         };
 
@@ -83,14 +84,14 @@ impl proto::ui_schema_service_server::UiSchemaService for UiSchemaGrpc {
 }
 
 fn page_envelope_to_proto(envelope: PageEnvelope) -> Result<proto::PageEnvelope, Status> {
-    let metadata = Some(proto::PageMetadata {
+    let metadata = proto::PageMetadata {
         title: envelope.schema.metadata.title,
         description: envelope.schema.metadata.description.unwrap_or_default(),
         tokens_version: envelope.schema.metadata.tokens_version,
         created_at: Some(timestamp_from_str(&envelope.schema.metadata.created_at)?),
         updated_at: Some(timestamp_from_str(&envelope.schema.metadata.updated_at)?),
         accessibility_notes: envelope.schema.metadata.accessibility_notes,
-    });
+    };
 
     let regions = envelope
         .schema
@@ -106,11 +107,15 @@ fn page_envelope_to_proto(envelope: PageEnvelope) -> Result<proto::PageEnvelope,
                         .map(json_to_struct)
                         .transpose()?
                         .unwrap_or_else(empty_struct);
+                .map(|widget| -> Result<proto::WidgetSchema, Status> {
+                    let props = widget.props.map(value_to_struct).transpose()?;
+
                     Ok(proto::WidgetSchema {
                         id: widget.id,
                         kind: format!("{:?}", widget.kind),
                         variant: widget.variant.unwrap_or_default(),
                         props: Some(props),
+                        props,
                     })
                 })
                 .collect::<Result<Vec<_>, Status>>()?;
@@ -122,6 +127,7 @@ fn page_envelope_to_proto(envelope: PageEnvelope) -> Result<proto::PageEnvelope,
                 gap: region.gap.unwrap_or_default(),
                 surface: region.surface.unwrap_or_default(),
                 slot: region.slot.map(slot_to_string).unwrap_or_default(),
+                slot: region.slot.map(|slot| slot.to_string()).unwrap_or_default(),
                 widgets,
             })
         })
@@ -131,7 +137,7 @@ fn page_envelope_to_proto(envelope: PageEnvelope) -> Result<proto::PageEnvelope,
         .realtime
         .into_iter()
         .map(realtime_to_proto)
-        .collect::<Result<Vec<_>, _>>()?;
+        .collect::<Result<Vec<_>, Status>>()?;
 
     let resume_token = envelope
         .resume_token
@@ -144,6 +150,7 @@ fn page_envelope_to_proto(envelope: PageEnvelope) -> Result<proto::PageEnvelope,
                 expires_at: Some(timestamp_from_str(&token.expires_at)?),
             })
         })
+        .map(resume_token_to_proto)
         .transpose()?;
 
     Ok(proto::PageEnvelope {
@@ -151,11 +158,21 @@ fn page_envelope_to_proto(envelope: PageEnvelope) -> Result<proto::PageEnvelope,
             id: envelope.schema.id,
             version: envelope.schema.version,
             kind: envelope.schema.kind,
-            metadata,
+            metadata: Some(metadata),
             regions,
         }),
         realtime,
         resume_token,
+    })
+}
+
+fn resume_token_to_proto(token: crate::schema::ResumeToken) -> Result<proto::ResumeToken, Status> {
+    Ok(proto::ResumeToken {
+        workflow_id: token.workflow_id,
+        stage_id: token.stage_id.unwrap_or_default(),
+        checkpoint: token.checkpoint,
+        issued_at: Some(timestamp_from_str(&token.issued_at)?),
+        expires_at: Some(timestamp_from_str(&token.expires_at)?),
     })
 }
 
@@ -164,6 +181,7 @@ fn realtime_to_proto(event: RealTimeEvent) -> Result<proto::RealTimeEvent, Statu
         event_type: event.event_type,
         workflow_id: event.workflow_id,
         payload: Some(json_to_struct(event.payload)?),
+        payload: Some(value_to_struct(event.payload)?),
         timestamp: Some(timestamp_from_str(&event.timestamp)?),
     })
 }
@@ -172,6 +190,7 @@ fn timestamp_from_str(value: &str) -> Result<Timestamp, Status> {
     let parsed: DateTime<Utc> = value
         .parse()
         .map_err(|_| Status::internal("invalid timestamp"))?;
+
     Ok(Timestamp {
         seconds: parsed.timestamp(),
         nanos: parsed.timestamp_subsec_nanos() as i32,
@@ -179,6 +198,7 @@ fn timestamp_from_str(value: &str) -> Result<Timestamp, Status> {
 }
 
 fn json_to_struct(value: JsonValue) -> Result<Struct, Status> {
+fn value_to_struct(value: JsonValue) -> Result<Struct, Status> {
     match value {
         JsonValue::Object(map) => {
             let fields = map
@@ -187,36 +207,43 @@ fn json_to_struct(value: JsonValue) -> Result<Struct, Status> {
                 .collect::<Result<BTreeMap<_, _>, Status>>()?;
             Ok(Struct { fields })
         }
+                .map(|(key, value)| Ok((key, value_to_prost_value(value)?)))
+                .collect::<Result<BTreeMap<_, _>, Status>>()?;
+            Ok(Struct { fields })
+        }
+        JsonValue::Null => Ok(Struct {
+            fields: BTreeMap::new(),
+        }),
         other => {
             let mut fields = BTreeMap::new();
-            fields.insert("value".to_string(), json_to_value(other)?);
+            fields.insert("value".to_string(), value_to_prost_value(other)?);
             Ok(Struct { fields })
         }
     }
 }
 
-fn json_to_value(value: JsonValue) -> Result<ProstValue, Status> {
+fn value_to_prost_value(value: JsonValue) -> Result<ProstValue, Status> {
     let kind = match value {
         JsonValue::Null => ProstKind::NullValue(0),
-        JsonValue::Bool(b) => ProstKind::BoolValue(b),
-        JsonValue::Number(num) => {
-            let number = num
+        JsonValue::Bool(value) => ProstKind::BoolValue(value),
+        JsonValue::Number(number) => ProstKind::NumberValue(
+            number
                 .as_f64()
-                .ok_or_else(|| Status::internal("invalid number"))?;
-            ProstKind::NumberValue(number)
-        }
-        JsonValue::String(s) => ProstKind::StringValue(s),
-        JsonValue::Array(items) => {
-            let values = items
+                .ok_or_else(|| Status::internal("invalid number"))?,
+        ),
+        JsonValue::String(value) => ProstKind::StringValue(value),
+        JsonValue::Array(values) => {
+            let values = values
                 .into_iter()
-                .map(json_to_value)
-                .collect::<Result<Vec<_>, _>>()?;
+                .map(value_to_prost_value)
+                .collect::<Result<Vec<_>, Status>>()?;
             ProstKind::ListValue(ListValue { values })
         }
         JsonValue::Object(map) => {
             let fields = map
                 .into_iter()
                 .map(|(key, value)| Ok((key, json_to_value(value)?)))
+                .map(|(key, value)| Ok((key, value_to_prost_value(value)?)))
                 .collect::<Result<BTreeMap<_, _>, Status>>()?;
             ProstKind::StructValue(Struct { fields })
         }
@@ -232,5 +259,14 @@ fn slot_to_string(slot: LayoutSlot) -> String {
 fn empty_struct() -> Struct {
     Struct {
         fields: BTreeMap::new(),
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn layout_slot_display() {
+        assert_eq!(LayoutSlot::Header.to_string(), "header");
+        assert_eq!(LayoutSlot::Main.to_string(), "main");
+        assert_eq!(LayoutSlot::Footer.to_string(), "footer");
     }
 }

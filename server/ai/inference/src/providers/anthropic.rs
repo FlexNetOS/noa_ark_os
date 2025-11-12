@@ -1,6 +1,5 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use tracing::info;
 
 use super::Provider;
 use crate::client::{CompletionRequest, CompletionResponse};
@@ -25,6 +24,10 @@ impl AnthropicProvider {
 impl Provider for AnthropicProvider {
     async fn complete(&self, request: CompletionRequest) -> anyhow::Result<CompletionResponse> {
         info!(model = %self.config.model, "anthropic offline completion");
+        tracing::info!(
+            model = self.config.model.as_str(),
+            "anthropic offline completion"
+        );
         Ok(CompletionResponse {
             content: format!("[anthropic:{}]: {}", self.config.model, request.prompt),
             model: self.config.model.clone(),
