@@ -154,3 +154,45 @@ pub fn get_file(path: &str) -> Option<FileDescriptor> {
     let table = FILE_TABLE.lock().unwrap();
     table.get(path).cloned()
 }
+
+/// Move a file to a new destination path.
+pub fn move_file(source: &str, destination: String) -> Result<FileDescriptor, &'static str> {
+    if source == "/" {
+        return Err("cannot_move_root");
+    }
+
+    let mut table = FILE_TABLE.lock().unwrap();
+
+    if !table.contains_key(source) {
+        return Err("source_not_found");
+    }
+
+    if table.contains_key(&destination) && source != destination {
+        return Err("destination_exists");
+    }
+
+    let mut descriptor = table.remove(source).ok_or("source_not_found")?;
+    descriptor.path = destination.clone();
+    table.insert(destination.clone(), descriptor.clone());
+
+    Ok(descriptor)
+}
+
+/// Delete a file from the table.
+pub fn delete_file(path: &str) -> Result<(), &'static str> {
+    if path == "/" {
+        return Err("cannot_delete_root");
+    }
+
+    let mut table = FILE_TABLE.lock().unwrap();
+
+    table.remove(path).ok_or("file_not_found")?;
+
+    Ok(())
+}
+
+/// List all tracked files.
+pub fn list_files() -> Vec<FileDescriptor> {
+    let table = FILE_TABLE.lock().unwrap();
+    table.values().cloned().collect()
+}
