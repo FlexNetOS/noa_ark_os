@@ -69,6 +69,31 @@ HOOK
     fi
 }
 
+disable_yaml_sources() {
+    local file="$1"
+    if [ ! -f "$file" ]; then
+        return
+    fi
+    if ! grep -qE 'esm\\.ubuntu\\.com' "$file"; then
+        return
+    fi
+    if grep -qE '^[[:space:]]*Enabled:[[:space:]]*(no|false)\b' "$file"; then
+        INFO "ESM entries already disabled in $file"
+        return
+    fi
+
+    backup_file "$file"
+    INFO "Disabling ESM entries in $file"
+
+    if grep -qE '^[[:space:]]*Enabled:' "$file"; then
+        sed -i -E 's/^([[:space:]]*Enabled:[[:space:]]*)(yes|true)\b/\1no/I' "$file"
+    else
+        printf '\n# disabled-by-noa\nEnabled: no\n' >> "$file"
+    fi
+
+    OK "ESM endpoints disabled in $(basename "$file")"
+}
+
 main() {
     require_root "$@"
 
@@ -78,6 +103,15 @@ main() {
         if [ -e "$path" ]; then
             if grep -qE 'esm\.ubuntu\.com' "$path"; then
                 comment_esm_entries "$path"
+                changed=1
+            fi
+        fi
+    done
+
+    for path in /etc/apt/sources.list.d/*.sources; do
+        if [ -e "$path" ]; then
+            if grep -qE 'esm\.ubuntu\.com' "$path"; then
+                disable_yaml_sources "$path"
                 changed=1
             fi
         fi
