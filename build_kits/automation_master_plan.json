@@ -1,0 +1,47 @@
+[
+  {
+    "code": "AMP-BOOT-01",
+    "title": "Automate Quickstart bootstrapper",
+    "theme": "Quickstart bootstrap automation",
+    "description": "Automate the Quickstart bootstrap orchestrator so provisioning, configuration seeding, and telemetry export execute without manual intervention.",
+    "priority": "P0",
+    "status": "Proposed",
+    "depends_on": [],
+    "acceptance_criteria": [
+      "Clean-room bootstrap completes without manual actions.",
+      "Telemetry exports are ingested into monitoring dashboards for every run."
+    ]
+  },
+  {
+    "code": "AMP-MREG-02",
+    "title": "Implement model registry updater automation",
+    "theme": "Model lifecycle automation",
+    "description": "Deliver a scheduled model registry updater that reconciles metadata changes, validates schemas, and emits change events to downstream consumers.",
+    "priority": "P0",
+    "status": "Proposed",
+    "depends_on": [
+      "AMP-BOOT-01"
+    ],
+    "acceptance_criteria": [
+      "Registry updates run on schedule without operator input.",
+      "Invalid metadata is quarantined with actionable alerts.",
+      "Change events deliver to subscribers within one minute."
+    ]
+  },
+  {
+    "code": "AMP-GHCLI-03",
+    "title": "Bundle offline GitHub CLI installer",
+    "theme": "Developer toolchain resilience",
+    "description": "Ship an offline-ready GitHub CLI bundle with checksum verification, automated configuration, and diagnostics suited for air-gapped deployments.",
+    "priority": "P0",
+    "status": "Proposed",
+    "depends_on": [
+      "AMP-BOOT-01"
+    ],
+    "acceptance_criteria": [
+      "Installer completes on air-gapped hosts without network access.",
+      "Diagnostics confirm CLI functionality against internal mirrors.",
+      "Checksum validation blocks tampered artifacts."
+    ]
+  }
+]
