@@ -16,6 +16,8 @@ This document tracks actionable tasks to resolve outstanding gaps and quality is
 
 ## 1. Populate Workflow Blueprint Catalog
 
+**Suggested task:** [View task](#task-agentos-1)
+
 **Objective:** Stand up a curated library of reusable workflow definitions that contributors can extend without duplicating schemas or discovery logic.
 
 **Success criteria:**
@@ -47,6 +49,8 @@ This document tracks actionable tasks to resolve outstanding gaps and quality is
 
 ## 2. Deliver Marketplace Assets & Tooling
 
+**Suggested task:** [View task](#task-agentos-2)
+
 **Objective:** Provide a discoverable marketplace catalog and CLI tooling so partners can package, validate, and publish assets safely.
 
 **Success criteria:**
@@ -74,6 +78,8 @@ This document tracks actionable tasks to resolve outstanding gaps and quality is
 ---
 
 ## 3. Implement Analytics Pipelines
+
+**Suggested task:** [View task](#task-agentos-3)
 
 **Objective:** Capture core CRC, deployment, and agent efficiency metrics with automated ingestion and dashboard surfacing.
 
@@ -103,6 +109,8 @@ This document tracks actionable tasks to resolve outstanding gaps and quality is
 
 ## 4. Seed Telemetry Storage Samples
 
+**Suggested task:** [View task](#task-agentos-4)
+
 **Objective:** Provide realistic telemetry datasets and automation so teams can validate observability integrations quickly.
 
 **Success criteria:**
@@ -128,6 +136,8 @@ This document tracks actionable tasks to resolve outstanding gaps and quality is
 
 ## 5. Fix CICD Pipeline Struct Duplication
 
+**Suggested task:** [View task](#task-agentos-5)
+
 **Objective:** Remove redundant struct definitions in the CICD crate and formalize serialization contracts.
 
 **Success criteria:**
@@ -151,6 +161,8 @@ This document tracks actionable tasks to resolve outstanding gaps and quality is
 ---
 
 ## 6. Extend GPU Detection Beyond NVIDIA
+
+**Suggested task:** [View task](#task-agentos-6)
 
 **Objective:** Expand hardware detection to produce normalized capability descriptors for AMD, Intel, and Apple GPUs.
 
@@ -176,6 +188,8 @@ This document tracks actionable tasks to resolve outstanding gaps and quality is
 ---
 
 ## 7. Deliver Value-Add Ecosystem Content
+
+**Suggested task:** [View task](#task-agentos-7)
 
 **Objective:** Launch a cohesive ecosystem release bundling blueprints, marketplace assets, and analytics resources with clear community pathways.
 
