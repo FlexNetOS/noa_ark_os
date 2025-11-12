@@ -74,4 +74,4 @@ kernel_hooks:
   - <string>                  # List of kernel hook identifiers (see examples above)
 ui_affordances:
   - <string>                  # List of UI features or surfaces provided
-- Use `docs/community/third-party-blueprints.md` for contribution guidelines and review policies.
+- Use [`/docs/community/third-party-blueprints.md`](../../docs/community/third-party-blueprints.md) for contribution guidelines and review policies.
