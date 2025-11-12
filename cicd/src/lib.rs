@@ -261,6 +261,9 @@ impl CICDSystem {
         Ok(id)
     }
 
+        Ok(id)
+    }
+
     pub fn trigger_doc_refresh_pipeline(
         &self,
         commit_sha: String,
