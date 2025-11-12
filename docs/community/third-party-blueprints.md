@@ -57,6 +57,70 @@ For complete examples, refer to the [Blueprint Catalog](../../workflow/blueprint
 - **Human Review:** Workflow maintainers verify design, telemetry quality, and compliance posture within five business days.
 - **Publication:** Approved blueprints receive a kernel-signed catalog entry and are surfaced in the UI with the `Third-Party` badge.
 
+## Blueprint Manifest Schema
+
+Each blueprint submission **must** include a `blueprint.yaml` file describing its metadata, configuration, and integration points. The expected schema is as follows:
+
+```yaml
+# blueprint.yaml
+name: <string>                # Unique identifier for the blueprint (e.g., "ci_cd/continuous-assurance")
+display_name: <string>        # Human-readable name for UI display
+description: <string>         # Brief summary of the blueprint's purpose
+category: <string>            # Category (e.g., "CI/CD", "Data Processing", "Agent Swarms")
+version: <string>             # Semantic version (e.g., "1.0.0")
+authors:
+  - name: <string>
+    contact: <string>         # (optional) Email or handle
+inputs:
+  - key: <string>             # Input parameter name
+    type: <string>            # Data type (e.g., string, int, bool, enum)
+    required: <bool>
+    description: <string>
+dependencies:
+  - <string>                  # List of required external systems or services
+kernel_hooks:
+  - <string>                  # List of kernel hook identifiers
+ui_affordances:
+  - <string>                  # List of UI features or surfaces provided
+```
+
+**Example:**
+
+```yaml
+# blueprint.yaml
+name: monitoring/observability-stack
+display_name: Observability Stack Blueprint
+description: Comprehensive monitoring and alerting pipeline with dashboards and SLO tracking
+category: Monitoring
+version: 1.2.0
+authors:
+  - name: Acme Monitoring Inc.
+    contact: support@acme-monitoring.io
+inputs:
+  - key: retention_days
+    type: int
+    required: true
+    description: Number of days to retain metrics and logs
+  - key: alert_channels
+    type: enum
+    required: false
+    description: Notification channels for critical alerts (slack, email, pagerduty)
+dependencies:
+  - prometheus>=2.40
+  - grafana>=9.0
+  - alertmanager>=0.25
+kernel_hooks:
+  - metrics:scrape-targets
+  - alerts:routing-rules
+  - dashboards:template-loader
+ui_affordances:
+  - Metrics explorer with query builder
+  - Alert management console
+  - SLO compliance tracker
+```
+
+For additional examples and detailed explanations of kernel hooks and UI affordances, refer to `workflow/blueprints/README.md`.
+
 ## Maintenance Expectations
 
 - Keep manifests and documentation current with each release; version mismatches trigger catalog quarantine.
