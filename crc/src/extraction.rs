@@ -66,7 +66,14 @@ impl ArtifactKind {
 
 /// Prepare an artifact for processing by extracting supported archives into the
 /// CRC workspace. Non-archive directories are passed through unchanged.
-pub async fn prepare_artifact_for_processing(path: PathBuf) -> Result<PreparedArtifact> {
+///
+/// # Arguments
+/// * `path` - Path to the artifact to prepare
+/// * `extraction_root` - Optional custom extraction root directory. If None, defaults to "crc/temp/extracts"
+pub async fn prepare_artifact_for_processing(
+    path: PathBuf,
+    extraction_root: Option<PathBuf>,
+) -> Result<PreparedArtifact> {
     if path.is_dir() {
         debug!("Bypassing extraction for directory {}", path.display());
         return Ok(PreparedArtifact {
@@ -89,7 +96,8 @@ pub async fn prepare_artifact_for_processing(path: PathBuf) -> Result<PreparedAr
         path.display()
     );
 
-    let extracts_root = Path::new("crc").join("temp").join("extracts");
+    let extracts_root = extraction_root
+        .unwrap_or_else(|| Path::new("crc").join("temp").join("extracts"));
     fs::create_dir_all(&extracts_root).await?;
 
     let extraction_dir = extracts_root.join(Uuid::new_v4().to_string());
