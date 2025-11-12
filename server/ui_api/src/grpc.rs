@@ -67,6 +67,7 @@ impl proto::ui_schema_service_server::UiSchemaService for UiSchemaGrpc {
 
         let mut stream = bridge.subscribe();
         let output = async_stream::try_stream! {
+            let mut stream = bridge.subscribe();
             tokio::pin!(stream);
             while let Some(event) = stream.next().await {
                 let event = match event {
@@ -100,6 +101,12 @@ fn page_envelope_to_proto(envelope: PageEnvelope) -> Result<proto::PageEnvelope,
             let widgets = region
                 .widgets
                 .into_iter()
+                .map(|widget| -> Result<proto::WidgetSchema, Status> {
+                    let props = widget
+                        .props
+                        .map(json_to_struct)
+                        .transpose()?
+                        .unwrap_or_default();
                 .map(|widget| {
                     let props = widget
                         .props
@@ -136,6 +143,16 @@ fn page_envelope_to_proto(envelope: PageEnvelope) -> Result<proto::PageEnvelope,
 
     let resume_token = envelope
         .resume_token
+        .map(|token| -> Result<proto::ResumeToken, Status> {
+        .map(|token| -> Result<_, Status> {
+            Ok(proto::ResumeToken {
+                workflow_id: token.workflow_id,
+                stage_id: token.stage_id.unwrap_or_default(),
+                checkpoint: token.checkpoint,
+                issued_at: Some(timestamp_from_str(&token.issued_at)?),
+                expires_at: Some(timestamp_from_str(&token.expires_at)?),
+            })
+        })
         .map(resume_token_to_proto)
         .transpose()?;
 
@@ -182,6 +199,12 @@ fn timestamp_from_str(value: &str) -> Result<Timestamp, Status> {
     })
 }
 
+fn slot_to_string(slot: LayoutSlot) -> String {
+    slot.to_string()
+}
+
+fn json_to_struct(value: JsonValue) -> Result<Struct, Status> {
+fn json_to_struct(value: JsonValue) -> Result<Struct, Status> {
 fn value_to_struct(value: JsonValue) -> Result<Struct, Status> {
     match value {
         JsonValue::Object(map) => {
@@ -215,6 +238,7 @@ fn value_to_prost_value(value: JsonValue) -> Result<ProstValue, Status> {
         JsonValue::Array(values) => {
             let values = values
                 .into_iter()
+                .map(json_to_value)
                 .map(value_to_prost_value)
                 .collect::<Result<Vec<_>, Status>>()?;
             ProstKind::ListValue(ListValue { values })

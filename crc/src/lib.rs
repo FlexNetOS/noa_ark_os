@@ -87,6 +87,11 @@ pub enum CRCState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OriginalArtifact {
+    pub path: PathBuf,
+    pub archive_type: Option<String>,
+    pub size: Option<u64>,
+    pub extracted_path: Option<PathBuf>,
 /// Represents the original archive file associated with a code drop in the CRC system.
 ///
 /// This struct is used to track the original artifact (such as a compressed archive or source bundle)

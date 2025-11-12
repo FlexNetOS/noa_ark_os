@@ -32,6 +32,11 @@ pub enum LayoutSlot {
 
 impl fmt::Display for LayoutSlot {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            LayoutSlot::Header => write!(f, "Header"),
+            LayoutSlot::Main => write!(f, "Main"),
+            LayoutSlot::Footer => write!(f, "Footer"),
+        }
         let label = match self {
             LayoutSlot::Header => "header",
             LayoutSlot::Main => "main",
