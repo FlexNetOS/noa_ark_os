@@ -4,6 +4,24 @@ Multi-layered AI agent system with hive mind coordination, swarm deployments, an
 
 ## Architecture
 
+### 5-Layer Agent Hierarchy
+
+NOA ARK OS uses a hierarchical 5-layer architecture for organizing agents, from strategic governance to infrastructure tasks:
+
+| Layer | Alternative Name | Description | Examples |
+|-------|-----------------|-------------|----------|
+| **L1Autonomy** | Executive | Root CECCA, Constitutional authority | CECCA, Constitutional Oversight |
+| **L2Reasoning** | Board | Board decision-making | Board agents, Strategic Planning |
+| **L3Orchestration** | Stack-Chief | Chief Commanders, Orchestrators | Stack Chiefs, Workflow Coordinators |
+| **L4Operations** | Specialist | Domain specialists, Workers | Code agents, Security specialists |
+| **L5Infrastructure** | Micro | Micro agents, Infrastructure tasks | Utility agents, Monitoring |
+
+**Escalation Flow**: Agents escalate decisions upward (L5 → L4 → L3 → L2 → L1) when tasks exceed their authority level or require higher-level coordination.
+
+**Historical Note**: The L1-L5 naming provides a clearer numerical hierarchy while maintaining backward compatibility with the original organizational names (Executive, Board, Stack-Chief, Specialist, Micro).
+
+### Component Structure
+
 ```
 agents/
 ├── factory/           # Agent creation and management

@@ -20,6 +20,7 @@ pub mod process;
 pub mod runtime;
 pub mod security;
 pub mod utils;
+pub mod time;
 
 /// Core OS version
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -33,12 +34,12 @@ pub fn init() -> Result<capabilities::KernelHandle, kernel::KernelError> {
 
     // Initialize subsystems
     kernel::init()?;
-    memory::init()?;
-    process::init()?;
-    ipc::init()?;
-    fs::init()?;
-    security::init()?;
-    gateway::init().map_err(|_| "gateway initialization failed")?;
+    memory::init().map_err(|e| kernel::KernelError::Init(e.to_string()))?;
+    process::init().map_err(|e| kernel::KernelError::Init(e.to_string()))?;
+    ipc::init().map_err(|e| kernel::KernelError::Init(e.to_string()))?;
+    fs::init().map_err(|e| kernel::KernelError::Init(e.to_string()))?;
+    security::init().map_err(|e| kernel::KernelError::Init(e.to_string()))?;
+    gateway::init().map_err(|_| kernel::KernelError::Init("gateway initialization failed".to_string()))?;
 
     println!("Core OS initialized successfully");
     Ok(handle)

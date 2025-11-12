@@ -1,6 +1,7 @@
 //! Security subsystem
 
 use crate::utils::{current_timestamp_millis, simple_hash};
+use crate::time::current_timestamp_millis;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -198,6 +199,17 @@ fn next_operation_id() -> String {
     format!("op-{}-{}", timestamp, counter)
 }
 
+fn simple_hash(value: &str) -> String {
+    const OFFSET_BASIS: u64 = 14695981039346656037;
+    const FNV_PRIME: u64 = 1099511628211;
+
+    let mut hash = OFFSET_BASIS;
+    for byte in value.as_bytes() {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(FNV_PRIME);
+    }
+
+    format!("{:016x}", hash)
 lazy_static::lazy_static! {
     static ref USER_TABLE: Arc<Mutex<HashMap<UserId, User>>> =
         Arc::new(Mutex::new(HashMap::new()));
