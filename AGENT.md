@@ -83,7 +83,7 @@ Grounded in the current repository layout:
 agents/              # Orchestrators, planners, worker runtimes, generated gateway agents
 ai/                  # AI engine integrations, llama.cpp bindings, model control
 apps/                # System applications and UI frameworks
-archive/             # Compressed superseded assets + ledger
+crc/archive/         # Compressed superseded assets + ledger
 cicd/                # CI/CD orchestration, pipelines, deployment assets
 core/                # Kernel/core OS services (process, memory, IPC, security)
 crc/                 # Continuous ReCode (ingest, DAGs, transforms, sandboxes)
