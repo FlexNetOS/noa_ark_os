@@ -1,5 +1,31 @@
-import mitt, { Emitter } from "mitt";
 import { PageEnvelope, RealTimeEvent, ResumeToken } from "../schema";
+
+class EventEmitter<Events extends Record<string, unknown>> {
+  private readonly listeners = new Map<keyof Events, Set<(value: unknown) => void>>();
+
+  emit<EventName extends keyof Events>(event: EventName, value: Events[EventName]): void {
+    const handlers = this.listeners.get(event);
+    if (!handlers) return;
+    for (const handler of handlers) {
+      (handler as (value: Events[EventName]) => void)(value);
+    }
+  }
+
+  on<EventName extends keyof Events>(event: EventName, handler: (value: Events[EventName]) => void): void {
+    const handlers = this.listeners.get(event) ?? new Set();
+    handlers.add(handler as (value: unknown) => void);
+    this.listeners.set(event, handlers);
+  }
+
+  off<EventName extends keyof Events>(event: EventName, handler: (value: Events[EventName]) => void): void {
+    const handlers = this.listeners.get(event);
+    if (!handlers) return;
+    handlers.delete(handler as (value: unknown) => void);
+    if (!handlers.size) {
+      this.listeners.delete(event);
+    }
+  }
+}
 
 type Events = {
   "workflow:update": RealTimeEvent;
@@ -15,7 +41,7 @@ export interface SessionContinuityOptions {
 
 export class SessionContinuityClient {
   private ws?: WebSocket;
-  private readonly emitter: Emitter<Events> = mitt<Events>();
+  private readonly emitter = new EventEmitter<Events>();
   constructor(private readonly options: SessionContinuityOptions) {}
 
   connectWebSocket(): void {
@@ -54,11 +80,11 @@ export class SessionContinuityClient {
   }
 
   on<EventName extends keyof Events>(event: EventName, handler: (value: Events[EventName]) => void) {
-    this.emitter.on(event, handler as any);
+    this.emitter.on(event, handler);
   }
 
   off<EventName extends keyof Events>(event: EventName, handler: (value: Events[EventName]) => void) {
-    this.emitter.off(event, handler as any);
+    this.emitter.off(event, handler);
   }
 }
 
