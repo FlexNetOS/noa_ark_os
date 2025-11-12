@@ -1,7 +1,7 @@
 # AGENTOS-6 — Launch value-add ecosystem features
 
 **Labels:** ecosystem, release, partner-program
-Priority: P1
+**Priority:** P1
 Depends on: AGENTOS-3, AGENTOS-4, AGENTOS-5
 
 ## Acceptance Criteria
