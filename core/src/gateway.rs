@@ -1570,7 +1570,6 @@ impl Gateway {
     }
 
     /// Establish an explicit connection if the policy allows it.
-    /// Establish an explicit connection if the policy allows it.
     pub fn connect(&self, connector_id: &str) -> Result<(), GatewayError> {
         let mut connectors = self.connectors_write()?;
         let record = connectors
