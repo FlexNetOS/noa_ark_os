@@ -100,6 +100,9 @@ server/tools/rustup-portable/
 server/data/
 crc/temp/
 crc/archive/
+crc/crc/archive/
+crc/crc/temp/
+crc/storage/
 crc/sandboxes/*/active/
 crc/drop-in/incoming/stale/
 crc/drop-in/incoming/forks/*/
