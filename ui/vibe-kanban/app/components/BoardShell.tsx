@@ -36,10 +36,6 @@ export function BoardShell({ state }: BoardShellProps) {
     setProjectName,
   } = state;
 
-  if (!snapshot) {
-    return null;
-  }
-
   const [activeCard, setActiveCard] = useState<VibeCard | null>(null);
   const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
   const [draggingCardId, setDraggingCardId] = useState<string | null>(null);
@@ -49,14 +45,18 @@ export function BoardShell({ state }: BoardShellProps) {
   const [columnCardDropTarget, setColumnCardDropTarget] = useState<string | null>(null);
 
   const totalCards = useMemo(
-    () => snapshot.columns.reduce((acc, column) => acc + column.cards.length, 0),
-    [snapshot.columns]
+    () => snapshot?.columns.reduce((acc, column) => acc + column.cards.length, 0) ?? 0,
+    [snapshot]
   );
   const completedCount = useMemo(() => {
-    return snapshot.columns
+    return snapshot?.columns
       .filter((column) => /done|complete|finished/i.test(column.title))
-      .reduce((count, column) => count + column.cards.length, 0);
-  }, [snapshot.columns]);
+      .reduce((count, column) => count + column.cards.length, 0) ?? 0;
+  }, [snapshot]);
+
+  if (!snapshot) {
+    return null;
+  }
 
   const handleCardDragStart = (columnId: string, card: VibeCard, event: ReactDragEvent<HTMLButtonElement>) => {
     setDragData(event, { type: "card", columnId, cardId: card.id });

@@ -156,6 +156,13 @@ cargo test --workspace
 
 See [Getting Started Guide](docs/GETTING_STARTED.md) for detailed instructions.
 
+## AI Assist for Kanban
+
+- The Vibe Kanban app now includes an **AI** button on every card that assembles an engineer-ready implementation prompt.
+- Configure providers with `AI_PROVIDER` and related environment variables as documented in [`docs/AI_PROVIDER_CONFIG.md`](docs/AI_PROVIDER_CONFIG.md).
+- The button posts to `/api/ai/prompt`, logs each request in SQLite, and surfaces copy/preview actions inside the card.
+- Regenerate roadmap build kits via `pnpm export:roadmap` (see [`docs/README_BUILD_KITS.md`](docs/README_BUILD_KITS.md)).
+
 ## Project Structure
 
 ```
