@@ -201,22 +201,22 @@ Deliver a constrained, single-host deployment profile that keeps the complete st
 ## Unified UI/UX Shell & Interaction Model
 Present a cohesive operator experience across desktop, web, and terminal surfaces that reuses the same interaction vocabulary.
 **Suggested task**
-- Ship unified multi-surface UI shell — [View task](#task-ui-shell)
+- Ship unified multi-surface UI shell — https://github.com/noa-ark/noa_ark_os/issues/103
 
 ## Adaptive Runtime & Portability Enhancements
 Add runtime intelligence to detect host capabilities, tune workloads, and keep deployments portable across infrastructure classes.
 **Suggested task**
-- Implement adaptive runtime orchestration — [View task](#task-adaptive-runtime)
+- Implement adaptive runtime orchestration — https://github.com/noa-ark/noa_ark_os/issues/104
 
 ## Advanced Gateway & Observability
 Upgrade ingress, policy, and telemetry flows so operators gain real-time insight and can enforce controls without friction.
 **Suggested task**
-- Develop advanced gateway with observability — [View task](#task-gateway-observability)
+- Develop advanced gateway with observability — https://github.com/noa-ark/noa_ark_os/issues/105
 
 ## Value-Added Service Ecosystem
 Layer differentiated services and packaged workflows on top of the hardened core to accelerate customer value delivery.
 **Suggested task**
-- Launch value-add ecosystem features — [View task](#task-value-ecosystem)
+- Launch value-add ecosystem features — https://github.com/noa-ark/noa_ark_os/issues/106
 
 ## Task Details
 
@@ -248,7 +248,7 @@ Layer differentiated services and packaged workflows on top of the hardened core
 ### AGENTOS-2 — Design single-host AgentOS server profile
 - Owner: TBA
 - Priority: P0
-- Status: Proposed
+- Status: Processing
 - Depends on: None
 
 ### <a id="task-single-host"></a>AGENTOS-2 — Design single-host AgentOS server profile
@@ -277,7 +277,7 @@ Layer differentiated services and packaged workflows on top of the hardened core
 ### AGENTOS-3 — Ship unified multi-surface UI shell
 - Owner: TBA
 - Priority: P0
-- Status: Proposed
+- Status: Processing
 - Depends on: AGENTOS-1
 
 ### <a id="task-ui-shell"></a>AGENTOS-3 — Ship unified multi-surface UI shell
@@ -306,7 +306,7 @@ Layer differentiated services and packaged workflows on top of the hardened core
 ### AGENTOS-4 — Implement adaptive runtime orchestration
 - Owner: TBA
 - Priority: P1
-- Status: Proposed
+- Status: Processing
 - Depends on: AGENTOS-2
 - Tracking: [Internal issue stub](../issues/AGENTOS-3-unified-ui-shell.md) _(replace anchor with external URL when published)_
 
@@ -336,7 +336,7 @@ Layer differentiated services and packaged workflows on top of the hardened core
 ### AGENTOS-5 — Develop advanced gateway with observability
 - Owner: TBA
 - Priority: P1
-- Status: Proposed
+- Status: Processing
 - Depends on: AGENTOS-1, AGENTOS-2
 
 ### <a id="task-gateway-observability"></a>AGENTOS-5 — Develop advanced gateway with observability
@@ -365,7 +365,7 @@ Layer differentiated services and packaged workflows on top of the hardened core
 ### AGENTOS-6 — Launch value-add ecosystem features
 - Owner: TBA
 - Priority: P1
-- Status: Proposed
+- Status: Processing
 - Depends on: AGENTOS-2
 
 ### <a id="task-value-ecosystem"></a>AGENTOS-6 — Launch value-add ecosystem features
@@ -390,7 +390,7 @@ Layer differentiated services and packaged workflows on top of the hardened core
 - Status: Processing
 - Owner: TBA
 - Priority: P1
-- Status: Proposed
+- Status: Processing
 - Depends on: AGENTOS-3, AGENTOS-4, AGENTOS-5
 
 Roadmap alignment: This sequence locks platform control through the kernel-first graph, delivers a resilient single-host deployment, unifies user experience, adds intelligent runtime and gateway ingress, and culminates in differentiated services layered on the hardened foundation for consistent portability.

@@ -17,6 +17,13 @@ Extend runtime controllers to detect host capabilities, adjust workload placemen
 - Adaptive controls remain configurable via the single-host profile without manual patching.
 
 ## Meta
+- Issue: https://github.com/noa-ark/noa_ark_os/issues/104
+- Owner: codex
+- Priority: P1
+- Status: Processing
+- Depends on: #101, #102
+- Blocked by: #101, #102
+- Blocks: #106
 - Owner: TBA
 - Priority: P1
 - Status: Proposed
