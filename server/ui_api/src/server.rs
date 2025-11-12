@@ -56,6 +56,12 @@ impl UiApiState {
     pub fn new() -> Self {
         let drop_registry: Arc<dyn DropRegistry> = Arc::new(CrcDropRegistry::default());
         
+        // Use environment variable if available, otherwise fall back to relative path.
+        // The relative path is resolved from the current working directory when the process starts.
+        // Set NOA_DROP_ROOT environment variable to specify an absolute path for production.
+        let drop_root = std::env::var("NOA_DROP_ROOT")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| PathBuf::from("crc/drop-in/incoming"));
         // Use environment variable or absolute path to avoid working directory dependency
         let drop_root = std::env::var("NOA_DROP_ROOT")
             .ok()
@@ -324,14 +330,48 @@ fn parse_drop_type(value: &str) -> Option<(SourceType, &'static str)> {
 
 fn sanitize_file_name(file_name: Option<&str>) -> String {
     file_name
-        .and_then(|name| Path::new(name).file_name().and_then(|value| value.to_str()))
         .filter(|name| !name.is_empty())
+        .and_then(|name| Path::new(name).file_name().and_then(|value| value.to_str()))
+        .filter(|name| is_valid_filename(name))
+        .map(|name| name.to_string())
         .filter(|name| {
             // Extra safety: reject special directory names
             !name.is_empty() && *name != "." && *name != ".."
         })
             *name != "." && *name != ".."
         .unwrap_or_else(|| format!("upload-{}.bin", Uuid::new_v4()))
+}
+
+fn is_valid_filename(name: &str) -> bool {
+    // Reject filenames containing path separators
+    if name.contains('/') || name.contains('\\') {
+        return false;
+    }
+    
+    // Reject filenames with control characters (including null bytes)
+    if name.chars().any(|c| c.is_control()) {
+        return false;
+    }
+    
+    // Reject special path components
+    if name == "." || name == ".." {
+        return false;
+    }
+
+    // Reject characters forbidden in Windows filenames for cross-platform safety
+    #[cfg(windows)]
+    {
+        if name.chars().any(|c| matches!(c, '<' | '>' | ':' | '"' | '|' | '?' | '*')) {
+            return false;
+        }
+    }
+    #[cfg(not(windows))]
+    {
+        if name.chars().any(|c| matches!(c, '<' | '>' | '"' | '|' | '?' | '*')) {
+            return false;
+        }
+    }
+    true
 }
 
 fn format_crc_state(state: &CRCState) -> String {
@@ -344,6 +384,17 @@ fn format_crc_state(state: &CRCState) -> String {
 async fn handle_websocket(mut socket: WebSocket, bridge: SessionBridge) {
     let mut events = bridge.subscribe();
     while let Some(event) = events.next().await {
+        match event.map(SessionBridge::map_event) {
+            Ok(event) => match serde_json::to_string(&event) {
+                Ok(payload) => {
+                    if socket.send(Message::Text(payload)).await.is_err() {
+                        break;
+                    }
+                }
+                Err(error) => {
+                    let _ = socket
+                        .send(Message::Text(format!("{{\"error\":\"{}\"}}", error)))
+                        .await;
         let Ok(event) = event.map(SessionBridge::map_event) else {
             continue;
         };
@@ -353,12 +404,8 @@ async fn handle_websocket(mut socket: WebSocket, bridge: SessionBridge) {
                 if socket.send(Message::Text(payload)).await.is_err() {
                     break;
                 }
-            }
-            Err(error) => {
-                let _ = socket
-                    .send(Message::Text(format!("{{\"error\":\"{}\"}}", error)))
-                    .await;
-            }
+            },
+            Err(_) => continue,
         }
     }
 }
@@ -564,6 +611,97 @@ mod tests {
         assert!(error.message.contains("failed to register drop"));
     }
 
+    #[test]
+    fn sanitize_file_name_accepts_valid_names() {
+        assert_eq!(sanitize_file_name(Some("example.txt")), "example.txt");
+        assert_eq!(sanitize_file_name(Some("my-file_123.zip")), "my-file_123.zip");
+        assert_eq!(sanitize_file_name(Some("Document (1).pdf")), "Document (1).pdf");
+    }
+
+    #[test]
+    fn sanitize_file_name_rejects_path_traversal() {
+        // Path traversal attempts should be rejected
+        let result = sanitize_file_name(Some("../../etc/passwd"));
+        assert!(result.starts_with("upload-"));
+        assert!(result.ends_with(".bin"));
+        
+        let result = sanitize_file_name(Some("..\\windows\\system32"));
+        assert!(result.starts_with("upload-"));
+        assert!(result.ends_with(".bin"));
+    }
+
+    #[test]
+    fn sanitize_file_name_rejects_absolute_paths() {
+        // Absolute paths should be rejected
+        let result = sanitize_file_name(Some("/etc/passwd"));
+        assert!(result.starts_with("upload-"));
+        assert!(result.ends_with(".bin"));
+        
+        let result = sanitize_file_name(Some("C:\\Windows\\System32"));
+        assert!(result.starts_with("upload-"));
+        assert!(result.ends_with(".bin"));
+    }
+
+    #[test]
+    fn sanitize_file_name_rejects_path_separators() {
+        // Any filename with path separators should be rejected
+        let result = sanitize_file_name(Some("file/name.txt"));
+        assert!(result.starts_with("upload-"));
+        assert!(result.ends_with(".bin"));
+        
+        let result = sanitize_file_name(Some("file\\name.txt"));
+        assert!(result.starts_with("upload-"));
+        assert!(result.ends_with(".bin"));
+    }
+
+    #[test]
+    fn sanitize_file_name_rejects_null_bytes() {
+        // Null bytes should be rejected
+        let result = sanitize_file_name(Some("file\0name.txt"));
+        assert!(result.starts_with("upload-"));
+        assert!(result.ends_with(".bin"));
+    }
+
+    #[test]
+    fn sanitize_file_name_rejects_control_characters() {
+        // Control characters should be rejected
+        let result = sanitize_file_name(Some("file\nname.txt"));
+        assert!(result.starts_with("upload-"));
+        assert!(result.ends_with(".bin"));
+        
+        let result = sanitize_file_name(Some("file\rname.txt"));
+        assert!(result.starts_with("upload-"));
+        assert!(result.ends_with(".bin"));
+        
+        let result = sanitize_file_name(Some("file\tname.txt"));
+        assert!(result.starts_with("upload-"));
+        assert!(result.ends_with(".bin"));
+    }
+
+    #[test]
+    fn sanitize_file_name_rejects_special_path_components() {
+        // Special path components should be rejected
+        let result = sanitize_file_name(Some("."));
+        assert!(result.starts_with("upload-"));
+        assert!(result.ends_with(".bin"));
+        
+        let result = sanitize_file_name(Some(".."));
+        assert!(result.starts_with("upload-"));
+        assert!(result.ends_with(".bin"));
+    }
+
+    #[test]
+    fn sanitize_file_name_handles_none() {
+        let result = sanitize_file_name(None);
+        assert!(result.starts_with("upload-"));
+        assert!(result.ends_with(".bin"));
+    }
+
+    #[test]
+    fn sanitize_file_name_handles_empty_string() {
+        let result = sanitize_file_name(Some(""));
+        assert!(result.starts_with("upload-"));
+        assert!(result.ends_with(".bin"));
     #[tokio::test]
     async fn upload_drop_accepts_files_within_size_limit() {
         let boundary = "TESTBOUNDARY";

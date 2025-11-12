@@ -41,6 +41,11 @@ pub enum AgentLayer {
     L5Infrastructure,
 }
 
+///
+/// Agents escalate upward through layers when decisions exceed their authority level. The
+/// registry organizes its agents into this hierarchy while maintaining backward compatibility
+/// with the legacy naming scheme.
+
 impl Default for AgentLayer {
     fn default() -> Self {
         Self::L4Operations

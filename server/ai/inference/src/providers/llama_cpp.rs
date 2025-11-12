@@ -24,7 +24,6 @@ impl LlamaCppProvider {
 #[async_trait]
 impl Provider for LlamaCppProvider {
     async fn complete(&self, request: CompletionRequest) -> anyhow::Result<CompletionResponse> {
-        info!(prompt = %request.prompt, "llama.cpp offline completion");
         tracing::info!(
             prompt = request.prompt.as_str(),
             "llama.cpp offline completion"

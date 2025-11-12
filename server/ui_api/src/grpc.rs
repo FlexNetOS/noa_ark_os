@@ -101,6 +101,12 @@ fn page_envelope_to_proto(envelope: PageEnvelope) -> Result<proto::PageEnvelope,
             let widgets = region
                 .widgets
                 .into_iter()
+                .map(|widget| {
+                    let props = widget
+                        .props
+                        .map(json_to_struct)
+                        .transpose()?
+                        .unwrap_or_else(empty_struct);
                 .map(|widget| -> Result<proto::WidgetSchema, Status> {
                     let props = widget.props.map(value_to_struct).transpose()?;
 
@@ -108,6 +114,7 @@ fn page_envelope_to_proto(envelope: PageEnvelope) -> Result<proto::PageEnvelope,
                         id: widget.id,
                         kind: format!("{:?}", widget.kind),
                         variant: widget.variant.unwrap_or_default(),
+                        props: Some(props),
                         props,
                     })
                 })
@@ -119,6 +126,7 @@ fn page_envelope_to_proto(envelope: PageEnvelope) -> Result<proto::PageEnvelope,
                 columns: region.columns.unwrap_or_default(),
                 gap: region.gap.unwrap_or_default(),
                 surface: region.surface.unwrap_or_default(),
+                slot: region.slot.map(slot_to_string).unwrap_or_default(),
                 slot: region.slot.map(|slot| slot.to_string()).unwrap_or_default(),
                 widgets,
             })
