@@ -9,6 +9,10 @@
 
 pub mod fs;
 pub mod gateway;
+pub mod hardware;
+pub mod ipc;
+pub mod kernel;
+pub mod memory;
 pub mod ipc;
 pub mod kernel;
 pub mod memory;
