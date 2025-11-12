@@ -64,6 +64,45 @@ intents:
 constrained defaults (latency ≤ 250ms, trust ≥ 0.6, encrypted, global zone) so higher layers can
 avoid manual boilerplate.
 
+## Zero-Trust Security Envelope
+
+Connectors must complete a zero-trust handshake before the router will energize them. Each
+`ConnectionPolicy` now encodes:
+
+- `min_attestation_score` – Minimum confidence the attestation authority must award.
+- `trusted_issuers` – Allow-listed authorities capable of attesting the connector.
+- `required_compliance` – Compliance evidence that must be present in the attestation payload.
+
+`Gateway::verify_attestation` validates the `IdentityProof` against these guardrails, enforces
+confidential-compute requirements, and records the proof. Connectors without fresh attestations are
+kept in a pending state and down-weighted during scans and routing.
+
+## Telemetry Feed
+
+Every registry, scan, attestation, route, and self-heal action emits `TelemetryEvent`s. Consumers
+should drain telemetry via `Gateway::drain_telemetry` and forward it to observability pipelines.
+Events include timestamp, kind (`SchemaRegistered`, `ConnectorRegistered`, `ZeroTrustValidated`,
+`ScanCompleted`, `RouteCompiled`, `AdaptiveModelUpdated`, `ToolMounted`, `SelfHealSuggested`), and
+free-form context strings that reference connector IDs or counts.
+
+## Cross-Platform Execution Fabric
+
+The gateway maintains a shared catalog of `ToolArtifact`s that describe WASM modules, containers, or
+secure enclave payloads. `Gateway::assign_tool` mounts an artifact for a connector inside the
+requested `SandboxKind` while enforcing concurrency limits. Leases are reference counted so multiple
+connectors can share a single artifact without duplication, and `Gateway::release_tool` returns the
+capacity once the session ends.
+
+## Adaptive Routing Intelligence
+
+Routing decisions combine digital-twin verification with adaptive scoring. `Gateway::update_demand_signal`
+feeds predicted load, while `Gateway::record_route_feedback` captures reinforcement signals from real
+traffic. `route_intent` merges health, attestation freshness, forecasted capacity, and recent
+successes so the system proactively shifts load toward healthy, well-proven connectors.
+
+By codifying this schema contract plus its security, execution, and adaptive layers, the gateway now
+delivers the ontology, automation, and observability pillars of the roadmap while staying auditable
+and predictable.
 ## Telemetry Feed
 
 Every registry, scan, route, and self-heal action emits `TelemetryEvent`s. Consumers should drain

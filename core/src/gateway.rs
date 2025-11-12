@@ -1,6 +1,9 @@
 use serde::de::{self, Deserializer, Visitor};
 use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet, VecDeque};
+use std::fmt;
+use std::fmt::Formatter;
 use std::collections::{HashMap, HashSet};
 use std::fmt::{self, Formatter};
 use std::str::FromStr;
@@ -77,6 +80,7 @@ impl<'de> Deserialize<'de> for SymbolKind {
             where
                 E: de::Error,
             {
+                SymbolKind::from_str(value).map_err(|err| E::custom(err))
                 SymbolKind::from_str(value).map_err(E::custom)
             }
         }
@@ -206,6 +210,9 @@ pub struct ConnectionPolicy {
     pub min_trust_score: f32,
     pub allowed_zones: HashSet<String>,
     pub encryption_required: bool,
+    pub min_attestation_score: f32,
+    pub trusted_issuers: HashSet<String>,
+    pub required_compliance: HashSet<String>,
 }
 
 impl ConnectionPolicy {
@@ -227,6 +234,47 @@ impl ConnectionPolicy {
 }
 
 #[derive(Debug, Clone)]
+pub struct IdentityProof {
+    pub connector_id: String,
+    pub issuer: String,
+    pub expires_at: SystemTime,
+    pub confidence: f32,
+    pub compliance_evidence: HashSet<String>,
+    pub hardware_rooted: bool,
+}
+
+impl IdentityProof {
+    fn is_fresh(&self, now: SystemTime) -> bool {
+        self.expires_at > now
+    }
+}
+
+#[derive(Debug, Clone)]
+struct AttestationRecord {
+    proof: IdentityProof,
+    validated_at: SystemTime,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum SandboxKind {
+    Wasm,
+    Container,
+    Enclave,
+    Native,
+}
+
+#[derive(Debug, Clone)]
+pub struct ToolArtifact {
+    pub artifact_id: String,
+    pub version: String,
+    pub checksum: String,
+    pub supported_sandboxes: HashSet<SandboxKind>,
+    pub max_parallel_sessions: usize,
+}
+
+impl ToolArtifact {
+    fn supports(&self, sandbox: &SandboxKind) -> bool {
+        self.supported_sandboxes.contains(sandbox)
 pub struct IntentConstraints {
     pub max_latency_ms: u32,
     pub min_trust_score: f32,
@@ -486,6 +534,43 @@ impl ExecutionSchematic {
 }
 
 #[derive(Debug, Clone)]
+pub struct ExecutionLease {
+    pub artifact_id: String,
+    pub sandbox: SandboxKind,
+    pub started_at: SystemTime,
+    pub shared: bool,
+}
+
+#[derive(Debug, Clone)]
+struct DemandSignal {
+    predicted_load: f32,
+    last_updated: SystemTime,
+}
+
+#[derive(Debug, Clone)]
+pub struct IntentConstraints {
+    pub max_latency_ms: u32,
+    pub min_trust_score: f32,
+    pub encryption_supported: bool,
+    pub allowed_zones: HashSet<String>,
+}
+
+/// High level business goal compiled into routing requirements.
+#[derive(Debug, Clone)]
+pub struct Intent {
+    pub description: String,
+    pub target_kind: SymbolKind,
+    pub required_capabilities: HashSet<String>,
+    pub constraints: IntentConstraints,
+}
+
+/// Observed state of a connector.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ConnectionState {
+    Connected,
+    Disconnected,
+    Pending,
+    Faulted,
 pub struct VerificationReport {
     pub model_check_passed: bool,
     pub smt_passed: bool,
@@ -688,6 +773,9 @@ struct ConnectorRecord {
     state: ConnectionState,
     last_seen: SystemTime,
     health_score: f32,
+    last_attestation: Option<AttestationRecord>,
+    execution_lease: Option<ExecutionLease>,
+    recent_feedback: VecDeque<bool>,
     genome: SymbolGenome,
     provider_id: String,
     schematic: ExecutionSchematic,
@@ -705,6 +793,13 @@ impl ConnectorRecord {
             state: ConnectionState::Disconnected,
             last_seen: SystemTime::now(),
             health_score: 0.7,
+            last_attestation: None,
+            execution_lease: None,
+            recent_feedback: VecDeque::with_capacity(20),
+        }
+    }
+
+    fn refresh(&mut self, now: SystemTime) -> ScanEvent {
             genome,
             provider_id,
             schematic,
@@ -732,6 +827,14 @@ impl ConnectorRecord {
             } else {
                 ConnectionState::Pending
             };
+        } else {
+            self.health_score = (self.health_score + 1.0).min(1.0);
+            self.state = ConnectionState::Connected;
+        }
+
+        if !self.attestation_valid(now) {
+            self.health_score *= 0.9;
+            self.state = ConnectionState::Pending;
             self.genome.record_signal("stale", -0.05);
         } else {
             self.health_score = (self.health_score + 0.08).min(1.0);
@@ -757,6 +860,73 @@ impl ConnectorRecord {
         }
     }
 
+    fn attestation_valid(&self, now: SystemTime) -> bool {
+        self.last_attestation
+            .as_ref()
+            .map(|record| {
+                let compliance_ok = if self.policy.required_compliance.is_empty() {
+                    true
+                } else {
+                    self.policy
+                        .required_compliance
+                        .is_subset(&record.proof.compliance_evidence)
+                };
+
+                let attestation_age = now
+                    .duration_since(record.validated_at)
+                    .unwrap_or(Duration::ZERO);
+                let attestation_fresh = attestation_age <= Duration::from_secs(120);
+
+                record.proof.is_fresh(now)
+                    && record.proof.confidence >= self.policy.min_attestation_score
+                    && compliance_ok
+                    && attestation_fresh
+            })
+            .unwrap_or(false)
+    }
+
+    fn adaptive_score(&self, signal: Option<&DemandSignal>, now: SystemTime) -> f32 {
+        let base = self.health_score;
+        let attestation_bonus = if self.attestation_valid(now) {
+            0.1
+        } else {
+            -0.2
+        };
+        let load_penalty = signal
+            .map(|s| {
+                let staleness = now.duration_since(s.last_updated).unwrap_or(Duration::ZERO);
+                let freshness = if staleness > Duration::from_secs(120) {
+                    0.0
+                } else {
+                    1.0 - (staleness.as_secs_f32() / 120.0)
+                };
+                ((1.0 - s.predicted_load.clamp(0.0, 1.0)) - 0.5) * freshness
+            })
+            .unwrap_or(0.0);
+        let feedback_bias: f32 = if self.recent_feedback.is_empty() {
+            0.0
+        } else {
+            let successes = self
+                .recent_feedback
+                .iter()
+                .filter(|result| **result)
+                .count() as f32;
+            (successes / self.recent_feedback.len() as f32) - 0.5
+        };
+
+        base + attestation_bonus + load_penalty + feedback_bias
+    }
+
+    fn record_feedback(&mut self, success: bool) {
+        if self.recent_feedback.len() == self.recent_feedback.capacity() {
+            self.recent_feedback.pop_front();
+        }
+        self.recent_feedback.push_back(success);
+        if success {
+            self.health_score = (self.health_score + 0.05).min(1.0);
+        } else {
+            self.health_score *= 0.92;
+        }
     fn evolve(&mut self, evolution: &mut EvolutionState) -> Option<String> {
         evolution.attempted += 1;
         if let Some(mutation) = self.genome.propose_mutation(&self.symbol.capabilities) {
@@ -790,6 +960,9 @@ pub enum TelemetryKind {
     ScanCompleted,
     RouteCompiled,
     SelfHealSuggested,
+    ZeroTrustValidated,
+    ToolMounted,
+    AdaptiveModelUpdated,
     PredictiveRewire,
     GenomeAdvanced,
     VerificationLoopCompleted,
@@ -828,6 +1001,58 @@ pub struct SchemaCatalogSnapshot {
     pub capability_index: HashMap<String, usize>,
 }
 
+#[derive(Debug, Deserialize)]
+struct IntentDocument {
+    intents: Vec<IntentSpec>,
+}
+
+#[derive(Debug, Deserialize)]
+struct IntentSpec {
+    name: String,
+    target: String,
+    #[serde(default)]
+    capabilities: Vec<String>,
+    #[serde(default)]
+    constraints: IntentConstraintSpec,
+}
+
+#[derive(Debug, Deserialize)]
+struct IntentConstraintSpec {
+    #[serde(default = "default_latency")]
+    max_latency_ms: u32,
+    #[serde(default = "default_trust")]
+    min_trust_score: f32,
+    #[serde(default = "default_true")]
+    encryption: bool,
+    #[serde(default = "default_zones")]
+    zones: Vec<String>,
+}
+
+impl Default for IntentConstraintSpec {
+    fn default() -> Self {
+        Self {
+            max_latency_ms: default_latency(),
+            min_trust_score: default_trust(),
+            encryption: default_true(),
+            zones: default_zones(),
+        }
+    }
+}
+
+fn default_latency() -> u32 {
+    250
+}
+
+fn default_trust() -> f32 {
+    0.6
+}
+
+fn default_true() -> bool {
+    true
+}
+
+fn default_zones() -> Vec<String> {
+    vec!["global".into()]
 /// Individual micro-substation maintaining autonomy in a federated mesh.
 #[derive(Debug, Clone)]
 pub struct MicroSubstation {
@@ -1170,6 +1395,11 @@ pub enum GatewayError {
     SchemaConflict(String),
     SchemaNotFound(String),
     IntentParse(String),
+    AttestationFailed(String),
+    ToolNotFound(String),
+    SandboxUnsupported(String),
+    ToolCapacity(String),
+    ToolConflict(String),
 }
 
 impl fmt::Display for GatewayError {
@@ -1187,6 +1417,13 @@ impl fmt::Display for GatewayError {
             GatewayError::SchemaConflict(id) => write!(f, "schema {id} already registered"),
             GatewayError::SchemaNotFound(id) => write!(f, "schema {id} not found"),
             GatewayError::IntentParse(msg) => write!(f, "intent parsing error: {msg}"),
+            GatewayError::AttestationFailed(msg) => write!(f, "attestation failed: {msg}"),
+            GatewayError::ToolNotFound(id) => write!(f, "tool artifact {id} not found"),
+            GatewayError::SandboxUnsupported(msg) => {
+                write!(f, "sandbox configuration unsupported: {msg}")
+            }
+            GatewayError::ToolCapacity(msg) => write!(f, "tool capacity exhausted: {msg}"),
+            GatewayError::ToolConflict(id) => write!(f, "tool artifact {id} already registered"),
         }
     }
 }
@@ -1202,6 +1439,9 @@ pub struct Gateway {
     topology: RwLock<HashMap<SymbolKind, HashSet<ConnectorId>>>,
     schemas: RwLock<HashMap<String, SymbolSchema>>,
     telemetry: RwLock<Vec<TelemetryEvent>>,
+    tool_catalog: RwLock<HashMap<String, ToolArtifact>>,
+    tool_sessions: RwLock<HashMap<String, usize>>,
+    demand_signals: RwLock<HashMap<SymbolKind, DemandSignal>>,
     reliability_feeds: RwLock<HashMap<String, ReliabilityFeed>>,
     evolution: RwLock<EvolutionState>,
     coherence: CoherenceFabric,
@@ -1334,6 +1574,16 @@ impl Gateway {
         let schema =
             schema.ok_or_else(|| GatewayError::SchemaNotFound(symbol.schema_hash.clone()))?;
 
+        if !schema
+            .compliance_tags
+            .is_superset(&policy.required_compliance)
+        {
+            return Err(GatewayError::PolicyViolation(format!(
+                "symbol {} lacks required compliance tags {:?}",
+                symbol.id, policy.required_compliance
+            )));
+        }
+
         if !schema.capability_taxonomy.is_superset(&symbol.capabilities) {
             return Err(GatewayError::PolicyViolation(format!(
                 "symbol {} declares capabilities not advertised by schema {}",
@@ -1341,6 +1591,9 @@ impl Gateway {
             )));
         }
 
+        let mut connectors = self.connectors_write()?;
+        if connectors.contains_key(&symbol.id) {
+            return Err(GatewayError::AlreadyRegistered(symbol.id.clone()));
         if schema.compliance_tags.contains("pii_safe") && !policy.encryption_required {
             return Err(GatewayError::GovernanceViolation(
                 "pii_safe schemas require encryption".into(),
@@ -1358,6 +1611,14 @@ impl Gateway {
         let id = symbol.id.clone();
         let kind = symbol.kind.clone();
         let symbol = Arc::new(symbol);
+
+        connectors.insert(id.clone(), ConnectorRecord::new(symbol.clone(), policy));
+
+        self.topology_write()?.entry(kind).or_default().insert(id);
+
+        self.emit_event(
+            TelemetryKind::ConnectorRegistered,
+            format!("{}@{}", symbol.id, symbol.version),
         let mut evolution = self.evolution_write()?;
         let mut record = ConnectorRecord::new(symbol.clone(), policy);
         if record
@@ -1398,6 +1659,7 @@ impl Gateway {
 
         Ok(())
     }
+
     /// Establish an explicit connection if the policy allows it.
     pub fn connect(&self, connector_id: &str) -> Result<(), GatewayError> {
         let mut connectors = self.connectors_write()?;
@@ -1438,6 +1700,13 @@ impl Gateway {
 
     /// Perform an auto-scan, updating health and discovering risky connectors.
     pub fn auto_scan(&self) -> Result<Vec<ScanEvent>, GatewayError> {
+        let mut connectors = self.connectors_write()?;
+        let now = SystemTime::now();
+        let events: Vec<_> = connectors
+            .values_mut()
+            .map(|record| record.refresh(now))
+            .collect();
+        drop(connectors);
         let reliability = {
             let feeds = self.reliability_read()?;
             feeds.clone()
@@ -1471,6 +1740,9 @@ impl Gateway {
     /// Calculate an optimized route for a given intent.
     pub fn route_intent(&self, intent: &Intent) -> Result<RoutePlan, GatewayError> {
         let connectors = self.connectors_read()?;
+        let now = SystemTime::now();
+        let demand_signals = self.demand_signals_read()?;
+        let mut candidates: Vec<_> = connectors
         let reliability = self.reliability_read()?;
         let mut candidates: Vec<_> = connectors
         let connectors_guard = self.connectors_read()?;
@@ -1484,6 +1756,7 @@ impl Gateway {
                     && record.policy.allows(&intent.constraints)
                     && record.health_score >= intent.constraints.min_trust_score
                     && record.state != ConnectionState::Faulted
+                    && record.attestation_valid(now)
             })
             .collect();
 
@@ -1492,6 +1765,12 @@ impl Gateway {
         }
 
         candidates.sort_by(|a, b| {
+            let demand = demand_signals.get(&intent.target_kind);
+            let score_a = a.adaptive_score(demand, now);
+            let score_b = b.adaptive_score(demand, now);
+            score_b
+                .partial_cmp(&score_a)
+                .unwrap_or(std::cmp::Ordering::Equal)
             let feed_a = reliability
                 .get(&a.provider_id)
                 .map(|feed| feed.probability_of_failure)
@@ -1516,6 +1795,13 @@ impl Gateway {
             .min()
             .unwrap_or(intent.constraints.max_latency_ms);
 
+        let mut plan = RoutePlan {
+            connectors: candidates
+                .iter()
+                .take(3)
+                .map(|record| record.symbol.id.clone())
+                .collect(),
+            predicted_latency_ms,
         let mut schematic = candidates[0].schematic.clone();
         schematic.incorporate_intent(intent);
         for record in candidates.iter().skip(1) {
@@ -1539,6 +1825,18 @@ impl Gateway {
 
         if self.formal_verification(intent, &plan)? {
             plan.verified = true;
+            self.emit_event(
+                TelemetryKind::RouteCompiled,
+                format!(
+                    "intent:{} connectors:{}",
+                    intent.description,
+                    plan.connectors.len()
+                ),
+            )?;
+            self.emit_event(
+                TelemetryKind::AdaptiveModelUpdated,
+                format!("intent:{}", intent.description),
+            )?;
             let risks = self.semantic_twin.predict_risk(&plan.connectors);
             for connector in &plan.connectors {
                 self.security_posture.rekey(connector, "falcon1024");
@@ -1562,6 +1860,24 @@ impl Gateway {
                 "intent constraints not satisfied in twin".into(),
             ))
         }
+    }
+
+    /// Digital twin style verification of a plan.
+    fn formal_verification(&self, intent: &Intent, plan: &RoutePlan) -> Result<bool, GatewayError> {
+        if plan.connectors.is_empty() {
+            return Ok(false);
+        }
+
+        let topology = self.topology_read()?;
+        let allowed = topology.get(&intent.target_kind);
+
+        for connector_id in &plan.connectors {
+            if allowed.is_none_or(|set| !set.contains(connector_id)) {
+                return Ok(false);
+            }
+        }
+
+        Ok(plan.predicted_latency_ms <= intent.constraints.max_latency_ms)
 
         let snapshots: Vec<_> = candidates.iter().map(|record| record.snapshot()).collect();
         let report = VerificationReport::evaluate(intent, &schematic, &snapshots, &reliability);
@@ -1689,6 +2005,196 @@ impl Gateway {
         })
     }
 
+    /// Perform a zero-trust handshake before connectors are energized.
+    pub fn verify_attestation(&self, proof: IdentityProof) -> Result<(), GatewayError> {
+        let mut connectors = self.connectors_write()?;
+        let record = connectors
+            .get_mut(&proof.connector_id)
+            .ok_or_else(|| GatewayError::NotFound(proof.connector_id.clone()))?;
+
+        if !record.policy.trusted_issuers.contains(&proof.issuer) {
+            return Err(GatewayError::AttestationFailed(format!(
+                "issuer {} not trusted for connector {}",
+                proof.issuer, proof.connector_id
+            )));
+        }
+
+        if proof.confidence < record.policy.min_attestation_score {
+            return Err(GatewayError::AttestationFailed(format!(
+                "attestation score {} below minimum {}",
+                proof.confidence, record.policy.min_attestation_score
+            )));
+        }
+
+        if !proof.is_fresh(SystemTime::now()) {
+            return Err(GatewayError::AttestationFailed(
+                "attestation expired".into(),
+            ));
+        }
+
+        if !record
+            .policy
+            .required_compliance
+            .is_subset(&proof.compliance_evidence)
+        {
+            return Err(GatewayError::AttestationFailed(
+                "proof missing required compliance evidence".into(),
+            ));
+        }
+
+        if record.policy.encryption_required && !proof.hardware_rooted {
+            return Err(GatewayError::AttestationFailed(
+                "connector lacks confidential-compute proof".into(),
+            ));
+        }
+
+        record.last_attestation = Some(AttestationRecord {
+            proof: proof.clone(),
+            validated_at: SystemTime::now(),
+        });
+        record.state = ConnectionState::Pending;
+        record.health_score = (record.health_score + 0.1).min(1.0);
+
+        drop(connectors);
+
+        self.emit_event(
+            TelemetryKind::ZeroTrustValidated,
+            format!("{}@{}", proof.connector_id, proof.issuer),
+        )
+    }
+
+    /// Register an execution artifact that can be shared across connectors.
+    pub fn register_tool_artifact(&self, artifact: ToolArtifact) -> Result<(), GatewayError> {
+        let mut catalog = self
+            .tool_catalog
+            .write()
+            .map_err(|_| GatewayError::Poisoned("tool_catalog"))?;
+        if catalog.contains_key(&artifact.artifact_id) {
+            return Err(GatewayError::ToolConflict(artifact.artifact_id));
+        }
+        catalog.insert(artifact.artifact_id.clone(), artifact);
+        Ok(())
+    }
+
+    /// Mount a tool artifact inside a sandbox for a connector, enabling shared execution.
+    pub fn assign_tool(
+        &self,
+        connector_id: &str,
+        artifact_id: &str,
+        sandbox: SandboxKind,
+    ) -> Result<ExecutionLease, GatewayError> {
+        let catalog = self
+            .tool_catalog
+            .read()
+            .map_err(|_| GatewayError::Poisoned("tool_catalog"))?;
+        let artifact = catalog
+            .get(artifact_id)
+            .cloned()
+            .ok_or_else(|| GatewayError::ToolNotFound(artifact_id.into()))?;
+
+        if !artifact.supports(&sandbox) {
+            return Err(GatewayError::SandboxUnsupported(format!(
+                "artifact {} does not support {:?}",
+                artifact_id, sandbox
+            )));
+        }
+        drop(catalog);
+
+        let mut sessions = self
+            .tool_sessions
+            .write()
+            .map_err(|_| GatewayError::Poisoned("tool_sessions"))?;
+        let current = sessions.entry(artifact_id.into()).or_insert(0);
+        if *current >= artifact.max_parallel_sessions {
+            return Err(GatewayError::ToolCapacity(artifact_id.into()));
+        }
+        *current += 1;
+        drop(sessions);
+
+        let lease = ExecutionLease {
+            artifact_id: artifact.artifact_id.clone(),
+            sandbox,
+            started_at: SystemTime::now(),
+            shared: artifact.max_parallel_sessions > 1,
+        };
+
+        let mut connectors = self.connectors_write()?;
+        let record = connectors
+            .get_mut(connector_id)
+            .ok_or_else(|| GatewayError::NotFound(connector_id.to_string()))?;
+        record.execution_lease = Some(lease.clone());
+        drop(connectors);
+
+        self.emit_event(
+            TelemetryKind::ToolMounted,
+            format!("{}->{}", connector_id, artifact_id),
+        )?;
+
+        Ok(lease)
+    }
+
+    /// Release an execution lease once a connector is done with the shared tool.
+    pub fn release_tool(&self, connector_id: &str) -> Result<(), GatewayError> {
+        let mut connectors = self.connectors_write()?;
+        let record = connectors
+            .get_mut(connector_id)
+            .ok_or_else(|| GatewayError::NotFound(connector_id.to_string()))?;
+        if let Some(lease) = record.execution_lease.take() {
+            drop(connectors);
+            let mut sessions = self
+                .tool_sessions
+                .write()
+                .map_err(|_| GatewayError::Poisoned("tool_sessions"))?;
+            if let Some(count) = sessions.get_mut(&lease.artifact_id) {
+                *count = count.saturating_sub(1);
+            }
+        } else {
+            drop(connectors);
+        }
+        Ok(())
+    }
+
+    /// Update demand forecasts so adaptive routing can prepare capacity ahead of time.
+    pub fn update_demand_signal(
+        &self,
+        kind: SymbolKind,
+        predicted_load: f32,
+    ) -> Result<(), GatewayError> {
+        let mut demand = self
+            .demand_signals
+            .write()
+            .map_err(|_| GatewayError::Poisoned("demand_signals"))?;
+        demand.insert(
+            kind,
+            DemandSignal {
+                predicted_load: predicted_load.clamp(0.0, 1.0),
+                last_updated: SystemTime::now(),
+            },
+        );
+        Ok(())
+    }
+
+    /// Feed reinforcement signals so the router can learn from outcomes.
+    pub fn record_route_feedback(
+        &self,
+        connector_id: &str,
+        success: bool,
+    ) -> Result<(), GatewayError> {
+        let mut connectors = self.connectors_write()?;
+        let record = connectors
+            .get_mut(connector_id)
+            .ok_or_else(|| GatewayError::NotFound(connector_id.to_string()))?;
+        record.record_feedback(success);
+        Ok(())
+    }
+
+    fn emit_event(&self, kind: TelemetryKind, context: String) -> Result<(), GatewayError> {
+        let mut telemetry = self.telemetry_write()?;
+        telemetry.push(TelemetryEvent {
+            timestamp: SystemTime::now(),
+            kind,
+            context,
+        });
     pub fn fabric_snapshot(&self) -> FabricSnapshot {
         self.coherence.snapshot()
     }
@@ -1765,6 +2271,12 @@ impl Gateway {
             .map_err(|_| GatewayError::Poisoned("telemetry"))
     }
 
+    fn demand_signals_read(
+        &self,
+    ) -> Result<RwLockReadGuard<'_, HashMap<SymbolKind, DemandSignal>>, GatewayError> {
+        self.demand_signals
+            .read()
+            .map_err(|_| GatewayError::Poisoned("demand_signals"))
     fn reliability_read(
         &self,
     ) -> Result<RwLockReadGuard<'_, HashMap<String, ReliabilityFeed>>, GatewayError> {
@@ -1805,6 +2317,9 @@ impl Default for Gateway {
             topology: RwLock::new(HashMap::new()),
             schemas: RwLock::new(HashMap::new()),
             telemetry: RwLock::new(Vec::new()),
+            tool_catalog: RwLock::new(HashMap::new()),
+            tool_sessions: RwLock::new(HashMap::new()),
+            demand_signals: RwLock::new(HashMap::new()),
             reliability_feeds: RwLock::new(HashMap::new()),
             evolution: RwLock::new(EvolutionState::default()),
             coherence: CoherenceFabric {
@@ -1874,6 +2389,7 @@ fn default_schemas() -> Vec<SymbolSchema> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::{Duration, SystemTime};
 
     fn sample_policy() -> ConnectionPolicy {
         ConnectionPolicy {
@@ -1881,6 +2397,9 @@ mod tests {
             min_trust_score: 0.9,
             allowed_zones: HashSet::from(["global".into(), "edge".into()]),
             encryption_required: true,
+            min_attestation_score: 0.85,
+            trusted_issuers: HashSet::from(["noa-ca".into()]),
+            required_compliance: HashSet::new(),
         }
     }
 
@@ -1890,6 +2409,17 @@ mod tests {
             min_trust_score: 0.6,
             encryption_supported: true,
             allowed_zones: HashSet::from(["global".into()]),
+        }
+    }
+
+    fn sample_proof(connector_id: &str) -> IdentityProof {
+        IdentityProof {
+            connector_id: connector_id.into(),
+            issuer: "noa-ca".into(),
+            expires_at: SystemTime::now() + Duration::from_secs(60),
+            confidence: 0.9,
+            compliance_evidence: HashSet::new(),
+            hardware_rooted: true,
         }
     }
 
@@ -1908,6 +2438,9 @@ mod tests {
         gateway
             .register_symbol(symbol.clone(), sample_policy())
             .expect("registration should succeed");
+        gateway
+            .verify_attestation(sample_proof(&symbol.id))
+            .expect("attestation should succeed");
         gateway.connect(&symbol.id).expect("connect should succeed");
 
         let intent = Intent {
@@ -1920,6 +2453,18 @@ mod tests {
         let plan = gateway.route_intent(&intent).expect("route should succeed");
         assert!(plan.verified);
         assert_eq!(plan.connectors.len(), 1);
+    }
+
+    #[test]
+    fn predictive_self_healing_flags_faults() {
+        let gateway = Gateway::new();
+        gateway.bootstrap_defaults().expect("defaults should load");
+        let symbol = Symbol {
+            id: "legacy.plugin".into(),
+            kind: SymbolKind::Plugin,
+            version: "2.1.0".into(),
+            capabilities: HashSet::from(["render".into()]),
+            schema_hash: "deadbeef".into(),
         assert!(!plan.schematic.nodes.is_empty());
     }
 
@@ -1938,6 +2483,27 @@ mod tests {
         gateway
             .register_symbol(symbol.clone(), sample_policy())
             .expect("registration should succeed");
+        gateway
+            .verify_attestation(sample_proof(&symbol.id))
+            .expect("attestation should succeed");
+
+        // Force the connector into a degraded state.
+        {
+            let mut connectors = gateway.connectors.write().unwrap();
+            let record = connectors.get_mut(&symbol.id).unwrap();
+            record.state = ConnectionState::Faulted;
+            record.health_score = 0.3;
+        }
+
+        let actions = gateway
+            .predictive_self_heal()
+            .expect("self healing should succeed");
+        assert_eq!(actions.len(), 1);
+        assert_eq!(actions[0].connector_id, symbol.id);
+    }
+
+    #[test]
+    fn policy_violation_prevents_routing() {
         gateway.connect(&symbol.id).expect("connect should succeed");
 
         let intent = Intent {
@@ -2019,6 +2585,7 @@ mod tests {
                 schema_id: "restricted.api".into(),
                 kind: SymbolKind::Api,
                 version: "1.2.0".into(),
+                capability_taxonomy: HashSet::from(["restricted".into()]),
                 capability_taxonomy: HashSet::from(["restricted".into(), "pii".into()]),
                 lifecycle: LifecycleStage::Active,
                 recommended_zones: HashSet::from(["private".into()]),
@@ -2032,6 +2599,7 @@ mod tests {
             id: "restricted.api".into(),
             kind: SymbolKind::Api,
             version: "1.2.0".into(),
+            capabilities: HashSet::from(["restricted".into()]),
             capabilities: HashSet::from(["restricted".into(), "pii".into()]),
             schema_hash: "feedface".into(),
         };
@@ -2042,6 +2610,62 @@ mod tests {
         gateway
             .register_symbol(symbol.clone(), policy)
             .expect("registration should succeed");
+        gateway
+            .verify_attestation(sample_proof(&symbol.id))
+            .expect("attestation should succeed");
+        gateway.connect(&symbol.id).expect("connect should succeed");
+
+        let constraints = IntentConstraints {
+            max_latency_ms: 10,
+            min_trust_score: 0.5,
+            encryption_supported: true,
+            allowed_zones: HashSet::from(["global".into()]),
+        };
+
+        let intent = Intent {
+            description: "Access restricted api".into(),
+            target_kind: SymbolKind::Api,
+            required_capabilities: HashSet::from(["restricted".into()]),
+            constraints,
+        };
+
+        let result = gateway.route_intent(&intent);
+        assert!(matches!(result, Err(GatewayError::NoRouteFound)));
+    }
+
+    #[test]
+    fn policies_respect_trust_thresholds() {
+        let mut policy = sample_policy();
+        policy.min_trust_score = 0.9;
+
+        let constraints = IntentConstraints {
+            max_latency_ms: 15,
+            min_trust_score: 0.6,
+            encryption_supported: true,
+            allowed_zones: HashSet::from(["global".into()]),
+        };
+
+        assert!(policy.allows(&constraints));
+
+        let stricter = IntentConstraints {
+            min_trust_score: 0.95,
+            ..constraints
+        };
+        assert!(!policy.allows(&stricter));
+    }
+
+    #[test]
+    fn catalog_snapshot_tracks_schema_counts() {
+        let gateway = Gateway::new();
+        gateway.bootstrap_defaults().expect("defaults should load");
+
+        let snapshot = gateway.catalog_snapshot().expect("snapshot should succeed");
+        assert_eq!(snapshot.total, 2);
+        assert_eq!(
+            snapshot.lifecycle_breakdown.get(&LifecycleStage::Active),
+            Some(&2)
+        );
+        assert!(snapshot.capability_index.contains_key("analytics"));
 
         let findings = gateway.semantic_twin.predict_risk(&[symbol.id.clone()]);
         assert_eq!(findings.len(), 1);
@@ -2123,6 +2747,55 @@ intents:
     }
 
     #[test]
+    fn zero_trust_required_before_routing() {
+        let gateway = Gateway::new();
+        gateway.bootstrap_defaults().expect("defaults should load");
+        let symbol = Symbol {
+            id: "analytics.api".into(),
+            kind: SymbolKind::Api,
+            version: "1.0.0".into(),
+            capabilities: HashSet::from(["stream".into(), "analytics".into()]),
+            schema_hash: "abc123".into(),
+        };
+
+        gateway
+            .register_symbol(symbol.clone(), sample_policy())
+            .expect("registration should succeed");
+        gateway.connect(&symbol.id).expect("connect should succeed");
+
+        let intent = Intent {
+            description: "Replicate analytics stream".into(),
+            target_kind: SymbolKind::Api,
+            required_capabilities: HashSet::from(["stream".into()]),
+            constraints: sample_constraints(),
+        };
+
+        let result = gateway.route_intent(&intent);
+        assert!(matches!(result, Err(GatewayError::NoRouteFound)));
+
+        gateway
+            .verify_attestation(sample_proof(&symbol.id))
+            .expect("attestation should succeed");
+
+        let plan = gateway.route_intent(&intent).expect("route should succeed");
+        assert!(plan.verified);
+    }
+
+    #[test]
+    fn shared_tool_leases_enforce_capacity() {
+        let gateway = Gateway::new();
+        gateway.bootstrap_defaults().expect("defaults should load");
+        let artifact = ToolArtifact {
+            artifact_id: "toolkit".into(),
+            version: "1.0.0".into(),
+            checksum: "cafebabe".into(),
+            supported_sandboxes: HashSet::from([SandboxKind::Wasm, SandboxKind::Enclave]),
+            max_parallel_sessions: 1,
+        };
+
+        gateway
+            .register_tool_artifact(artifact)
+            .expect("artifact should register");
     fn governance_layer_tracks_activity() {
         let gateway = Gateway::new();
         gateway.bootstrap_defaults().expect("defaults should load");
@@ -2138,6 +2811,32 @@ intents:
         gateway
             .register_symbol(symbol.clone(), sample_policy())
             .expect("registration should succeed");
+        gateway
+            .verify_attestation(sample_proof(&symbol.id))
+            .expect("attestation should succeed");
+
+        let lease = gateway
+            .assign_tool(&symbol.id, "toolkit", SandboxKind::Wasm)
+            .expect("should obtain lease");
+        assert!(!lease.shared);
+
+        let result = gateway.assign_tool(&symbol.id, "toolkit", SandboxKind::Wasm);
+        assert!(matches!(result, Err(GatewayError::ToolCapacity(_))));
+
+        gateway
+            .release_tool(&symbol.id)
+            .expect("release should succeed");
+        gateway
+            .assign_tool(&symbol.id, "toolkit", SandboxKind::Wasm)
+            .expect("lease should be reusable");
+    }
+
+    #[test]
+    fn adaptive_routing_responds_to_feedback() {
+        let gateway = Gateway::new();
+        gateway.bootstrap_defaults().expect("defaults should load");
+        let mut policy = sample_policy();
+        policy.trusted_issuers = HashSet::from(["noa-ca".into(), "backup-ca".into()]);
 
         let ledger = gateway.governance_snapshot();
         assert!(!ledger.is_empty());
@@ -2158,6 +2857,47 @@ intents:
             capabilities: HashSet::from(["stream".into(), "analytics".into()]),
             schema_hash: "abc123".into(),
         };
+
+        gateway
+            .register_symbol(symbol.clone(), policy.clone())
+            .expect("registration should succeed");
+        gateway
+            .verify_attestation(sample_proof(&symbol.id))
+            .expect("attestation should succeed");
+
+        let mut second_policy = policy.clone();
+        second_policy.min_trust_score = 0.8;
+        let mut second_symbol = symbol.clone();
+        second_symbol.id = "analytics.secondary".into();
+
+        gateway
+            .register_symbol(second_symbol.clone(), second_policy)
+            .expect("second registration should succeed");
+        gateway
+            .verify_attestation(sample_proof(&second_symbol.id))
+            .expect("attestation should succeed");
+
+        gateway
+            .update_demand_signal(SymbolKind::Api, 0.2)
+            .expect("signal should update");
+
+        gateway
+            .record_route_feedback(&symbol.id, false)
+            .expect("feedback should record");
+        gateway
+            .record_route_feedback(&second_symbol.id, true)
+            .expect("feedback should record");
+
+        let intent = Intent {
+            description: "Replicate analytics stream".into(),
+            target_kind: SymbolKind::Api,
+            required_capabilities: HashSet::from(["stream".into()]),
+            constraints: sample_constraints(),
+        };
+
+        let plan = gateway.route_intent(&intent).expect("route should succeed");
+        assert!(plan.connectors.first().is_some());
+        assert_eq!(plan.connectors[0], second_symbol.id);
         gateway
             .register_symbol(symbol.clone(), sample_policy())
             .expect("registration should succeed");
