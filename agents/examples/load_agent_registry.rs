@@ -84,7 +84,7 @@ fn main() -> anyhow::Result<()> {
 
                     // Show first 3 agents
                     for agent in agents.iter().take(3) {
-                        println!("    • {} - {}", agent.name, agent.role);
+                        println!("    • {} - {}", agent.agent_name, agent.role);
                         if !agent.purpose.is_empty() {
                             let purpose = if agent.purpose.len() > 60 {
                                 format!("{}...", &agent.purpose[..60])
