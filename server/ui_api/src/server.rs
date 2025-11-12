@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::env;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
@@ -10,7 +11,7 @@ use axum::routing::{get, post};
 use axum::{Json, Router};
 use bytes::Bytes;
 use chrono::Utc;
-use noa_crc::{CRCState, CRCSystem, DropManifest, Priority, SourceType};
+use noa_crc::{CRCState, CRCSystem, DropManifest, OriginalArtifact, Priority, SourceType};
 use serde::{Deserialize, Serialize};
 use tokio::fs;
 use tokio::sync::RwLock;
@@ -21,7 +22,12 @@ use crate::schema::PageEnvelope;
 use crate::session::SessionBridge;
 
 pub trait DropRegistry: Send + Sync {
-    fn register(&self, path: PathBuf, manifest: DropManifest) -> Result<String, String>;
+    fn register(
+        &self,
+        path: PathBuf,
+        manifest: DropManifest,
+        original_artifact: Option<OriginalArtifact>,
+    ) -> Result<String, String>;
     fn get_state(&self, drop_id: &str) -> Option<CRCState>;
 }
 
@@ -31,8 +37,13 @@ struct CrcDropRegistry {
 }
 
 impl DropRegistry for CrcDropRegistry {
-    fn register(&self, path: PathBuf, manifest: DropManifest) -> Result<String, String> {
-        self.crc.register_drop(path, manifest)
+    fn register(
+        &self,
+        path: PathBuf,
+        manifest: DropManifest,
+        original_artifact: Option<OriginalArtifact>,
+    ) -> Result<String, String> {
+        self.crc.register_drop(path, manifest, original_artifact)
     }
 
     fn get_state(&self, drop_id: &str) -> Option<CRCState> {
@@ -51,12 +62,15 @@ pub struct UiApiState {
 impl UiApiState {
     pub fn new() -> Self {
         let drop_registry: Arc<dyn DropRegistry> = Arc::new(CrcDropRegistry::default());
+        let drop_root = env::var("NOA_UI_DROP_ROOT")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| PathBuf::from("D:/dev/workspaces/noa_ark_os/crc/drop-in/incoming"));
+
         Self {
             pages: Arc::new(RwLock::new(HashMap::new())),
             session: Arc::new(Mutex::new(None)),
             drop_registry,
-            // Use absolute path per workspace guidelines to avoid ambiguity.
-            drop_root: PathBuf::from("D:/dev/workspaces/noa_ark_os/crc/drop-in/incoming"),
+            drop_root,
         }
     }
 
@@ -229,7 +243,7 @@ impl UiApiServer {
 
         let registry = state.drop_registry();
         let drop_id = registry
-            .register(file_path.clone(), manifest)
+            .register(file_path.clone(), manifest, None)
             .map_err(|err| internal_error(format!("failed to register drop: {err}")))?;
 
         let status = registry
@@ -293,17 +307,6 @@ fn format_crc_state(state: &CRCState) -> String {
 async fn handle_websocket(mut socket: WebSocket, bridge: SessionBridge) {
     let mut events = bridge.subscribe();
     while let Some(event) = events.next().await {
-        match event.map(SessionBridge::map_event) {
-            Ok(event) => match serde_json::to_string(&event) {
-                Ok(payload) => {
-                    if socket.send(Message::Text(payload)).await.is_err() {
-                        break;
-                    }
-                }
-                Err(error) => {
-                    let _ = socket
-                        .send(Message::Text(format!("{{\"error\":\"{}\"}}", error)))
-                        .await;
         let Ok(event) = event.map(SessionBridge::map_event) else {
             continue;
         };
@@ -373,7 +376,12 @@ mod tests {
     }
 
     impl DropRegistry for MockRegistry {
-        fn register(&self, path: PathBuf, manifest: DropManifest) -> Result<String, String> {
+        fn register(
+            &self,
+            path: PathBuf,
+            manifest: DropManifest,
+            _original_artifact: Option<OriginalArtifact>,
+        ) -> Result<String, String> {
             *self.registered_path.lock().unwrap() = Some(path);
             *self.registered_manifest.lock().unwrap() = Some(manifest.clone());
             if let Some(error) = &self.fail_with {
