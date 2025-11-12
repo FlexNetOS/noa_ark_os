@@ -1,6 +1,5 @@
-//! Upgrade & Patch Agent
-Release - Auto-generated
-//! 
+//! Upgrade & Patch Agent Release - Auto-generated
+//!
 //! ['Performs Micro Agent functions']
 
 use crate::unified_types::*;
@@ -8,8 +7,7 @@ use crate::Result;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
-/// Upgrade & Patch Agent
-Release
+/// Upgrade & Patch Agent Release
 pub struct UpgradePatchAgentRelease {
     metadata: AgentMetadata,
     state: RwLock<AgentState>,
@@ -20,8 +18,7 @@ impl UpgradePatchAgentRelease {
         let metadata = AgentMetadata {
             id: Uuid::new_v4(),
             agent_id: "upgrade_patch_agent_release".to_string(),
-            name: "Upgrade & Patch Agent
-Release".to_string(),
+            name: "Upgrade & Patch Agent Release".to_string(),
             layer: AgentLayer::L5Infrastructure,
             category: AgentCategory::Other,
             agent_type: AgentType::Worker,
@@ -85,8 +82,7 @@ mod tests {
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = UpgradePatchAgentRelease::new();
-        assert_eq!(agent.metadata().name, "Upgrade & Patch Agent
-Release");
+        assert_eq!(agent.metadata().name, "Upgrade & Patch Agent Release");
     }
     
     #[tokio::test]

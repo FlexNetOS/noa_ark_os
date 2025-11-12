@@ -1,6 +1,5 @@
-//! Backup & Restore Agent
-Disaster - Auto-generated
-//! 
+//! Backup & Restore Agent Disaster - Auto-generated
+//!
 //! ['Performs Micro Agent functions']
 
 use crate::unified_types::*;
@@ -8,8 +7,7 @@ use crate::Result;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
-/// Backup & Restore Agent
-Disaster
+/// Backup & Restore Agent Disaster
 pub struct BackupRestoreAgentDisaster {
     metadata: AgentMetadata,
     state: RwLock<AgentState>,
@@ -20,8 +18,7 @@ impl BackupRestoreAgentDisaster {
         let metadata = AgentMetadata {
             id: Uuid::new_v4(),
             agent_id: "backup_restore_agent_disaster".to_string(),
-            name: "Backup & Restore Agent
-Disaster".to_string(),
+            name: "Backup & Restore Agent Disaster".to_string(),
             layer: AgentLayer::L5Infrastructure,
             category: AgentCategory::Other,
             agent_type: AgentType::Worker,
@@ -85,8 +82,7 @@ mod tests {
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = BackupRestoreAgentDisaster::new();
-        assert_eq!(agent.metadata().name, "Backup & Restore Agent
-Disaster");
+        assert_eq!(agent.metadata().name, "Backup & Restore Agent Disaster");
     }
     
     #[tokio::test]

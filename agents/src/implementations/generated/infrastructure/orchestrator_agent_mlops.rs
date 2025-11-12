@@ -1,6 +1,5 @@
-//! Orchestrator Agent
-MLOps - Auto-generated
-//! 
+//! Orchestrator Agent MLOps - Auto-generated
+//!
 //! ['Performs Micro Agent functions']
 
 use crate::unified_types::*;
@@ -8,8 +7,7 @@ use crate::Result;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
-/// Orchestrator Agent
-MLOps
+/// Orchestrator Agent MLOps
 pub struct OrchestratorAgentMlops {
     metadata: AgentMetadata,
     state: RwLock<AgentState>,
@@ -20,8 +18,7 @@ impl OrchestratorAgentMlops {
         let metadata = AgentMetadata {
             id: Uuid::new_v4(),
             agent_id: "orchestrator_agent_mlops".to_string(),
-            name: "Orchestrator Agent
-MLOps".to_string(),
+            name: "Orchestrator Agent MLOps".to_string(),
             layer: AgentLayer::L5Infrastructure,
             category: AgentCategory::Other,
             agent_type: AgentType::Worker,
@@ -85,8 +82,7 @@ mod tests {
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = OrchestratorAgentMlops::new();
-        assert_eq!(agent.metadata().name, "Orchestrator Agent
-MLOps");
+        assert_eq!(agent.metadata().name, "Orchestrator Agent MLOps");
     }
     
     #[tokio::test]

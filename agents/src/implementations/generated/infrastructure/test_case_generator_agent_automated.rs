@@ -1,6 +1,5 @@
-//! Test Case Generator Agent
-Automated - Auto-generated
-//! 
+//! Test Case Generator Agent Automated - Auto-generated
+//!
 //! ['Performs Micro Agent functions']
 
 use crate::unified_types::*;
@@ -8,8 +7,7 @@ use crate::Result;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
-/// Test Case Generator Agent
-Automated
+/// Test Case Generator Agent Automated
 pub struct TestCaseGeneratorAgentAutomated {
     metadata: AgentMetadata,
     state: RwLock<AgentState>,
@@ -20,8 +18,7 @@ impl TestCaseGeneratorAgentAutomated {
         let metadata = AgentMetadata {
             id: Uuid::new_v4(),
             agent_id: "test_case_generator_agent_automated".to_string(),
-            name: "Test Case Generator Agent
-Automated".to_string(),
+            name: "Test Case Generator Agent Automated".to_string(),
             layer: AgentLayer::L5Infrastructure,
             category: AgentCategory::Other,
             agent_type: AgentType::Worker,
@@ -85,8 +82,7 @@ mod tests {
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = TestCaseGeneratorAgentAutomated::new();
-        assert_eq!(agent.metadata().name, "Test Case Generator Agent
-Automated");
+        assert_eq!(agent.metadata().name, "Test Case Generator Agent Automated");
     }
     
     #[tokio::test]

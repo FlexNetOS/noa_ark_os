@@ -1,6 +1,5 @@
-//! SafeStack Agent
-Red - Auto-generated
-//! 
+//! SafeStack Agent Red - Auto-generated
+//!
 //! ['Performs Micro Agent functions']
 
 use crate::unified_types::*;
@@ -8,8 +7,7 @@ use crate::Result;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
-/// SafeStack Agent
-Red
+/// SafeStack Agent Red
 pub struct SafestackAgentRed {
     metadata: AgentMetadata,
     state: RwLock<AgentState>,
@@ -20,8 +18,7 @@ impl SafestackAgentRed {
         let metadata = AgentMetadata {
             id: Uuid::new_v4(),
             agent_id: "safestack_agent_red".to_string(),
-            name: "SafeStack Agent
-Red".to_string(),
+            name: "SafeStack Agent Red".to_string(),
             layer: AgentLayer::L5Infrastructure,
             category: AgentCategory::Other,
             agent_type: AgentType::Worker,
@@ -85,8 +82,7 @@ mod tests {
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = SafestackAgentRed::new();
-        assert_eq!(agent.metadata().name, "SafeStack Agent
-Red");
+        assert_eq!(agent.metadata().name, "SafeStack Agent Red");
     }
     
     #[tokio::test]

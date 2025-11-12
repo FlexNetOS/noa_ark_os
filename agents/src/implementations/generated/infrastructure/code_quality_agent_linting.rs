@@ -1,6 +1,5 @@
-//! Code Quality Agent
-Linting - Auto-generated
-//! 
+//! Code Quality Agent Linting - Auto-generated
+//!
 //! ['Performs Micro Agent functions']
 
 use crate::unified_types::*;
@@ -8,8 +7,7 @@ use crate::Result;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
-/// Code Quality Agent
-Linting
+/// Code Quality Agent Linting
 pub struct CodeQualityAgentLinting {
     metadata: AgentMetadata,
     state: RwLock<AgentState>,
@@ -20,8 +18,7 @@ impl CodeQualityAgentLinting {
         let metadata = AgentMetadata {
             id: Uuid::new_v4(),
             agent_id: "code_quality_agent_linting".to_string(),
-            name: "Code Quality Agent
-Linting".to_string(),
+            name: "Code Quality Agent Linting".to_string(),
             layer: AgentLayer::L5Infrastructure,
             category: AgentCategory::Other,
             agent_type: AgentType::Worker,
@@ -85,8 +82,7 @@ mod tests {
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = CodeQualityAgentLinting::new();
-        assert_eq!(agent.metadata().name, "Code Quality Agent
-Linting");
+        assert_eq!(agent.metadata().name, "Code Quality Agent Linting");
     }
     
     #[tokio::test]
