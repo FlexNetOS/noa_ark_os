@@ -10,6 +10,9 @@ members = [
     "crc",
     "ui/core",
     "server/ai/inference",
+    "services/relocation-daemon",
+    "apps/cli",
+    "server/relocation",
 ]
 
 [workspace.package]
