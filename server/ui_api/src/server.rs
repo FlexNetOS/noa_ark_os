@@ -305,7 +305,7 @@ fn sanitize_file_name(file_name: Option<&str>) -> String {
             // Extra safety: reject special directory names
             !name.is_empty() && *name != "." && *name != ".."
         })
-        .map(|name| name.to_string())
+            *name != "." && *name != ".."
         .unwrap_or_else(|| format!("upload-{}.bin", Uuid::new_v4()))
 }
 
