@@ -47,12 +47,14 @@ export function BoardShell({ state }: BoardShellProps) {
   const totalCards = useMemo(
     () => snapshot?.columns.reduce((acc, column) => acc + column.cards.length, 0) ?? 0,
     [snapshot?.columns]
+    [snapshot]
   );
   const completedCount = useMemo(() => {
     return snapshot?.columns
       .filter((column) => /done|complete|finished/i.test(column.title))
       .reduce((count, column) => count + column.cards.length, 0) ?? 0;
   }, [snapshot?.columns]);
+  }, [snapshot]);
 
   if (!snapshot) {
     return null;

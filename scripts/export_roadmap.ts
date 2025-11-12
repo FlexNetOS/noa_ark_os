@@ -76,6 +76,15 @@ function extractTaskDetails(content: string): Record<string, TaskDetail> {
    *   5. checklistBlock - The checklist block (multi-line, up to Acceptance criteria)
    *   6. acceptanceBlock- The acceptance criteria block (multi-line, up to Meta)
    *   7. metaBlock      - The meta block (multi-line, up to next anchor or end of content)
+   *
+   * Regex breakdown:
+   *   <a id="([^"]+)"></a>         - Capture 1: anchor id
+   *   \s*###\s*(AGENTOS-\d+)       - Capture 2: code
+   *   \s*—\s*([^\n]+)              - Capture 3: title
+   *   \n\*\*Description:\*\*\s*([^\n]+) - Capture 4: description
+   *   \n\*\*Checklist\*\*\n([\s\S]*?)  - Capture 5: checklistBlock (non-greedy)
+   *   \n\*\*Acceptance criteria\*\*\n([\s\S]*?) - Capture 6: acceptanceBlock (non-greedy)
+   *   \n\*\*Meta\*\*\n([\s\S]*?)(?=\n<a id=|$) - Capture 7: metaBlock (non-greedy, up to next anchor or end)
    */
   const taskRegex = /<a id="([^"]+)"><\/a>\s*###\s*(AGENTOS-\d+)\s*—\s*([^\n]+)\n\*\*Description:\*\*\s*([^\n]+)\n\*\*Checklist\*\*\n([\s\S]*?)\n\*\*Acceptance criteria\*\*\n([\s\S]*?)\n\*\*Meta\*\*\n([\s\S]*?)(?=\n<a id=|$)/g;
 

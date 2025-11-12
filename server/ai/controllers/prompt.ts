@@ -87,7 +87,7 @@ export async function handlePromptRequest(
 ): Promise<PromptControllerResult> {
   const payload = validatePromptPayload(input);
   const template = await deps.loadTemplate();
-  const now = deps.now ?? (() => Date.now());
+  const now = deps.now ?? (() => new Date());
   const started = now();
 
   try {

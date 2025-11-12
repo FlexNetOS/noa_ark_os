@@ -20,6 +20,9 @@ export class RateLimiter {
       const refillApplied = Math.min(refill, this.capacity - tokens);
       tokens = Math.min(this.capacity, tokens + refill);
       updatedAt = existing.updatedAt + refillApplied * this.refillIntervalMs;
+      const refillApplied = Math.min(refill, this.capacity - existing.tokens);
+      tokens = Math.min(this.capacity, tokens + refill);
+      updatedAt = existing.updatedAt + (refillApplied * this.refillIntervalMs);
     }
 
     if (tokens <= 0) {
