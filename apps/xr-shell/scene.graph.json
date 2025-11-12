@@ -1,0 +1,39 @@
+{
+  "scene": "NOA Unified Control Volume",
+  "nodes": [
+    {
+      "id": "workspace-developer",
+      "type": "panel",
+      "title": "Developer Workspace",
+      "position": [0.0, 1.6, -1.2]
+    },
+    {
+      "id": "workspace-operator",
+      "type": "panel",
+      "title": "Operations Workspace",
+      "position": [-1.2, 1.6, -1.5]
+    },
+    {
+      "id": "workspace-executive",
+      "type": "panel",
+      "title": "Executive Workspace",
+      "position": [1.2, 1.6, -1.5]
+    }
+  ],
+  "edges": [
+    {
+      "from": "workspace-developer",
+      "to": "workspace-operator",
+      "type": "data-stream"
+    },
+    {
+      "from": "workspace-operator",
+      "to": "workspace-executive",
+      "type": "insight"
+    }
+  ],
+  "metadata": {
+    "refreshIntervalSeconds": 2,
+    "eventChannel": "wss://api.noa-ark-os.local/xr/events"
+  }
+}
