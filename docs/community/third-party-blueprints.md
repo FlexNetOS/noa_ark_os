@@ -6,7 +6,7 @@ External partners can publish blueprint automations that extend Noa Ark workflow
 
 1. **Repository Layout**
    - Provide a public Git repository or artifact bundle containing blueprint assets.
-   - Include `blueprint.yaml` detailing inputs, dependencies, kernel hooks, and UI affordances.
+   - Include `blueprint.yaml` detailing inputs, dependencies, kernel hooks, and UI affordances (see schema below).
    - Supply documentation (`README.md`) with deployment diagrams and configuration steps.
 2. **Operational Readiness**
    - Demonstrate compatibility with the latest LTS kernel release (`noa-ark>=1.4`).
@@ -20,6 +20,35 @@ External partners can publish blueprint automations that extend Noa Ark workflow
    - Register required dashboards, forms, and status tiles under `ui.affordances` in `blueprint.yaml`.
    - Supply localization-ready copy for user-facing text.
    - Provide sample screenshots or motion clips for catalog previews.
+
+## `blueprint.yaml` Schema
+
+Each blueprint **must** include a `blueprint.yaml` file describing its metadata, configuration, and integration points. The expected schema is as follows:
+
+```yaml
+# blueprint.yaml
+name: <string>                # Unique identifier for the blueprint (e.g., "ci_cd/continuous-assurance")
+display_name: <string>        # Human-readable name for UI display
+description: <string>         # Brief summary of the blueprint's purpose
+category: <string>            # Category (e.g., "CI/CD", "Data Processing", "Agent Swarms")
+version: <string>             # Semantic version (e.g., "1.0.0")
+authors:
+  - name: <string>
+    contact: <string>         # (optional) Email or handle
+inputs:
+  - key: <string>             # Input parameter name
+    type: <string>            # Data type (e.g., string, int, bool, enum)
+    required: <bool>
+    description: <string>
+dependencies:
+  - <string>                  # List of required external systems or services
+kernel_hooks:
+  - <string>                  # List of kernel hook identifiers (see examples in workflow/blueprints/README.md)
+ui_affordances:
+  - <string>                  # List of UI features or surfaces provided
+```
+
+For complete examples, refer to the [Blueprint Catalog](../../workflow/blueprints/README.md).
 
 ## Review Process
 
