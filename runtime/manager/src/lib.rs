@@ -37,7 +37,7 @@ pub enum RuntimeComponent {
 }
 
 /// Available execution backends for each runtime component.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ExecutionBackend {
     LlamaCppCpu,
     LlamaCppGpu {
