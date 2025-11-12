@@ -191,32 +191,32 @@ This document tracks actionable tasks to resolve outstanding gaps and quality is
 ## Ensure everything depends on the kernel/service graph, simplify deployment, and make the platform portable across environments by default.
 Ground platform evolution in a single kernel-first dependency graph that packages services consistently for any environment.
 **Suggested task**
-- Establish kernel-first dependency graph and portable packaging — [View task](#task-kernel-first)
+- Establish kernel-first dependency graph and portable packaging — [View task](#task-kernel-first) · [Issue stub](../issues/AGENTOS-1-kernel-first-graph.md)
 
 ## Single-Host AgentOS Server Orchestration
 Deliver a constrained, single-host deployment profile that keeps the complete stack healthy without external orchestration.
 **Suggested task**
-- Design single-host AgentOS server profile — [View task](#task-single-host)
+- Design single-host AgentOS server profile — [View task](#task-single-host) · [Issue stub](../issues/AGENTOS-2-single-host-profile.md)
 
 ## Unified UI/UX Shell & Interaction Model
 Present a cohesive operator experience across desktop, web, and terminal surfaces that reuses the same interaction vocabulary.
 **Suggested task**
-- Ship unified multi-surface UI shell — [View task](#task-ui-shell)
+- Ship unified multi-surface UI shell — [View task](#task-ui-shell) · [Issue stub](../issues/AGENTOS-3-unified-ui-shell.md)
 
 ## Adaptive Runtime & Portability Enhancements
 Add runtime intelligence to detect host capabilities, tune workloads, and keep deployments portable across infrastructure classes.
 **Suggested task**
-- Implement adaptive runtime orchestration — [View task](#task-adaptive-runtime)
+- Implement adaptive runtime orchestration — [View task](#task-adaptive-runtime) · [Issue stub](../issues/AGENTOS-4-adaptive-runtime.md)
 
 ## Advanced Gateway & Observability
 Upgrade ingress, policy, and telemetry flows so operators gain real-time insight and can enforce controls without friction.
 **Suggested task**
-- Develop advanced gateway with observability — [View task](#task-gateway-observability)
+- Develop advanced gateway with observability — [View task](#task-gateway-observability) · [Issue stub](../issues/AGENTOS-5-gateway-observability.md)
 
 ## Value-Added Service Ecosystem
 Layer differentiated services and packaged workflows on top of the hardened core to accelerate customer value delivery.
 **Suggested task**
-- Launch value-add ecosystem features — [View task](#task-value-ecosystem)
+- Launch value-add ecosystem features — [View task](#task-value-ecosystem) · [Issue stub](../issues/AGENTOS-6-value-ecosystem.md)
 
 ## Task Details
 
@@ -241,6 +241,7 @@ Layer differentiated services and packaged workflows on top of the hardened core
 - Priority: P0
 - Status: Proposed
 - Depends on: None
+- Tracking: [Internal issue stub](../issues/AGENTOS-1-kernel-first-graph.md) _(replace anchor with external URL when published)_
 
 ### <a id="task-single-host"></a>AGENTOS-2 — Design single-host AgentOS server profile
 **Description:** Define and validate a single-host profile that boots the full AgentOS stack with deterministic ordering, self-healing, and constrained resource envelopes.
@@ -263,6 +264,7 @@ Layer differentiated services and packaged workflows on top of the hardened core
 - Priority: P0
 - Status: Proposed
 - Depends on: AGENTOS-1
+- Tracking: [Internal issue stub](../issues/AGENTOS-2-single-host-profile.md) _(replace anchor with external URL when published)_
 
 ### <a id="task-ui-shell"></a>AGENTOS-3 — Ship unified multi-surface UI shell
 **Description:** Create a shared UI shell, interaction model, and component library that can be deployed across desktop, browser, and CLI interfaces.
@@ -285,6 +287,7 @@ Layer differentiated services and packaged workflows on top of the hardened core
 - Priority: P1
 - Status: Proposed
 - Depends on: AGENTOS-2
+- Tracking: [Internal issue stub](../issues/AGENTOS-3-unified-ui-shell.md) _(replace anchor with external URL when published)_
 
 ### <a id="task-adaptive-runtime"></a>AGENTOS-4 — Implement adaptive runtime orchestration
 **Description:** Extend runtime controllers to detect host capabilities, adjust workload placement, and surface portability guidance tied to the kernel graph.
@@ -307,6 +310,7 @@ Layer differentiated services and packaged workflows on top of the hardened core
 - Priority: P1
 - Status: Proposed
 - Depends on: AGENTOS-1, AGENTOS-2
+- Tracking: [Internal issue stub](../issues/AGENTOS-4-adaptive-runtime.md) _(replace anchor with external URL when published)_
 
 ### <a id="task-gateway-observability"></a>AGENTOS-5 — Develop advanced gateway with observability
 **Description:** Modernize the gateway to deliver policy enforcement, traffic shaping, and deep observability linked to platform telemetry expectations.
@@ -329,6 +333,7 @@ Layer differentiated services and packaged workflows on top of the hardened core
 - Priority: P1
 - Status: Proposed
 - Depends on: AGENTOS-2
+- Tracking: [Internal issue stub](../issues/AGENTOS-5-gateway-observability.md) _(replace anchor with external URL when published)_
 
 ### <a id="task-value-ecosystem"></a>AGENTOS-6 — Launch value-add ecosystem features
 **Description:** Bundle advanced services, curated workflows, and partner integrations that sit atop the hardened platform and gateway foundation.
@@ -351,6 +356,7 @@ Layer differentiated services and packaged workflows on top of the hardened core
 - Priority: P1
 - Status: Proposed
 - Depends on: AGENTOS-3, AGENTOS-4, AGENTOS-5
+- Tracking: [Internal issue stub](../issues/AGENTOS-6-value-ecosystem.md) _(replace anchor with external URL when published)_
 
 Roadmap alignment: This sequence locks platform control through the kernel-first graph, delivers a resilient single-host deployment, unifies user experience, adds intelligent runtime and gateway ingress, and culminates in differentiated services layered on the hardened foundation for consistent portability.
 
