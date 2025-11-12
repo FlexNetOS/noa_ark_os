@@ -192,7 +192,7 @@ impl UiApiServer {
                     file_name = field.file_name().map(|name| name.to_string());
                     
                     // Read file in chunks with size validation to prevent memory exhaustion
-                    let mut file_data = Vec::new();
+                    let mut file_data = Vec::with_capacity(MAX_UPLOAD_SIZE);
                     let mut total_size = 0usize;
                     
                     while let Some(chunk) = field
