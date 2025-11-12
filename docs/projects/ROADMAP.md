@@ -69,7 +69,7 @@
 - [ ] Multi-layered agent hierarchies
 - [ ] Agent collaboration protocols
 - [ ] Learning and adaptation
-- [ ] Agent marketplace/registry
+- [ ] Agent marketplace/registry ([AGENTOS-6 — Launch value-add ecosystem features](../issues/AGENTOS-6.md))
 - [ ] Agent performance analytics
 - [ ] Distributed agent deployment
 
