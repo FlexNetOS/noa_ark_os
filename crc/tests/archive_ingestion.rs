@@ -9,17 +9,35 @@ use flate2::Compression;
 use noa_crc::extraction::prepare_artifact_for_processing;
 use noa_crc::processor::DropProcessor;
 use noa_crc::{CRCConfig, CRCSystem, DropManifest, Priority, SourceType};
+use serial_test::serial;
 use tar::Builder;
 use zip::write::FileOptions;
 use zip::CompressionMethod;
 
 #[tokio::test]
+#[serial]
 async fn processes_zip_archive_via_extraction() -> Result<()> {
+/// Helper function to test archive processing via extraction pipeline
+/// 
+/// # Arguments
+/// * `archive_name` - Name of the archive file (e.g., "ingest-zip-archive.zip")
+/// * `create_archive_fn` - Function to create the archive
+/// * `expected_type` - Expected archive type string (e.g., "zip" or "tar.gz")
+/// * `default_name` - Default name fallback if extraction fails
+async fn test_archive_processing<F>(
+    archive_name: &str,
+    create_archive_fn: F,
+    expected_type: &str,
+    default_name: &str,
+) -> Result<()>
+where
+    F: FnOnce(&Path) -> Result<()>,
+{
     let drop_in = Path::new("crc/drop-in/incoming/repos");
     fs::create_dir_all(drop_in)?;
 
-    let archive_path = drop_in.join("ingest-zip-archive.zip");
-    create_zip_archive(&archive_path)?;
+    let archive_path = drop_in.join(archive_name);
+    create_archive_fn(&archive_path)?;
 
     let prepared = prepare_artifact_for_processing(archive_path.clone()).await?;
     let processing_path = prepared.processing_path.clone();
@@ -56,7 +74,7 @@ async fn processes_zip_archive_via_extraction() -> Result<()> {
         .original_artifact
         .as_ref()
         .and_then(|artifact| artifact.path.file_stem()?.to_str())
-        .unwrap_or("ingest-zip-archive")
+        .unwrap_or(default_name)
         .to_string();
 
     let manifest = DropManifest {
@@ -93,7 +111,7 @@ async fn processes_zip_archive_via_extraction() -> Result<()> {
             .metadata
             .get("original_artifact_type")
             .map(String::as_str),
-        Some("zip")
+        Some(expected_type)
     );
 
     let artifact = drop
@@ -136,6 +154,7 @@ async fn processes_zip_archive_via_extraction() -> Result<()> {
 }
 
 #[tokio::test]
+#[serial]
 async fn processes_tar_gz_archive_via_extraction() -> Result<()> {
     let drop_in = Path::new("crc/drop-in/incoming/repos");
     fs::create_dir_all(drop_in)?;
@@ -244,8 +263,25 @@ async fn processes_tar_gz_archive_via_extraction() -> Result<()> {
             fs::remove_file(&artifact.path)?;
         }
     }
+async fn processes_zip_archive_via_extraction() -> Result<()> {
+    test_archive_processing(
+        "ingest-zip-archive.zip",
+        create_zip_archive,
+        "zip",
+        "ingest-zip-archive",
+    )
+    .await
+}
 
-    Ok(())
+#[tokio::test]
+async fn processes_tar_gz_archive_via_extraction() -> Result<()> {
+    test_archive_processing(
+        "ingest-tar-archive.tar.gz",
+        create_tar_gz_archive,
+        "tar.gz",
+        "ingest-tar-archive",
+    )
+    .await
 }
 
 fn create_zip_archive(path: &Path) -> Result<()> {
