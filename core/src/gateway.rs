@@ -1800,7 +1800,6 @@ impl Gateway {
     }
 
     /// Digital twin style verification of a plan.
-    /// Digital twin style verification of a plan.
     fn formal_verification(&self, intent: &Intent, plan: &RoutePlan) -> Result<bool, GatewayError> {
         if plan.connectors.is_empty() {
             return Ok(false);
