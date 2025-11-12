@@ -222,6 +222,7 @@ Layer differentiated services and packaged workflows on top of the hardened core
 
 <a id="task-kernel-first"></a>
 ### AGENTOS-1 — Establish kernel-first dependency graph & portable packaging
+### <a id="task-kernel-first"></a>AGENTOS-1 — Establish kernel-first dependency graph & portable packaging
 **Description:** Build a canonical dependency map anchored on the kernel/service graph and package baselines that run identically on local, cloud, and air-gapped hosts.
 
 **Checklist**
@@ -245,6 +246,12 @@ Layer differentiated services and packaged workflows on top of the hardened core
 
 <a id="task-single-host"></a>
 ### AGENTOS-2 — Design single-host AgentOS server profile
+- Owner: TBA
+- Priority: P0
+- Status: Proposed
+- Depends on: None
+
+### <a id="task-single-host"></a>AGENTOS-2 — Design single-host AgentOS server profile
 **Description:** Define and validate a single-host profile that boots the full AgentOS stack with deterministic ordering, self-healing, and constrained resource envelopes.
 
 **Checklist**
@@ -268,6 +275,12 @@ Layer differentiated services and packaged workflows on top of the hardened core
 
 <a id="task-ui-shell"></a>
 ### AGENTOS-3 — Ship unified multi-surface UI shell
+- Owner: TBA
+- Priority: P0
+- Status: Proposed
+- Depends on: AGENTOS-1
+
+### <a id="task-ui-shell"></a>AGENTOS-3 — Ship unified multi-surface UI shell
 **Description:** Create a shared UI shell, interaction model, and component library that can be deployed across desktop, browser, and CLI interfaces.
 
 **Checklist**
@@ -291,6 +304,13 @@ Layer differentiated services and packaged workflows on top of the hardened core
 
 <a id="task-adaptive-runtime"></a>
 ### AGENTOS-4 — Implement adaptive runtime orchestration
+- Owner: TBA
+- Priority: P1
+- Status: Proposed
+- Depends on: AGENTOS-2
+- Tracking: [Internal issue stub](../issues/AGENTOS-3-unified-ui-shell.md) _(replace anchor with external URL when published)_
+
+### <a id="task-adaptive-runtime"></a>AGENTOS-4 — Implement adaptive runtime orchestration
 **Description:** Extend runtime controllers to detect host capabilities, adjust workload placement, and surface portability guidance tied to the kernel graph.
 
 **Checklist**
@@ -314,6 +334,12 @@ Layer differentiated services and packaged workflows on top of the hardened core
 
 <a id="task-gateway-observability"></a>
 ### AGENTOS-5 — Develop advanced gateway with observability
+- Owner: TBA
+- Priority: P1
+- Status: Proposed
+- Depends on: AGENTOS-1, AGENTOS-2
+
+### <a id="task-gateway-observability"></a>AGENTOS-5 — Develop advanced gateway with observability
 **Description:** Modernize the gateway to deliver policy enforcement, traffic shaping, and deep observability linked to platform telemetry expectations.
 
 **Checklist**
@@ -337,6 +363,12 @@ Layer differentiated services and packaged workflows on top of the hardened core
 
 <a id="task-value-ecosystem"></a>
 ### AGENTOS-6 — Launch value-add ecosystem features
+- Owner: TBA
+- Priority: P1
+- Status: Proposed
+- Depends on: AGENTOS-2
+
+### <a id="task-value-ecosystem"></a>AGENTOS-6 — Launch value-add ecosystem features
 **Description:** Bundle advanced services, curated workflows, and partner integrations that sit atop the hardened platform and gateway foundation.
 
 **Checklist**
@@ -356,6 +388,9 @@ Layer differentiated services and packaged workflows on top of the hardened core
 - Owner: codex
 - Priority: P1
 - Status: Processing
+- Owner: TBA
+- Priority: P1
+- Status: Proposed
 - Depends on: AGENTOS-3, AGENTOS-4, AGENTOS-5
 
 Roadmap alignment: This sequence locks platform control through the kernel-first graph, delivers a resilient single-host deployment, unifies user experience, adds intelligent runtime and gateway ingress, and culminates in differentiated services layered on the hardened foundation for consistent portability.
