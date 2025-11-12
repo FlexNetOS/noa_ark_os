@@ -437,11 +437,7 @@ impl WorkflowEngine {
 }
 
 fn parameters_to_value(parameters: &HashMap<String, Value>) -> Value {
-    let mut map = serde_json::Map::new();
-    for (key, value) in parameters {
-        map.insert(key.clone(), value.clone());
-    }
-    Value::Object(map)
+    serde_json::to_value(parameters).unwrap_or(Value::Null)
 fn now_iso() -> String {
     Utc::now().to_rfc3339()
 }
