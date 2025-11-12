@@ -31,7 +31,9 @@ dist/
 
 # Workspace indexes and temp files
 .workspace/
-.graphs/
+.graphs/*
+!.graphs/metrics/
+!.graphs/metrics/**
 
 # Rust
 **/*.rs.bk
