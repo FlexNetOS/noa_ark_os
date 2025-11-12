@@ -1,5 +1,6 @@
 //! Security subsystem
 
+use crate::time::current_timestamp_millis;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -7,7 +8,6 @@ use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
-use std::time::{SystemTime, UNIX_EPOCH};
 
 pub type UserId = u64;
 
@@ -191,13 +191,6 @@ fn next_operation_id() -> String {
     let counter = OPERATION_COUNTER.fetch_add(1, Ordering::SeqCst);
     let timestamp = current_timestamp_millis();
     format!("op-{}-{}", timestamp, counter)
-}
-
-fn current_timestamp_millis() -> u128 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|duration| duration.as_millis())
-        .unwrap_or(0)
 }
 
 fn simple_hash(value: &str) -> String {
