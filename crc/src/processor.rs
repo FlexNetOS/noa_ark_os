@@ -113,6 +113,9 @@ impl DropProcessor {
 
         let archive_root = self.base_path.join("archive");
         let mut archive_manager = ArchiveManager::new(archive_root, ArchiveConfig::default());
+        let archive_info = archive_manager
+            .archive_drop(drop_id, &source_path, source_type.clone())
+            .await?;
         let archive_result = archive_manager
             .archive_drop(drop_id, &source_path, source_type.clone())
             .await;
@@ -146,6 +149,8 @@ impl DropProcessor {
             archive_info.archive_path.display(),
             archive_info.hash
         );
+
+
         let mut metadata = validation.metadata;
         match serde_json::to_string(&build_artifacts) {
             Ok(serialized) => {

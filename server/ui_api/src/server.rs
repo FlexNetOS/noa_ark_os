@@ -293,8 +293,8 @@ fn format_crc_state(state: &CRCState) -> String {
 async fn handle_websocket(mut socket: WebSocket, bridge: SessionBridge) {
     let mut events = bridge.subscribe();
     while let Some(event) = events.next().await {
-        match event.map(SessionBridge::map_event) {
-            Ok(event) => match serde_json::to_string(&event) {
+        match event {
+            Ok(event) => match serde_json::to_string(&SessionBridge::map_event(event)) {
                 Ok(payload) => {
                     if socket.send(Message::Text(payload)).await.is_err() {
                         break;
