@@ -150,6 +150,10 @@ fn verify_directory_structure() -> Result<(), Box<dyn std::error::Error>> {
         "crc/temp/analysis-cache",
         "crc/temp/extracts",
         "crc/temp/logs",
+        // Artifact storage
+        "storage/artifacts",
+        "storage/artifacts/edge",
+        "storage/artifacts/server",
     ];
 
     let mut created_count = 0;

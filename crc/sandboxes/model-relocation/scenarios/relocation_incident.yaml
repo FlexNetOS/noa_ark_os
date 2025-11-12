@@ -1,0 +1,68 @@
+# Relocation Incident Simulation
+version: 1
+metadata:
+  id: relocation-inc-001
+  objective: "Validate automated relocation guardrails and recovery flow"
+  severity: high
+  playbook: storage-relocation-v2
+  owner: storage-relocation
+  dependencies:
+    - noa_storage::automation
+    - services/monitoring/pipelines/alerts.yaml
+
+stages:
+  - name: preflight
+    checks:
+      - ensure_signed_run: true
+      - confirm_checkpoint_ready: true
+      - traffic_drain_percentage: 25
+    telemetry:
+      - metric: relocation.preflight.duration_ms
+        target: 120000
+        tolerance: 10000
+        unit: milliseconds
+      - metric: relocation.preflight.drift_detected
+        target: 0
+        tolerance: 0
+        
+  - name: execution
+    actions:
+      - relocate_assets:
+          from: zone-a
+          to: zone-b
+          batch_size: 50
+          checksum_strategy: sha256
+      - trigger_health_checks: true
+    telemetry:
+      - metric: relocation.execution.success_rate
+        target: 0.99
+        tolerance: 0.01
+        unit: ratio
+      - metric: relocation.execution.traffic_loss_pct
+        target: 0.01
+        tolerance: 0.005
+        unit: ratio
+
+  - name: validation
+    actions:
+      - verify_checksums: true
+      - collect_business_signoff: product-owner
+      - archive_run_artifacts: true
+    telemetry:
+      - metric: relocation.validation.checksum_mismatch
+        target: 0
+        tolerance: 0
+        unit: count
+      - metric: relocation.validation.signoff_latency_minutes
+        target: 30
+        tolerance: 10
+        unit: minutes
+
+recovery_assertions:
+  rollback_ready: true
+  checkpoints_verified: true
+  postmortem_required: true
+success_criteria:
+  - "No checksum mismatches detected during validation"
+  - "All alerts acknowledged within severity SLAs"
+  - "ROI dashboard updated with relocation metrics within one refresh interval"

@@ -1,0 +1,75 @@
+# Relocation policy DSL for the NOA Ark OS relocation daemon.
+#
+# version: Schema version to allow breaking changes in the future.
+# defaults: Fallback retention and naming rules applied when a relocation rule
+#           does not override them explicitly.
+# relocations: Ordered list of relocation rules. The first matching rule wins
+#              for a given file descriptor.
+#
+# A relocation rule supports the following fields:
+#   name: Unique identifier for the rule.
+#   source: Glob expression describing which files are targeted.
+#   destination: Base directory for relocated artifacts.
+#   requires_approval: Forces the daemon to queue the action for manual
+#                      approval even when running in enforce mode.
+#   retention: Optional override for retention behaviour.
+#   naming: Optional override for naming strategy.
+#   filters:
+#     min_size: Minimum size in bytes that a file must have to qualify.
+#     labels:   All labels that must be present on the file registry entry.
+#
+# Retention options:
+#   max_versions: Maximum number of relocated copies allowed under the
+#                 destination prefix. Additional files are skipped until older
+#                 copies are purged.
+#   ttl_days:     Minimum age (in days) before a file is eligible for
+#                 relocation. Files more recent than the TTL will be skipped.
+#
+# Naming strategies:
+#   strategy: preserve | timestamp | incremental
+#   prefix/suffix: Optional affixes added to the generated filename.
+#   format: Optional chrono format string used by the timestamp strategy.
+#   width:  Optional zero-padding width used by the incremental strategy.
+version: "1.0"
+
+defaults:
+  retention:
+    max_versions: 5
+    ttl_days: 7
+  naming:
+    strategy: preserve
+
+relocations:
+  - name: archive-log-stream
+    source: "/var/log/**/*.log"
+    destination: "/archive/logs"
+    naming:
+      strategy: timestamp
+      format: "%Y%m%dT%H%M%SZ"
+      prefix: "log-"
+      suffix: ".gz"
+    retention:
+      max_versions: 30
+      ttl_days: 1
+    filters:
+      min_size: 1024
+      labels: ["log", "ingested"]
+  - name: retain-critical-snapshots
+    source: "/snapshots/critical/**/*.img"
+    destination: "/cold-storage/critical"
+    requires_approval: true
+    naming:
+      strategy: incremental
+      width: 4
+      prefix: "critical-"
+    retention:
+      max_versions: 12
+    filters:
+      labels: ["snapshot", "critical"]
+  - name: archive-generic-artifacts
+    source: "/data/artifacts/**/*"
+    destination: "/archive/artifacts"
+    naming:
+      strategy: preserve
+    retention:
+      max_versions: 50
