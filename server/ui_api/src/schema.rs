@@ -1,3 +1,5 @@
+use std::fmt;
+
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use serde_repr::Serialize_repr;
@@ -26,6 +28,18 @@ pub enum LayoutSlot {
     Header = 1,
     Main = 2,
     Footer = 3,
+}
+
+impl fmt::Display for LayoutSlot {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let label = match self {
+            LayoutSlot::Header => "header",
+            LayoutSlot::Main => "main",
+            LayoutSlot::Footer => "footer",
+        };
+
+        f.write_str(label)
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
