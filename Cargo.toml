@@ -30,5 +30,4 @@ serde_json = "1.0"
 serde_yaml = "0.9"
 anyhow = "1.0"
 tokio = { version = "1", features = ["full"] }
-lazy_static = "1.4"
 noa_inference = { path = "server/ai/inference" }

@@ -143,6 +143,8 @@ impl WorkflowEngine {
 
     /// Create a workflow engine that interacts with kernel capabilities.
     pub fn with_kernel(kernel: KernelHandle) -> Self {
+        let instrumentation = PipelineInstrumentation::new()
+            .expect("failed to initialise pipeline instrumentation");
         let instrumentation =
             PipelineInstrumentation::new().expect("failed to initialise pipeline instrumentation");
         Self {
@@ -402,7 +404,7 @@ impl WorkflowEngine {
         stage_states
             .entry(workflow_id.to_string())
             .or_insert_with(HashMap::new)
-            .insert(stage_name.to_string(), state);
+            .insert(stage_name.to_string(), state.clone());
 
         let timestamp = now_iso();
         self.emit_event(WorkflowEvent::StageState {
