@@ -188,7 +188,7 @@ impl CRCWatcher {
             .ok_or_else(|| Error::ConfigError("Unknown source type".to_string()))?;
 
         // Prepare the source for ingestion (extract archives when necessary)
-        let prepared = prepare_artifact_for_processing(path.clone()).await?;
+        let prepared = prepare_artifact_for_processing(path.clone(), None).await?;
         let processing_path = prepared.processing_path.clone();
 
         // If extraction occurred, save the path for potential cleanup on error

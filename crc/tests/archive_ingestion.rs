@@ -39,7 +39,7 @@ where
     let archive_path = drop_in.join(archive_name);
     create_archive_fn(&archive_path)?;
 
-    let prepared = prepare_artifact_for_processing(archive_path.clone()).await?;
+    let prepared = prepare_artifact_for_processing(archive_path.clone(), None).await?;
     let processing_path = prepared.processing_path.clone();
 
     let mut metadata = HashMap::new();
@@ -162,7 +162,7 @@ async fn processes_tar_gz_archive_via_extraction() -> Result<()> {
     let archive_path = drop_in.join("ingest-tar-archive.tar.gz");
     create_tar_gz_archive(&archive_path)?;
 
-    let prepared = prepare_artifact_for_processing(archive_path.clone()).await?;
+    let prepared = prepare_artifact_for_processing(archive_path.clone(), None).await?;
     let processing_path = prepared.processing_path.clone();
 
     let mut metadata = HashMap::new();
@@ -331,6 +331,38 @@ fn create_tar_gz_archive(path: &Path) -> Result<()> {
 }
 
 #[tokio::test]
+async fn uses_custom_extraction_path_when_provided() -> Result<()> {
+    let drop_in = Path::new("crc/drop-in/incoming/repos");
+    fs::create_dir_all(drop_in)?;
+
+    let archive_path = drop_in.join("custom-extract-test.zip");
+    create_zip_archive(&archive_path)?;
+
+    // Use a custom extraction root
+    let custom_extract_root = PathBuf::from("crc/temp/test_custom_extracts");
+    if custom_extract_root.exists() {
+        fs::remove_dir_all(&custom_extract_root)?;
+    }
+
+    let prepared = prepare_artifact_for_processing(
+        archive_path.clone(),
+        Some(custom_extract_root.clone()),
+    )
+    .await?;
+
+    // Verify the extraction happened in the custom path
+    assert!(prepared.processing_path.starts_with(&custom_extract_root));
+    assert!(prepared.processing_path.exists());
+    assert!(prepared.processing_path.join("Cargo.toml").exists());
+
+    // Clean up
+    if custom_extract_root.exists() {
+        fs::remove_dir_all(&custom_extract_root)?;
+    }
+    if archive_path.exists() {
+        fs::remove_file(&archive_path)?;
+    }
+
 async fn cleanup_extracted_directory_on_registration_failure() -> Result<()> {
     let drop_in = Path::new("crc/drop-in/incoming/repos");
     fs::create_dir_all(drop_in)?;
