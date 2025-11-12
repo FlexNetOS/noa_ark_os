@@ -60,8 +60,8 @@ impl UiApiState {
             .ok()
             .map(PathBuf::from)
             .unwrap_or_else(|| {
-                // Default to /tmp for development/CI, can be overridden in production
-                PathBuf::from("/tmp/noa-ark-os/crc/drop-in/incoming")
+                // Use platform-appropriate temp directory for default
+                std::env::temp_dir().join("noa-ark-os/crc/drop-in/incoming")
             });
         
         Self {
