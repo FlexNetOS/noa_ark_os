@@ -2,6 +2,7 @@
 //! Contains actual agent code from agentaskit drop
 
 pub mod board;
+pub mod documentation;
 pub mod executive;
 pub mod micro;
 pub mod model_selector;
@@ -13,6 +14,7 @@ pub mod generated;
 
 // Re-export for convenience
 pub use board::*;
+pub use documentation::*;
 pub use executive::*;
 pub use generated::*;
 pub use micro::*;

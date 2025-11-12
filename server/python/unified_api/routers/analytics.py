@@ -1,6 +1,4 @@
 """Analytics and ROI endpoints."""
-"""Analytics endpoints exposed to the unified dashboard."""
-
 from __future__ import annotations
 
 from typing import Dict, List

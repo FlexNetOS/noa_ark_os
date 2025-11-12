@@ -12,3 +12,6 @@ serde_json = "1.0"
 serde_yaml = "0.9"
 noa_core = { path = "../core" }
 noa_agents = { path = "../agents" }
+tokio = { version = "1", features = ["sync"] }
+tokio-stream = "0.1"
+chrono = { version = "0.4", features = ["serde"] }

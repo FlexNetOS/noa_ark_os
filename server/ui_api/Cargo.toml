@@ -1,0 +1,29 @@
+[package]
+name = "noa_ui_api"
+version = "0.1.0"
+edition = "2021"
+description = "Server-driven UI API for NOA ARK OS"
+license = "MIT"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = "0.9"
+serde_repr = "0.1"
+axum = { version = "0.7", features = ["ws"] }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+tokio-stream = "0.1"
+tower = "0.4"
+uuid = { version = "1", features = ["serde", "v4"] }
+thiserror = "1.0"
+tracing = "0.1"
+noa_workflow = { path = "../../workflow" }
+tonic = { version = "0.11", features = ["transport"] }
+prost = "0.12"
+prost-types = "0.12"
+async-stream = "0.3"
+futures = "0.3"
+
+[build-dependencies]
+tonic-build = "0.11"
+prost-build = "0.12"
