@@ -2,6 +2,18 @@
 
 This document tracks actionable tasks to resolve outstanding gaps and quality issues identified during verification of the NOA ARK OS roadmap implementation.
 
+## Task Overview
+
+- **AGENTOS-1 — Populate Workflow Blueprint Catalog** ([View task](#task-agentos-1))
+- **AGENTOS-2 — Deliver Marketplace Assets & Tooling** ([View task](#task-agentos-2))
+- **AGENTOS-3 — Implement Analytics Pipelines** ([View task](#task-agentos-3))
+- **AGENTOS-4 — Seed Telemetry Storage Samples** ([View task](#task-agentos-4))
+- **AGENTOS-5 — Fix CICD Pipeline Struct Duplication** ([View task](#task-agentos-5))
+- **AGENTOS-6 — Extend GPU Detection Beyond NVIDIA** ([View task](#task-agentos-6))
+- **AGENTOS-7 — Deliver Value-Add Ecosystem Content** ([View task](#task-agentos-7))
+
+---
+
 ## 1. Populate Workflow Blueprint Catalog
 
 **Objective:** Stand up a curated library of reusable workflow definitions that contributors can extend without duplicating schemas or discovery logic.
@@ -186,6 +198,42 @@ This document tracks actionable tasks to resolve outstanding gaps and quality is
 
 **Risks & mitigation:** Launch alignment may slip due to upstream blockers → maintain dependency tracker and contingency date; community guidelines adoption risk → run office hours/webinars post-launch.
 
+## Task Details
+
+<a id="task-agentos-1"></a>
+### AGENTOS-1 — Populate Workflow Blueprint Catalog
+
+See [Populate Workflow Blueprint Catalog](#1-populate-workflow-blueprint-catalog) for objectives, success criteria, dependencies, milestones, and risks.
+
+<a id="task-agentos-2"></a>
+### AGENTOS-2 — Deliver Marketplace Assets & Tooling
+
+See [Deliver Marketplace Assets & Tooling](#2-deliver-marketplace-assets--tooling) for objectives, success criteria, dependencies, milestones, and risks.
+
+<a id="task-agentos-3"></a>
+### AGENTOS-3 — Implement Analytics Pipelines
+
+See [Implement Analytics Pipelines](#3-implement-analytics-pipelines) for objectives, success criteria, dependencies, milestones, and risks.
+
+<a id="task-agentos-4"></a>
+### AGENTOS-4 — Seed Telemetry Storage Samples
+
+See [Seed Telemetry Storage Samples](#4-seed-telemetry-storage-samples) for objectives, success criteria, dependencies, milestones, and risks.
+
+<a id="task-agentos-5"></a>
+### AGENTOS-5 — Fix CICD Pipeline Struct Duplication
+
+See [Fix CICD Pipeline Struct Duplication](#5-fix-cicd-pipeline-struct-duplication) for objectives, success criteria, dependencies, milestones, and risks.
+
+<a id="task-agentos-6"></a>
+### AGENTOS-6 — Extend GPU Detection Beyond NVIDIA
+
+See [Extend GPU Detection Beyond NVIDIA](#6-extend-gpu-detection-beyond-nvidia) for objectives, success criteria, dependencies, milestones, and risks.
+
+<a id="task-agentos-7"></a>
+### AGENTOS-7 — Deliver Value-Add Ecosystem Content
+
+See [Deliver Value-Add Ecosystem Content](#7-deliver-value-add-ecosystem-content) for objectives, success criteria, dependencies, milestones, and risks.
 <!-- BEGIN: GAP_REMEDIATION_TASKS -->
 
 ## Ensure everything depends on the kernel/service graph, simplify deployment, and make the platform portable across environments by default.
@@ -202,26 +250,31 @@ Deliver a constrained, single-host deployment profile that keeps the complete st
 Present a cohesive operator experience across desktop, web, and terminal surfaces that reuses the same interaction vocabulary.
 **Suggested task**
 - Ship unified multi-surface UI shell — [View task](#task-ui-shell)
+- Ship unified multi-surface UI shell — https://github.com/noa-ark/noa_ark_os/issues/103
 
 ## Adaptive Runtime & Portability Enhancements
 Add runtime intelligence to detect host capabilities, tune workloads, and keep deployments portable across infrastructure classes.
 **Suggested task**
 - Implement adaptive runtime orchestration — [View task](#task-adaptive-runtime)
+- Implement adaptive runtime orchestration — https://github.com/noa-ark/noa_ark_os/issues/104
 
 ## Advanced Gateway & Observability
 Upgrade ingress, policy, and telemetry flows so operators gain real-time insight and can enforce controls without friction.
 **Suggested task**
 - Develop advanced gateway with observability — [View task](#task-gateway-observability)
+- Develop advanced gateway with observability — https://github.com/noa-ark/noa_ark_os/issues/105
 
 ## Value-Added Service Ecosystem
 Layer differentiated services and packaged workflows on top of the hardened core to accelerate customer value delivery.
 **Suggested task**
 - Launch value-add ecosystem features — [View task](#task-value-ecosystem)
+- Launch value-add ecosystem features — https://github.com/noa-ark/noa_ark_os/issues/106
 
 ## Task Details
 
 <a id="task-kernel-first"></a>
 ### AGENTOS-1 — Establish kernel-first dependency graph & portable packaging
+### <a id="task-kernel-first"></a>AGENTOS-1 — Establish kernel-first dependency graph & portable packaging
 **Description:** Build a canonical dependency map anchored on the kernel/service graph and package baselines that run identically on local, cloud, and air-gapped hosts.
 
 **Checklist**
@@ -245,6 +298,12 @@ Layer differentiated services and packaged workflows on top of the hardened core
 
 <a id="task-single-host"></a>
 ### AGENTOS-2 — Design single-host AgentOS server profile
+- Owner: TBA
+- Priority: P0
+- Status: Processing
+- Depends on: None
+
+### <a id="task-single-host"></a>AGENTOS-2 — Design single-host AgentOS server profile
 **Description:** Define and validate a single-host profile that boots the full AgentOS stack with deterministic ordering, self-healing, and constrained resource envelopes.
 
 **Checklist**
@@ -268,6 +327,12 @@ Layer differentiated services and packaged workflows on top of the hardened core
 
 <a id="task-ui-shell"></a>
 ### AGENTOS-3 — Ship unified multi-surface UI shell
+- Owner: TBA
+- Priority: P0
+- Status: Processing
+- Depends on: AGENTOS-1
+
+### <a id="task-ui-shell"></a>AGENTOS-3 — Ship unified multi-surface UI shell
 **Description:** Create a shared UI shell, interaction model, and component library that can be deployed across desktop, browser, and CLI interfaces.
 
 **Checklist**
@@ -291,6 +356,13 @@ Layer differentiated services and packaged workflows on top of the hardened core
 
 <a id="task-adaptive-runtime"></a>
 ### AGENTOS-4 — Implement adaptive runtime orchestration
+- Owner: TBA
+- Priority: P1
+- Status: Processing
+- Depends on: AGENTOS-2
+- Tracking: [Internal issue stub](../issues/AGENTOS-3-unified-ui-shell.md) _(replace anchor with external URL when published)_
+
+### <a id="task-adaptive-runtime"></a>AGENTOS-4 — Implement adaptive runtime orchestration
 **Description:** Extend runtime controllers to detect host capabilities, adjust workload placement, and surface portability guidance tied to the kernel graph.
 
 **Checklist**
@@ -314,6 +386,12 @@ Layer differentiated services and packaged workflows on top of the hardened core
 
 <a id="task-gateway-observability"></a>
 ### AGENTOS-5 — Develop advanced gateway with observability
+- Owner: TBA
+- Priority: P1
+- Status: Processing
+- Depends on: AGENTOS-1, AGENTOS-2
+
+### <a id="task-gateway-observability"></a>AGENTOS-5 — Develop advanced gateway with observability
 **Description:** Modernize the gateway to deliver policy enforcement, traffic shaping, and deep observability linked to platform telemetry expectations.
 
 **Checklist**
@@ -337,6 +415,12 @@ Layer differentiated services and packaged workflows on top of the hardened core
 
 <a id="task-value-ecosystem"></a>
 ### AGENTOS-6 — Launch value-add ecosystem features
+- Owner: TBA
+- Priority: P1
+- Status: Processing
+- Depends on: AGENTOS-2
+
+### <a id="task-value-ecosystem"></a>AGENTOS-6 — Launch value-add ecosystem features
 **Description:** Bundle advanced services, curated workflows, and partner integrations that sit atop the hardened platform and gateway foundation.
 
 **Checklist**
@@ -354,6 +438,9 @@ Layer differentiated services and packaged workflows on top of the hardened core
 
 **Meta**
 - Owner: codex
+- Priority: P1
+- Status: Processing
+- Owner: TBA
 - Priority: P1
 - Status: Processing
 - Depends on: AGENTOS-3, AGENTOS-4, AGENTOS-5

@@ -20,6 +20,7 @@
 - [ ] Inter-runtime communication via IPC
 - [ ] Runtime isolation and sandboxing
 - [ ] Multi-language agent execution
+- Tracking: [AGENTOS-4 — Implement adaptive runtime orchestration](../issues/AGENTOS-4.md) _(Docs guild notified for roadmap linkage)_
 
 ## Phase 3: AI Engine Integration
 - [ ] Compile llama.cpp as static library
@@ -69,7 +70,7 @@
 - [ ] Multi-layered agent hierarchies
 - [ ] Agent collaboration protocols
 - [ ] Learning and adaptation
-- [ ] Agent marketplace/registry
+- [ ] Agent marketplace/registry ([AGENTOS-6 — Launch value-add ecosystem features](../issues/AGENTOS-6.md))
 - [ ] Agent performance analytics
 - [ ] Distributed agent deployment
 
