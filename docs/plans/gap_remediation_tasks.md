@@ -249,21 +249,25 @@ Deliver a constrained, single-host deployment profile that keeps the complete st
 ## Unified UI/UX Shell & Interaction Model
 Present a cohesive operator experience across desktop, web, and terminal surfaces that reuses the same interaction vocabulary.
 **Suggested task**
+- Ship unified multi-surface UI shell — [View task](#task-ui-shell)
 - Ship unified multi-surface UI shell — https://github.com/noa-ark/noa_ark_os/issues/103
 
 ## Adaptive Runtime & Portability Enhancements
 Add runtime intelligence to detect host capabilities, tune workloads, and keep deployments portable across infrastructure classes.
 **Suggested task**
+- Implement adaptive runtime orchestration — [View task](#task-adaptive-runtime)
 - Implement adaptive runtime orchestration — https://github.com/noa-ark/noa_ark_os/issues/104
 
 ## Advanced Gateway & Observability
 Upgrade ingress, policy, and telemetry flows so operators gain real-time insight and can enforce controls without friction.
 **Suggested task**
+- Develop advanced gateway with observability — [View task](#task-gateway-observability)
 - Develop advanced gateway with observability — https://github.com/noa-ark/noa_ark_os/issues/105
 
 ## Value-Added Service Ecosystem
 Layer differentiated services and packaged workflows on top of the hardened core to accelerate customer value delivery.
 **Suggested task**
+- Launch value-add ecosystem features — [View task](#task-value-ecosystem)
 - Launch value-add ecosystem features — https://github.com/noa-ark/noa_ark_os/issues/106
 
 ## Task Details

@@ -107,6 +107,22 @@ We are committed to providing a welcoming and inclusive environment for all cont
 - Error: `GitHub authentication is required` → rerun the login command in step 4 or refresh your PAT and re-export `GH_TOKEN`/`GITHUB_TOKEN`.
 - Error persists in CI or automation → confirm the token has not expired and still includes the `repo` and `workflow` scopes.
 
+### Automating AGENTOS roadmap issue creation
+
+Run `scripts/create_agentos_tasks.py` to convert the six AGENTOS roadmap entries in `docs/plans/gap_remediation_tasks.md` into live GitHub issues. The helper defaults to a dry-run so you can preview the generated payloads:
+
+```bash
+scripts/create_agentos_tasks.py --dry-run
+```
+
+When you are ready to create (or reuse) issues in this repository and append the URLs next to the in-document anchors, execute:
+
+```bash
+scripts/create_agentos_tasks.py --repo FlexNetOS/noa_ark_os --execute --update-doc
+```
+
+The script expects the GitHub CLI to be authenticated (see the prerequisites above) and will reuse existing issues whose titles already match `AGENTOS-# — …`.
+
 ## How to Contribute
 
 ### Types of Contributions
