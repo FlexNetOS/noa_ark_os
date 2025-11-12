@@ -3,6 +3,11 @@
 ## Description
 Extend runtime controllers to detect host capabilities, adjust workload placement, and surface portability guidance tied to the kernel graph.
 
+## Suggested Tasks
+- [Kernel-first dependency graph](../plans/gap_remediation_tasks.md#task-kernel-first)
+- [Single-host profile boot plan](../plans/gap_remediation_tasks.md#task-single-host)
+- [Adaptive runtime orchestration subtasks](../plans/gap_remediation_tasks.md#task-adaptive-runtime)
+
 ## Checklist
 - [ ] Build capability detectors leveraging hardware, OS, and workload telemetry inputs.
 - [ ] Map detection outputs to scheduling policies aligned with kernel-first dependencies.
