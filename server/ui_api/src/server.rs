@@ -32,7 +32,7 @@ struct CrcDropRegistry {
 
 impl DropRegistry for CrcDropRegistry {
     fn register(&self, path: PathBuf, manifest: DropManifest) -> Result<String, String> {
-        self.crc.register_drop(path, manifest)
+        self.crc.register_drop(path, manifest, None)
     }
 
     fn get_state(&self, drop_id: &str) -> Option<CRCState> {
@@ -55,8 +55,7 @@ impl UiApiState {
             pages: Arc::new(RwLock::new(HashMap::new())),
             session: Arc::new(Mutex::new(None)),
             drop_registry,
-            // Use absolute path per workspace guidelines to avoid ambiguity.
-            drop_root: PathBuf::from("D:/dev/workspaces/noa_ark_os/crc/drop-in/incoming"),
+            drop_root: PathBuf::from("crc/drop-in/incoming"),
         }
     }
 
@@ -277,10 +276,30 @@ fn parse_drop_type(value: &str) -> Option<(SourceType, &'static str)> {
 
 fn sanitize_file_name(file_name: Option<&str>) -> String {
     file_name
-        .and_then(|name| Path::new(name).file_name().and_then(|value| value.to_str()))
         .filter(|name| !name.is_empty())
+        .filter(|name| is_valid_filename(name))
+        .and_then(|name| Path::new(name).file_name().and_then(|value| value.to_str()))
         .map(|name| name.to_string())
         .unwrap_or_else(|| format!("upload-{}.bin", Uuid::new_v4()))
+}
+
+fn is_valid_filename(name: &str) -> bool {
+    // Reject filenames containing path separators
+    if name.contains('/') || name.contains('\\') {
+        return false;
+    }
+    
+    // Reject filenames with null bytes or control characters
+    if name.chars().any(|c| c.is_control() || c == '\0') {
+        return false;
+    }
+    
+    // Reject special path components
+    if name == "." || name == ".." {
+        return false;
+    }
+    
+    true
 }
 
 fn format_crc_state(state: &CRCState) -> String {
@@ -304,21 +323,9 @@ async fn handle_websocket(mut socket: WebSocket, bridge: SessionBridge) {
                     let _ = socket
                         .send(Message::Text(format!("{{\"error\":\"{}\"}}", error)))
                         .await;
-        let Ok(event) = event.map(SessionBridge::map_event) else {
-            continue;
-        };
-
-        match serde_json::to_string(&event) {
-            Ok(payload) => {
-                if socket.send(Message::Text(payload)).await.is_err() {
-                    break;
                 }
-            }
-            Err(error) => {
-                let _ = socket
-                    .send(Message::Text(format!("{{\"error\":\"{}\"}}", error)))
-                    .await;
-            }
+            },
+            Err(_) => continue,
         }
     }
 }
@@ -522,5 +529,98 @@ mod tests {
         let bytes = response.into_body().collect().await.unwrap().to_bytes();
         let error: ErrorResponse = serde_json::from_slice(&bytes).unwrap();
         assert!(error.message.contains("failed to register drop"));
+    }
+
+    #[test]
+    fn sanitize_file_name_accepts_valid_names() {
+        assert_eq!(sanitize_file_name(Some("example.txt")), "example.txt");
+        assert_eq!(sanitize_file_name(Some("my-file_123.zip")), "my-file_123.zip");
+        assert_eq!(sanitize_file_name(Some("Document (1).pdf")), "Document (1).pdf");
+    }
+
+    #[test]
+    fn sanitize_file_name_rejects_path_traversal() {
+        // Path traversal attempts should be rejected
+        let result = sanitize_file_name(Some("../../etc/passwd"));
+        assert!(result.starts_with("upload-"));
+        assert!(result.ends_with(".bin"));
+        
+        let result = sanitize_file_name(Some("..\\windows\\system32"));
+        assert!(result.starts_with("upload-"));
+        assert!(result.ends_with(".bin"));
+    }
+
+    #[test]
+    fn sanitize_file_name_rejects_absolute_paths() {
+        // Absolute paths should be rejected
+        let result = sanitize_file_name(Some("/etc/passwd"));
+        assert!(result.starts_with("upload-"));
+        assert!(result.ends_with(".bin"));
+        
+        let result = sanitize_file_name(Some("C:\\Windows\\System32"));
+        assert!(result.starts_with("upload-"));
+        assert!(result.ends_with(".bin"));
+    }
+
+    #[test]
+    fn sanitize_file_name_rejects_path_separators() {
+        // Any filename with path separators should be rejected
+        let result = sanitize_file_name(Some("file/name.txt"));
+        assert!(result.starts_with("upload-"));
+        assert!(result.ends_with(".bin"));
+        
+        let result = sanitize_file_name(Some("file\\name.txt"));
+        assert!(result.starts_with("upload-"));
+        assert!(result.ends_with(".bin"));
+    }
+
+    #[test]
+    fn sanitize_file_name_rejects_null_bytes() {
+        // Null bytes should be rejected
+        let result = sanitize_file_name(Some("file\0name.txt"));
+        assert!(result.starts_with("upload-"));
+        assert!(result.ends_with(".bin"));
+    }
+
+    #[test]
+    fn sanitize_file_name_rejects_control_characters() {
+        // Control characters should be rejected
+        let result = sanitize_file_name(Some("file\nname.txt"));
+        assert!(result.starts_with("upload-"));
+        assert!(result.ends_with(".bin"));
+        
+        let result = sanitize_file_name(Some("file\rname.txt"));
+        assert!(result.starts_with("upload-"));
+        assert!(result.ends_with(".bin"));
+        
+        let result = sanitize_file_name(Some("file\tname.txt"));
+        assert!(result.starts_with("upload-"));
+        assert!(result.ends_with(".bin"));
+    }
+
+    #[test]
+    fn sanitize_file_name_rejects_special_path_components() {
+        // Special path components should be rejected
+        let result = sanitize_file_name(Some("."));
+        assert!(result.starts_with("upload-"));
+        assert!(result.ends_with(".bin"));
+        
+        let result = sanitize_file_name(Some(".."));
+        assert!(result.starts_with("upload-"));
+        assert!(result.ends_with(".bin"));
+    }
+
+    #[test]
+    fn sanitize_file_name_handles_none() {
+        let result = sanitize_file_name(None);
+        assert!(result.starts_with("upload-"));
+        assert!(result.ends_with(".bin"));
+    }
+
+    #[test]
+    fn sanitize_file_name_handles_empty_string() {
+        let result = sanitize_file_name(Some(""));
+        assert!(result.starts_with("upload-"));
+        assert!(result.ends_with(".bin"));
     }
 }
