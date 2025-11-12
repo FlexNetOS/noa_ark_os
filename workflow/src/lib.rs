@@ -351,7 +351,7 @@ impl WorkflowEngine {
 
         if action_lower.contains("doc")
             || action_lower.contains("handbook")
-            || action_lower.contains("update")
+            || action_lower.contains("documentation")
         {
             let document_path = task
                 .parameters

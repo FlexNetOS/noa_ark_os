@@ -1,5 +1,6 @@
 //! Security subsystem
 
+use crate::utils::{current_timestamp_millis, simple_hash};
 use crate::time::current_timestamp_millis;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
@@ -51,6 +52,11 @@ pub struct OperationRecord {
 
 impl OperationRecord {
     /// Construct a new record with sensible defaults.
+    /// 
+    /// NOTE: The timestamp generated here will be overwritten by `sign_and_register`
+    /// in the PolicyEnforcer when the operation is signed. This initial timestamp
+    /// represents when the record was created, but the final signed timestamp
+    /// represents when the operation was actually signed and registered.
     pub fn new(kind: OperationKind, actor: impl Into<String>, scope: impl Into<String>) -> Self {
         Self {
             operation_id: next_operation_id(),

@@ -1,4 +1,5 @@
 use noa_core::security::{self, OperationKind, OperationRecord, SignedOperation};
+use noa_core::utils::{current_timestamp_millis, simple_hash};
 use noa_core::time::current_timestamp_millis;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -313,6 +314,9 @@ fn with_log_lock<T>(
     f()
 }
 
+// Manual Clone implementation for PipelineInstrumentation.
+// While PathBuf implements Clone, this explicit implementation is provided for
+// clarity and future extensibility. PathBuf::clone is cheap (Arc-based internally).
 impl Clone for PipelineInstrumentation {
     fn clone(&self) -> Self {
         Self {
