@@ -264,6 +264,9 @@ impl CICDSystem {
         Ok(id)
     }
 
+        Ok(id)
+    }
+
     pub fn trigger_doc_refresh_pipeline(
         &self,
         commit_sha: String,
@@ -476,7 +479,7 @@ impl CICDSystem {
         Ok(())
     }
 
-    fn docs_refresh(&self, pipeline_id: &str) -> Result<(), String> {
+     fn docs_refresh(&self, pipeline_id: &str) -> Result<(), String> {
         let diff_summary = {
             let pipelines = self.pipelines.lock().unwrap();
             pipelines
