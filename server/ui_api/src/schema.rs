@@ -28,6 +28,16 @@ pub enum LayoutSlot {
     Footer = 3,
 }
 
+impl std::fmt::Display for LayoutSlot {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            LayoutSlot::Header => write!(f, "Header"),
+            LayoutSlot::Main => write!(f, "Main"),
+            LayoutSlot::Footer => write!(f, "Footer"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WidgetSchema {
     pub id: String,
