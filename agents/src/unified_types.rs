@@ -23,55 +23,10 @@ use uuid::Uuid;
 /// - **L3Orchestration** (Stack-Chief): Cross-domain coordination and workflow orchestration.
 /// - **L4Operations** (Specialist): Operational execution and domain expertise.
 /// - **L5Infrastructure** (Micro): Fine-grained task execution and infrastructure services.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum AgentLayer {
-    /// L1: Root CECCA, Constitutional authority (formerly "Executive")
-    L1Autonomy,
-    /// L2: Board agents, high-level governance (formerly "Board")
-    L2Reasoning,
-    /// L3: Chief Commanders, Orchestrators, tactical coordination (formerly "Stack-Chief")
-    L3Orchestration,
-    /// L4: Specialists, Workers, operational execution (formerly "Specialist")
-    L4Operations,
-    /// L5: Micro agents, Subject domain, infrastructure tasks (formerly "Micro")
-    L5Infrastructure,
-/// Agents escalate upward through layers when decisions exceed their authority level.
-/// The NOA ARK OS organizes its 928 agents into a five-layer hierarchy that maps
-/// organizational roles to technical capabilities:
 ///
-/// ## Layer Hierarchy (L1 → L5)
-///
-/// - **L1Autonomy**: Root governance and constitutional agents
-///   - Legacy name: "Executive"
-///   - Examples: CECCA (Chief Executive Constitutional Compliance Agent)
-///   - Role: Constitutional oversight, highest-level decision making
-///
-/// - **L2Reasoning**: Strategic planning and board-level agents
-///   - Legacy name: "Board"
-///   - Examples: Board members, strategic planners
-///   - Role: Strategic decision-making, policy formation
-///
-/// - **L3Orchestration**: Coordination and orchestration agents
-///   - Legacy name: "Stack-Chief" / "StackChief"
-///   - Examples: Chief Commanders, Stack VPs, orchestrators
-///   - Role: Cross-domain coordination, workflow orchestration
-///
-/// - **L4Operations**: Operational and specialist agents
-///   - Legacy name: "Specialist"
-///   - Examples: Domain experts, operational workers
-///   - Role: Specific domain tasks, operational execution
-///
-/// - **L5Infrastructure**: Task-specific micro agents
-///   - Legacy name: "Micro"
-///   - Examples: Subject-domain micro agents, utility agents
-///   - Role: Fine-grained task execution, infrastructure services
-///
-/// ## Migration Note
-///
-/// The L1-L5 naming convention replaced the original organizational naming
-/// (Executive, Board, Stack-Chief, Specialist, Micro) to provide a clearer
-/// technical hierarchy. The registry parser maintains backward compatibility
-/// with both naming schemes.
+/// Agents escalate upward through layers when decisions exceed their authority level. The
+/// registry organizes its agents into this hierarchy while maintaining backward compatibility
+/// with the legacy naming scheme.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum AgentLayer {
     L1Autonomy,       // Root CECCA, Constitutional (was: Executive)
