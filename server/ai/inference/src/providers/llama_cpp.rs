@@ -1,6 +1,5 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use tracing::info;
 
 use super::Provider;
 use crate::client::{CompletionRequest, CompletionResponse};
@@ -25,6 +24,10 @@ impl LlamaCppProvider {
 impl Provider for LlamaCppProvider {
     async fn complete(&self, request: CompletionRequest) -> anyhow::Result<CompletionResponse> {
         info!(prompt = %request.prompt, "llama.cpp offline completion");
+        tracing::info!(
+            prompt = request.prompt.as_str(),
+            "llama.cpp offline completion"
+        );
         Ok(CompletionResponse {
             content: format!("[llama.cpp]: {}", request.prompt),
             model: "llama.cpp".into(),

@@ -24,6 +24,10 @@ use uuid::Uuid;
 /// - **L4Operations** (Specialist): Operational execution and domain expertise.
 /// - **L5Infrastructure** (Micro): Fine-grained task execution and infrastructure services.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+/// Agent layer in NOA's five-layer hierarchy.
+///
+/// The naming scheme maps legacy terms (Executive, Board, Stack-Chief,
+/// Specialist, Micro) to the new L1–L5 architecture used by the registry.
 pub enum AgentLayer {
     /// L1: Root CECCA, Constitutional authority (formerly "Executive")
     L1Autonomy,
@@ -35,6 +39,17 @@ pub enum AgentLayer {
     L4Operations,
     /// L5: Micro agents, Subject domain, infrastructure tasks (formerly "Micro")
     L5Infrastructure,
+///
+/// Agents escalate upward through layers when decisions exceed their authority level. The
+/// registry organizes its agents into this hierarchy while maintaining backward compatibility
+/// with the legacy naming scheme.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum AgentLayer {
+    L1Autonomy,       // Root CECCA, Constitutional (was: Executive)
+    L2Reasoning,      // Board & Executive agents (was: Board)
+    L3Orchestration,  // Chief Commanders, Orchestrators (was: Stack-Chief)
+    L4Operations,     // Specialists, Workers (was: Specialist)
+    L5Infrastructure, // Micro agents, Subject domain (was: Micro)
 }
 
 impl Default for AgentLayer {

@@ -37,6 +37,13 @@ impl fmt::Display for LayoutSlot {
             LayoutSlot::Main => write!(f, "Main"),
             LayoutSlot::Footer => write!(f, "Footer"),
         }
+        let label = match self {
+            LayoutSlot::Header => "header",
+            LayoutSlot::Main => "main",
+            LayoutSlot::Footer => "footer",
+        };
+
+        f.write_str(label)
     }
 }
 
