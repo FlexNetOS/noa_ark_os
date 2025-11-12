@@ -7,7 +7,7 @@ export type ClientSessionUser = {
   name: string;
 };
 
-type SessionState = {
+export type SessionState = {
   status: "loading" | "ready";
   user: ClientSessionUser | null;
 };
