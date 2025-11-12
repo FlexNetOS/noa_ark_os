@@ -2,8 +2,9 @@
 const nextConfig = {
   reactStrictMode: true,
   experimental: {
-    typedRoutes: true
-  }
+    typedRoutes: true,
+  },
+  transpilePackages: ["@noa-ark/shared-ui"],
 };
 
 export default nextConfig;

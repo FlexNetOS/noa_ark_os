@@ -1,0 +1,37 @@
+{
+  "generated_at": "2024-05-01T00:00:00Z",
+  "files": [
+    {
+      "path": "/var/log/system/app.log",
+      "hash": "f3e1d4c0b7a9137780f4bd362fd88a9e",
+      "size": 40960,
+      "permissions": 420,
+      "last_seen": "2024-04-30T23:00:00Z",
+      "labels": ["log", "ingested", "system"]
+    },
+    {
+      "path": "/var/log/system/app-duplicate.log",
+      "hash": "f3e1d4c0b7a9137780f4bd362fd88a9e",
+      "size": 40960,
+      "permissions": 420,
+      "last_seen": "2024-04-30T22:45:00Z",
+      "labels": ["log", "shadow"]
+    },
+    {
+      "path": "/snapshots/critical/db/master.img",
+      "hash": "1c2b33cbeb1a4919b7f832f7ed31be0f",
+      "size": 524288000,
+      "permissions": 416,
+      "last_seen": "2024-04-01T12:00:00Z",
+      "labels": ["snapshot", "critical", "database"]
+    },
+    {
+      "path": "/data/artifacts/build-001/output.bin",
+      "hash": "f9154d39c193384a72bd5a8190f8d9aa",
+      "size": 1048576,
+      "permissions": 420,
+      "last_seen": "2024-04-29T10:15:00Z",
+      "labels": ["artifact", "build"]
+    }
+  ]
+}
