@@ -87,7 +87,7 @@ marketing:
 
 - Every submission requires CRC attestations and passes kernel runtime conformance tests.
 - Publishers provide update channels; delistings propagate via catalog sync to disable installations automatically.
-- The marketplace CLI (`tools/marketctl`, forthcoming) will lint manifests against this schema.
+- The marketplace CLI (`tools/marketctl`) will lint manifests against this schema (tool in development; in the meantime, validate your `manifest.yaml` files manually against the schema described above).
 
 ## Contribution Guidance
 
