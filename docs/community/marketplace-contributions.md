@@ -10,7 +10,7 @@ The marketplace showcases kernel-vetted applications and agents. Publishers must
 
 ## Manifest Requirements
 
-- Supply a `manifest.yaml` adhering to the schema defined in `apps/marketplace/README.md`.
+- Supply a `manifest.yaml` adhering to the schema demonstrated by the example in `apps/marketplace/README.md`.
 - Include compatibility matrices for kernel versions, UI targets, and dependent blueprints.
 - Reference CRC attestation bundles for every binary, container image, or workflow script.
 - Provide localized summaries and highlight bullet points for the UI catalog card.
@@ -19,7 +19,7 @@ The marketplace showcases kernel-vetted applications and agents. Publishers must
 
 1. **Automated Linting**: `marketctl lint` validates manifest structure, attestation references, and semantic versioning.
 2. **Security Scan**: Kernel security council reviews supply chain attestations, SBOMs, and vulnerability reports.
-3. **Functional Evaluation**: Marketplace maintainers execute the installation workflow in a sandbox workspace.
+3. **Functional Evaluation**: Workflow maintainers execute the installation workflow in a sandbox workspace.
 4. **Contract Sign-off**: Licensing terms and revenue sharing agreements are finalized prior to publication.
 
 ## Post-Publication Responsibilities
