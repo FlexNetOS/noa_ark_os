@@ -22,6 +22,10 @@ Extend runtime controllers to detect host capabilities, adjust workload placemen
 - Adaptive controls remain configurable via the single-host profile without manual patching.
 
 ## Meta
+- Owner: TBA
+- Priority: P1
+- Status: Proposed
+- Depends on: AGENTOS-1, AGENTOS-2
 - Issue: https://github.com/noa-ark/noa_ark_os/issues/104
 - Owner: codex
 - Priority: P1
@@ -40,3 +44,6 @@ Extend runtime controllers to detect host capabilities, adjust workload placemen
 
 ## Documentation Alignment
 - 2025-11-12: Architecture & Docs Guild (docs@noa-ark.example) notified so roadmap materials can link to this tracking item.
+
+## Suggested Tasks
+- Follow the gap remediation breakdown at [AGENTOS-4 — Implement adaptive runtime orchestration](../plans/gap_remediation_tasks.md#task-adaptive-runtime) to track actionable subtasks.
