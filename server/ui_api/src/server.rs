@@ -21,6 +21,7 @@ use crate::schema::PageEnvelope;
 use crate::session::SessionBridge;
 
 /// Maximum upload file size (100 MB)
+/// Maximum file size for uploads (100 MB)
 const MAX_UPLOAD_SIZE: usize = 100 * 1024 * 1024;
 
 pub trait DropRegistry: Send + Sync {
@@ -54,12 +55,21 @@ pub struct UiApiState {
 impl UiApiState {
     pub fn new() -> Self {
         let drop_registry: Arc<dyn DropRegistry> = Arc::new(CrcDropRegistry::default());
+        
+        // Use environment variable or absolute path to avoid working directory dependency
+        let drop_root = std::env::var("NOA_DROP_ROOT")
+            .ok()
+            .map(PathBuf::from)
+            .unwrap_or_else(|| {
+                // Use platform-appropriate temp directory for default
+                std::env::temp_dir().join("noa-ark-os/crc/drop-in/incoming")
+            });
+        
         Self {
             pages: Arc::new(RwLock::new(HashMap::new())),
             session: Arc::new(Mutex::new(None)),
             drop_registry,
-            // Use absolute path per workspace guidelines to avoid ambiguity.
-            drop_root: PathBuf::from("D:/dev/workspaces/noa_ark_os/crc/drop-in/incoming"),
+            drop_root,
         }
     }
 
@@ -211,6 +221,20 @@ impl UiApiServer {
                     }
                     
                     file_bytes = Some(Bytes::from(file_data));
+                    let bytes = field.bytes().await.map_err(|err| {
+                        internal_error(format!("failed to read upload contents: {err}"))
+                    })?;
+                    
+                    // Validate file size
+                    if bytes.len() > MAX_UPLOAD_SIZE {
+                        return Err(bad_request(format!(
+                            "file size {} bytes exceeds maximum allowed size of {} bytes",
+                            bytes.len(),
+                            MAX_UPLOAD_SIZE
+                        )));
+                    }
+                    
+                    file_bytes = Some(bytes);
                 }
                 _ => {}
             }
@@ -302,7 +326,11 @@ fn sanitize_file_name(file_name: Option<&str>) -> String {
     file_name
         .and_then(|name| Path::new(name).file_name().and_then(|value| value.to_str()))
         .filter(|name| !name.is_empty())
-        .map(|name| name.to_string())
+        .filter(|name| {
+            // Extra safety: reject special directory names
+            !name.is_empty() && *name != "." && *name != ".."
+        })
+            *name != "." && *name != ".."
         .unwrap_or_else(|| format!("upload-{}.bin", Uuid::new_v4()))
 }
 
