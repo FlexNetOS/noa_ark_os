@@ -15,6 +15,13 @@ pub trait PlatformAdapter {
         chrome: &ShellChrome,
         state: &UIState,
     ) -> Result<(), String>;
+use crate::components::ShellChrome;
+use crate::renderer::renderer::Renderer;
+use crate::UIState;
+
+/// Trait describing how shells are mounted on different targets.
+pub trait PlatformAdapter {
+    fn mount(&self, renderer: &Renderer, chrome: &ShellChrome, state: &UIState);
 }
 
 /// No-op adapter used for server orchestration surfaces.
@@ -28,6 +35,10 @@ impl PlatformAdapter for ServerAdapter {
         _state: &UIState,
     ) -> Result<(), String> {
         renderer.render("server-shell")
+    fn mount(&self, renderer: &Renderer, _chrome: &ShellChrome, _state: &UIState) {
+        renderer
+            .render("server-shell")
+            .expect("render server shell");
     }
 }
 
@@ -172,6 +183,11 @@ impl PlatformAdapter for ReactNativeAdapter {
             chrome.navigation.items.len(),
             capabilities
         ))
+    fn mount(&self, renderer: &Renderer, chrome: &ShellChrome, _state: &UIState) {
+        let _ = renderer.render(&format!(
+            "react-shell:{} routes",
+            chrome.navigation.items.len()
+        ));
     }
 }
 
@@ -239,4 +255,13 @@ fn workspace_root() -> Result<PathBuf, String> {
         .and_then(|path| path.parent())
         .map(|path| path.to_path_buf())
         .ok_or_else(|| "failed to resolve workspace root".into())
+pub struct SpatialAdapter;
+
+impl PlatformAdapter for SpatialAdapter {
+    fn mount(&self, renderer: &Renderer, chrome: &ShellChrome, _state: &UIState) {
+        let _ = renderer.render(&format!(
+            "spatial-shell:{} workspaces",
+            chrome.workspace_switcher.workspaces.len()
+        ));
+    }
 }

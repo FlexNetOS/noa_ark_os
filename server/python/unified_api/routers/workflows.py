@@ -3,6 +3,11 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Dict, List, Optional
+"""Workflow orchestration endpoints."""
+from __future__ import annotations
+
+from datetime import datetime
+from typing import Dict, List
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -60,6 +65,7 @@ WORKFLOWS: Dict[str, Workflow] = {
                 label="Promote",
                 description="Production deploy",
             ),
+            WorkflowStage(id="promote", label="Promote", description="Production deploy"),
         ],
     ),
 }
@@ -80,6 +86,7 @@ async def trigger_workflow(
 ) -> WorkflowRun:
     """Kick off a workflow and broadcast the event bus notification."""
 
+async def trigger_workflow(workflow_id: str, payload: Dict[str, str] | None = None) -> WorkflowRun:
     workflow = WORKFLOWS.get(workflow_id)
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
@@ -109,3 +116,4 @@ async def list_runs() -> List[WorkflowRun]:
 
     # Return newest first for dashboard readability.
     return sorted(RUN_HISTORY.values(), key=lambda run: run.triggered_at, reverse=True)
+    return list(RUN_HISTORY.values())

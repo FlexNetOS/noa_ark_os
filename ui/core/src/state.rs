@@ -128,6 +128,64 @@ pub struct GlobalState {
 impl Default for GlobalState {
     fn default() -> Self {
         Self {
+}
+
+/// Notification model surfaced to users across the unified shell.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Notification {
+    pub id: String,
+    pub level: NotificationLevel,
+    pub message: String,
+    pub timestamp: u64,
+}
+
+impl Notification {
+    pub fn new(level: NotificationLevel, message: impl Into<String>) -> Self {
+        let id = format!("{}-{}", level as u8, uuid());
+        Self {
+            id,
+            level,
+            message: message.into(),
+            timestamp: unix_time(),
+        }
+    }
+}
+
+/// User session and contextual metadata consumed by every module.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserSession {
+    pub user_id: String,
+    pub display_name: String,
+    pub roles: Vec<String>,
+    pub active_workspace: Option<String>,
+    pub auth_token: Option<String>,
+}
+
+impl Default for UserSession {
+    fn default() -> Self {
+        Self {
+            user_id: "anonymous".into(),
+            display_name: "Guest".into(),
+            roles: vec![],
+            active_workspace: None,
+            auth_token: None,
+        }
+    }
+}
+
+/// Global state aggregated by the unified shell.
+#[derive(Debug, Clone)]
+pub struct GlobalState {
+    pub session: UserSession,
+    pub navigation: NavigationState,
+    pub workspaces: HashMap<String, Workspace>,
+    pub notifications: Vec<Notification>,
+    pub data: HashMap<String, serde_json::Value>,
+}
+
+impl Default for GlobalState {
+    fn default() -> Self {
+        Self {
             session: UserSession::default(),
             navigation: NavigationState::default(),
             workspaces: HashMap::new(),

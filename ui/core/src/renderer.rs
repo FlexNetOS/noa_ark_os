@@ -43,6 +43,9 @@ pub mod renderer {
                     .as_deref()
                     .unwrap_or("none"),
                 frame.chrome.knowledge.articles.len()
+                "shell-navigation:{} workspaces:{}",
+                frame.chrome.navigation.items.len(),
+                frame.chrome.workspace_switcher.workspaces.len()
             );
             self.render(&component)
         }

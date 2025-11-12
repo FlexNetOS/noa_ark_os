@@ -8,6 +8,8 @@ license = "MIT"
 
 [dependencies]
 lazy_static = "1.4"
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.9"
 
 [lib]
 name = "noa_core"

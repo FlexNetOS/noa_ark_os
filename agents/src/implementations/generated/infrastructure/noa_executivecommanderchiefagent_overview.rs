@@ -1,6 +1,5 @@
-//! NOA - ExecutiveCommanderChiefAgent
-Overview - Auto-generated
-//! 
+//! NOA - ExecutiveCommanderChiefAgent Overview - Auto-generated
+//!
 //! ['Performs Micro Agent functions']
 
 use crate::unified_types::*;
@@ -8,8 +7,7 @@ use crate::Result;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
-/// NOA - ExecutiveCommanderChiefAgent
-Overview
+/// NOA - ExecutiveCommanderChiefAgent Overview
 pub struct NoaExecutivecommanderchiefagentOverview {
     metadata: AgentMetadata,
     state: RwLock<AgentState>,
@@ -20,8 +18,7 @@ impl NoaExecutivecommanderchiefagentOverview {
         let metadata = AgentMetadata {
             id: Uuid::new_v4(),
             agent_id: "noa_executivecommanderchiefagent_overview".to_string(),
-            name: "NOA - ExecutiveCommanderChiefAgent
-Overview".to_string(),
+            name: "NOA - ExecutiveCommanderChiefAgent Overview".to_string(),
             layer: AgentLayer::L5Infrastructure,
             category: AgentCategory::Other,
             agent_type: AgentType::Worker,
@@ -85,8 +82,7 @@ mod tests {
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = NoaExecutivecommanderchiefagentOverview::new();
-        assert_eq!(agent.metadata().name, "NOA - ExecutiveCommanderChiefAgent
-Overview");
+        assert_eq!(agent.metadata().name, "NOA - ExecutiveCommanderChiefAgent Overview");
     }
     
     #[tokio::test]

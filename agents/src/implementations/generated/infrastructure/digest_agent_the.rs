@@ -1,6 +1,5 @@
-//! Digest Agent
-The - Auto-generated
-//! 
+//! Digest Agent The - Auto-generated
+//!
 //! ['Performs Micro Agent functions']
 
 use crate::unified_types::*;
@@ -8,8 +7,7 @@ use crate::Result;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
-/// Digest Agent
-The
+/// Digest Agent The
 pub struct DigestAgentThe {
     metadata: AgentMetadata,
     state: RwLock<AgentState>,
@@ -20,8 +18,7 @@ impl DigestAgentThe {
         let metadata = AgentMetadata {
             id: Uuid::new_v4(),
             agent_id: "digest_agent_the".to_string(),
-            name: "Digest Agent
-The".to_string(),
+            name: "Digest Agent The".to_string(),
             layer: AgentLayer::L5Infrastructure,
             category: AgentCategory::Other,
             agent_type: AgentType::Worker,
@@ -85,8 +82,7 @@ mod tests {
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = DigestAgentThe::new();
-        assert_eq!(agent.metadata().name, "Digest Agent
-The");
+        assert_eq!(agent.metadata().name, "Digest Agent The");
     }
     
     #[tokio::test]

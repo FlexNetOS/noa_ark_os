@@ -1,4 +1,5 @@
 """Analytics and ROI endpoints."""
+"""Analytics and ROI surfaces."""
 from __future__ import annotations
 
 from typing import Dict, List
@@ -49,4 +50,6 @@ async def calculate_roi() -> Dict[str, float]:
     infrastructure = METRICS["infrastructure_cost"].value
     if infrastructure == 0:
         return {"roi": None}
+    productivity = METRICS["developer_productivity"].value
+    infrastructure = METRICS["infrastructure_cost"].value
     return {"roi": round(productivity / infrastructure, 2)}

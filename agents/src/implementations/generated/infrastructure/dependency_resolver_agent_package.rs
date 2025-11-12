@@ -1,6 +1,5 @@
-//! Dependency Resolver Agent
-Package - Auto-generated
-//! 
+//! Dependency Resolver Agent Package - Auto-generated
+//!
 //! ['Performs Micro Agent functions']
 
 use crate::unified_types::*;
@@ -8,8 +7,7 @@ use crate::Result;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
-/// Dependency Resolver Agent
-Package
+/// Dependency Resolver Agent Package
 pub struct DependencyResolverAgentPackage {
     metadata: AgentMetadata,
     state: RwLock<AgentState>,
@@ -20,8 +18,7 @@ impl DependencyResolverAgentPackage {
         let metadata = AgentMetadata {
             id: Uuid::new_v4(),
             agent_id: "dependency_resolver_agent_package".to_string(),
-            name: "Dependency Resolver Agent
-Package".to_string(),
+            name: "Dependency Resolver Agent Package".to_string(),
             layer: AgentLayer::L5Infrastructure,
             category: AgentCategory::Other,
             agent_type: AgentType::Worker,
@@ -85,8 +82,7 @@ mod tests {
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = DependencyResolverAgentPackage::new();
-        assert_eq!(agent.metadata().name, "Dependency Resolver Agent
-Package");
+        assert_eq!(agent.metadata().name, "Dependency Resolver Agent Package");
     }
     
     #[tokio::test]

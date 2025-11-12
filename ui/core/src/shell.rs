@@ -7,11 +7,16 @@ use crate::adapters::{
 use crate::analytics::{AnalyticsEngine, Metric};
 use crate::chat::ChatWorkspace;
 use crate::components::{KnowledgeOverlay, NavigationRail, ShellChrome, WorkspaceSwitcher};
+use crate::adapters::{PlatformAdapter, ReactAdapter, ServerAdapter, SpatialAdapter};
+use crate::analytics::{AnalyticsEngine, Metric};
+use crate::chat::ChatWorkspace;
+use crate::components::{NavigationRail, ShellChrome, WorkspaceSwitcher};
 use crate::events::ShellEvent;
 use crate::module::{default_modules, ModuleContext, ShellModule};
 use crate::renderer::renderer::Renderer;
 use crate::renderer::RenderFrame;
 use crate::state::{GlobalState, GlobalStore, KnowledgeArticle, UserSession, WorkspacePersona};
+use crate::state::{GlobalState, GlobalStore, UserSession, WorkspacePersona};
 use crate::workflows::WorkflowCatalog;
 use crate::{init, Platform, UIContext, UIState};
 
@@ -47,6 +52,8 @@ impl ShellBuilder {
             self.modules.unwrap_or_else(default_modules),
             self.session,
         )
+    pub fn build(self) -> Result<UnifiedShell, &'static str> {
+        UnifiedShell::new(self.platform, self.modules.unwrap_or_else(default_modules))
     }
 }
 
@@ -69,6 +76,7 @@ impl UnifiedShell {
         modules: Vec<Arc<dyn ShellModule>>,
         session: Option<UserSession>,
     ) -> Result<Self, &'static str> {
+    fn new(platform: Platform, modules: Vec<Arc<dyn ShellModule>>) -> Result<Self, &'static str> {
         let context = init(platform.clone())?;
         let renderer = Renderer::new(context.clone());
         let state = UIState::new(context.clone());
@@ -80,6 +88,13 @@ impl UnifiedShell {
                 active_workspace: None,
                 auth_token: None,
             }),
+            session: UserSession {
+                user_id: "ops-admin".into(),
+                display_name: "Ops Admin".into(),
+                roles: vec!["admin".into(), "developer".into()],
+                active_workspace: None,
+                auth_token: None,
+            },
             ..GlobalState::default()
         });
         let workflow_catalog = WorkflowCatalog::default();
@@ -341,6 +356,11 @@ impl UnifiedShell {
         );
         let frame = RenderFrame { chrome: &chrome };
         adapter.mount(&self.renderer, &chrome, &self.state)?;
+        let navigation = NavigationRail::from_state(&state.navigation);
+        let workspaces = WorkspaceSwitcher::new(state.workspaces.values().cloned().collect());
+        let chrome = ShellChrome::new(navigation, workspaces);
+        let frame = RenderFrame { chrome: &chrome };
+        adapter.mount(&self.renderer, &chrome, &self.state);
         self.renderer.render_frame(&frame)
     }
 
@@ -351,6 +371,8 @@ impl UnifiedShell {
             Platform::Web => Box::new(ReactAdapter),
             Platform::Mobile => Box::new(ReactNativeAdapter::default()),
             Platform::ARGlasses | Platform::XRHeadset => Box::new(SpatialAdapter::default()),
+            Platform::Desktop | Platform::Web | Platform::Mobile => Box::new(ReactAdapter),
+            Platform::ARGlasses | Platform::XRHeadset => Box::new(SpatialAdapter),
         }
     }
 

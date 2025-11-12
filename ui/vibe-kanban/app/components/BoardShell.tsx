@@ -36,6 +36,10 @@ export function BoardShell({ state }: BoardShellProps) {
     setProjectName,
   } = state;
 
+  if (!snapshot) {
+    return null;
+  }
+
   const [activeCard, setActiveCard] = useState<VibeCard | null>(null);
   const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
   const [draggingCardId, setDraggingCardId] = useState<string | null>(null);
@@ -168,6 +172,7 @@ export function BoardShell({ state }: BoardShellProps) {
           totalCardCount={totalCards}
           completedCount={completedCount}
           showMetrics={isFeatureEnabled("boardMetrics")}
+          metrics={snapshot.metrics}
         />
 
         <div className="relative overflow-hidden rounded-[3rem] border border-white/10 bg-surface/60 p-8 shadow-[0_60px_160px_-60px_rgba(14,165,233,0.35)]">

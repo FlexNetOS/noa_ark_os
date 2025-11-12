@@ -1,6 +1,5 @@
-//! Prompt Designer Agent
-LLM - Auto-generated
-//! 
+//! Prompt Designer Agent LLM - Auto-generated
+//!
 //! ['Performs Micro Agent functions']
 
 use crate::unified_types::*;
@@ -8,8 +7,7 @@ use crate::Result;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
-/// Prompt Designer Agent
-LLM
+/// Prompt Designer Agent LLM
 pub struct PromptDesignerAgentLlm {
     metadata: AgentMetadata,
     state: RwLock<AgentState>,
@@ -20,8 +18,7 @@ impl PromptDesignerAgentLlm {
         let metadata = AgentMetadata {
             id: Uuid::new_v4(),
             agent_id: "prompt_designer_agent_llm".to_string(),
-            name: "Prompt Designer Agent
-LLM".to_string(),
+            name: "Prompt Designer Agent LLM".to_string(),
             layer: AgentLayer::L5Infrastructure,
             category: AgentCategory::Other,
             agent_type: AgentType::Worker,
@@ -85,8 +82,7 @@ mod tests {
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = PromptDesignerAgentLlm::new();
-        assert_eq!(agent.metadata().name, "Prompt Designer Agent
-LLM");
+        assert_eq!(agent.metadata().name, "Prompt Designer Agent LLM");
     }
     
     #[tokio::test]

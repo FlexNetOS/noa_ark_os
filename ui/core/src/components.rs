@@ -1,4 +1,5 @@
 use crate::state::{KnowledgeArticle, NavigationItem, Workspace, WorkspacePersona};
+use crate::state::{NavigationItem, NavigationState, Workspace};
 
 /// Declarative navigation rail component representation.
 pub struct NavigationRail {
@@ -11,6 +12,10 @@ impl NavigationRail {
         Self {
             items,
             active_route,
+    pub fn from_state(state: &NavigationState) -> Self {
+        Self {
+            items: state.primary_items.clone(),
+            active_route: state.active_route.clone(),
         }
     }
 }
@@ -36,6 +41,11 @@ pub struct KnowledgeOverlay {
 impl KnowledgeOverlay {
     pub fn new(persona: WorkspacePersona, articles: Vec<KnowledgeArticle>) -> Self {
         Self { persona, articles }
+}
+
+impl WorkspaceSwitcher {
+    pub fn new(workspaces: Vec<Workspace>) -> Self {
+        Self { workspaces }
     }
 }
 
@@ -56,6 +66,13 @@ impl ShellChrome {
             navigation,
             workspace_switcher,
             knowledge,
+}
+
+impl ShellChrome {
+    pub fn new(navigation: NavigationRail, workspace_switcher: WorkspaceSwitcher) -> Self {
+        Self {
+            navigation,
+            workspace_switcher,
         }
     }
 }
