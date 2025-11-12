@@ -1,6 +1,4 @@
 """CI/CD orchestration endpoints."""
-"""Continuous integration and sandbox orchestration endpoints."""
-
 from __future__ import annotations
 
 from datetime import datetime
