@@ -13,6 +13,10 @@ pub mod hardware;
 pub mod ipc;
 pub mod kernel;
 pub mod memory;
+pub mod ipc;
+pub mod kernel;
+pub mod memory;
+pub mod metrics;
 pub mod process;
 pub mod security;
 

@@ -1,0 +1,94 @@
+[profile]
+name = "single_host"
+description = "Co-locate gateway, MCP server, workflow orchestrator, and sandbox controllers on a single kernel-managed host"
+version = "0.1.0"
+
+[profile.co_location]
+api_gateway = true
+mcp_server = true
+workflow_orchestrator = true
+sandbox_controllers = true
+
+[profile.kernel]
+quota_strategy = "cgroup_v2"
+pressure_monitoring_interval_ms = 2000
+
+[profile.runtime]
+metrics_endpoint = "http://127.0.0.1:9310/metrics"
+control_socket = "/var/run/noa/single-host.sock"
+
+[resources.cpu]
+reserved_cores = 1
+max_cores = 8
+shares = 4096
+burst_cores = 2
+
+[resources.memory]
+limit_mb = 32768
+soft_limit_mb = 28672
+kill_threshold_percent = 92
+reclaim_percent = 80
+
+[resources.io]
+read_mbps = 800
+write_mbps = 400
+ioscheduler = "bfq"
+
+[resources.network]
+rxtx_mbps = 2000
+policer_burst_mbps = 400
+
+[services.api_gateway]
+description = "HTTP/gRPC entrypoint"
+unit = "noa-single-host@api-gateway.service"
+quota.cpu_shares = 1200
+quota.memory_mb = 4096
+socket = "0.0.0.0:8443"
+
+[services.mcp_server]
+description = "Model control plane server"
+unit = "noa-single-host@mcp.service"
+quota.cpu_shares = 1000
+quota.memory_mb = 4096
+channel = "ipc://var/run/noa/mcp.sock"
+
+[services.workflow_orchestrator]
+description = "Workflow DAG orchestrator"
+unit = "noa-single-host@workflow.service"
+quota.cpu_shares = 900
+quota.memory_mb = 6144
+queue_depth_soft = 64
+queue_depth_hard = 128
+
+[services.sandbox_controllers]
+description = "Container and VM sandbox managers"
+unit = "noa-single-host@sandbox.service"
+quota.cpu_shares = 1400
+quota.memory_mb = 8192
+max_parallel_boots = 4
+
+[telemetry.thresholds]
+load_idle = 0.35
+load_steady = 0.65
+load_elevated = 0.82
+load_saturated = 0.93
+
+[telemetry.actions]
+low = "restore-full-capacity"
+medium = "normalize"
+high = "throttle-agents"
+critical = "lightweight-inference"
+
+[boot.steps]
+1 = "Load kernel-managed quotas via noa-single-host.target"
+2 = "Start colocated services via templated systemd units"
+3 = "Verify metrics stream for adaptive scaling"
+4 = "Publish readiness to CI/CD acceptance checks"
+
+[artifacts]
+config_digest = "sha256:single-host-profile"
+notes = [
+  "Designed for developer workstations and small lab servers",
+  "Kernel is authoritative for quotas; services must honor cgroup signals",
+  "Compatible with adaptive scaling controller in server/src",
+]

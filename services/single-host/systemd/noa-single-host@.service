@@ -1,0 +1,16 @@
+[Unit]
+Description=NOA ARK OS single-host service (%i)
+PartOf=noa-single-host.target
+After=network-online.target
+
+[Service]
+Type=notify
+Environment=NOA_PROFILE=/etc/noa/server/profiles/single_host/profile.toml
+Environment=NOA_SINGLE_HOST_UNIT=%i
+ExecStart=/opt/noa/services/single-host/init/noa-single-host.sh start %i
+ExecStop=/opt/noa/services/single-host/init/noa-single-host.sh stop %i
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=noa-single-host.target
