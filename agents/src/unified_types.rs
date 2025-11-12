@@ -1,5 +1,5 @@
 //! Unified Type System for NOA Agent Architecture
-//! Merges factory types (lib.rs) with registry types (types.rs)
+//! Provides the complete type system for agent factory and registry
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
