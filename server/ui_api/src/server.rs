@@ -135,8 +135,10 @@ impl UiApiServer {
         Router::new()
             .route("/ui/pages/:page_id", get(Self::get_page))
             .route("/ui/pages/:page_id/events", get(Self::stream_events))
-            .route("/ui/drop-in/upload", post(Self::upload_drop))
-            .layer(DefaultBodyLimit::max(MAX_UPLOAD_SIZE))
+            .route(
+                "/ui/drop-in/upload",
+                post(Self::upload_drop).layer(DefaultBodyLimit::max(MAX_UPLOAD_SIZE)),
+            )
             .with_state(self.state.clone())
     }
 
