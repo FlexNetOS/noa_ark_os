@@ -52,7 +52,7 @@ impl UnifiedAuthenticator {
         }
 
         if let Some(token) = &credentials.oidc {
-            if !token.starts_with("id-") || token.len() < 3 {
+            if !token.starts_with("id-") || token.len() < 10 {
                 return Err(AuthError::InvalidOidc);
             }
         }
