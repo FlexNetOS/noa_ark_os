@@ -46,6 +46,19 @@ export function BoardShell({ state }: BoardShellProps) {
   const [columnDropTarget, setColumnDropTarget] = useState<string | null>(null);
   const [columnCardDropTarget, setColumnCardDropTarget] = useState<string | null>(null);
 
+  const totalCards = useMemo(
+    () =>
+      (snapshot?.columns ?? []).reduce(
+        (acc, column) => acc + (column.cards?.length ?? 0),
+        0
+      ),
+    [snapshot?.columns]
+  );
+  const completedCount = useMemo(() => {
+    return (snapshot?.columns ?? [])
+      .filter((column) => /done|complete|finished/i.test(column.title))
+      .reduce((count, column) => count + (column.cards?.length ?? 0), 0);
+  }, [snapshot?.columns]);
   const totalCards = useMemo(() => {
     if (!snapshot) return 0;
     return snapshot.columns.reduce((acc, column) => acc + column.cards.length, 0);

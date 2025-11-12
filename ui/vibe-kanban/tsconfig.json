@@ -36,6 +36,8 @@
       "@noa-ark/shared-ui": [
         "../shared/src/index"
       ],
+      "mitt": [
+        "./types/mitt"
       "@noa-ark/server/*": [
         "../../server/*"
       ],
