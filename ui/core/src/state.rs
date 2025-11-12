@@ -26,6 +26,7 @@ pub struct NavigationItem {
     pub label: String,
     pub icon: String,
     pub route: String,
+    pub allowed_roles: Vec<String>,
 }
 
 /// Container for navigation state shared across modules.
@@ -43,12 +44,22 @@ pub struct Workspace {
     pub label: String,
     pub persona: WorkspacePersona,
     pub routes: Vec<String>,
+    pub allowed_roles: Vec<String>,
 }
 
 impl Workspace {
     pub fn contains_route(&self, route: &str) -> bool {
         self.routes.iter().any(|r| r == route)
     }
+}
+
+/// Represents knowledge base entries surfaced in the contextual overlay.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KnowledgeArticle {
+    pub id: String,
+    pub title: String,
+    pub summary: String,
+    pub link: String,
 }
 
 /// Notification severity levels for the shell notification center.
@@ -58,6 +69,65 @@ pub enum NotificationLevel {
     Success,
     Warning,
     Error,
+}
+
+/// Notification model surfaced to users across the unified shell.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Notification {
+    pub id: String,
+    pub level: NotificationLevel,
+    pub message: String,
+    pub timestamp: u64,
+}
+
+impl Notification {
+    pub fn new(level: NotificationLevel, message: impl Into<String>) -> Self {
+        let id = format!("{}-{}", level as u8, uuid());
+        Self {
+            id,
+            level,
+            message: message.into(),
+            timestamp: unix_time(),
+        }
+    }
+}
+
+/// User session and contextual metadata consumed by every module.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserSession {
+    pub user_id: String,
+    pub display_name: String,
+    pub roles: Vec<String>,
+    pub active_workspace: Option<String>,
+    pub auth_token: Option<String>,
+}
+
+impl Default for UserSession {
+    fn default() -> Self {
+        Self {
+            user_id: "anonymous".into(),
+            display_name: "Guest".into(),
+            roles: vec![],
+            active_workspace: None,
+            auth_token: None,
+        }
+    }
+}
+
+/// Global state aggregated by the unified shell.
+#[derive(Debug, Clone)]
+pub struct GlobalState {
+    pub session: UserSession,
+    pub navigation: NavigationState,
+    pub workspaces: HashMap<String, Workspace>,
+    pub notifications: Vec<Notification>,
+    pub data: HashMap<String, serde_json::Value>,
+    pub knowledge_base: HashMap<WorkspacePersona, Vec<KnowledgeArticle>>,
+}
+
+impl Default for GlobalState {
+    fn default() -> Self {
+        Self {
 }
 
 /// Notification model surfaced to users across the unified shell.
@@ -121,6 +191,7 @@ impl Default for GlobalState {
             workspaces: HashMap::new(),
             notifications: vec![],
             data: HashMap::new(),
+            knowledge_base: HashMap::new(),
         }
     }
 }
@@ -171,6 +242,29 @@ impl GlobalStore {
             state.data.insert(key.into(), value);
         });
     }
+
+    pub fn set_active_workspace(&self, workspace_id: impl Into<String>) {
+        let id = workspace_id.into();
+        self.update(|state| {
+            if state.workspaces.contains_key(&id) {
+                state.session.active_workspace = Some(id.clone());
+            }
+        });
+    }
+
+    pub fn set_knowledge_base(&self, persona: WorkspacePersona, articles: Vec<KnowledgeArticle>) {
+        self.update(|state| {
+            state.knowledge_base.insert(persona, articles);
+        });
+    }
+
+    pub fn knowledge_for(&self, persona: WorkspacePersona) -> Vec<KnowledgeArticle> {
+        self.read()
+            .knowledge_base
+            .get(&persona)
+            .cloned()
+            .unwrap_or_default()
+    }
 }
 
 fn unix_time() -> u64 {
@@ -207,6 +301,7 @@ mod tests {
             label: "Developer".into(),
             persona: WorkspacePersona::Developer,
             routes: vec!["/chat".into()],
+            allowed_roles: vec!["developer".into()],
         };
 
         store.upsert_workspace(workspace.clone());
