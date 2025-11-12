@@ -119,7 +119,7 @@ fn page_envelope_to_proto(envelope: PageEnvelope) -> Result<proto::PageEnvelope,
                 surface: region.surface.unwrap_or_default(),
                 slot: region
                     .slot
-                    .map(|slot| format!("{:?}", slot))
+                    .map(|slot| slot as i32)
                     .unwrap_or_default(),
                 widgets,
             })
