@@ -33,6 +33,16 @@ pub mod renderer {
 
         pub fn render_frame(&self, frame: &RenderFrame<'_>) -> Result<(), String> {
             let component = format!(
+                "shell-navigation:{} workspaces:{} active:{} knowledge:{}",
+                frame.chrome.navigation.items.len(),
+                frame.chrome.workspace_switcher.workspaces.len(),
+                frame
+                    .chrome
+                    .workspace_switcher
+                    .active
+                    .as_deref()
+                    .unwrap_or("none"),
+                frame.chrome.knowledge.articles.len()
                 "shell-navigation:{} workspaces:{}",
                 frame.chrome.navigation.items.len(),
                 frame.chrome.workspace_switcher.workspaces.len()

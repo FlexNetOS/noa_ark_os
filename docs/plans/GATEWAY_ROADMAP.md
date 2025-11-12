@@ -29,6 +29,10 @@
 - ✅ **Phase 0 – Baseline Hardening**: Gateway bootstrap now loads a resilient schema catalog by default, emits telemetry for every critical path, and expands the regression suite with catalog, telemetry, and intent compilation coverage.
 - ✅ **Phase 1 – Ontology & Catalog**: Introduced a `SymbolSchema` registry with lifecycle governance, compatibility windows, and policy enforcement, backed by `docs/architecture/gateway_symbol_schema.md`.
 - ✅ **Phase 2 – Intent Compiler & Policy Mesh**: Delivered a YAML-driven `IntentCompiler` that converts manifests into verified intents, linking policy constraints directly into routing operations.
+- ✅ **Phase 3 – Automation & Healing Fabric**: Zero-trust attestation gating, adaptive routing scores, and reinforcement feedback loops keep routes deterministic while predictive self-healing continues to remediate faults automatically.
+- ✅ **Phase 4 – Observability & Knowledge Graph**: Expanded telemetry now tracks attestation, routing model updates, and tool leases, providing richer signals for anomaly detection and digital-twin analytics.
+- ✅ **Phase 5 – Execution Fabric & Acceleration**: Shared `ToolArtifact` catalog with sandbox-aware leases allows multiple connectors to mount common tooling without duplication, enforcing concurrency limits for deterministic QoS.
+- 🚧 **Phase 6+**: Federation, partner trust exchange, and DX/documentation automation remain in-flight future efforts.
 - 🚧 **Phase 3+**: Automation fabric, observability graph, execution acceleration, federation, and DX streams remain on the roadmap; telemetry hooks and schema metadata lay the groundwork for these follow-on phases.
 
 ## Phase Highlights & Key Workstreams

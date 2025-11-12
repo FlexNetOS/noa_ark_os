@@ -41,6 +41,7 @@ pub struct ModuleDescriptor {
     pub persona: WorkspacePersona,
     pub capabilities: Vec<ModuleCapability>,
     pub mount: ModuleMount,
+    pub allowed_roles: Vec<String>,
 }
 
 impl ModuleDescriptor {
@@ -52,6 +53,7 @@ impl ModuleDescriptor {
         routes: Vec<String>,
         capabilities: Vec<ModuleCapability>,
         mount: ModuleMount,
+        allowed_roles: Vec<String>,
     ) -> Self {
         Self {
             id: id.into(),
@@ -61,6 +63,7 @@ impl ModuleDescriptor {
             routes,
             capabilities,
             mount,
+            allowed_roles,
         }
     }
 }
@@ -76,6 +79,10 @@ pub struct ModuleContext {
 
 impl ModuleContext {
     pub fn register_navigation(&self, descriptor: &ModuleDescriptor) {
+        if !self.module_accessible(descriptor) {
+            return;
+        }
+
         self.store.update(|state| {
             let mut nav = state.navigation.clone();
             nav.primary_items.push(NavigationItem {
@@ -87,6 +94,7 @@ impl ModuleContext {
                     .first()
                     .cloned()
                     .unwrap_or_else(|| format!("/{}", descriptor.id)),
+                allowed_roles: descriptor.allowed_roles.clone(),
             });
             nav.active_route = nav
                 .active_route
@@ -96,11 +104,16 @@ impl ModuleContext {
     }
 
     pub fn register_workspace(&self, descriptor: &ModuleDescriptor) {
+        if !self.module_accessible(descriptor) {
+            return;
+        }
+
         self.store.upsert_workspace(Workspace {
             id: descriptor.id.clone(),
             label: descriptor.label.clone(),
             persona: descriptor.persona,
             routes: descriptor.routes.clone(),
+            allowed_roles: descriptor.allowed_roles.clone(),
         });
     }
 
@@ -192,6 +205,7 @@ impl WorkflowModule {
                 ModuleMount::InternalComponent {
                     name: "WorkflowCommandCenter".into(),
                 },
+                vec!["operator".into(), "admin".into()],
             ),
             workflows,
         }
@@ -247,6 +261,7 @@ impl AgentModule {
                 ModuleMount::InternalComponent {
                     name: "AgentHiveExplorer".into(),
                 },
+                vec!["operator".into(), "admin".into()],
             ),
         }
     }
@@ -369,6 +384,7 @@ impl CiModule {
                 ModuleMount::InternalComponent {
                     name: "CiConsole".into(),
                 },
+                vec!["developer".into(), "admin".into()],
             ),
         }
     }
@@ -418,6 +434,7 @@ impl StorageModule {
                 ModuleMount::InternalComponent {
                     name: "StorageHub".into(),
                 },
+                vec!["executive".into(), "admin".into()],
             ),
         }
     }
@@ -463,6 +480,7 @@ impl AnalyticsModule {
                 ModuleMount::InternalComponent {
                     name: "ValueAnalytics".into(),
                 },
+                vec!["executive".into(), "admin".into()],
             ),
         }
     }
@@ -508,6 +526,7 @@ impl ChatModule {
                 ModuleMount::InternalComponent {
                     name: "AiOpsStudio".into(),
                 },
+                vec!["developer".into(), "operator".into(), "admin".into()],
             ),
         }
     }
@@ -595,10 +614,51 @@ mod tests {
         };
         let module =
             WorkflowModule::new(vec![Workflow::builder("test").with_stage("lint").finish()]);
+        store.update(|state| {
+            state.session.roles = vec!["operator".into()];
+        });
         module.hydrate(&context);
 
         let state = store.read();
         assert!(!state.navigation.primary_items.is_empty());
         assert!(state.workspaces.contains_key("workflow-command-center"));
+    }
+
+    #[test]
+    fn executive_modules_require_role() {
+        let store = GlobalStore::new(GlobalState::default());
+        store.update(|state| {
+            state.session.roles = vec!["developer".into()];
+        });
+        let context = ModuleContext {
+            store: store.clone(),
+            workflows: WorkflowCatalog::default(),
+            emit: Arc::new(|_| {}),
+        };
+        let analytics = AnalyticsModule::new();
+        analytics.hydrate(&context);
+
+        let state = store.read();
+        assert!(state
+            .navigation
+            .primary_items
+            .iter()
+            .all(|item| item.id != "analytics"));
+        assert!(!state.workspaces.contains_key("analytics"));
+    }
+}
+
+impl ModuleContext {
+    fn module_accessible(&self, descriptor: &ModuleDescriptor) -> bool {
+        let state = self.store.read();
+        if descriptor.allowed_roles.is_empty() {
+            return true;
+        }
+
+        let session_roles = &state.session.roles;
+        descriptor
+            .allowed_roles
+            .iter()
+            .any(|role| session_roles.iter().any(|r| r == role))
     }
 }
