@@ -57,6 +57,7 @@ pub struct Pipeline {
     pub ai_confidence: f32,           // new: AI confidence score
     pub diff_summary: Option<String>,
     pub approvals_required: Vec<String>,
+    #[serde(default)]
     pub approvals_granted: Vec<String>,
 }
 
