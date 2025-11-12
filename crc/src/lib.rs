@@ -16,6 +16,7 @@ pub mod commands;
 pub mod digestors;
 pub mod engine;
 pub mod error;
+pub mod extraction;
 pub mod graph;
 pub mod ir;
 pub mod orchestrator;
@@ -32,7 +33,7 @@ pub use types::*;
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -86,6 +87,35 @@ pub enum CRCState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+/// Represents the original archive file associated with a code drop in the CRC system.
+///
+/// This struct is used to track the original artifact (such as a compressed archive or source bundle)
+/// that was ingested as part of a code drop. It records the file's location, type, size, and any
+/// extracted path if the archive was unpacked. The `cleanup_after_processing` field determines whether
+/// the original file (and any extracted contents) should be deleted after processing is complete.
+///
+/// # Lifecycle
+/// - When a new code drop is received, its original archive is recorded as an `OriginalArtifact`.
+/// - If `cleanup_after_processing` is `true`, the system will remove the original and/or extracted files
+///   after the code drop has been fully processed and archived.
+/// - If `false`, the files are retained for further inspection or auditing.
+///
+/// This struct is part of the public API for tracking and managing code drop artifacts.
+pub struct OriginalArtifact {
+    /// Filesystem path to the original archive file as received.
+    pub path: PathBuf,
+    /// Optional string describing the archive type (e.g., "zip", "tar.gz").
+    pub archive_type: Option<String>,
+    /// Optional size of the archive file in bytes.
+    pub size: Option<u64>,
+    /// Optional path to the directory where the archive was extracted, if applicable.
+    pub extracted_path: Option<PathBuf>,
+    /// If true, the original and/or extracted files will be deleted after processing is complete.
+    /// If false, the files are retained for further use or auditing.
+    pub cleanup_after_processing: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CodeDrop {
     pub id: String,
     pub source_type: SourceType,
@@ -95,6 +125,7 @@ pub struct CodeDrop {
     pub manifest: DropManifest,
     pub analysis: Option<AnalysisResult>,
     pub adaptation: Option<AdaptationResult>,
+    pub original_artifact: Option<OriginalArtifact>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -292,6 +323,7 @@ impl CRCSystem {
         &self,
         path: PathBuf,
         manifest: DropManifest,
+        original_artifact: Option<OriginalArtifact>,
     ) -> std::result::Result<String, String> {
         let id = format!("drop_{}", uuid::Uuid::new_v4());
 
@@ -304,6 +336,7 @@ impl CRCSystem {
             manifest,
             analysis: None,
             adaptation: None,
+            original_artifact,
         };
 
         let mut drops = self.drops.lock().unwrap();
@@ -356,6 +389,12 @@ impl CRCSystem {
     pub fn get_drop(&self, drop_id: &str) -> Option<CodeDrop> {
         let drops = self.drops.lock().unwrap();
         drops.get(drop_id).cloned()
+    }
+
+    /// List all registered drop identifiers (for testing and diagnostics).
+    pub fn list_drop_ids(&self) -> Vec<String> {
+        let drops = self.drops.lock().unwrap();
+        drops.keys().cloned().collect()
     }
 }
 
