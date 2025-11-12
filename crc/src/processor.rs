@@ -150,13 +150,6 @@ impl DropProcessor {
             archive_info.hash
         );
 
-        if cleanup_after_processing {
-            archive_manager.cleanup_source(&source_path).await?;
-            info!(
-                "✓ Removed temporary extraction directory {}",
-                source_path.display()
-            );
-        }
 
         let mut metadata = validation.metadata;
         match serde_json::to_string(&build_artifacts) {
