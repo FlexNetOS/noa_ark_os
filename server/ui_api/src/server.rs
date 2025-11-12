@@ -69,8 +69,6 @@ impl UiApiState {
             session: Arc::new(Mutex::new(None)),
             drop_registry,
             drop_root,
-            // Use absolute path per workspace guidelines to avoid ambiguity.
-            drop_root: PathBuf::from("D:/dev/workspaces/noa_ark_os/crc/drop-in/incoming"),
         }
     }
 
