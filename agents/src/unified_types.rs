@@ -23,11 +23,11 @@ use uuid::Uuid;
 /// - **L3Orchestration** (Stack-Chief): Cross-domain coordination and workflow orchestration.
 /// - **L4Operations** (Specialist): Operational execution and domain expertise.
 /// - **L5Infrastructure** (Micro): Fine-grained task execution and infrastructure services.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-/// Agent layer in NOA's five-layer hierarchy.
 ///
-/// The naming scheme maps legacy terms (Executive, Board, Stack-Chief,
-/// Specialist, Micro) to the new L1–L5 architecture used by the registry.
+/// Agents escalate upward through layers when decisions exceed their authority level. The
+/// registry organizes its agents into this hierarchy while maintaining backward compatibility
+/// with the legacy naming scheme.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum AgentLayer {
     /// L1: Root CECCA, Constitutional authority (formerly "Executive")
     L1Autonomy,
