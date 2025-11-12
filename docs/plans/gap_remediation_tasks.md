@@ -285,6 +285,7 @@ Layer differentiated services and packaged workflows on top of the hardened core
 - Priority: P1
 - Status: Proposed
 - Depends on: AGENTOS-2
+- Tracking: [Internal issue stub](../issues/AGENTOS-3-unified-ui-shell.md) _(replace anchor with external URL when published)_
 
 ### <a id="task-adaptive-runtime"></a>AGENTOS-4 — Implement adaptive runtime orchestration
 **Description:** Extend runtime controllers to detect host capabilities, adjust workload placement, and surface portability guidance tied to the kernel graph.
