@@ -77,7 +77,7 @@ disable_yaml_sources() {
     if ! grep -qE 'esm\\.ubuntu\\.com' "$file"; then
         return
     fi
-    if grep -qE '^[[:space:]]*Enabled:[[:space:]]*(no|false)\b' "$file"; then
+    if grep -qE '^[[:space:]]*Enabled:[[:space:]]*(no|false)\b' "$file" || grep -q '# disabled-by-noa' "$file"; then
         INFO "ESM entries already disabled in $file"
         return
     fi
