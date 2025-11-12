@@ -50,9 +50,9 @@ pub fn get_allocated() -> usize {
 /// Load registry data from the provided directory path.
 pub fn load_registry<P: AsRef<Path>>(root: P) -> Result<(), RegistryError> {
     let root = root.as_ref();
-    if !root.exists() {
+    if !root.exists() || !root.is_dir() {
         return Err(RegistryError::Validation(format!(
-            "registry directory '{:?}' does not exist",
+            "registry path '{:?}' does not exist or is not a directory",
             root
         )));
     }
