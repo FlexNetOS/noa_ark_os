@@ -16,6 +16,14 @@ pub mod kernel;
 pub mod memory;
 pub mod process;
 pub mod runtime;
+pub mod fs;
+pub mod gateway;
+pub mod hardware;
+pub mod ipc;
+pub mod kernel;
+pub mod memory;
+pub mod metrics;
+pub mod process;
 pub mod security;
 
 /// Core OS version
@@ -26,6 +34,17 @@ pub fn init() -> Result<capabilities::KernelHandle, kernel::KernelError> {
     println!("NOA ARK OS Core v{}", VERSION);
     println!("Initializing kernel-managed capabilities...");
     let handle = kernel::init()?;
+    println!("Initializing core services...");
+
+    // Initialize subsystems
+    kernel::init()?;
+    memory::init()?;
+    process::init()?;
+    ipc::init()?;
+    fs::init()?;
+    security::init()?;
+    gateway::init().map_err(|_| "gateway initialization failed")?;
+
     println!("Core OS initialized successfully");
     Ok(handle)
 }

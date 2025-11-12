@@ -1,0 +1,52 @@
+{
+  "$schema": "./registry.schema.json",
+  "registryVersion": "1.0.0",
+  "owners": [
+    {
+      "id": "crew-systems-memory",
+      "name": "Systems Memory Crew",
+      "description": "Owns the runtime knowledge graph cache and memory orchestration layer.",
+      "contacts": ["systems-memory@noa-ark.example"],
+      "note": "Contact email is a placeholder. Replace with a real address for production use."
+    },
+    {
+      "id": "crew-vfs",
+      "name": "Virtual Filesystem Crew",
+      "description": "Maintains metadata propagation and file graph surfaces.",
+      "contacts": ["vfs@noa-ark.example"],
+      "note": "Contact email is a placeholder. Replace with a real address for production use."
+    }
+  ],
+  "components": [
+    {
+      "id": "core.memory.graph",
+      "name": "Registry Graph Memory Service",
+      "version": "0.2.0",
+      "description": "Loads registry metadata and exposes graph-aware queries to the OS.",
+      "files": [
+        "core/src/memory.rs"
+      ],
+      "dependencies": [],
+      "owners": ["crew-systems-memory"],
+      "tags": ["core", "memory", "graph"],
+      "links": {
+        "handbook": "docs/architecture/registry-knowledge-graph.md"
+      }
+    },
+    {
+      "id": "core.fs.registry-sync",
+      "name": "Registry-Aware VFS Sync",
+      "version": "0.2.0",
+      "description": "Aligns VFS descriptors with graph metadata exposed by the memory service.",
+      "files": [
+        "core/src/fs.rs"
+      ],
+      "dependencies": ["core.memory.graph"],
+      "owners": ["crew-vfs"],
+      "tags": ["core", "filesystem", "graph"],
+      "links": {
+        "handbook": "docs/architecture/registry-knowledge-graph.md"
+      }
+    }
+  ]
+}

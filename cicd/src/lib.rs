@@ -5,6 +5,8 @@ pub mod validation;
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::fs;
+use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -13,9 +15,11 @@ pub enum PipelineStage {
     Validate,
     Build,
     Test,
+    SingleHostAcceptance,
     Deploy,
     Verify,
     Promote,
+    DocsRefresh,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -52,6 +56,13 @@ pub struct Pipeline {
     pub stages: Vec<Stage>,
     pub commit_sha: String,
     pub triggered_at: u64,
+    pub crc_job_id: Option<String>,  // new: link to CRC job
+    pub auto_approved: bool,          // new: AI auto-approval
+    pub ai_confidence: f32,           // new: AI confidence score
+    pub diff_summary: Option<String>,
+    pub approvals_required: Vec<String>,
+    #[serde(default)]
+    pub approvals_granted: Vec<String>,
     pub crc_job_id: Option<String>, // new: link to CRC job
     pub auto_approved: bool,        // new: AI auto-approval
     pub ai_confidence: f32,         // new: AI confidence score
@@ -112,6 +123,7 @@ pub struct CICDSystem {
     deployments: Arc<Mutex<HashMap<String, Deployment>>>,
     baseline_metrics: Arc<Mutex<HashMap<Environment, HealthMetrics>>>,
     auto_approve_threshold: f32, // new
+    single_host_profile: Arc<Mutex<Option<String>>>,
 }
 
 impl CICDSystem {
@@ -121,6 +133,9 @@ impl CICDSystem {
             deployments: Arc::new(Mutex::new(HashMap::new())),
             baseline_metrics: Arc::new(Mutex::new(HashMap::new())),
             auto_approve_threshold: 0.95, // 95% confidence
+            single_host_profile: Arc::new(Mutex::new(Some(
+                "server/profiles/single_host/profile.toml".to_string(),
+            ))),
         }
     }
 
@@ -131,7 +146,19 @@ impl CICDSystem {
             deployments: Arc::new(Mutex::new(HashMap::new())),
             baseline_metrics: Arc::new(Mutex::new(HashMap::new())),
             auto_approve_threshold: threshold,
+            single_host_profile: Arc::new(Mutex::new(Some(
+                "server/profiles/single_host/profile.toml".to_string(),
+            ))),
         }
+    }
+
+    /// Register the single-host profile manifest used for acceptance tests.
+    pub fn configure_single_host_profile<P: Into<String>>(&self, profile_path: P) {
+        let mut guard = self
+            .single_host_profile
+            .lock()
+            .expect("single host profile lock poisoned");
+        *guard = Some(profile_path.into());
     }
 
     /// Trigger a new pipeline (can be triggered by CRC)
@@ -162,6 +189,12 @@ impl CICDSystem {
                     duration_ms: None,
                 },
                 Stage {
+                    name: "single_host_acceptance".to_string(),
+                    stage_type: PipelineStage::SingleHostAcceptance,
+                    status: PipelineStatus::Pending,
+                    duration_ms: None,
+                },
+                Stage {
                     name: "deploy".to_string(),
                     stage_type: PipelineStage::Deploy,
                     status: PipelineStatus::Pending,
@@ -176,6 +209,9 @@ impl CICDSystem {
             crc_job_id: None,
             auto_approved: false,
             ai_confidence: 0.0,
+            diff_summary: None,
+            approvals_required: Vec::new(),
+            approvals_granted: Vec::new(),
         };
 
         let mut pipelines = self.pipelines.lock().unwrap();
@@ -222,6 +258,92 @@ impl CICDSystem {
         Ok(id)
     }
 
+        Ok(id)
+    }
+
+        Ok(id)
+    }
+
+    pub fn trigger_doc_refresh_pipeline(
+        &self,
+        commit_sha: String,
+        diff_summary: String,
+        approvals_required: Vec<String>,
+    ) -> Result<String, String> {
+        let id = format!("doc_pipeline_{}", uuid::Uuid::new_v4());
+
+        let pipeline = Pipeline {
+            id: id.clone(),
+            name: "documentation-refresh".to_string(),
+            status: PipelineStatus::Pending,
+            stages: vec![
+                Stage {
+                    name: "validate".to_string(),
+                    stage_type: PipelineStage::Validate,
+                    status: PipelineStatus::Pending,
+                    duration_ms: None,
+                },
+                Stage {
+                    name: "docs-refresh".to_string(),
+                    stage_type: PipelineStage::DocsRefresh,
+                    status: PipelineStatus::Pending,
+                    duration_ms: None,
+                },
+                Stage {
+                    name: "verify".to_string(),
+                    stage_type: PipelineStage::Verify,
+                    status: PipelineStatus::Pending,
+                    duration_ms: None,
+                },
+            ],
+            commit_sha,
+            triggered_at: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+            crc_job_id: None,
+            auto_approved: false,
+            ai_confidence: 0.0,
+            diff_summary: Some(diff_summary),
+            approvals_required,
+            approvals_granted: Vec::new(),
+        };
+
+        let mut pipelines = self.pipelines.lock().unwrap();
+        pipelines.insert(id.clone(), pipeline);
+
+        println!("[CI/CD] Documentation pipeline triggered: {}", id);
+        Ok(id)
+    }
+
+    pub fn approve_pipeline(&self, pipeline_id: &str, approver: &str) -> Result<(), String> {
+        let mut pipelines = self.pipelines.lock().unwrap();
+        let pipeline = pipelines
+            .get_mut(pipeline_id)
+            .ok_or_else(|| format!("Pipeline not found: {}", pipeline_id))?;
+
+        if pipeline
+            .approvals_required
+            .iter()
+            .any(|required| required == approver)
+        {
+            if pipeline
+                .approvals_granted
+                .iter()
+                .all(|granted| granted != approver)
+            {
+                pipeline.approvals_granted.push(approver.to_string());
+                println!("[CI/CD] Approval added by {}", approver);
+            }
+            Ok(())
+        } else {
+            Err(format!(
+                "Approver {} is not required for pipeline {}",
+                approver, pipeline_id
+            ))
+        }
+    }
+    
     /// Execute pipeline with full automation
     pub fn execute_pipeline(&self, pipeline_id: &str) -> Result<(), String> {
         // Check if requires human review
@@ -230,6 +352,11 @@ impl CICDSystem {
             if let Some(pipeline) = pipelines.get(pipeline_id) {
                 if pipeline.status == PipelineStatus::HumanReview {
                     return Err("Pipeline requires human review before execution".to_string());
+                }
+                if !pipeline.approvals_required.is_empty()
+                    && !pipeline.approvals_required.iter().all(|required| pipeline.approvals_granted.contains(required))
+                {
+                    return Err("Pipeline is waiting for documentation approvals".to_string());
                 }
             }
         }
@@ -269,7 +396,9 @@ impl CICDSystem {
             PipelineStage::Validate => self.validate()?,
             PipelineStage::Build => self.build()?,
             PipelineStage::Test => self.test()?,
+            PipelineStage::SingleHostAcceptance => self.single_host_acceptance()?,
             PipelineStage::Deploy => self.deploy()?,
+            PipelineStage::DocsRefresh => self.docs_refresh(pipeline_id)?,
             _ => {}
         }
 
@@ -306,12 +435,62 @@ impl CICDSystem {
         Ok(())
     }
 
+    /// Acceptance checks for the single-host profile
+    fn single_host_acceptance(&self) -> Result<(), String> {
+        println!("[CI/CD] Running single-host acceptance suite...");
+
+        let profile_path = {
+            let guard = self
+                .single_host_profile
+                .lock()
+                .expect("single host profile lock poisoned");
+            guard.clone()
+        };
+
+        let profile_path = profile_path
+            .ok_or_else(|| "Single-host profile not configured for CI/CD".to_string())?;
+
+        if !Path::new(&profile_path).exists() {
+            return Err(format!("Single-host profile not found at {}", profile_path));
+        }
+
+        let manifest = fs::read_to_string(&profile_path)
+            .map_err(|err| format!("Failed to read profile: {err}"))?;
+
+        if !manifest.contains("single_host") {
+            return Err("Profile manifest does not describe the single_host configuration".into());
+        }
+
+        println!(
+            "[CI/CD] ✓ Validated profile manifest at {} ({} bytes)",
+            profile_path,
+            manifest.len()
+        );
+        println!("[CI/CD] ✓ Acceptance checks ready for workload replay");
+        Ok(())
+    }
+
     /// Deploy stage
     fn deploy(&self) -> Result<(), String> {
         println!("[CI/CD] Deploying to staging...");
         Ok(())
     }
 
+    fn docs_refresh(&self, pipeline_id: &str) -> Result<(), String> {
+        let diff_summary = {
+            let pipelines = self.pipelines.lock().unwrap();
+            pipelines
+                .get(pipeline_id)
+                .and_then(|p| p.diff_summary.clone())
+                .unwrap_or_else(|| "No diff summary provided".to_string())
+        };
+
+        println!("[CI/CD] Running documentation refresh...");
+        println!("[CI/CD] Diff summary: {}", diff_summary);
+        println!("[CI/CD] Invoking documentation agent to sync docs");
+        Ok(())
+    }
+    
     /// Deploy to environment with strategy and auto-approval
     pub fn deploy_to_environment(
         &self,

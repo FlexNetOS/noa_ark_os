@@ -1,0 +1,104 @@
+# Alerting Pipelines for Automation Telemetry
+version: 1
+service_tier: production
+runbook: docs/reports/AUTOMATION_EFFECTIVENESS_ROI.md
+pipelines:
+  - name: relocation-guardrail-alerts
+    description: "Escalates relocation guardrail regressions detected in sandboxes"
+    source_metrics:
+      - relocation.execution.success_rate
+      - relocation.validation.checksum_mismatch
+    evaluation_interval: 5m
+    severity_levels:
+      warning:
+        acknowledgement_sla: 10m
+        runbook_section: "#storage-relocation"
+      critical:
+        acknowledgement_sla: 5m
+        runbook_section: "#Incident Response"
+    alert_rules:
+      - condition: "relocation.execution.success_rate < 0.97"
+        severity: warning
+        destinations:
+          - "pagerduty://storage-oncall"
+          - "slack://#storage-relocation"
+        annotations:
+          summary: "Relocation success rate below guardrail threshold"
+          remediation: "Investigate failed batches and validate checkpoint integrity"
+      - condition: "relocation.validation.checksum_mismatch > 0"
+        severity: critical
+        destinations:
+          - "pagerduty://incident-commander"
+          - "slack://#incident-bridge"
+        annotations:
+          summary: "Checksum mismatch detected during relocation validation"
+          remediation: "Halt rollout, re-run checksums, and engage storage owner"
+
+  - name: documentation-recovery-alerts
+    description: "Surfaces documentation automation latency or compliance breaches"
+    source_metrics:
+      - docs.regeneration.runtime_minutes
+      - docs.validation.review_latency_minutes
+      - docs.incident.ttd_minutes
+    evaluation_interval: 15m
+    severity_levels:
+      warning:
+        acknowledgement_sla: 30m
+        runbook_section: "#documentation-playbooks"
+      critical:
+        acknowledgement_sla: 15m
+        runbook_section: "#Escalation"
+    alert_rules:
+      - condition: "docs.regeneration.runtime_minutes > 30"
+        severity: warning
+        destinations:
+          - "slack://#doc-automation"
+        annotations:
+          summary: "Documentation regeneration exceeding target runtime"
+          remediation: "Check sandbox logs for stuck playbooks and re-queue"
+      - condition: "docs.validation.review_latency_minutes > 60"
+        severity: critical
+        destinations:
+          - "slack://#leadership-updates"
+          - "email://doc-owner@example.com"
+        annotations:
+          summary: "Review latency breaching SLA"
+          remediation: "Page reviewer rotation and provide regenerated package context"
+
+  - name: automation-roi-regression
+    description: "Flags downward trends in automation ROI metrics"
+    source_metrics:
+      - automation.roi.hours_saved
+      - automation.roi.cost_avoidance_usd
+      - automation.roi.incidents_avoided
+    evaluation_interval: 1h
+    severity_levels:
+      warning:
+        acknowledgement_sla: 4h
+        runbook_section: "#ROI Monitoring"
+      critical:
+        acknowledgement_sla: 1h
+        runbook_section: "#Executive Briefings"
+    alert_rules:
+      - condition: "automation.roi.hours_saved < 100"
+        severity: warning
+        destinations:
+          - "slack://#automation-ops"
+        annotations:
+          summary: "Automation hours saved dipping below health threshold"
+          remediation: "Validate sandbox schedules and confirm pipeline completeness"
+      - condition: "automation.roi.cost_avoidance_usd < 20000"
+        severity: warning
+        destinations:
+          - "email://finance-partner@example.com"
+        annotations:
+          summary: "Cost avoidance under-performing"
+          remediation: "Review recent incidents for manual intervention or delays"
+      - condition: "automation.roi.incidents_avoided < 3"
+        severity: critical
+        destinations:
+          - "pagerduty://automation-owner"
+          - "slack://#exec-briefings"
+        annotations:
+          summary: "Automation failing to prevent simulated incidents"
+          remediation: "Audit guardrail coverage and escalate to program owners"
