@@ -229,6 +229,11 @@ See [Fix CICD Pipeline Struct Duplication](#5-fix-cicd-pipeline-struct-duplicati
 ### AGENTOS-6 — Extend GPU Detection Beyond NVIDIA
 
 See [Extend GPU Detection Beyond NVIDIA](#6-extend-gpu-detection-beyond-nvidia) for objectives, success criteria, dependencies, milestones, and risks.
+
+<a id="task-agentos-7"></a>
+### AGENTOS-7 — Deliver Value-Add Ecosystem Content
+
+See [Deliver Value-Add Ecosystem Content](#7-deliver-value-add-ecosystem-content) for objectives, success criteria, dependencies, milestones, and risks.
 <!-- BEGIN: GAP_REMEDIATION_TASKS -->
 
 ## Ensure everything depends on the kernel/service graph, simplify deployment, and make the platform portable across environments by default.
