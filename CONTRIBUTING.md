@@ -86,6 +86,22 @@ We are committed to providing a welcoming and inclusive environment for all cont
    cd repos/agentaskit && cargo build
    ```
 
+5. Create a fine-grained personal access token (PAT) following [GitHub's official documentation](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens). Grant the token the scopes required to read and write to this repository and set an expiration reminder so you can renew it before it lapses.
+
+6. Authenticate the GitHub CLI using the token:
+   ```bash
+   gh auth login --hostname github.com --with-token
+   ```
+   When prompted, paste the PAT you created in the previous step.
+
+7. For non-interactive environments (CI jobs, scripts, etc.), export the token so the GitHub CLI can reuse it without prompts, and verify your session:
+   ```bash
+   export GH_TOKEN="<your-token>"
+   export GITHUB_TOKEN="<your-token>"
+   gh auth status --hostname github.com
+   ```
+
+> **Troubleshooting:** If you see `GitHub authentication is required` while running `gh` commands, your session has expired or was never initialized. Re-run steps 5–7 to refresh your credentials.
 #### Troubleshooting GitHub CLI authentication
 
 - Error: `GitHub authentication is required` → rerun the login command in step 4 or refresh your PAT and re-export `GH_TOKEN`/`GITHUB_TOKEN`.
