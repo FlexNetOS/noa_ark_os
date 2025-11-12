@@ -1,5 +1,5 @@
 //! Board Finance Agent - Financial Oversight
-//! 
+//!
 //! Simplified working version
 //! Monitors financial performance and provides oversight
 
@@ -11,7 +11,7 @@ use tokio::sync::RwLock;
 use uuid::Uuid;
 
 /// Board Finance Agent - Financial oversight and reporting
-/// 
+///
 /// Responsible for:
 /// - Financial performance monitoring
 /// - Budget oversight and compliance
@@ -96,7 +96,8 @@ impl FinanceAgent {
             category: AgentCategory::Governance,
             agent_type: AgentType::Master,
             language: AgentLanguage::Rust,
-            description: "Financial Oversight Agent - Budget and performance monitoring".to_string(),
+            description: "Financial Oversight Agent - Budget and performance monitoring"
+                .to_string(),
             role: "Board Finance".to_string(),
             purpose: "Monitor financial performance and ensure fiscal responsibility".to_string(),
             state: AgentState::Created,
@@ -126,17 +127,17 @@ impl FinanceAgent {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
             financial_data: Arc::new(RwLock::new(FinancialData::default())),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Initializing;
-        
+
         // Initialize financial tracking
         let mut data = self.financial_data.write().await;
         data.budget = BudgetInfo {
@@ -145,15 +146,15 @@ impl FinanceAgent {
             spent: 600000.0,
             remaining: 400000.0,
         };
-        
+
         *self.state.write().await = AgentState::Ready;
         tracing::info!("Finance Agent initialized");
         Ok(())
     }
-    
+
     pub async fn generate_report(&self) -> Result<FinancialReport> {
         let data = self.financial_data.read().await;
-        
+
         Ok(FinancialReport {
             report_id: Uuid::new_v4(),
             metrics: data.metrics.clone(),
@@ -163,11 +164,11 @@ impl FinanceAgent {
             generated_at: chrono::Utc::now(),
         })
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -182,20 +183,20 @@ impl Default for FinanceAgent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_create_finance_agent() {
         let agent = FinanceAgent::new();
         assert_eq!(agent.metadata().name, "Finance Board Agent");
     }
-    
+
     #[tokio::test]
     async fn test_initialize() {
         let mut agent = FinanceAgent::new();
         agent.initialize().await.unwrap();
         assert_eq!(agent.state().await, AgentState::Ready);
     }
-    
+
     #[tokio::test]
     async fn test_generate_report() {
         let mut agent = FinanceAgent::new();

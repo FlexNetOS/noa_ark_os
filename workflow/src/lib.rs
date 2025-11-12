@@ -3,6 +3,10 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
+use noa_agents::{AgentFactory, AGENT_FACTORY_CAPABILITY};
+use noa_core::capabilities::KernelHandle;
+use noa_core::config::manifest::CAPABILITY_PROCESS;
+use noa_core::process::ProcessService;
 use chrono::{Duration, Utc};
 use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast;
@@ -110,6 +114,7 @@ pub struct WorkflowEngine {
     workflows: Arc<Mutex<HashMap<String, Workflow>>>,
     states: Arc<Mutex<HashMap<String, WorkflowState>>>,
     stage_states: Arc<Mutex<HashMap<String, HashMap<String, StageState>>>>,
+    kernel: Option<KernelHandle>,
     event_stream: Arc<Mutex<Option<WorkflowEventStream>>>,
 }
 
@@ -119,6 +124,18 @@ impl WorkflowEngine {
             workflows: Arc::new(Mutex::new(HashMap::new())),
             states: Arc::new(Mutex::new(HashMap::new())),
             stage_states: Arc::new(Mutex::new(HashMap::new())),
+            kernel: None,
+        }
+    }
+
+    /// Create a workflow engine that interacts with kernel capabilities.
+    pub fn with_kernel(kernel: KernelHandle) -> Self {
+        Self {
+            workflows: Arc::new(Mutex::new(HashMap::new())),
+            states: Arc::new(Mutex::new(HashMap::new())),
+            stage_states: Arc::new(Mutex::new(HashMap::new())),
+            kernel: Some(kernel),
+        }
             event_stream: Arc::new(Mutex::new(None)),
         }
     }
@@ -270,6 +287,23 @@ impl WorkflowEngine {
     /// Execute a single task
     fn execute_task(&self, task: &Task) -> Result<(), String> {
         println!(
+            "[WORKFLOW] Executing task via kernel: agent={}, action={}",
+            task.agent, task.action
+        );
+
+        if let Some(kernel) = &self.kernel {
+            if let Ok(process_service) = kernel.request::<ProcessService>(CAPABILITY_PROCESS) {
+                let _ = process_service.create_process(format!("workflow::{}", task.agent));
+            }
+
+            if let Ok(factory) = kernel.request::<AgentFactory>(AGENT_FACTORY_CAPABILITY) {
+                println!(
+                    "[WORKFLOW] Agent factory accessible: {} total agents",
+                    factory.list_agents().len()
+                );
+            }
+        }
+
             "[WORKFLOW] Executing task: agent={}, action={}",
             task.agent, task.action
         );

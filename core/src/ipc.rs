@@ -13,7 +13,7 @@ pub struct Message {
 }
 
 lazy_static::lazy_static! {
-    static ref MESSAGE_QUEUES: Arc<Mutex<HashMap<ChannelId, Vec<Message>>>> = 
+    static ref MESSAGE_QUEUES: Arc<Mutex<HashMap<ChannelId, Vec<Message>>>> =
         Arc::new(Mutex::new(HashMap::new()));
 }
 
@@ -23,15 +23,13 @@ pub fn init() -> Result<(), &'static str> {
     Ok(())
 }
 
-/// Create a new channel
-pub fn create_channel(channel_id: ChannelId) -> Result<(), &'static str> {
+fn create_channel_inner(channel_id: ChannelId) -> Result<(), &'static str> {
     let mut queues = MESSAGE_QUEUES.lock().unwrap();
     queues.insert(channel_id, Vec::new());
     Ok(())
 }
 
-/// Send a message
-pub fn send_message(channel_id: ChannelId, message: Message) -> Result<(), &'static str> {
+fn send_message_inner(channel_id: ChannelId, message: Message) -> Result<(), &'static str> {
     let mut queues = MESSAGE_QUEUES.lock().unwrap();
     if let Some(queue) = queues.get_mut(&channel_id) {
         queue.push(message);
@@ -41,8 +39,7 @@ pub fn send_message(channel_id: ChannelId, message: Message) -> Result<(), &'sta
     }
 }
 
-/// Receive a message
-pub fn receive_message(channel_id: ChannelId) -> Option<Message> {
+fn receive_message_inner(channel_id: ChannelId) -> Option<Message> {
     let mut queues = MESSAGE_QUEUES.lock().unwrap();
     if let Some(queue) = queues.get_mut(&channel_id) {
         if !queue.is_empty() {
@@ -53,4 +50,44 @@ pub fn receive_message(channel_id: ChannelId) -> Option<Message> {
     } else {
         None
     }
+}
+
+/// Capability wrapper over IPC primitives.
+#[derive(Clone, Default)]
+pub struct IpcService;
+
+impl IpcService {
+    /// Register a new communication channel.
+    pub fn create_channel(&self, channel_id: ChannelId) -> Result<(), &'static str> {
+        create_channel_inner(channel_id)
+    }
+
+    /// Deliver a message to a channel.
+    pub fn send_message(
+        &self,
+        channel_id: ChannelId,
+        message: Message,
+    ) -> Result<(), &'static str> {
+        send_message_inner(channel_id, message)
+    }
+
+    /// Pull the next message from a channel queue.
+    pub fn receive_message(&self, channel_id: ChannelId) -> Option<Message> {
+        receive_message_inner(channel_id)
+    }
+}
+
+/// Create a new channel.
+pub fn create_channel(channel_id: ChannelId) -> Result<(), &'static str> {
+    IpcService::default().create_channel(channel_id)
+}
+
+/// Send a message.
+pub fn send_message(channel_id: ChannelId, message: Message) -> Result<(), &'static str> {
+    IpcService::default().send_message(channel_id, message)
+}
+
+/// Receive a message.
+pub fn receive_message(channel_id: ChannelId) -> Option<Message> {
+    IpcService::default().receive_message(channel_id)
 }

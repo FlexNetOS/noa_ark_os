@@ -1,5 +1,5 @@
 //! Illusion approach means that each MicroAgentStack - Auto-generated
-//! 
+//!
 //! ['Performs Micro Agent functions']
 
 use crate::unified_types::*;
@@ -48,22 +48,22 @@ impl IllusionApproachMeansThatEachMicroagentstack {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Ready;
         Ok(())
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -78,13 +78,16 @@ impl Default for IllusionApproachMeansThatEachMicroagentstack {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = IllusionApproachMeansThatEachMicroagentstack::new();
-        assert_eq!(agent.metadata().name, "Illusion approach means that each MicroAgentStack");
+        assert_eq!(
+            agent.metadata().name,
+            "Illusion approach means that each MicroAgentStack"
+        );
     }
-    
+
     #[tokio::test]
     async fn test_agent_initialization() {
         let mut agent = IllusionApproachMeansThatEachMicroagentstack::new();

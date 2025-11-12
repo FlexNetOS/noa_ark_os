@@ -1,5 +1,5 @@
 //! NOA Commander - Chief Executive Agent
-//! 
+//!
 //! Simplified working version - Phase 3A
 //! Original: 1,467 lines with 40+ structs
 //! This version: ~300 lines, room to grow
@@ -13,7 +13,7 @@ use tokio::sync::RwLock;
 use uuid::Uuid;
 
 /// NOA Commander - Root CECCA Agent
-/// 
+///
 /// The highest-level autonomous agent responsible for:
 /// - Strategic decision-making
 /// - Agent coordination
@@ -33,10 +33,10 @@ pub struct NoaCommander {
 pub struct CommanderConfig {
     /// Maximum concurrent decisions
     pub max_concurrent_decisions: usize,
-    
+
     /// Emergency response threshold (0.0-1.0)
     pub emergency_threshold: f64,
-    
+
     /// Strategic planning interval (seconds)
     pub planning_interval: u64,
 }
@@ -56,10 +56,10 @@ impl Default for CommanderConfig {
 struct StrategicEngine {
     /// Current strategic goals
     goals: HashMap<String, StrategicGoal>,
-    
+
     /// Decision history
     decisions: Vec<StrategicDecision>,
-    
+
     /// System metrics
     metrics: SystemMetrics,
 }
@@ -120,7 +120,7 @@ pub struct SystemMetrics {
 struct AgentCoordinator {
     /// Registered agents
     agents: HashMap<AgentId, AgentInfo>,
-    
+
     /// Active coordination tasks
     active_tasks: Vec<CoordinationTask>,
 }
@@ -149,7 +149,7 @@ impl NoaCommander {
     pub fn new() -> Self {
         Self::with_config(CommanderConfig::default())
     }
-    
+
     /// Create NOA Commander with custom config
     pub fn with_config(config: CommanderConfig) -> Self {
         let metadata = AgentMetadata {
@@ -176,7 +176,11 @@ impl NoaCommander {
                 "system-oversight".to_string(),
             ],
             tools: vec![],
-            tags: vec!["root".to_string(), "cecca".to_string(), "executive".to_string()],
+            tags: vec![
+                "root".to_string(),
+                "cecca".to_string(),
+                "executive".to_string(),
+            ],
             inputs: vec![],
             outputs: vec![],
             dependencies: vec![],
@@ -191,7 +195,7 @@ impl NoaCommander {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
@@ -204,14 +208,14 @@ impl NoaCommander {
             config,
         }
     }
-    
+
     /// Initialize the commander
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Initializing;
-        
+
         // Initialize strategic engine with default goals
         let mut engine = self.strategic_engine.write().await;
-        
+
         engine.goals.insert(
             "system-stability".to_string(),
             StrategicGoal::new(
@@ -221,7 +225,7 @@ impl NoaCommander {
                 1.0,
             ),
         );
-        
+
         engine.goals.insert(
             "performance-optimization".to_string(),
             StrategicGoal::new(
@@ -231,21 +235,21 @@ impl NoaCommander {
                 0.8,
             ),
         );
-        
+
         *self.state.write().await = AgentState::Ready;
-        
+
         tracing::info!("NOA Commander initialized successfully");
         Ok(())
     }
-    
+
     /// Start the commander
     pub async fn start(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Running;
-        
+
         tracing::info!("NOA Commander started");
         Ok(())
     }
-    
+
     /// Make strategic decision
     pub async fn make_decision(
         &self,
@@ -253,7 +257,7 @@ impl NoaCommander {
         context: serde_json::Value,
     ) -> Result<StrategicDecision> {
         let mut engine = self.strategic_engine.write().await;
-        
+
         // Simple decision-making logic
         let confidence = match decision_type {
             DecisionType::ResourceAllocation => 0.85,
@@ -262,7 +266,7 @@ impl NoaCommander {
             DecisionType::EmergencyResponse => 0.95,
             DecisionType::StrategicPlanning => 0.90,
         };
-        
+
         let decision = StrategicDecision {
             id: Uuid::new_v4(),
             decision_type,
@@ -270,23 +274,25 @@ impl NoaCommander {
             confidence,
             outcome: "approved".to_string(),
         };
-        
+
         engine.decisions.push(decision.clone());
-        
+
         tracing::debug!("Strategic decision made: {:?}", decision.id);
         Ok(decision)
     }
-    
+
     /// Register an agent
     pub async fn register_agent(&self, agent_info: AgentInfo) -> Result<()> {
         let mut coordinator = self.agent_coordinator.write().await;
-        
-        coordinator.agents.insert(agent_info.id.clone(), agent_info.clone());
-        
+
+        coordinator
+            .agents
+            .insert(agent_info.id.clone(), agent_info.clone());
+
         tracing::info!("Agent registered: {} ({})", agent_info.name, agent_info.id);
         Ok(())
     }
-    
+
     /// Coordinate agents for a task
     pub async fn coordinate_task(
         &self,
@@ -294,7 +300,7 @@ impl NoaCommander {
         required_capabilities: Vec<String>,
     ) -> Result<CoordinationTask> {
         let mut coordinator = self.agent_coordinator.write().await;
-        
+
         // Find agents with required capabilities
         let assigned_agents: Vec<AgentId> = coordinator
             .agents
@@ -306,28 +312,32 @@ impl NoaCommander {
             })
             .map(|(id, _)| id.clone())
             .collect();
-        
+
         let task = CoordinationTask {
             id: Uuid::new_v4(),
             task_type,
             assigned_agents,
             status: "active".to_string(),
         };
-        
+
         coordinator.active_tasks.push(task.clone());
-        
+
         tracing::info!("Coordination task created: {:?}", task.id);
         Ok(task)
     }
-    
+
     /// Handle emergency
     pub async fn handle_emergency(
         &self,
         emergency_type: String,
         severity: f64,
     ) -> Result<StrategicDecision> {
-        tracing::error!("Emergency detected: {} (severity: {})", emergency_type, severity);
-        
+        tracing::error!(
+            "Emergency detected: {} (severity: {})",
+            emergency_type,
+            severity
+        );
+
         self.make_decision(
             DecisionType::EmergencyResponse,
             serde_json::json!({
@@ -337,42 +347,42 @@ impl NoaCommander {
         )
         .await
     }
-    
+
     /// Get system status
     pub async fn system_status(&self) -> Result<SystemMetrics> {
         let engine = self.strategic_engine.read().await;
         let coordinator = self.agent_coordinator.read().await;
-        
+
         let mut metrics = engine.metrics.clone();
         metrics.agent_count = coordinator.agents.len();
         metrics.health_score = 0.85; // TODO: Calculate real health
         metrics.resource_utilization = 0.70; // TODO: Calculate real utilization
-        
+
         Ok(metrics)
     }
-    
+
     /// Get metadata
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     /// Get current state
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
-    
+
     /// List strategic goals
     pub async fn list_goals(&self) -> Vec<StrategicGoal> {
         let engine = self.strategic_engine.read().await;
         engine.goals.values().cloned().collect()
     }
-    
+
     /// List decisions
     pub async fn list_decisions(&self) -> Vec<StrategicDecision> {
         let engine = self.strategic_engine.read().await;
         engine.decisions.clone()
     }
-    
+
     /// List registered agents
     pub async fn list_agents(&self) -> Vec<AgentInfo> {
         let coordinator = self.agent_coordinator.read().await;
@@ -389,31 +399,31 @@ impl Default for NoaCommander {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_create_commander() {
         let commander = NoaCommander::new();
         assert_eq!(commander.metadata().name, "NOA Commander");
         assert_eq!(commander.metadata().layer, AgentLayer::L1Autonomy);
     }
-    
+
     #[tokio::test]
     async fn test_initialize() {
         let mut commander = NoaCommander::new();
         commander.initialize().await.unwrap();
-        
+
         let state = commander.state().await;
         assert_eq!(state, AgentState::Ready);
-        
+
         let goals = commander.list_goals().await;
         assert!(goals.len() >= 2);
     }
-    
+
     #[tokio::test]
     async fn test_make_decision() {
         let mut commander = NoaCommander::new();
         commander.initialize().await.unwrap();
-        
+
         let decision = commander
             .make_decision(
                 DecisionType::ResourceAllocation,
@@ -421,15 +431,15 @@ mod tests {
             )
             .await
             .unwrap();
-        
+
         assert_eq!(decision.outcome, "approved");
         assert!(decision.confidence > 0.0);
     }
-    
+
     #[tokio::test]
     async fn test_register_agent() {
         let commander = NoaCommander::new();
-        
+
         let agent_info = AgentInfo {
             id: "test-agent".to_string(),
             name: "Test Agent".to_string(),
@@ -437,17 +447,17 @@ mod tests {
             state: AgentState::Ready,
             capabilities: vec!["testing".to_string()],
         };
-        
+
         commander.register_agent(agent_info).await.unwrap();
-        
+
         let agents = commander.list_agents().await;
         assert_eq!(agents.len(), 1);
     }
-    
+
     #[tokio::test]
     async fn test_coordinate_task() {
         let commander = NoaCommander::new();
-        
+
         // Register agent with capability
         let agent_info = AgentInfo {
             id: "worker-1".to_string(),
@@ -456,9 +466,9 @@ mod tests {
             state: AgentState::Ready,
             capabilities: vec!["data-processing".to_string()],
         };
-        
+
         commander.register_agent(agent_info).await.unwrap();
-        
+
         // Create coordination task
         let task = commander
             .coordinate_task(
@@ -467,15 +477,15 @@ mod tests {
             )
             .await
             .unwrap();
-        
+
         assert_eq!(task.assigned_agents.len(), 1);
     }
-    
+
     #[tokio::test]
     async fn test_system_status() {
         let mut commander = NoaCommander::new();
         commander.initialize().await.unwrap();
-        
+
         let status = commander.system_status().await.unwrap();
         assert!(status.health_score > 0.0);
     }

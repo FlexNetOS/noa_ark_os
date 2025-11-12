@@ -1,5 +1,5 @@
 //! ExecutionPlanningAgent - Auto-generated
-//! 
+//!
 //! Plans and sequences agent/app actions to achieve target outcomes; escalates only if goal is unclear or missing critical context.
 
 use crate::unified_types::*;
@@ -48,22 +48,22 @@ impl Executionplanningagent {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Ready;
         Ok(())
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -78,13 +78,13 @@ impl Default for Executionplanningagent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = Executionplanningagent::new();
         assert_eq!(agent.metadata().name, "ExecutionPlanningAgent");
     }
-    
+
     #[tokio::test]
     async fn test_agent_initialization() {
         let mut agent = Executionplanningagent::new();

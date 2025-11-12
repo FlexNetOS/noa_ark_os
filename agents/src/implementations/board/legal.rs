@@ -1,5 +1,5 @@
 //! Board Legal Compliance Agent
-//! 
+//!
 //! Simplified working version
 //! Ensures legal compliance and regulatory oversight
 
@@ -11,7 +11,7 @@ use tokio::sync::RwLock;
 use uuid::Uuid;
 
 /// Legal Compliance Agent - Regulatory oversight
-/// 
+///
 /// Responsible for:
 /// - Legal compliance monitoring
 /// - Regulatory requirement tracking
@@ -115,7 +115,11 @@ impl LegalAgent {
                 "risk-mitigation".to_string(),
             ],
             tools: vec![],
-            tags: vec!["board".to_string(), "legal".to_string(), "compliance".to_string()],
+            tags: vec![
+                "board".to_string(),
+                "legal".to_string(),
+                "compliance".to_string(),
+            ],
             inputs: vec!["regulatory-requirements".to_string()],
             outputs: vec!["compliance-report".to_string()],
             dependencies: vec![],
@@ -130,17 +134,17 @@ impl LegalAgent {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
             compliance_data: Arc::new(RwLock::new(ComplianceData::default())),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Initializing;
-        
+
         // Initialize compliance requirements
         let mut data = self.compliance_data.write().await;
         data.requirements.push(ComplianceRequirement {
@@ -149,15 +153,15 @@ impl LegalAgent {
             description: "Ensure user data privacy compliance".to_string(),
             status: ComplianceStatus::Compliant,
         });
-        
+
         *self.state.write().await = AgentState::Ready;
         tracing::info!("Legal Compliance Agent initialized");
         Ok(())
     }
-    
+
     pub async fn generate_report(&self) -> Result<ComplianceReport> {
         let data = self.compliance_data.read().await;
-        
+
         Ok(ComplianceReport {
             report_id: Uuid::new_v4(),
             compliance_score: 0.95,
@@ -168,11 +172,11 @@ impl LegalAgent {
             generated_at: chrono::Utc::now(),
         })
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -187,20 +191,20 @@ impl Default for LegalAgent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_create_legal_agent() {
         let agent = LegalAgent::new();
         assert_eq!(agent.metadata().name, "Legal Compliance Agent");
     }
-    
+
     #[tokio::test]
     async fn test_initialize() {
         let mut agent = LegalAgent::new();
         agent.initialize().await.unwrap();
         assert_eq!(agent.state().await, AgentState::Ready);
     }
-    
+
     #[tokio::test]
     async fn test_generate_report() {
         let mut agent = LegalAgent::new();

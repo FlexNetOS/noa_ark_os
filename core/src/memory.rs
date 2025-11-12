@@ -30,23 +30,54 @@ pub fn init() -> Result<(), &'static str> {
     Ok(())
 }
 
-/// Track memory allocation
-pub fn allocate(size: usize) -> Result<(), &'static str> {
+fn allocate_inner(size: usize) {
     ALLOCATED_MEMORY.fetch_add(size, Ordering::SeqCst);
-    Ok(())
 }
 
-/// Track memory deallocation
-pub fn deallocate(size: usize) -> Result<(), &'static str> {
+fn deallocate_inner(size: usize) {
     ALLOCATED_MEMORY.fetch_sub(size, Ordering::SeqCst);
-    Ok(())
 }
 
-/// Get total allocated memory
-pub fn get_allocated() -> usize {
+fn allocated_inner() -> usize {
     ALLOCATED_MEMORY.load(Ordering::SeqCst)
 }
 
+/// Capability wrapper for kernel-managed memory operations.
+#[derive(Clone, Default)]
+pub struct MemoryManager;
+
+impl MemoryManager {
+    /// Reserve memory pages from the global allocator tracking.
+    pub fn allocate(&self, size: usize) -> Result<(), &'static str> {
+        allocate_inner(size);
+        Ok(())
+    }
+
+    /// Release memory back to the allocator tracking.
+    pub fn deallocate(&self, size: usize) -> Result<(), &'static str> {
+        deallocate_inner(size);
+        Ok(())
+    }
+
+    /// Query total allocated memory.
+    pub fn total_allocated(&self) -> usize {
+        allocated_inner()
+    }
+}
+
+/// Track memory allocation.
+pub fn allocate(size: usize) -> Result<(), &'static str> {
+    MemoryManager::default().allocate(size)
+}
+
+/// Track memory deallocation.
+pub fn deallocate(size: usize) -> Result<(), &'static str> {
+    MemoryManager::default().deallocate(size)
+}
+
+/// Get total allocated memory.
+pub fn get_allocated() -> usize {
+    MemoryManager::default().total_allocated()
 /// Load registry data from the provided directory path.
 pub fn load_registry<P: AsRef<Path>>(root: P) -> Result<(), RegistryError> {
     let root = root.as_ref();

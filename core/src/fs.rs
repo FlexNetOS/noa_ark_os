@@ -92,8 +92,7 @@ pub fn init() -> Result<(), &'static str> {
     Ok(())
 }
 
-/// Create a file
-pub fn create_file(path: String, permissions: u32) -> Result<(), &'static str> {
+fn create_file_inner(path: String, permissions: u32) -> Result<(), &'static str> {
     let descriptor = FileDescriptor {
         path: path.clone(),
         permissions,
@@ -107,6 +106,7 @@ pub fn create_file(path: String, permissions: u32) -> Result<(), &'static str> {
     Ok(())
 }
 
+fn get_file_inner(path: &str) -> Option<FileDescriptor> {
 /// Synchronise file descriptors with registry metadata.
 pub fn sync_registry_metadata() -> Result<(), FsError> {
     let snapshot = memory::registry_snapshot();
@@ -155,6 +155,36 @@ pub fn get_file(path: &str) -> Option<FileDescriptor> {
     table.get(path).cloned()
 }
 
+/// Kernel-managed file-system capability.
+#[derive(Clone, Default)]
+pub struct FileSystemService;
+
+impl FileSystemService {
+    /// Create a file entry tracked by the kernel registry.
+    pub fn create_file(&self, path: String, permissions: u32) -> Result<(), &'static str> {
+        create_file_inner(path, permissions)
+    }
+
+    /// Lookup a file descriptor.
+    pub fn get_file(&self, path: &str) -> Option<FileDescriptor> {
+        get_file_inner(path)
+    }
+
+    /// List all tracked descriptors.
+    pub fn list(&self) -> Vec<FileDescriptor> {
+        let table = FILE_TABLE.lock().unwrap();
+        table.values().cloned().collect()
+    }
+}
+
+/// Create a file.
+pub fn create_file(path: String, permissions: u32) -> Result<(), &'static str> {
+    FileSystemService::default().create_file(path, permissions)
+}
+
+/// Get file descriptor.
+pub fn get_file(path: &str) -> Option<FileDescriptor> {
+    FileSystemService::default().get_file(path)
 /// Move a file to a new destination path.
 pub fn move_file(source: &str, destination: String) -> Result<FileDescriptor, &'static str> {
     if source == "/" {

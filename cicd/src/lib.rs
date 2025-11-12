@@ -1,6 +1,7 @@
 //! CI/CD System - Continuous Delivery focused with CRC integration
 
 pub mod trigger;
+pub mod validation;
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -253,6 +254,9 @@ impl CICDSystem {
                 }
             }
         }
+
+        Ok(id)
+    }
 
         Ok(id)
     }

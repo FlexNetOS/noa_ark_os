@@ -1,5 +1,5 @@
 //! KnowledgeGraphAgent - Auto-generated
-//! 
+//!
 //! Builds/maintains a knowledge graph of all entities, dependencies, and operational context; escalates only for ambiguity in new entity relationships.
 
 use crate::unified_types::*;
@@ -48,22 +48,22 @@ impl Knowledgegraphagent {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Ready;
         Ok(())
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -78,13 +78,13 @@ impl Default for Knowledgegraphagent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = Knowledgegraphagent::new();
         assert_eq!(agent.metadata().name, "KnowledgeGraphAgent");
     }
-    
+
     #[tokio::test]
     async fn test_agent_initialization() {
         let mut agent = Knowledgegraphagent::new();

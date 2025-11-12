@@ -12,11 +12,11 @@ use uuid::Uuid;
 /// Agent layer in NOA 5-layer architecture
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum AgentLayer {
-    L1Autonomy,      // Root CECCA, Constitutional
-    L2Reasoning,     // Board & Executive agents
-    L3Orchestration, // Chief Commanders, Orchestrators
-    L4Operations,    // Specialists, Workers
-    L5Infrastructure,// Micro agents, Subject domain
+    L1Autonomy,       // Root CECCA, Constitutional
+    L2Reasoning,      // Board & Executive agents
+    L3Orchestration,  // Chief Commanders, Orchestrators
+    L4Operations,     // Specialists, Workers
+    L5Infrastructure, // Micro agents, Subject domain
 }
 
 impl Default for AgentLayer {
@@ -100,10 +100,10 @@ impl Default for HealthStatus {
 /// Agent type classification
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AgentType {
-    Master,      // CECCA, Board, Executive
-    Worker,      // Specialists, Operators
-    SubAgent,    // Micro agents
-    Swarm,       // Coordinated groups
+    Master,   // CECCA, Board, Executive
+    Worker,   // Specialists, Operators
+    SubAgent, // Micro agents
+    Swarm,    // Coordinated groups
 }
 
 impl Default for AgentType {
@@ -137,50 +137,50 @@ pub struct AgentMetadata {
     pub id: Uuid,
     pub agent_id: String,
     pub name: String,
-    
+
     // Classification
     pub layer: AgentLayer,
     pub category: AgentCategory,
     pub agent_type: AgentType,
     pub language: AgentLanguage,
-    
+
     // Description
     pub description: String,
     pub role: String,
     pub purpose: String,
-    
+
     // Status
     pub state: AgentState,
     pub health_status: HealthStatus,
-    
+
     // Relationships
     pub parent_id: Option<String>,
     pub escalation_to: Option<String>,
     pub stack: Option<String>,
-    
+
     // Capabilities
     pub capabilities: Vec<String>,
     pub tools: Vec<String>,
     pub tags: Vec<String>,
-    
+
     // I/O
     pub inputs: Vec<String>,
     pub outputs: Vec<String>,
     pub dependencies: Vec<String>,
-    
+
     // Resources
     pub cpu_min: String,
     pub ram_min: String,
     pub disk_min: String,
-    
+
     // Behavior
     pub autonomy_level: String,
     pub disposable: bool,
-    
+
     // Diagnostics
     pub issues_identified: Vec<String>,
     pub repair_recommendations: Vec<String>,
-    
+
     // Metadata
     pub created_at: Option<String>,
     pub last_updated: Option<String>,
@@ -224,7 +224,7 @@ impl AgentMetadata {
             version: Some("0.1.0".to_string()),
         }
     }
-    
+
     /// Create from registry data
     pub fn from_registry(agent_name: String, agent_id: String) -> Self {
         Self {
@@ -261,7 +261,7 @@ impl AgentMetadata {
             version: None,
         }
     }
-    
+
     /// Backwards compatibility - old factory signature
     pub fn new(name: String, description: String, category: String) -> Self {
         let cat = match category.to_lowercase().as_str() {
@@ -273,22 +273,25 @@ impl AgentMetadata {
             "analysis" => AgentCategory::Analysis,
             _ => AgentCategory::Other,
         };
-        
+
         Self::minimal(name, description, cat)
     }
-    
+
     pub fn is_healthy(&self) -> bool {
         matches!(self.health_status, HealthStatus::Healthy)
     }
-    
+
     pub fn needs_repair(&self) -> bool {
-        matches!(self.health_status, HealthStatus::NeedsRepair | HealthStatus::Error)
+        matches!(
+            self.health_status,
+            HealthStatus::NeedsRepair | HealthStatus::Error
+        )
     }
-    
+
     pub fn layer_name(&self) -> &str {
         self.layer.name()
     }
-    
+
     pub fn set_layer(&mut self, layer: String) {
         // Parse string to enum
         self.layer = match layer.to_lowercase().as_str() {
@@ -300,7 +303,7 @@ impl AgentMetadata {
             _ => AgentLayer::L4Operations,
         };
     }
-    
+
     pub fn set_status(&mut self, status: String) {
         self.health_status = match status.to_lowercase().as_str() {
             "healthy" => HealthStatus::Healthy,
@@ -310,7 +313,7 @@ impl AgentMetadata {
             _ => HealthStatus::Unknown,
         };
     }
-    
+
     pub fn full_id(&self) -> String {
         format!("{}::{}", self.layer_name(), self.agent_id)
     }
@@ -334,12 +337,7 @@ pub struct Agent {
 }
 
 impl Agent {
-    pub fn new(
-        id: String,
-        name: String,
-        agent_type: AgentType,
-        language: AgentLanguage,
-    ) -> Self {
+    pub fn new(id: String, name: String, agent_type: AgentType, language: AgentLanguage) -> Self {
         Self {
             id,
             name,
@@ -351,7 +349,7 @@ impl Agent {
             disposable: false,
         }
     }
-    
+
     pub fn make_disposable(mut self) -> Self {
         self.disposable = true;
         self

@@ -1,5 +1,5 @@
 //! Priority Manager Agent - Executive Layer
-//! 
+//!
 //! Simplified working version
 //! Manages task prioritization and execution ordering
 
@@ -12,7 +12,7 @@ use tokio::sync::RwLock;
 use uuid::Uuid;
 
 /// Priority Manager Agent - Task prioritization and ordering
-/// 
+///
 /// Responsible for:
 /// - Task priority assignment
 /// - Execution queue management
@@ -89,7 +89,8 @@ impl PriorityAgent {
             category: AgentCategory::Operations,
             agent_type: AgentType::Master,
             language: AgentLanguage::Rust,
-            description: "Priority Manager - Task prioritization and execution ordering".to_string(),
+            description: "Priority Manager - Task prioritization and execution ordering"
+                .to_string(),
             role: "Executive Priority".to_string(),
             purpose: "Manage task priorities and optimize execution order".to_string(),
             state: AgentState::Created,
@@ -119,17 +120,17 @@ impl PriorityAgent {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
             priority_data: Arc::new(RwLock::new(PriorityData::default())),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Initializing;
-        
+
         // Initialize priority rules
         let mut data = self.priority_data.write().await;
         data.priority_rules.push(PriorityRule {
@@ -137,35 +138,40 @@ impl PriorityAgent {
             condition: "emergency".to_string(),
             priority_boost: 1.5,
         });
-        
+
         *self.state.write().await = AgentState::Ready;
         tracing::info!("Priority Manager Agent initialized");
         Ok(())
     }
-    
+
     pub async fn prioritize_task(&self, task: PrioritizedTask) -> Result<()> {
         let mut data = self.priority_data.write().await;
-        
+
         // Insert task in priority order
-        let insert_pos = data.task_queue
+        let insert_pos = data
+            .task_queue
             .iter()
             .position(|t| t.priority_level < task.priority_level)
             .unwrap_or(data.task_queue.len());
-        
+
         data.task_queue.insert(insert_pos, task);
         data.metrics.total_tasks_prioritized += 1;
-        
+
         Ok(())
     }
-    
+
     pub async fn generate_report(&self) -> Result<PriorityReport> {
         let data = self.priority_data.read().await;
-        
-        let high_priority = data.task_queue
+
+        let high_priority = data
+            .task_queue
             .iter()
-            .filter(|t| t.priority_level == PriorityLevel::High || t.priority_level == PriorityLevel::Critical)
+            .filter(|t| {
+                t.priority_level == PriorityLevel::High
+                    || t.priority_level == PriorityLevel::Critical
+            })
             .count();
-        
+
         Ok(PriorityReport {
             report_id: Uuid::new_v4(),
             queued_tasks: data.task_queue.len(),
@@ -175,11 +181,11 @@ impl PriorityAgent {
             generated_at: chrono::Utc::now(),
         })
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -194,25 +200,25 @@ impl Default for PriorityAgent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_create_priority_agent() {
         let agent = PriorityAgent::new();
         assert_eq!(agent.metadata().name, "Priority Manager Agent");
     }
-    
+
     #[tokio::test]
     async fn test_initialize() {
         let mut agent = PriorityAgent::new();
         agent.initialize().await.unwrap();
         assert_eq!(agent.state().await, AgentState::Ready);
     }
-    
+
     #[tokio::test]
     async fn test_prioritize_task() {
         let mut agent = PriorityAgent::new();
         agent.initialize().await.unwrap();
-        
+
         let task = PrioritizedTask {
             task_id: Uuid::new_v4(),
             task_name: "Test task".to_string(),
@@ -221,9 +227,9 @@ mod tests {
             importance: 0.9,
             assigned_at: chrono::Utc::now(),
         };
-        
+
         agent.prioritize_task(task).await.unwrap();
-        
+
         let report = agent.generate_report().await.unwrap();
         assert_eq!(report.queued_tasks, 1);
         assert_eq!(report.high_priority_count, 1);

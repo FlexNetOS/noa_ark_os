@@ -1,5 +1,5 @@
 //! Board Strategy Agent
-//! 
+//!
 //! Simplified working version
 //! Strategic planning and direction
 
@@ -11,7 +11,7 @@ use tokio::sync::RwLock;
 use uuid::Uuid;
 
 /// Strategy Agent - Strategic planning
-/// 
+///
 /// Responsible for:
 /// - Strategic planning and direction
 /// - Long-term goal setting
@@ -132,17 +132,17 @@ impl StrategyAgent {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
             strategy_data: Arc::new(RwLock::new(StrategyData::default())),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Initializing;
-        
+
         // Initialize strategic goals
         let mut data = self.strategy_data.write().await;
         data.goals.push(StrategicGoal {
@@ -153,15 +153,15 @@ impl StrategyAgent {
             progress: 0.65,
             target_date: None,
         });
-        
+
         *self.state.write().await = AgentState::Ready;
         tracing::info!("Strategy Agent initialized");
         Ok(())
     }
-    
+
     pub async fn generate_report(&self) -> Result<StrategyReport> {
         let data = self.strategy_data.read().await;
-        
+
         Ok(StrategyReport {
             report_id: Uuid::new_v4(),
             goals_summary: format!("{} strategic goals in progress", data.goals.len()),
@@ -177,11 +177,11 @@ impl StrategyAgent {
             generated_at: chrono::Utc::now(),
         })
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -196,20 +196,20 @@ impl Default for StrategyAgent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_create_strategy_agent() {
         let agent = StrategyAgent::new();
         assert_eq!(agent.metadata().name, "Strategy Board Agent");
     }
-    
+
     #[tokio::test]
     async fn test_initialize() {
         let mut agent = StrategyAgent::new();
         agent.initialize().await.unwrap();
         assert_eq!(agent.state().await, AgentState::Ready);
     }
-    
+
     #[tokio::test]
     async fn test_generate_report() {
         let mut agent = StrategyAgent::new();

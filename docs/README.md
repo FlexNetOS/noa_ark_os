@@ -12,3 +12,7 @@ Complete documentation for NOA ARK OS.
 - tests/ - Test documentation
 - guides/ - User and developer guides
 - archive/ - Old documentation
+
+## Featured Architecture References
+
+- [Kernel-First Capability Architecture](architecture/kernel-first.md)

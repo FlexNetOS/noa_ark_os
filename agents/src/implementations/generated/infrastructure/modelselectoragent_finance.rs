@@ -1,5 +1,5 @@
 //! ModelSelectorAgent_Finance - Auto-generated
-//! 
+//!
 //! Selects the best model for finance/accounting tasks from available options.
 
 use crate::unified_types::*;
@@ -23,9 +23,12 @@ impl ModelselectoragentFinance {
             category: AgentCategory::Other,
             agent_type: AgentType::Worker,
             language: AgentLanguage::Rust,
-            description: "Selects the best model for finance/accounting tasks from available options.".to_string(),
+            description:
+                "Selects the best model for finance/accounting tasks from available options."
+                    .to_string(),
             role: "Micro Agent".to_string(),
-            purpose: "Selects the best model for finance/accounting tasks from available options.".to_string(),
+            purpose: "Selects the best model for finance/accounting tasks from available options."
+                .to_string(),
             state: AgentState::Created,
             health_status: HealthStatus::Unknown,
             parent_id: None,
@@ -48,22 +51,22 @@ impl ModelselectoragentFinance {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Ready;
         Ok(())
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -78,13 +81,13 @@ impl Default for ModelselectoragentFinance {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = ModelselectoragentFinance::new();
         assert_eq!(agent.metadata().name, "ModelSelectorAgent_Finance");
     }
-    
+
     #[tokio::test]
     async fn test_agent_initialization() {
         let mut agent = ModelselectoragentFinance::new();
