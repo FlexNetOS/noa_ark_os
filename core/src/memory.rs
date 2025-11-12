@@ -86,11 +86,11 @@ pub fn load_registry<P: AsRef<Path>>(root: P) -> Result<(), RegistryError> {
 }
 
 /// Obtain an immutable snapshot of the registry graph.
-pub fn registry_snapshot() -> RegistryGraph {
+pub fn registry_snapshot() -> Result<RegistryGraph, RegistryError> {
     REGISTRY_GRAPH
         .read()
         .map(|guard| guard.clone())
-        .unwrap_or_default()
+        .map_err(|_| RegistryError::PoisonedState("registry graph".into()))
 }
 
 /// Fetch a component by ID.
