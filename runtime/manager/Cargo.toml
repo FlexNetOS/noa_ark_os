@@ -1,0 +1,17 @@
+[package]
+name = "runtime_manager"
+version = "0.1.0"
+edition = "2021"
+authors = ["NOA ARK OS Team"]
+description = "Runtime orchestration layer that selects execution backends based on hardware capabilities"
+license = "MIT"
+
+[dependencies]
+serde = { workspace = true }
+serde_yaml = { workspace = true }
+anyhow = { workspace = true }
+noa_core = { path = "../../core" }
+thiserror = "1.0"
+
+[dev-dependencies]
+serde_json = { workspace = true }
