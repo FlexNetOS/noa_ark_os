@@ -235,7 +235,9 @@ See [Extend GPU Detection Beyond NVIDIA](#6-extend-gpu-detection-beyond-nvidia) 
 
 See [Deliver Value-Add Ecosystem Content](#7-deliver-value-add-ecosystem-content) for objectives, success criteria, dependencies, milestones, and risks.
 <!-- BEGIN: GAP_REMEDIATION_TASKS -->
+# Gap Remediation Tasks for the PM Roadmap
 
+The following remediation items align to the roadmap themes and ensure prerequisite guardrails are in place before feature execution. Each remediation thread links directly to the detailed task entry defined in the roadmap.
 ## Ensure everything depends on the kernel/service graph, simplify deployment, and make the platform portable across environments by default.
 Ground platform evolution in a single kernel-first dependency graph that packages services consistently for any environment.
 **Suggested task**
@@ -270,26 +272,34 @@ Layer differentiated services and packaged workflows on top of the hardened core
 - Launch value-add ecosystem features — [View task](#task-value-ecosystem)
 - Launch value-add ecosystem features — https://github.com/noa-ark/noa_ark_os/issues/106
 
-## Task Details
+## Kernel-first dependency graph & portable packaging
+- **Intent:** Close validation and packaging gaps before kernels ship portable bundles.
+- **Remediation focus:** Harden dependency capture, manifest validation, and offline bundle verification.
+- **Suggested task:** [View task](#task-kernel-graph)
 
+## Single-host server profile (full stack on one machine)
+- **Intent:** Remove deployment friction for lab and demo environments.
+- **Remediation focus:** Script repeatable provisioning and observability coverage to surface regressions.
+- **Suggested task:** [View task](#task-single-host)
 <a id="task-kernel-first"></a>
 ### AGENTOS-1 — Establish kernel-first dependency graph & portable packaging
 ### <a id="task-kernel-first"></a>AGENTOS-1 — Establish kernel-first dependency graph & portable packaging
 **Description:** Build a canonical dependency map anchored on the kernel/service graph and package baselines that run identically on local, cloud, and air-gapped hosts.
 
-**Checklist**
-- [ ] Document the kernel-centered dependency graph with required and optional services.
-- [ ] Produce reproducible build artifacts for each service with pinned interfaces.
-- [ ] Provide environment-agnostic packaging (container, tarball, OCI layout) driven from one manifest.
-- [ ] Implement compatibility validation covering Linux, macOS, and containerized targets.
-- [ ] Automate dependency compliance checks inside CI to guard drift.
+## Unified UI/UX shell (desktop + web + immersive)
+- **Intent:** Prevent divergence between shell experiences across canvases.
+- **Remediation focus:** Establish shared shell patterns, documentation, and feature flag pathways.
+- **Suggested task:** [View task](#task-unified-shell)
 
-**Acceptance criteria**
-- Kernel-first dependency graph published with machine-readable manifest and human guide.
-- Packaging workflow produces artifacts that pass smoke tests on Linux, macOS, and container runners.
-- CI blocks merges when dependency or interface drift is detected.
-- Downstream task owners acknowledge the manifest as their source of truth.
+## Adaptive runtime/portability (edge/VM/containers)
+- **Intent:** Ensure runtime policies adapt safely across heterogeneous targets.
+- **Remediation focus:** Build confidence with environment detection, policy authoring, and telemetry validation.
+- **Suggested task:** [View task](#task-adaptive-runtime)
 
+## Advanced gateway & observability (routing, security, metrics)
+- **Intent:** Mitigate routing and security drift while expanding observability guardrails.
+- **Remediation focus:** Codify policy tooling, authentication adapters, and golden-signal dashboards.
+- **Suggested task:** [View task](#task-gateway-observability)
 **Meta**
 - Owner: codex
 - Priority: P0
@@ -303,9 +313,12 @@ Layer differentiated services and packaged workflows on top of the hardened core
 - Status: Processing
 - Depends on: None
 
-### <a id="task-single-host"></a>AGENTOS-2 — Design single-host AgentOS server profile
-**Description:** Define and validate a single-host profile that boots the full AgentOS stack with deterministic ordering, self-healing, and constrained resource envelopes.
+## Value-add ecosystem (blueprints, automation, analytics)
+- **Intent:** Guarantee marketplace assets deliver measurable value and stay operable.
+- **Remediation focus:** Curate blueprints, automate analytics packs, and launch guided onboarding.
+- **Suggested task:** [View task](#task-ecosystem-value)
 
+---
 **Checklist**
 - [ ] Capture service inventory, boot order, and health semantics for the single-host mode.
 - [ ] Provide orchestration scripts or manifests that start/stop all services with one command.
@@ -445,7 +458,12 @@ Layer differentiated services and packaged workflows on top of the hardened core
 - Status: Processing
 - Depends on: AGENTOS-3, AGENTOS-4, AGENTOS-5
 
-Roadmap alignment: This sequence locks platform control through the kernel-first graph, delivers a resilient single-host deployment, unifies user experience, adds intelligent runtime and gateway ingress, and culminates in differentiated services layered on the hardened foundation for consistent portability.
+### Task Links
 
+- [AGENTOS-1 — Establish kernel dependency graph & portable packaging](#task-kernel-graph)
+- [AGENTOS-2 — Design single-host AgentOS server profile](#task-single-host)
+- [AGENTOS-3 — Deliver unified UI/UX shell](#task-unified-shell)
+- [AGENTOS-4 — Implement adaptive runtime portability policies](#task-adaptive-runtime)
+- [AGENTOS-5 — Advance gateway security & observability mesh](#task-gateway-observability)
+- [AGENTOS-6 — Launch value-add automation & analytics kits](#task-ecosystem-value)
 <!-- END: GAP_REMEDIATION_TASKS -->
-
