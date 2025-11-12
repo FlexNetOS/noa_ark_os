@@ -200,10 +200,8 @@ impl ChatWorkspace {
                 sandbox_id,
                 parameters,
             } => {
-                self.store.put_data(
-                    format!("chat.sandbox.{}", sandbox_id),
-                    parameters.clone(),
-                );
+                self.store
+                    .put_data(format!("chat.sandbox.{}", sandbox_id), parameters.clone());
                 (self.event_sink)(ShellEvent::LogStreamUpdate {
                     stream_id: sandbox_id.clone(),
                     line: "Sandbox launch requested".into(),
@@ -222,10 +220,8 @@ impl ChatWorkspace {
                 return Some(format!("Streaming logs for {}", stream_id));
             }
             ChatAction::ShowDiff { artifact_id } => {
-                self.store.put_data(
-                    "chat.last_diff",
-                    json!({"artifact": artifact_id}),
-                );
+                self.store
+                    .put_data("chat.last_diff", json!({"artifact": artifact_id}));
                 (self.event_sink)(ShellEvent::DiffAvailable {
                     artifact_id: artifact_id.clone(),
                     summary: "Diff ready for review".into(),
@@ -240,10 +236,8 @@ impl ChatWorkspace {
                 return Some(format!("Artifact {} prepared for download", artifact_id));
             }
             ChatAction::SpawnAgent { role, goal } => {
-                self.store.put_data(
-                    format!("chat.agent_goal.{}", role),
-                    json!({"goal": goal}),
-                );
+                self.store
+                    .put_data(format!("chat.agent_goal.{}", role), json!({"goal": goal}));
                 (self.event_sink)(ShellEvent::AgentSpawned {
                     agent_id: format!("{}-agent", role),
                     role: role.clone(),
