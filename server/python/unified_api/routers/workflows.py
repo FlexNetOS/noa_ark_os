@@ -1,13 +1,8 @@
-"""Workflow orchestration routes exposed to the unified dashboard."""
-from __future__ import annotations
-
-from datetime import datetime
-from typing import Dict, List, Optional
 """Workflow orchestration endpoints."""
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -44,6 +39,13 @@ class WorkflowRun(BaseModel):
     status: str = "pending"
 
 
+class WorkflowGraph(BaseModel):
+    """Unified graph response consumed by the UI."""
+
+    workflows: List[Workflow]
+    runs: List[WorkflowRun]
+
+
 WORKFLOWS: Dict[str, Workflow] = {
     "build": Workflow(
         id="build",
@@ -65,7 +67,6 @@ WORKFLOWS: Dict[str, Workflow] = {
                 label="Promote",
                 description="Production deploy",
             ),
-            WorkflowStage(id="promote", label="Promote", description="Production deploy"),
         ],
     ),
 }
@@ -80,13 +81,22 @@ async def list_workflows() -> List[Workflow]:
     return list(WORKFLOWS.values())
 
 
+@router.get("/graph", response_model=WorkflowGraph)
+async def workflow_graph() -> WorkflowGraph:
+    """Return workflows and runs for unified graph consumption."""
+
+    return WorkflowGraph(
+        workflows=list(WORKFLOWS.values()),
+        runs=list(RUN_HISTORY.values()),
+    )
+
+
 @router.post("/{workflow_id}/trigger", response_model=WorkflowRun)
 async def trigger_workflow(
     workflow_id: str, payload: Optional[Dict[str, str]] = None
 ) -> WorkflowRun:
     """Kick off a workflow and broadcast the event bus notification."""
 
-async def trigger_workflow(workflow_id: str, payload: Dict[str, str] | None = None) -> WorkflowRun:
     workflow = WORKFLOWS.get(workflow_id)
     if not workflow:
         raise HTTPException(status_code=404, detail="Workflow not found")
@@ -100,11 +110,12 @@ async def trigger_workflow(workflow_id: str, payload: Dict[str, str] | None = No
     )
     RUN_HISTORY[run.id] = run
     await GLOBAL_EVENT_BUS.publish(
-        "shell",
+        "workflows",
         {
             "type": "workflow_triggered",
             "workflow_id": workflow_id,
             "run_id": run.id,
+            "stages": [stage.id for stage in workflow.stages],
         },
     )
     return run
@@ -114,6 +125,4 @@ async def trigger_workflow(workflow_id: str, payload: Dict[str, str] | None = No
 async def list_runs() -> List[WorkflowRun]:
     """Return the recorded workflow run history."""
 
-    # Return newest first for dashboard readability.
     return sorted(RUN_HISTORY.values(), key=lambda run: run.triggered_at, reverse=True)
-    return list(RUN_HISTORY.values())

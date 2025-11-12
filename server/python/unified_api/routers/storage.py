@@ -1,4 +1,3 @@
-"""Artifact catalog routes."""
 """Storage and artifact management endpoints."""
 from __future__ import annotations
 

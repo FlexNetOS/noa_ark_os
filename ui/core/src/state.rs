@@ -1,8 +1,11 @@
 use std::collections::HashMap;
+use std::fs;
+use std::path::Path;
 use std::sync::{Arc, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
+use once_cell::sync::Lazy;
 
 /// Represents the persona-driven workspace groupings that
 /// drive contextual layouts in the unified shell.
@@ -29,7 +32,7 @@ pub struct NavigationItem {
 }
 
 /// Container for navigation state shared across modules.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct NavigationState {
     pub primary_items: Vec<NavigationItem>,
     pub secondary_items: Vec<NavigationItem>,
@@ -104,7 +107,7 @@ impl Default for UserSession {
 }
 
 /// Global state aggregated by the unified shell.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GlobalState {
     pub session: UserSession,
     pub navigation: NavigationState,
@@ -136,6 +139,11 @@ impl GlobalStore {
         Self {
             inner: Arc::new(RwLock::new(state)),
         }
+    }
+
+    pub fn global() -> &'static GlobalStore {
+        static STORE: Lazy<GlobalStore> = Lazy::new(|| GlobalStore::new(GlobalState::default()));
+        &STORE
     }
 
     pub fn read(&self) -> GlobalState {
@@ -170,6 +178,27 @@ impl GlobalStore {
         self.update(|state| {
             state.data.insert(key.into(), value);
         });
+    }
+
+    pub fn persist_to_file<P: AsRef<Path>>(&self, path: P) -> Result<(), std::io::Error> {
+        let snapshot = self.read();
+        let json = serde_json::to_string_pretty(&snapshot)
+            .unwrap_or_else(|_| serde_json::json!({}).to_string());
+        fs::create_dir_all(
+            path.as_ref()
+                .parent()
+                .unwrap_or_else(|| Path::new(".")),
+        )?;
+        fs::write(path, json)
+    }
+
+    pub fn load_from_file<P: AsRef<Path>>(&self, path: P) -> Result<(), std::io::Error> {
+        let contents = fs::read_to_string(path)?;
+        let parsed: GlobalState = serde_json::from_str(&contents).unwrap_or_default();
+        self.update(|state| {
+            *state = parsed;
+        });
+        Ok(())
     }
 }
 
@@ -213,5 +242,28 @@ mod tests {
         let state = store.read();
         assert!(state.workspaces.get("dev").is_some());
         assert!(state.workspaces.get("dev").unwrap().contains_route("/chat"));
+    }
+
+    #[test]
+    fn persist_and_restore_global_state() {
+        let store = GlobalStore::new(GlobalState::default());
+        store.update(|state| {
+            state.session.user_id = "persist-user".into();
+            state.data.insert("key".into(), serde_json::json!({"value": 42}));
+        });
+
+        let path = std::env::temp_dir().join("noa_state_test.json");
+        store.persist_to_file(&path).expect("persist state");
+
+        let restored = GlobalStore::new(GlobalState::default());
+        restored
+            .load_from_file(&path)
+            .expect("load persisted state");
+
+        let snapshot = restored.read();
+        assert_eq!(snapshot.session.user_id, "persist-user");
+        assert_eq!(snapshot.data.get("key").unwrap()["value"], 42);
+
+        let _ = std::fs::remove_file(path);
     }
 }
