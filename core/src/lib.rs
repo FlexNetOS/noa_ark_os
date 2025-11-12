@@ -19,6 +19,7 @@ pub mod metrics;
 pub mod process;
 pub mod runtime;
 pub mod security;
+pub mod utils;
 pub mod time;
 
 /// Core OS version
