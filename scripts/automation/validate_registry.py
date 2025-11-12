@@ -104,7 +104,11 @@ def validate_documents(documents: List[RegistryDocument], repo_root: Path) -> Tu
 
     for component_id, (doc_path, component) in components.items():
         for dependency in component.get("dependencies", []):
-            if dependency and dependency not in components:
+            if not dependency:
+                raise ValidationError(
+                    f"{doc_path}: component '{component_id}' has an empty or missing dependency entry"
+                )
+            if dependency not in components:
                 raise ValidationError(
                     f"{doc_path}: component '{component_id}' depends on unknown component '{dependency}'"
                 )
