@@ -114,6 +114,17 @@ impl Display for PolicyError {
 
 impl std::error::Error for PolicyError {}
 
+/// Maximum number of signed operations to keep in memory.
+/// Older operations are evicted in FIFO order when this limit is reached.
+/// For complete audit trails, use persistent ledger storage.
+const MAX_IN_MEMORY_RECORDS: usize = 1000;
+
+/// Policy enforcer that signs operations and maintains a bounded in-memory audit trail.
+///
+/// **Memory Management**: This enforcer keeps only the most recent operations in memory
+/// (up to `MAX_IN_MEMORY_RECORDS`). When the limit is reached, the oldest operations
+/// are evicted in FIFO order. For production systems requiring complete audit trails,
+/// integrate with persistent ledger storage (e.g., blockchain, append-only database).
 #[derive(Debug)]
 struct PolicyEnforcer {
     secret: String,
@@ -155,7 +166,13 @@ impl PolicyEnforcer {
             previous_signature: self.last_signature.clone(),
         };
         self.last_signature = signature;
+        
+        // Implement bounded buffer with FIFO eviction
+        if self.records.len() >= MAX_IN_MEMORY_RECORDS {
+            self.records.remove(0); // Remove oldest record
+        }
         self.records.push(signed.clone());
+        
         Ok(signed)
     }
 
@@ -172,6 +189,10 @@ impl PolicyEnforcer {
         }
     }
 
+    /// Returns the in-memory audit trail of recent operations.
+    ///
+    /// Note: This only includes the most recent operations (up to MAX_IN_MEMORY_RECORDS).
+    /// For complete historical audit trails, retrieve records from persistent ledger storage.
     fn audit_trail(&self) -> Vec<SignedOperation> {
         self.records.clone()
     }
@@ -211,9 +232,6 @@ fn simple_hash(value: &str) -> String {
     }
 
     format!("{:016x}", hash)
-lazy_static::lazy_static! {
-    static ref USER_TABLE: Arc<Mutex<HashMap<UserId, User>>> =
-        Arc::new(Mutex::new(HashMap::new()));
 }
 
 /// Initialize security subsystem
@@ -260,7 +278,12 @@ pub fn verify_signed_operation(operation: &SignedOperation) -> bool {
     }
 }
 
-/// Retrieve a snapshot of the audit trail.
+/// Retrieve a snapshot of recent operations from the in-memory audit trail.
+///
+/// **Important**: This returns only the most recent operations kept in memory
+/// (up to 1000 records). For complete historical audit trails across the entire
+/// system lifetime, retrieve signed operations from persistent ledger storage
+/// (e.g., blockchain, append-only database, or external audit systems).
 pub fn audit_trail() -> Vec<SignedOperation> {
     let enforcer = POLICY_ENFORCER.lock();
     if let Ok(enforcer) = enforcer {
@@ -284,6 +307,51 @@ mod tests {
         assert!(verify_signed_operation(&signed));
         assert!(signed.signature.len() > 10);
     }
+
+    #[test]
+    fn test_policy_enforcer_bounded_memory() {
+        init().unwrap();
+        
+        // Clear any existing records by creating a fresh enforcer
+        let mut enforcer = PolicyEnforcer::new("test-secret".to_string());
+        
+        // Add more records than MAX_IN_MEMORY_RECORDS
+        let test_count = MAX_IN_MEMORY_RECORDS + 100;
+        for i in 0..test_count {
+            let record = OperationRecord::new(
+                OperationKind::FileMove,
+                format!("user-{}", i),
+                format!("scope-{}", i),
+            );
+            enforcer.sign_and_register(record).expect("should sign");
+        }
+        
+        // Verify that only MAX_IN_MEMORY_RECORDS are kept
+        assert_eq!(
+            enforcer.records.len(),
+            MAX_IN_MEMORY_RECORDS,
+            "Records should be bounded to MAX_IN_MEMORY_RECORDS"
+        );
+        
+        // Verify that the oldest records were evicted (first 100 should be gone)
+        // and the most recent records are kept
+        let trail = enforcer.audit_trail();
+        assert_eq!(trail.len(), MAX_IN_MEMORY_RECORDS);
+        
+        // The first record in memory should be from iteration 100 (0-99 evicted)
+        assert!(
+            trail[0].record.actor.contains("100"),
+            "First record should be from iteration 100 after eviction"
+        );
+        
+        // The last record should be from the last iteration
+        assert!(
+            trail.last().unwrap().record.actor.contains(&format!("{}", test_count - 1)),
+            "Last record should be from the final iteration"
+        );
+    }
+}
+
 fn register_user_inner(user: User) {
     let mut table = USER_TABLE.lock().unwrap();
     table.insert(user.id, user);
