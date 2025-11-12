@@ -243,6 +243,7 @@ fn slot_to_string(slot: LayoutSlot) -> String {
     slot.to_string()
 }
 
+    format!("{:?}", slot)
 fn json_to_struct(value: JsonValue) -> Result<Struct, Status> {
     match value {
         JsonValue::Object(map) => {

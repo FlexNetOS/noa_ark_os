@@ -39,6 +39,13 @@ impl fmt::Display for LayoutSlot {
         };
 
         f.write_str(label)
+impl std::fmt::Display for LayoutSlot {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            LayoutSlot::Header => write!(f, "Header"),
+            LayoutSlot::Main => write!(f, "Main"),
+            LayoutSlot::Footer => write!(f, "Footer"),
+        }
     }
 }
 
