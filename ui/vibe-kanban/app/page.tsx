@@ -1,21 +1,81 @@
 "use client";
 
-import { AnalyticsPanel } from "./components/AnalyticsPanel";
-import { AssistPanel } from "./components/AssistPanel";
-import { BoardShell } from "./components/BoardShell";
+import { useEffect, useMemo, useState } from "react";
+import type { PageEnvelope, ResumeToken } from "@noa-ark/shared-ui/schema";
+import { createSchemaClient, SessionContinuityClient } from "@noa-ark/shared-ui/session";
+import { vibeDashboardEnvelope } from "@noa-ark/shared-ui/samples";
+
 import { NotificationCenter } from "./components/NotificationCenter";
-import { PresenceBar } from "./components/PresenceBar";
-import { ActivityTimeline } from "./components/ActivityTimeline";
-import { IntegrationStatus } from "./components/IntegrationStatus";
-import { WorkspaceSwitcher } from "./components/WorkspaceSwitcher";
+import { SchemaDrivenRenderer } from "./components/SchemaDrivenRenderer";
 import { useBoardState } from "./components/useBoardState";
 import { useSession } from "./components/useSession";
 
 export default function Page() {
   const session = useSession();
   const state = useBoardState(session.user);
+  const [envelope, setEnvelope] = useState<PageEnvelope>(vibeDashboardEnvelope);
+  const [resumeToken, setResumeToken] = useState<ResumeToken | undefined>(vibeDashboardEnvelope.resumeToken);
 
   const ready = session.status === "ready" && !!session.user && state.hydrated && state.snapshot;
+
+  useEffect(() => {
+    const baseUrl = process.env.NEXT_PUBLIC_UI_API ?? "http://localhost:8787";
+    const schemaClient = createSchemaClient(baseUrl);
+    schemaClient
+      .fetchPage("vibe-kanban")
+      .then((payload) => {
+        setEnvelope(payload);
+        setResumeToken(payload.resumeToken ?? undefined);
+      })
+      .catch(() => {
+        // Fallback to local sample envelope
+      });
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const endpoint = process.env.NEXT_PUBLIC_WORKFLOW_STREAM ?? "ws://localhost:8787/ui/session";
+    const client = new SessionContinuityClient({ workflowEndpoint: endpoint });
+    client.on("workflow:update", (event) => {
+      if (event.eventType === "workflow/state" && event.payload?.state === "completed") {
+        state.refreshBoard().catch((error) => console.error("Failed to refresh board", error));
+      }
+      if (event.eventType === "workflow/stage" && event.payload?.resumeToken) {
+        setResumeToken(event.payload.resumeToken as ResumeToken);
+      }
+    });
+    client.on("workflow:resume", (token) => setResumeToken(token));
+    try {
+      client.connectWebSocket();
+    } catch (error) {
+      console.warn("Unable to connect to workflow stream", error);
+    }
+    return () => client.disconnect();
+  }, [state]);
+
+  const schemaRenderer = useMemo(() => {
+    return ready
+      ? (
+          <SchemaDrivenRenderer
+            schema={envelope.schema}
+            context={{
+              resumeWorkflow: (workflowId) => {
+                console.info("Requesting resume for", workflowId);
+                void state.refreshBoard();
+              },
+              triggerEvent: (bindingId) => {
+                console.info("UI event triggered", bindingId);
+              },
+              data: {
+                boardState: state,
+                session,
+                resumeToken,
+              },
+            }}
+          />
+        )
+      : null;
+  }, [ready, envelope.schema, state, session, resumeToken]);
 
   if (session.status === "loading") {
     return <FullScreenMessage label="Initializing workspace…" />;
@@ -30,46 +90,10 @@ export default function Page() {
   }
 
   return (
-    <div className="relative min-h-screen bg-background pb-32 text-white">
+    <>
       <NotificationCenter notifications={state.notifications} onDismiss={state.dismissNotification} />
-
-      <header className="border-b border-white/10 bg-surface/50">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-6 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.4em] text-white/40">NOA ARK OS</p>
-            <h1 className="text-2xl font-semibold tracking-tight text-white">Vibe Kanban Control Hub</h1>
-            <p className="text-sm text-white/50">
-              Connected to workspaces, live presence, and agent intelligence.
-            </p>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <p className="text-sm font-semibold text-white">{session.user.name}</p>
-              <p className="text-xs uppercase tracking-[0.2em] text-white/40">Collaborator</p>
-            </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-blue-500 text-lg font-semibold">
-              {session.user.name.slice(0, 2).toUpperCase()}
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="relative mx-auto grid max-w-7xl gap-6 px-6 py-12 lg:grid-cols-[320px_1fr_320px]">
-        <div className="space-y-6">
-          <WorkspaceSwitcher state={state} />
-          <IntegrationStatus integrations={state.integrations} />
-        </div>
-        <div className="space-y-6">
-          <BoardShell state={state} />
-        </div>
-        <div className="space-y-6">
-          <PresenceBar presence={state.presence} members={state.workspace?.members ?? []} />
-          <AssistPanel assist={state.assist} onRequest={state.requestAssist} />
-          <AnalyticsPanel board={state.snapshot} />
-          <ActivityTimeline activity={state.activity} />
-        </div>
-      </main>
-    </div>
+      {schemaRenderer}
+    </>
   );
 }
 

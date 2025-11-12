@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package noa.ui;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+message PageMetadata {
+  string title = 1;
+  string description = 2;
+  string tokens_version = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+  repeated string accessibility_notes = 6;
+}
+
+message WidgetSchema {
+  string id = 1;
+  string kind = 2;
+  string variant = 3;
+  google.protobuf.Struct props = 4;
+}
+
+message LayoutRegion {
+  string id = 1;
+  string layout = 2;
+  string columns = 3;
+  string gap = 4;
+  string surface = 5;
+  string slot = 6;
+  repeated WidgetSchema widgets = 7;
+}
+
+message PageSchema {
+  string id = 1;
+  string version = 2;
+  string kind = 3;
+  PageMetadata metadata = 4;
+  repeated LayoutRegion regions = 5;
+}
+
+message ResumeToken {
+  string workflow_id = 1;
+  string stage_id = 2;
+  string checkpoint = 3;
+  google.protobuf.Timestamp issued_at = 4;
+  google.protobuf.Timestamp expires_at = 5;
+}
+
+message RealTimeEvent {
+  string event_type = 1;
+  string workflow_id = 2;
+  google.protobuf.Struct payload = 3;
+  google.protobuf.Timestamp timestamp = 4;
+}
+
+message PageEnvelope {
+  PageSchema schema = 1;
+  repeated RealTimeEvent realtime = 2;
+  ResumeToken resume_token = 3;
+}
+
+message PageRequest {
+  string page_id = 1;
+}
+
+service UiSchemaService {
+  rpc GetPage(PageRequest) returns (PageEnvelope);
+  rpc StreamEvents(PageRequest) returns (stream RealTimeEvent);
+}
