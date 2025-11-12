@@ -9,7 +9,7 @@ use serde_json::Value as JsonValue;
 use tokio_stream::StreamExt;
 use tonic::{Request, Response, Status};
 
-use crate::schema::{PageEnvelope, RealTimeEvent};
+use crate::schema::{LayoutSlot, PageEnvelope, RealTimeEvent};
 use crate::server::UiApiState;
 use crate::session::SessionBridge;
 
@@ -65,6 +65,7 @@ impl proto::ui_schema_service_server::UiSchemaService for UiSchemaGrpc {
                 .ok_or_else(|| Status::unavailable("streaming disabled"))?
         };
 
+        let mut stream = bridge.subscribe();
         let output = async_stream::try_stream! {
             let mut stream = bridge.subscribe();
             tokio::pin!(stream);
@@ -109,18 +110,15 @@ fn page_envelope_to_proto(envelope: PageEnvelope) -> Result<proto::PageEnvelope,
                 .map(|widget| {
                     let props = widget
                         .props
-                        .map(json_to_struct)
+                        .map(value_to_struct)
                         .transpose()?
                         .unwrap_or_else(empty_struct);
-                .map(|widget| -> Result<proto::WidgetSchema, Status> {
-                    let props = widget.props.map(value_to_struct).transpose()?;
 
                     Ok(proto::WidgetSchema {
                         id: widget.id,
                         kind: format!("{:?}", widget.kind),
                         variant: widget.variant.unwrap_or_default(),
                         props: Some(props),
-                        props,
                     })
                 })
                 .collect::<Result<Vec<_>, Status>>()?;
@@ -132,7 +130,6 @@ fn page_envelope_to_proto(envelope: PageEnvelope) -> Result<proto::PageEnvelope,
                 gap: region.gap.unwrap_or_default(),
                 surface: region.surface.unwrap_or_default(),
                 slot: region.slot.map(slot_to_string).unwrap_or_default(),
-                slot: region.slot.map(|slot| slot.to_string()).unwrap_or_default(),
                 widgets,
             })
         })
@@ -186,7 +183,6 @@ fn realtime_to_proto(event: RealTimeEvent) -> Result<proto::RealTimeEvent, Statu
     Ok(proto::RealTimeEvent {
         event_type: event.event_type,
         workflow_id: event.workflow_id,
-        payload: Some(json_to_struct(event.payload)?),
         payload: Some(value_to_struct(event.payload)?),
         timestamp: Some(timestamp_from_str(&event.timestamp)?),
     })
@@ -214,10 +210,6 @@ fn value_to_struct(value: JsonValue) -> Result<Struct, Status> {
         JsonValue::Object(map) => {
             let fields = map
                 .into_iter()
-                .map(|(key, value)| Ok((key, json_to_value(value)?)))
-                .collect::<Result<BTreeMap<_, _>, Status>>()?;
-            Ok(Struct { fields })
-        }
                 .map(|(key, value)| Ok((key, value_to_prost_value(value)?)))
                 .collect::<Result<BTreeMap<_, _>, Status>>()?;
             Ok(Struct { fields })
@@ -254,7 +246,6 @@ fn value_to_prost_value(value: JsonValue) -> Result<ProstValue, Status> {
         JsonValue::Object(map) => {
             let fields = map
                 .into_iter()
-                .map(|(key, value)| Ok((key, json_to_value(value)?)))
                 .map(|(key, value)| Ok((key, value_to_prost_value(value)?)))
                 .collect::<Result<BTreeMap<_, _>, Status>>()?;
             ProstKind::StructValue(Struct { fields })
@@ -271,6 +262,9 @@ fn slot_to_string(slot: LayoutSlot) -> String {
 fn empty_struct() -> Struct {
     Struct {
         fields: BTreeMap::new(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
