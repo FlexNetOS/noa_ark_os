@@ -107,7 +107,6 @@ def build_handbook() -> str:
 
     for name, summary in ledger_summaries.items():
         sections.append(f"\n## {name.title()} Ledger Detail\n")
-        entries = summary["latest"]
         all_entries = load_entries(LOG_FILES[name])
         if not any(e for e in all_entries if not e.get("event", {}).get("event_type", "").endswith("genesis")):
             sections.append("No operational entries recorded yet.\n")
