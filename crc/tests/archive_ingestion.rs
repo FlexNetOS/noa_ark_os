@@ -9,11 +9,13 @@ use flate2::Compression;
 use noa_crc::extraction::prepare_artifact_for_processing;
 use noa_crc::processor::DropProcessor;
 use noa_crc::{CRCConfig, CRCSystem, DropManifest, Priority, SourceType};
+use serial_test::serial;
 use tar::Builder;
 use zip::write::FileOptions;
 use zip::CompressionMethod;
 
 #[tokio::test]
+#[serial]
 async fn processes_zip_archive_via_extraction() -> Result<()> {
     let drop_in = Path::new("crc/drop-in/incoming/repos");
     fs::create_dir_all(drop_in)?;
@@ -136,6 +138,7 @@ async fn processes_zip_archive_via_extraction() -> Result<()> {
 }
 
 #[tokio::test]
+#[serial]
 async fn processes_tar_gz_archive_via_extraction() -> Result<()> {
     let drop_in = Path::new("crc/drop-in/incoming/repos");
     fs::create_dir_all(drop_in)?;
