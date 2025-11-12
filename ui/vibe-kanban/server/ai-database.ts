@@ -49,6 +49,9 @@ class AiDatabase {
     );
 
     const appliedRows = this.db.prepare(`SELECT id FROM schema_migrations`).all() as Array<{ id: string }>;
+    const appliedRows = this.db
+      .prepare(`SELECT id FROM schema_migrations`)
+      .all() as Array<{ id: string }>;
     const applied = new Set<string>(appliedRows.map((row) => row.id));
 
     const migrationFiles = readdirSync(this.migrationsDir)

@@ -45,6 +45,7 @@ export function BoardHeader({
   }, [projectName]);
 
   const metrics = useMemo(() => {
+    const base: Array<{ label: string; value: string }> = [
     const base: { label: string; value: string }[] = [
       { label: "Columns", value: columnCount.toString() },
       { label: "Active vibes", value: Math.max(totalCardCount - completedCount, 0).toString() },

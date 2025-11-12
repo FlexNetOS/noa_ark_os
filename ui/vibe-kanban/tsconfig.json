@@ -12,8 +12,9 @@
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
     "module": "esnext",
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "resolveJsonModule": true,
+    "baseUrl": "../..",
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
@@ -22,18 +23,26 @@
         "name": "next"
       }
     ],
+    "typeRoots": [
+      "./node_modules/@types"
+    ],
     "paths": {
       "@/*": [
-        "./*"
+        "ui/vibe-kanban/*"
       ],
       "@noa-ark/shared-ui/*": [
-        "../shared/src/*"
+        "ui/shared/src/*"
       ],
       "@noa-ark/shared-ui": [
         "../shared/src/index"
       ],
       "mitt": [
         "./types/mitt"
+      "@noa-ark/server/*": [
+        "../../server/*"
+      ],
+      "zod": [
+        "./node_modules/zod"
       ]
     },
     "esModuleInterop": true

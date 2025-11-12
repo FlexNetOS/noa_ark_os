@@ -11,6 +11,10 @@ import { handlePromptRequest } from "../../../../server/ai/controllers/prompt";
 import { getProvider } from "../../../../server/ai/router";
 import { aiDatabase } from "../../../../server/ai-database";
 import { aiRateLimiter } from "../../../../server/rate-limiter";
+import { handlePromptRequest } from "@noa-ark/server/ai/controllers/prompt";
+import { getProvider } from "@noa-ark/server/ai/router";
+import { aiDatabase } from "@/server/ai-database";
+import { aiRateLimiter } from "@/server/rate-limiter";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
