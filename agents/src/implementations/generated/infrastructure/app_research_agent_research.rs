@@ -1,6 +1,5 @@
-//! App Research Agent
-Research - Auto-generated
-//! 
+//! App Research Agent Research - Auto-generated
+//!
 //! ['Performs Micro Agent functions']
 
 use crate::unified_types::*;
@@ -8,8 +7,7 @@ use crate::Result;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
-/// App Research Agent
-Research
+/// App Research Agent Research
 pub struct AppResearchAgentResearch {
     metadata: AgentMetadata,
     state: RwLock<AgentState>,
@@ -20,8 +18,7 @@ impl AppResearchAgentResearch {
         let metadata = AgentMetadata {
             id: Uuid::new_v4(),
             agent_id: "app_research_agent_research".to_string(),
-            name: "App Research Agent
-Research".to_string(),
+            name: "App Research Agent Research".to_string(),
             layer: AgentLayer::L5Infrastructure,
             category: AgentCategory::Other,
             agent_type: AgentType::Worker,
@@ -85,8 +82,7 @@ mod tests {
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = AppResearchAgentResearch::new();
-        assert_eq!(agent.metadata().name, "App Research Agent
-Research");
+        assert_eq!(agent.metadata().name, "App Research Agent Research");
     }
     
     #[tokio::test]

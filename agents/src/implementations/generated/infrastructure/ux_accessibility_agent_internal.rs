@@ -1,6 +1,5 @@
-//! UX/Accessibility Agent
-Internal - Auto-generated
-//! 
+//! UX/Accessibility Agent Internal - Auto-generated
+//!
 //! ['Performs Micro Agent functions']
 
 use crate::unified_types::*;
@@ -8,8 +7,7 @@ use crate::Result;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
-/// UX/Accessibility Agent
-Internal
+/// UX/Accessibility Agent Internal
 pub struct UxAccessibilityAgentInternal {
     metadata: AgentMetadata,
     state: RwLock<AgentState>,
@@ -20,8 +18,7 @@ impl UxAccessibilityAgentInternal {
         let metadata = AgentMetadata {
             id: Uuid::new_v4(),
             agent_id: "ux_accessibility_agent_internal".to_string(),
-            name: "UX/Accessibility Agent
-Internal".to_string(),
+            name: "UX/Accessibility Agent Internal".to_string(),
             layer: AgentLayer::L5Infrastructure,
             category: AgentCategory::Other,
             agent_type: AgentType::Worker,
@@ -85,8 +82,7 @@ mod tests {
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = UxAccessibilityAgentInternal::new();
-        assert_eq!(agent.metadata().name, "UX/Accessibility Agent
-Internal");
+        assert_eq!(agent.metadata().name, "UX/Accessibility Agent Internal");
     }
     
     #[tokio::test]

@@ -1,6 +1,5 @@
-//! Deploy Specialized Agent
-            SA - Auto-generated
-//! 
+//! Deploy Specialized Agent SA - Auto-generated
+//!
 //! ['Performs Micro Agent functions']
 
 use crate::unified_types::*;
@@ -8,8 +7,7 @@ use crate::Result;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
-/// Deploy Specialized Agent
-            SA
+/// Deploy Specialized Agent SA
 pub struct DeploySpecializedAgentSa {
     metadata: AgentMetadata,
     state: RwLock<AgentState>,
@@ -20,8 +18,7 @@ impl DeploySpecializedAgentSa {
         let metadata = AgentMetadata {
             id: Uuid::new_v4(),
             agent_id: "deploy_specialized_agent_sa".to_string(),
-            name: "Deploy Specialized Agent
-            SA".to_string(),
+            name: "Deploy Specialized Agent SA".to_string(),
             layer: AgentLayer::L5Infrastructure,
             category: AgentCategory::Other,
             agent_type: AgentType::Worker,
@@ -85,8 +82,7 @@ mod tests {
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = DeploySpecializedAgentSa::new();
-        assert_eq!(agent.metadata().name, "Deploy Specialized Agent
-            SA");
+        assert_eq!(agent.metadata().name, "Deploy Specialized Agent SA");
     }
     
     #[tokio::test]
