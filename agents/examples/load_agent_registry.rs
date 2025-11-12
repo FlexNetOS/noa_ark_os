@@ -13,6 +13,13 @@
 //! - **L4 (Operations)**: Specialist layer - Specialists, Workers, domain experts
 //! - **L5 (Infrastructure)**: Micro layer - Micro agents, infrastructure services
 //!
+//! **Note:** The names "Executive", "Board", "Stack-Chief", "Specialist", and "Micro" are historical names from a previous version of the codebase. In the current code, these correspond to the following `AgentLayer` enum variants (see `unified_types.rs`):
+//! - `AgentLayer::L1Autonomy` (formerly Executive)
+//! - `AgentLayer::L2Reasoning` (formerly Board)
+//! - `AgentLayer::L3Orchestration` (formerly Stack-Chief)
+//! - `AgentLayer::L4Operations` (formerly Specialist)
+//! - `AgentLayer::L5Infrastructure` (formerly Micro)
+//!
 //! ## Usage
 //!
 //!   cargo run --example load_agent_registry
