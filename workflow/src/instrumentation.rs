@@ -120,29 +120,65 @@ impl PipelineInstrumentation {
     ) -> Result<(), InstrumentationError> {
         with_log_lock(|| {
             let path = self.log_path(log_name);
-            if path.exists() {
-                if let Ok(content) = fs::read_to_string(&path) {
+            // Try to atomically create the file if it doesn't exist
+            let file_result = OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&path);
+            match file_result {
+                Ok(mut file) => {
+                    // File was created, write genesis entry
+                    let event = PipelineLogEvent {
+                        event_type: format!("{}::genesis", log_name),
+                        actor: "system/bootstrap".to_string(),
+                        scope: "instrumentation".to_string(),
+                        source: None,
+                        target: None,
+                        metadata: json!({"message": "ledger initialised"}),
+                        timestamp: current_timestamp_millis(),
+                    };
+                    let record = OperationRecord::new(kind.clone(), "system/bootstrap", "instrumentation")
+                        .with_metadata(json!({"initialised": true}));
+                    let signed = security::enforce_operation(record)?;
+                    let entry = ImmutableLogEntry::new(event, signed, "GENESIS".to_string())?;
+                    // Write the entry directly to the new file
+                    let entry_str = serde_json::to_string(&entry)?;
+                    writeln!(file, "{}", entry_str)?;
+                    Ok(())
+                }
+                Err(ref e) if e.kind() == ErrorKind::AlreadyExists => {
+                    // File already exists, check if it is empty
+                    if let Ok(content) = fs::read_to_string(&path) {
+                        if !content.trim().is_empty() {
+                            return Ok(());
+                        }
+                    }
+                    // File exists but is empty, write genesis entry
+                    let event = PipelineLogEvent {
+                        event_type: format!("{}::genesis", log_name),
+                        actor: "system/bootstrap".to_string(),
+                        scope: "instrumentation".to_string(),
+                        source: None,
+                        target: None,
+                        metadata: json!({"message": "ledger initialised"}),
+                        timestamp: current_timestamp_millis(),
+                    };
+                    let record = OperationRecord::new(kind.clone(), "system/bootstrap", "instrumentation")
+                        .with_metadata(json!({"initialised": true}));
+                    let signed = security::enforce_operation(record)?;
+                    let entry = ImmutableLogEntry::new(event, signed, "GENESIS".to_string())?;
+                    // Open for appending and check again before writing
+                    let mut file = OpenOptions::new().append(true).open(&path)?;
+                    let content = fs::read_to_string(&path)?;
                     if !content.trim().is_empty() {
                         return Ok(());
                     }
+                    let entry_str = serde_json::to_string(&entry)?;
+                    writeln!(file, "{}", entry_str)?;
+                    Ok(())
                 }
+                Err(e) => Err(InstrumentationError::Io(e)),
             }
-
-            let event = PipelineLogEvent {
-                event_type: format!("{}::genesis", log_name),
-                actor: "system/bootstrap".to_string(),
-                scope: "instrumentation".to_string(),
-                source: None,
-                target: None,
-                metadata: json!({"message": "ledger initialised"}),
-                timestamp: current_timestamp_millis(),
-            };
-            let record = OperationRecord::new(kind.clone(), "system/bootstrap", "instrumentation")
-                .with_metadata(json!({"initialised": true}));
-            let signed = security::enforce_operation(record)?;
-            let entry = ImmutableLogEntry::new(event, signed, "GENESIS".to_string())?;
-            self.write_entry(log_name, &entry)?;
-            Ok(())
         })
     }
 
