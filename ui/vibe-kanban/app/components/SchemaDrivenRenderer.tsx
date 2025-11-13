@@ -15,6 +15,7 @@ import { AssistPanel } from "./AssistPanel";
 import { UploadPanel } from "./UploadPanel";
 import { AnalyticsPanel } from "./AnalyticsPanel";
 import { ActivityTimeline } from "./ActivityTimeline";
+import { isFeatureEnabled } from "./featureFlags";
 import type { BoardState } from "./useBoardState";
 import type { SessionState } from "./useSession";
 
@@ -151,9 +152,13 @@ const widgetRegistry = {
   },
   "workspace.analytics": ({ context }: ComponentRenderProps) => {
     const { boardState } = context.data as SchemaDrivenRendererProps["context"]["data"];
+    const enableGoalInsights =
+      isFeatureEnabled("goalInsights") &&
+      !boardState.capabilities.loading &&
+      boardState.capabilities.has("kanban.goalInsights");
     return (
       <WidgetSurface>
-        <AnalyticsPanel board={boardState.snapshot} />
+        <AnalyticsPanel board={boardState.snapshot} enableGoalInsights={enableGoalInsights} />
       </WidgetSurface>
     );
   },

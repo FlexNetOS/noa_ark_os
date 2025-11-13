@@ -39,6 +39,8 @@ export type BoardMetrics = {
   vibeMomentum: number;
   cycleTimeDays?: number;
   flowEfficiency?: number;
+  goalLeadTimeHours?: number;
+  goalSuccessRate?: number;
 };
 
 export type BoardSnapshot = {
@@ -52,6 +54,7 @@ export type BoardSnapshot = {
   archived?: boolean;
   metrics?: BoardMetrics;
   moodSamples?: BoardMoodSample[];
+  goalId?: string;
 };
 
 export type WorkspaceBoard = BoardSnapshot & {

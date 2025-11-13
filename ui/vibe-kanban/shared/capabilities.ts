@@ -47,10 +47,28 @@ export const KANBAN_FEATURE_GATES: CapabilityFeatureGate[] = [
     description: "Display velocity, flow efficiency, and cycle-time insights.",
   },
   {
+    id: "kanban.goalInsights",
+    capability: "kanban.goalInsights",
+    label: "Goal insights",
+    description: "Surface goal-level success rates and lead-time analytics.",
+  },
+  {
     id: "kanban.assist",
     capability: "kanban.assist",
     label: "Spark assist agent",
     description: "Request AI suggestions tailored to the active board.",
+  },
+  {
+    id: "kanban.autonomousRetry",
+    capability: "kanban.autonomousRetry",
+    label: "Autonomous retry",
+    description: "Automatically re-plan workflows when performance degrades.",
+  },
+  {
+    id: "kanban.agentEscalation",
+    capability: "kanban.agentEscalation",
+    label: "Agent escalation",
+    description: "Escalate complex goals to senior agents when thresholds are breached.",
   },
 ];
 

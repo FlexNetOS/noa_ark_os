@@ -1,8 +1,10 @@
 use crate::{Stage, StageType, Task};
+use chrono::Utc;
 use noa_core::security::{self, OperationKind, OperationRecord, SignedOperation};
 use noa_core::utils::{current_timestamp_millis, simple_hash};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use std::collections::HashMap;
 use std::fs::{self, OpenOptions};
 use std::io::{ErrorKind, Write};
 use std::path::PathBuf;
@@ -16,6 +18,8 @@ const STAGE_RECEIPT_LOG: &str = "stage_receipts";
 const SECURITY_SCAN_LOG: &str = "security_scans";
 const EVIDENCE_LEDGER_DIR: &str = "storage/db/evidence";
 const EVIDENCE_LEDGER_FILE: &str = "ledger.jsonl";
+const GOAL_ANALYTICS_DIR: &str = "storage/db/analytics";
+const GOAL_ANALYTICS_FILE: &str = "goal_kpis.json";
 
 #[derive(Debug)]
 pub enum InstrumentationError {
@@ -126,6 +130,170 @@ pub struct StageReceipt {
     pub levels: Vec<MerkleLevel>,
     pub leaves: Vec<MerkleLeaf>,
     pub tasks: Vec<TaskReceipt>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentExecutionResult {
+    pub agent: String,
+    pub success: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GoalOutcomeRecord {
+    pub goal_id: String,
+    pub workflow_id: String,
+    pub started_at: u128,
+    pub completed_at: u128,
+    pub duration_ms: u128,
+    pub success: bool,
+    #[serde(default)]
+    pub agents: Vec<AgentExecutionResult>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+struct AgentAggregate {
+    total_runs: u64,
+    successful_runs: u64,
+}
+
+impl AgentAggregate {
+    fn record(&mut self, success: bool) {
+        self.total_runs += 1;
+        if success {
+            self.successful_runs += 1;
+        }
+    }
+
+    fn to_metric(&self, agent: &str) -> GoalAgentMetric {
+        GoalAgentMetric {
+            agent: agent.to_string(),
+            total_runs: self.total_runs,
+            successful_runs: self.successful_runs,
+            success_rate: if self.total_runs == 0 {
+                0.0
+            } else {
+                self.successful_runs as f64 / self.total_runs as f64
+            },
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct GoalAggregate {
+    goal_id: String,
+    workflow_id: String,
+    total_runs: u64,
+    successful_runs: u64,
+    total_duration_ms: u128,
+    last_started_at: Option<u128>,
+    last_completed_at: Option<u128>,
+    agents: HashMap<String, AgentAggregate>,
+}
+
+impl GoalAggregate {
+    fn new(goal_id: &str, workflow_id: &str) -> Self {
+        Self {
+            goal_id: goal_id.to_string(),
+            workflow_id: workflow_id.to_string(),
+            total_runs: 0,
+            successful_runs: 0,
+            total_duration_ms: 0,
+            last_started_at: None,
+            last_completed_at: None,
+            agents: HashMap::new(),
+        }
+    }
+
+    fn record(&mut self, outcome: &GoalOutcomeRecord) {
+        self.total_runs += 1;
+        if outcome.success {
+            self.successful_runs += 1;
+        }
+        self.total_duration_ms += outcome.duration_ms;
+        self.last_started_at = Some(outcome.started_at);
+        self.last_completed_at = Some(outcome.completed_at);
+
+        for agent in &outcome.agents {
+            self.agents
+                .entry(agent.agent.clone())
+                .or_default()
+                .record(agent.success);
+        }
+    }
+
+    fn to_snapshot(&self) -> GoalMetricSnapshot {
+        let average_lead_time_ms = if self.total_runs == 0 {
+            0.0
+        } else {
+            self.total_duration_ms as f64 / self.total_runs as f64
+        };
+        let success_rate = if self.total_runs == 0 {
+            0.0
+        } else {
+            self.successful_runs as f64 / self.total_runs as f64
+        };
+        let mut agents: Vec<GoalAgentMetric> = self
+            .agents
+            .iter()
+            .map(|(agent, aggregate)| aggregate.to_metric(agent))
+            .collect();
+        agents.sort_by(|a, b| b.success_rate.partial_cmp(&a.success_rate).unwrap_or(std::cmp::Ordering::Equal));
+
+        GoalMetricSnapshot {
+            goal_id: self.goal_id.clone(),
+            workflow_id: self.workflow_id.clone(),
+            total_runs: self.total_runs,
+            successful_runs: self.successful_runs,
+            average_lead_time_ms,
+            success_rate,
+            agents,
+            updated_at: Utc::now().to_rfc3339(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+struct GoalMetricStore {
+    goals: HashMap<String, GoalAggregate>,
+}
+
+impl GoalMetricStore {
+    fn record(&mut self, outcome: &GoalOutcomeRecord) {
+        self.goals
+            .entry(outcome.goal_id.clone())
+            .or_insert_with(|| GoalAggregate::new(&outcome.goal_id, &outcome.workflow_id))
+            .record(outcome);
+    }
+
+    fn snapshots(&self) -> Vec<GoalMetricSnapshot> {
+        let mut entries: Vec<GoalMetricSnapshot> = self
+            .goals
+            .values()
+            .map(GoalAggregate::to_snapshot)
+            .collect();
+        entries.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+        entries
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GoalAgentMetric {
+    pub agent: String,
+    pub total_runs: u64,
+    pub successful_runs: u64,
+    pub success_rate: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GoalMetricSnapshot {
+    pub goal_id: String,
+    pub workflow_id: String,
+    pub total_runs: u64,
+    pub successful_runs: u64,
+    pub average_lead_time_ms: f64,
+    pub success_rate: f64,
+    pub agents: Vec<GoalAgentMetric>,
+    pub updated_at: String,
 }
 
 impl StageReceipt {
@@ -266,6 +434,8 @@ pub struct PipelineInstrumentation {
     mirror_dir: PathBuf,
     evidence_dir: PathBuf,
     evidence_ledger_path: PathBuf,
+    goal_metrics_path: PathBuf,
+    goal_metrics: Mutex<GoalMetricStore>,
 }
 
 impl PipelineInstrumentation {
@@ -273,17 +443,23 @@ impl PipelineInstrumentation {
         let index_dir = resolve_path(INDEX_DIR);
         let mirror_dir = resolve_path(STORAGE_MIRROR_DIR);
         let evidence_dir = resolve_path(EVIDENCE_LEDGER_DIR);
+        let analytics_dir = resolve_path(GOAL_ANALYTICS_DIR);
         fs::create_dir_all(&index_dir)?;
         fs::create_dir_all(&mirror_dir)?;
         fs::create_dir_all(&evidence_dir)?;
+        fs::create_dir_all(&analytics_dir)?;
 
         let evidence_ledger_path = evidence_dir.join(EVIDENCE_LEDGER_FILE);
+        let goal_metrics_path = analytics_dir.join(GOAL_ANALYTICS_FILE);
+        let goal_metrics = Mutex::new(load_goal_metrics(&goal_metrics_path)?);
 
         let instrumentation = Self {
             index_dir,
             mirror_dir,
             evidence_dir,
             evidence_ledger_path,
+            goal_metrics_path,
+            goal_metrics,
         };
 
         instrumentation.ensure_genesis(RELOCATION_LOG, OperationKind::FileMove)?;
@@ -291,6 +467,7 @@ impl PipelineInstrumentation {
         instrumentation.ensure_genesis(STAGE_RECEIPT_LOG, OperationKind::StageReceipt)?;
         instrumentation.ensure_genesis(SECURITY_SCAN_LOG, OperationKind::SecurityScan)?;
         instrumentation.ensure_evidence_ledger()?;
+        instrumentation.ensure_goal_metrics()?;
 
         Ok(instrumentation)
     }
@@ -514,6 +691,22 @@ impl PipelineInstrumentation {
         Ok(report)
     }
 
+    pub fn record_goal_outcome(
+        &self,
+        outcome: GoalOutcomeRecord,
+    ) -> Result<(), InstrumentationError> {
+        {
+            let mut store = self.goal_metrics.lock().unwrap();
+            store.record(&outcome);
+        }
+        self.persist_goal_metrics()
+    }
+
+    pub fn goal_metrics_snapshot(&self) -> Result<Vec<GoalMetricSnapshot>, InstrumentationError> {
+        let store = self.goal_metrics.lock().unwrap();
+        Ok(store.snapshots())
+    }
+
     fn append_entry(
         &self,
         log_name: &str,
@@ -545,6 +738,44 @@ impl PipelineInstrumentation {
             let entry = EvidenceLedgerEntry::genesis();
             let payload = serde_json::to_string(&entry)?;
             writeln!(file, "{}", payload)?;
+            file.flush()?;
+            file.sync_all()?;
+            Ok(())
+        })
+    }
+
+    fn ensure_goal_metrics(&self) -> Result<(), InstrumentationError> {
+        with_log_lock(|| {
+            if self.goal_metrics_path.exists() {
+                return Ok(());
+            }
+            let store = self.goal_metrics.lock().unwrap();
+            let payload = serde_json::to_string_pretty(&*store)?;
+            drop(store);
+            let mut file = OpenOptions::new()
+                .create(true)
+                .write(true)
+                .truncate(true)
+                .open(&self.goal_metrics_path)?;
+            file.write_all(payload.as_bytes())?;
+            file.flush()?;
+            file.sync_all()?;
+            Ok(())
+        })
+    }
+
+    fn persist_goal_metrics(&self) -> Result<(), InstrumentationError> {
+        let store = self.goal_metrics.lock().unwrap();
+        let snapshots = store.snapshots();
+        drop(store);
+        let payload = serde_json::to_string_pretty(&snapshots)?;
+        with_log_lock(|| {
+            let mut file = OpenOptions::new()
+                .create(true)
+                .write(true)
+                .truncate(true)
+                .open(&self.goal_metrics_path)?;
+            file.write_all(payload.as_bytes())?;
             file.flush()?;
             file.sync_all()?;
             Ok(())
@@ -676,11 +907,14 @@ fn build_merkle_tree(
 // clarity and future extensibility. PathBuf::clone is cheap (Arc-based internally).
 impl Clone for PipelineInstrumentation {
     fn clone(&self) -> Self {
+        let metrics = self.goal_metrics.lock().unwrap().clone();
         Self {
             index_dir: self.index_dir.clone(),
             mirror_dir: self.mirror_dir.clone(),
             evidence_dir: self.evidence_dir.clone(),
             evidence_ledger_path: self.evidence_ledger_path.clone(),
+            goal_metrics_path: self.goal_metrics_path.clone(),
+            goal_metrics: Mutex::new(metrics),
         }
     }
 }
@@ -694,6 +928,41 @@ fn resolve_path(relative: &str) -> PathBuf {
         .parent()
         .map(|root| root.join(relative))
         .unwrap_or_else(|| PathBuf::from(relative))
+}
+
+fn load_goal_metrics(path: &PathBuf) -> Result<GoalMetricStore, InstrumentationError> {
+    if !path.exists() {
+        return Ok(GoalMetricStore::default());
+    }
+    let raw = fs::read_to_string(path)?;
+    if raw.trim().is_empty() {
+        return Ok(GoalMetricStore::default());
+    }
+    match serde_json::from_str::<GoalMetricStore>(&raw) {
+        Ok(store) => Ok(store),
+        Err(_) => {
+            let snapshots: Vec<GoalMetricSnapshot> = serde_json::from_str(&raw)?;
+            let mut store = GoalMetricStore::default();
+            for snapshot in snapshots {
+                let mut aggregate = GoalAggregate::new(&snapshot.goal_id, &snapshot.workflow_id);
+                aggregate.total_runs = snapshot.total_runs;
+                aggregate.successful_runs = snapshot.successful_runs;
+                let duration = (snapshot.average_lead_time_ms * snapshot.total_runs as f64).round() as u128;
+                aggregate.total_duration_ms = duration;
+                for agent in snapshot.agents {
+                    aggregate.agents.insert(
+                        agent.agent.clone(),
+                        AgentAggregate {
+                            total_runs: agent.total_runs,
+                            successful_runs: agent.successful_runs,
+                        },
+                    );
+                }
+                store.goals.insert(snapshot.goal_id.clone(), aggregate);
+            }
+            Ok(store)
+        }
+    }
 }
 
 #[cfg(test)]

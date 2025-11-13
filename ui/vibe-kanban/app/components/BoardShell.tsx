@@ -85,6 +85,10 @@ export function BoardShell({ state }: BoardShellProps) {
     !state.capabilities.loading &&
     isFeatureEnabled("boardMetrics") &&
     state.capabilities.has("kanban.metrics");
+  const goalInsightsEnabled =
+    boardMetricsEnabled &&
+    isFeatureEnabled("goalInsights") &&
+    state.capabilities.has("kanban.goalInsights");
   const quickComposerEnabled =
     !state.capabilities.loading &&
     isFeatureEnabled("quickComposer") &&
@@ -215,6 +219,7 @@ export function BoardShell({ state }: BoardShellProps) {
           completedCount={completedCount}
           showMetrics={boardMetricsEnabled}
           metrics={snapshot.metrics}
+          goalInsightsEnabled={goalInsightsEnabled}
           capabilitySummary={state.capabilities.featureGates}
           capabilitiesLoading={state.capabilities.loading}
         />

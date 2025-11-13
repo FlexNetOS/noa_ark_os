@@ -30,6 +30,7 @@ type BoardHeaderProps = {
   completedCount: number;
   showMetrics?: boolean;
   metrics?: BoardMetrics;
+  goalInsightsEnabled?: boolean;
   capabilitySummary?: CapabilityFeatureGateStatus[];
   capabilitiesLoading?: boolean;
 };
@@ -46,6 +47,7 @@ export function BoardHeader({
   completedCount,
   showMetrics = true,
   metrics: advancedMetrics,
+  goalInsightsEnabled = false,
   capabilitySummary = [],
   capabilitiesLoading = false,
 }: BoardHeaderProps) {
@@ -69,9 +71,15 @@ export function BoardHeader({
       if (advancedMetrics.flowEfficiency) {
         base.push({ label: "Flow efficiency", value: `${advancedMetrics.flowEfficiency}%` });
       }
+      if (goalInsightsEnabled && typeof advancedMetrics.goalLeadTimeHours === "number") {
+        base.push({ label: "Lead time", value: `${advancedMetrics.goalLeadTimeHours}h` });
+      }
+      if (goalInsightsEnabled && typeof advancedMetrics.goalSuccessRate === "number") {
+        base.push({ label: "Goal success", value: `${advancedMetrics.goalSuccessRate}%` });
+      }
     }
     return base;
-  }, [advancedMetrics, columnCount, completedCount, totalCardCount]);
+  }, [advancedMetrics, columnCount, completedCount, goalInsightsEnabled, totalCardCount]);
 
   const hasCapabilitySummary = capabilitySummary.length > 0;
 

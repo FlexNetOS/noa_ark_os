@@ -22,6 +22,7 @@ import {
   normalizeCapabilityRegistry,
 } from "@/shared/capabilities";
 import { logError } from "@/shared/logging";
+import { isFeatureEnabled } from "./featureFlags";
 
 const accentPalette = [
   "from-indigo-500 via-purple-500 to-blue-500",
@@ -36,6 +37,13 @@ type AssistState = {
   focusCard: VibeCard | null;
   updatedAt: string;
 } | null;
+
+type AutonomyState = {
+  replanTriggered: boolean;
+  escalationTriggered: boolean;
+  lastTriggeredAt: string | null;
+  summary: string | null;
+};
 
 type WorkspaceHookState = {
   hydrated: boolean;
@@ -52,6 +60,7 @@ type WorkspaceHookState = {
   uploadReceipts: UploadReceiptSummary[];
   integrations: WorkspaceIntegrationStatus[];
   assist: AssistState;
+  autonomy: AutonomyState;
   capabilities: {
     loading: boolean;
     registry: CapabilityRegistry;
@@ -92,6 +101,12 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
   const [uploadReceipts, setUploadReceipts] = useState<UploadReceiptSummary[]>([]);
   const [integrations, setIntegrations] = useState<WorkspaceIntegrationStatus[]>([]);
   const [assist, setAssist] = useState<AssistState>(null);
+  const [autonomy, setAutonomy] = useState<AutonomyState>({
+    replanTriggered: false,
+    escalationTriggered: false,
+    lastTriggeredAt: null,
+    summary: null,
+  });
   const [capabilityRegistry, setCapabilityRegistry] = useState<CapabilityRegistry>(() => ({
     version: DEFAULT_CAPABILITY_REGISTRY.version,
     capabilities: [],
@@ -103,6 +118,10 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
   const eventSourceRef = useRef<EventSource | null>(null);
   const presenceIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const latestBoardRef = useRef<WorkspaceBoard | null>(null);
+  const goalEvaluationRef = useRef<{ boardId: string | null; signature: string | null }>({
+    boardId: null,
+    signature: null,
+  });
 
   const logBoardError = useCallback(
     (event: string, error: unknown, context?: Record<string, unknown>) => {
@@ -623,6 +642,108 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     setAssist({ suggestions: payload.suggestions ?? [], focusCard: payload.focusCard ?? null, updatedAt: new Date().toISOString() });
   }, [workspaceId, boardId]);
 
+  useEffect(() => {
+    if (!snapshot || capabilitiesLoading) return;
+    if (!snapshot.metrics) return;
+
+    const boardKey = snapshot.id ?? "unknown-board";
+    const signature = [
+      boardKey,
+      snapshot.lastUpdated,
+      snapshot.metrics.goalSuccessRate ?? "na",
+      snapshot.metrics.goalLeadTimeHours ?? "na",
+    ].join("::");
+
+    if (
+      goalEvaluationRef.current.boardId === boardKey &&
+      goalEvaluationRef.current.signature === signature
+    ) {
+      return;
+    }
+
+    goalEvaluationRef.current = { boardId: boardKey, signature };
+
+    const nowIso = new Date().toISOString();
+    const goalInsightsFlag = isFeatureEnabled("goalInsights");
+    const autoRetryFlag = isFeatureEnabled("autonomousRetry");
+    const escalationFlag = isFeatureEnabled("agentEscalation");
+    const hasGoalInsights = goalInsightsFlag && capabilityTokens.has("kanban.goalInsights");
+    const autoRetryEnabled = autoRetryFlag && capabilityTokens.has("kanban.autonomousRetry");
+    const escalationEnabled = escalationFlag && capabilityTokens.has("kanban.agentEscalation");
+
+    let replanTriggered = false;
+    let escalationTriggered = false;
+    let summary: string | null = null;
+
+    if (hasGoalInsights && autoRetryEnabled && typeof snapshot.metrics.goalSuccessRate === "number") {
+      if (snapshot.metrics.goalSuccessRate < 60) {
+        replanTriggered = true;
+        summary = `Autonomous retry scheduled at ${snapshot.metrics.goalSuccessRate}% success rate.`;
+        requestAssist().catch((error) =>
+          logBoardError("autonomous_retry_failed", error, {
+            boardId: snapshot.id,
+            successRate: snapshot.metrics?.goalSuccessRate,
+          })
+        );
+        setNotifications((prev) => {
+          const notification = {
+            id: `auto-replan-${Date.now()}`,
+            message: `Success rate dipped to ${snapshot.metrics?.goalSuccessRate ?? 0}%. Triggered an autonomous retry cycle.`,
+            createdAt: nowIso,
+            severity: "warning" as const,
+          };
+          const items = [notification, ...(prev ?? [])];
+          return items.slice(0, 20);
+        });
+      }
+    }
+
+    if (hasGoalInsights && escalationEnabled && typeof snapshot.metrics.goalLeadTimeHours === "number") {
+      if (snapshot.metrics.goalLeadTimeHours > 12) {
+        escalationTriggered = true;
+        const message = `Goal lead time reached ${snapshot.metrics.goalLeadTimeHours}h. Escalating to senior agent.`;
+        summary = summary ? `${summary} ${message}` : message;
+        setNotifications((prev) => {
+          const notification = {
+            id: `auto-escalate-${Date.now()}`,
+            message,
+            createdAt: nowIso,
+            severity: "warning" as const,
+          };
+          const items = [notification, ...(prev ?? [])];
+          return items.slice(0, 20);
+        });
+      }
+    }
+
+    if (replanTriggered || escalationTriggered) {
+      setAutonomy({
+        replanTriggered,
+        escalationTriggered,
+        lastTriggeredAt: nowIso,
+        summary,
+      });
+    } else {
+      setAutonomy((prev) =>
+        prev.replanTriggered || prev.escalationTriggered
+          ? {
+              replanTriggered: false,
+              escalationTriggered: false,
+              lastTriggeredAt: nowIso,
+              summary: null,
+            }
+          : prev
+      );
+    }
+  }, [
+    snapshot,
+    capabilitiesLoading,
+    capabilityTokens,
+    requestAssist,
+    logBoardError,
+    setNotifications,
+  ]);
+
   const refreshWorkspace = useCallback(async () => {
     await fetchWorkspace();
   }, [fetchWorkspace]);
@@ -646,6 +767,7 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     uploadReceipts,
     integrations,
     assist,
+    autonomy,
     capabilities: {
       loading: capabilitiesLoading,
       registry: capabilityRegistry,
