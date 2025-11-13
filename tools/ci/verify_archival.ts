@@ -158,12 +158,12 @@ function ensureLedgerEntry(
         }
       } else if (entry.replacement_path === null || entry.replacement_path === undefined) {
         return entry;
-      } else {
-        // Accept ledger entries that explicitly state a replacement path even for deletions
-        return entry;
       }
+      // If replacementPath is not specified and entry.replacement_path is set, do not accept.
+      // This prevents accepting rename entries for deletions.
     }
   }
+}
   return null;
 }
 
