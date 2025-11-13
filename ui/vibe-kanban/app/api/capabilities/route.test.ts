@@ -29,8 +29,7 @@ describe("GET /api/capabilities", () => {
     vi.resetModules();
     const readFile = vi.fn().mockRejectedValue(Object.assign(new Error("missing"), { code: "ENOENT" }));
     vi.doMock("fs/promises", () => ({
-      default: { readFile },
-      readFile,
+      default: { readFile }
     }));
     const { GET } = await import("./route");
     const response = await GET();
