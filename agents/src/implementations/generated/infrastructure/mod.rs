@@ -303,7 +303,7 @@ pub mod xata_agent;
 pub use agentselfupgraderetirementagent::Agentselfupgraderetirementagent;
 pub use multitenantisolationagent::Multitenantisolationagent;
 pub use upgradepatchagent::Upgradepatchagent;
-pub use string::String;
+pub use string::StringAgent;
 pub use agentsupervisorheartbeatagent::Agentsupervisorheartbeatagent;
 pub use backuprestoreagent::Backuprestoreagent;
 pub use cachemanageragent::Cachemanageragent;

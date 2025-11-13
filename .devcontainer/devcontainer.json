@@ -1,0 +1,34 @@
+{
+  "name": "NOA ARK OS Dev",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "lts",
+      "pnpm": "true"
+    },
+    "ghcr.io/devcontainers/features/rust:1": {
+      "profile": "minimal",
+      "toolchain": "stable"
+    },
+    "ghcr.io/devcontainers/features/git:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "npm.packageManager": "pnpm",
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "rust-analyzer.checkOnSave": true,
+        "rust-analyzer.check.command": "check",
+        "rust-analyzer.cargo.allFeatures": true
+      },
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "tamasfe.even-better-toml",
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint"
+      ]
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "remoteUser": "vscode"
+}
