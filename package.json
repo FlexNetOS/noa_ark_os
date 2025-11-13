@@ -1,4 +1,11 @@
 {
+{
+  "scripts": {
+    "orchestrate": "tsx scripts/orchestrator.ts",
+    "guardrails:local": "bash scripts/guardrails-local.sh",
+    "smoke:local": "bash scripts/smoke-local.sh"
+  },
+
   "name": "noa-ark-os",
   "private": true,
   "type": "module",

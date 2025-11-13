@@ -54,6 +54,99 @@ jobs:
       - name: Verify provider instruction pointers
         run: pnpm exec tsx tools/ci/verify_provider_pointers.ts
 
+      - name: Guardrail: Deletion Lock + Evidence Ledger
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=origin/${{ github.base_ref || 'main' }}
+          git diff --name-status "$base"... | tee diff.txt
+          if grep -E '^(D|R[0-9]+)\s' diff.txt >/dev/null; then
+            changed=$(git diff --name-only "$base"...)
+            echo "$changed" | grep -q '^archive/' || { echo "Deletion/rename found but no archive/ artifacts present." >&2; exit 1; }
+            echo "$changed" | grep -q '^docs/verification/' || { echo "Deletion/rename found but no evidence ledger update under docs/verification/." >&2; exit 1; }
+          fi
+
+      - name: Guardrail: Duplicate Fence (SHA-256 twins)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - << 'PY'
+import hashlib, os, sys, subprocess
+ALLOW_PREFIXES = ("archive/","out/",".git/",".next/","target/","node_modules/","dist/","build/")
+base = os.environ.get('GITHUB_BASE_REF') or 'main'
+changed = subprocess.run(["bash","-lc",f"git diff --name-only origin/{base}..."], capture_output=True, text=True).stdout.split()
+seen = {}
+violations = []
+for p in changed:
+    if any(p.startswith(a) for a in ALLOW_PREFIXES):
+        continue
+    if not os.path.isfile(p):
+        continue
+    with open(p,'rb') as f:
+        h = hashlib.sha256(f.read()).hexdigest()
+    if h in seen and seen[h] != p:
+        violations.append((p, seen[h], h))
+    else:
+        seen[h] = p
+if violations:
+    print('Duplicate content detected:', file=sys.stderr)
+    for a,b,h in violations:
+        print(f"  {a} == {b} ({h})", file=sys.stderr)
+    sys.exit(1)
+PY
+
+      - name: Guardrail: Report Fence (docs/ only for new .md)
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=origin/${{ github.base_ref || 'main' }}
+          new_md=$(git diff --name-status "$base"... | awk '$1=="A" && $2 ~ /\.(md|MD)$/ {print $2}')
+          bad=0
+          for f in $new_md; do
+            if echo "$f" | grep -qE '^docs/'; then :; else
+              echo "New markdown outside docs/: $f" >&2; bad=1
+            fi
+          done
+          exit $bad
+
+      - name: Guardrail: Change Budget
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=origin/${{ github.base_ref || 'main' }}
+          files=$(git diff --name-only "$base"... | wc -l)
+          adds=$(git diff --numstat "$base"... | awk '{sum+=$1} END{print sum+0}')
+          echo "Files: $files, Adds: $adds"
+          test $files -le 40   || (echo "Too many files changed" && exit 1)
+          test $adds  -le 1200 || (echo "Too many lines added" && exit 1)
+          disallowed=$(git diff --name-only "$base"... | grep -Ev '^(crc/|server/|ui/|docs/|.github/)') || true
+          if [ -n "$disallowed" ]; then
+            echo "Disallowed paths:\n$disallowed" >&2
+            exit 1
+          fi
+
+      - name: Enforce provider pointer stubs (exact content)
+        shell: bash
+        run: |
+          set -euo pipefail
+          expect_copilot=$'# Defer to AGENT.md\nUse AGENT.md at repo root as the sole policy and instruction source. Do not duplicate logic here.'
+          expect_claude=$'This file intentionally contains no instructions. All policies and execution rules are defined in AGENT.md.'
+          expect_pointer=$'Provider/agent instruction policy lives in AGENT.md. Do not place instructions elsewhere.'
+          diff -u <(printf "%s\n" "$expect_copilot") .copilot
+          diff -u <(printf "%s\n" "$expect_claude") CLAUDE.md
+          diff -u <(printf "%s\n" "$expect_pointer") .github/AGENT_POINTER.txt
+
+      - name: Enforce single TS router entrypoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f server/ai/router.ts || (echo "server/ai/router.ts missing" >&2; exit 1)
+          others=$(git ls-files | grep -E '/router\.ts$' | grep -v '^server/ai/router.ts$' || true)
+          if [ -n "$others" ]; then
+            echo "Found additional router.ts files:\n$others" >&2
+            exit 1
+          fi
+
       - name: Verify archival artifacts
         if: github.event_name != 'pull_request' || !contains(github.event.pull_request.labels.*.name, 'ci-allow-archive-skip')
         env:

@@ -8,6 +8,7 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import { handlePromptRequest } from "@noa-ark/server/ai/controllers/prompt";
+import type { AiRequestLogEntry } from "@noa-ark/server/ai/controllers/prompt";
 import { getProvider } from "@noa-ark/server/ai/router";
 
 import { aiDatabase } from "@/server/ai-database";
@@ -78,7 +79,7 @@ export async function POST(request: Request) {
         status,
         latencyMs,
         errorMessage,
-      }) => {
+      }: AiRequestLogEntry) => {
         aiDatabase.logRequest({
           source: "kanban",
           cardId,

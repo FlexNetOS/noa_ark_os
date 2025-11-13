@@ -155,7 +155,40 @@ impl UiApiServer {
             .route("/ui/pages/:page_id", get(Self::get_page))
             .route("/ui/pages/:page_id/events", get(Self::stream_events))
             .route("/ui/drop-in/upload", post(Self::upload_drop))
+            .route("/ui/drop-in/panel", get(Self::upload_panel))
             .with_state(self.state.clone())
+    }
+
+    async fn upload_panel() -> impl IntoResponse {
+        const HTML: &str = r#"<!doctype html><html><head><meta charset=\"utf-8\"><title>Upload → Digest</title></head>
+<body style=\"font-family: system-ui; margin:2rem;\">
+<h2>Upload → Digest</h2>
+<form id=\"f\" method=\"post\" action=\"/ui/drop-in/upload\" enctype=\"multipart/form-data\">
+  <label>Type:
+    <select name=\"type\">
+      <option value=\"repos\">Repo</option>
+      <option value=\"forks\">Fork</option>
+      <option value=\"mirrors\">Mirror</option>
+      <option value=\"stale\">Stale</option>
+    </select>
+  </label>
+  <br/><br/>
+  <input type=\"file\" name=\"file\" required />
+  <button type=\"submit\">Upload</button>
+</form>
+<pre id=\"out\"></pre>
+<script>
+const f=document.getElementById('f');
+f.addEventListener('submit', async e=>{
+  e.preventDefault();
+  const fd=new FormData(f);
+  const r=await fetch(f.action,{method:'POST',body:fd});
+  const t=await r.text();
+  document.getElementById('out').textContent=t;
+});
+</script>
+</body></html>"#;
+        ([("content-type", "text/html; charset=utf-8")], HTML)
     }
 
     async fn get_page(

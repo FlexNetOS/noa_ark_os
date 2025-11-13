@@ -27,7 +27,6 @@ jobs:
           cargo run -p noa_crc -- ingest --root . --report out/ci/ingest.json
           test -f out/ci/ingest.json
       - name: Archive artifacts
-        if: ${{ env.ACT != 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: smoke-artifacts

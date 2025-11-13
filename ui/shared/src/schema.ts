@@ -2,6 +2,7 @@ export type WidgetKind =
   | "workspace.header"
   | "workspace.session"
   | "workspace.board"
+  | "workspace.uploads"
   | "workspace.analytics"
   | "workspace.activity"
   | "workspace.assist"

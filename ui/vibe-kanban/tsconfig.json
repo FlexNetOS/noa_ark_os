@@ -34,13 +34,13 @@
         "ui/shared/src/*"
       ],
       "@noa-ark/shared-ui": [
-        "../shared/src/index"
+        "ui/shared/src/index"
       ],
       "mitt": [
         "./types/mitt"
       ],
       "@noa-ark/server/*": [
-        "../../server/*"
+        "server/*"
       ],
       "zod": [
         "./node_modules/zod"

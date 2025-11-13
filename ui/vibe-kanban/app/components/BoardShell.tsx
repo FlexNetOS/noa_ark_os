@@ -47,38 +47,17 @@ export function BoardShell({ state }: BoardShellProps) {
   const [columnCardDropTarget, setColumnCardDropTarget] = useState<string | null>(null);
 
   const totalCards = useMemo(
-    () =>
-      (snapshot?.columns ?? []).reduce(
-        (acc, column) => acc + (column.cards?.length ?? 0),
-        0
-      ),
+    () => (snapshot?.columns ?? []).reduce((acc, column) => acc + (column.cards?.length ?? 0), 0),
     [snapshot?.columns]
   );
-  const completedCount = useMemo(() => {
-    return (snapshot?.columns ?? [])
-      .filter((column) => /done|complete|finished/i.test(column.title))
-      .reduce((count, column) => count + (column.cards?.length ?? 0), 0);
-  }, [snapshot?.columns]);
-  const totalCards = useMemo(() => {
-    if (!snapshot) return 0;
-    return snapshot.columns.reduce((acc, column) => acc + column.cards.length, 0);
-  }, [snapshot]);
 
-  const completedCount = useMemo(() => {
-    if (!snapshot) return 0;
-
-    return snapshot.columns.reduce((count, column) => {
-      if (!COMPLETED_COLUMN_PATTERN.test(column.title)) {
-        return count;
-      }
-
-      return count + column.cards.length;
-    }, 0);
-    return (snapshot?.columns ?? [])
-      .filter((column) => /done|complete|finished/i.test(column.title))
-      .reduce((count, column) => count + column.cards.length, 0);
-      .reduce((count, column) => count + column.cards.length, 0) ?? 0;
-  }, [snapshot]);
+  const completedCount = useMemo(
+    () =>
+      (snapshot?.columns ?? [])
+        .filter((column) => COMPLETED_COLUMN_PATTERN.test(column.title))
+        .reduce((count, column) => count + (column.cards?.length ?? 0), 0),
+    [snapshot?.columns]
+  );
 
   const ambientBackdropEnabled = isFeatureEnabled("ambientBackdrop");
   const boardMetricsEnabled =
