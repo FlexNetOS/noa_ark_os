@@ -12,6 +12,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
 mod instrumentation;
+pub use instrumentation::{
+    EvidenceLedgerEntry, EvidenceLedgerKind, MerkleLeaf, MerkleLevel, PipelineInstrumentation,
+    SecurityScanReport, SecurityScanStatus, StageReceipt, TaskReceipt,
+};
 pub use instrumentation::{EvidenceLedgerEntry, PipelineInstrumentation, StageReceipt};
 use tokio::sync::broadcast;
 
@@ -85,6 +89,12 @@ pub enum WorkflowEvent {
         workflow_id: String,
         stage_id: String,
         state: StageState,
+        timestamp: String,
+    },
+    StageReceiptGenerated {
+        workflow_id: String,
+        stage_id: String,
+        receipt: StageReceipt,
         timestamp: String,
     },
     ResumeOffered {
@@ -259,6 +269,22 @@ impl WorkflowEngine {
             StageType::Loop => self.execute_loop(stage)?,
         };
 
+        let receipt = self
+            .instrumentation
+            .log_stage_receipt(workflow_id, stage, &artifacts)
+            .map_err(|err| format!("stage receipt failed: {}", err))?;
+
+        println!(
+            "[WORKFLOW] Stage receipt generated for {}::{} (root={})",
+            workflow_id, stage.name, receipt.merkle_root
+        );
+
+        self.emit_event(WorkflowEvent::StageReceiptGenerated {
+            workflow_id: workflow_id.to_string(),
+            stage_id: stage.name.clone(),
+            receipt,
+            timestamp: now_iso(),
+        });
         if let Err(err) = self.instrumentation.log_stage_receipt(
             workflow_id,
             &stage.name,
@@ -480,6 +506,33 @@ mod tests {
     use noa_core::security;
     use serde_json::json;
     use std::fs;
+    use std::path::Path;
+
+    use crate::instrumentation::{EvidenceLedgerEntry, EvidenceLedgerKind};
+    use tempfile::tempdir;
+
+    struct EnvGuard {
+        key: &'static str,
+        previous: Option<String>,
+    }
+
+    impl EnvGuard {
+        fn set(key: &'static str, value: &Path) -> Self {
+            let previous = std::env::var(key).ok();
+            std::env::set_var(key, value);
+            Self { key, previous }
+        }
+    }
+
+    impl Drop for EnvGuard {
+        fn drop(&mut self) {
+            if let Some(ref previous) = self.previous {
+                std::env::set_var(self.key, previous);
+            } else {
+                std::env::remove_var(self.key);
+            }
+        }
+    }
     use std::path::PathBuf;
 
     use crate::instrumentation::EvidenceLedgerEntry;
@@ -499,6 +552,8 @@ mod tests {
 
     #[test]
     fn test_instrumentation_generates_signed_operations() {
+        let dir = tempdir().unwrap();
+        let _guard = EnvGuard::set("NOA_WORKFLOW_ROOT", dir.path());
         let engine = WorkflowEngine::new();
         let instrumentation = engine.instrumentation();
 
@@ -524,6 +579,10 @@ mod tests {
 
     #[test]
     fn stage_merkle_receipt_is_recorded() {
+        let dir = tempdir().unwrap();
+        let _guard = EnvGuard::set("NOA_WORKFLOW_ROOT", dir.path());
+        let engine = WorkflowEngine::new();
+        let workflow_name = format!("merkle-{}", Utc::now().timestamp_nanos_opt().unwrap());
         let engine = WorkflowEngine::new();
         let workflow_name = format!("merkle-{}", Utc::now().timestamp_nanos());
         let workflow = Workflow {
@@ -544,6 +603,7 @@ mod tests {
         let id = engine.load_workflow(workflow).unwrap();
         engine.execute(&id).unwrap();
 
+        let ledger_path = dir.path().join("storage/db/evidence/ledger.jsonl");
         let ledger_path = {
             let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
             let repo_root = root.parent().expect("workspace root available");
@@ -555,6 +615,37 @@ mod tests {
         let receipt = content
             .lines()
             .filter_map(|line| serde_json::from_str::<EvidenceLedgerEntry>(line).ok())
+            .filter(|entry| entry.kind == EvidenceLedgerKind::StageReceipt)
+            .find(|entry| {
+                entry.payload.get("workflow_id").and_then(Value::as_str)
+                    == Some(workflow_name.as_str())
+            })
+            .expect("stage receipt recorded");
+
+        let stage_id = receipt
+            .payload
+            .get("stage_id")
+            .and_then(Value::as_str)
+            .unwrap_or_default();
+        assert_eq!(stage_id, "stage-merkle");
+        let leaf_count = receipt
+            .payload
+            .get("leaves")
+            .and_then(Value::as_array)
+            .map(|array| array.len())
+            .unwrap_or(0);
+        assert_eq!(leaf_count, 1);
+        let merkle_root = receipt
+            .payload
+            .get("levels")
+            .and_then(Value::as_array)
+            .and_then(|levels| levels.last())
+            .and_then(|level| level.get("nodes"))
+            .and_then(Value::as_array)
+            .and_then(|nodes| nodes.first())
+            .and_then(Value::as_str)
+            .unwrap_or_default();
+        assert!(!merkle_root.is_empty());
             .find(|entry| entry.receipt.workflow_id == workflow_name)
             .expect("stage receipt recorded");
 

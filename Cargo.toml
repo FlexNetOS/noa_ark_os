@@ -17,6 +17,8 @@ members = [
     "apps/cli",
     "server/relocation",
     "server/ui_api",
+    "tools/symbol_graph",
+    "tools/security/shim",
 ]
 
 [workspace.package]

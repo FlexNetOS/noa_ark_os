@@ -1,8 +1,10 @@
+use std::io::BufRead;
 use std::path::PathBuf;
 use std::str::FromStr;
 
 use anyhow::{Context, Result};
 use clap::{Args, Parser, Subcommand};
+use noa_workflow::EvidenceLedgerEntry;
 use relocation_daemon::{ExecutionMode, RelocationDaemon};
 use tokio::runtime::Runtime;
 use uuid::Uuid;
@@ -58,6 +60,13 @@ enum Commands {
         #[arg(long)]
         force: bool,
     },
+    /// Inspect the evidence ledger for workflow receipts and scan results
+    Evidence {
+        #[arg(long)]
+        workflow: Option<String>,
+        #[arg(long)]
+        limit: Option<usize>,
+    },
 }
 
 fn parse_mode(value: &str) -> std::result::Result<ExecutionMode, String> {
@@ -112,10 +121,50 @@ fn main() -> Result<()> {
                     .await?;
                 println!("{}", serde_json::to_string_pretty(&result)?);
             }
+            Commands::Evidence { workflow, limit } => {
+                show_evidence(workflow, limit)?;
+            }
         }
 
         Ok(())
     })
+}
+
+fn show_evidence(workflow_filter: Option<String>, limit: Option<usize>) -> Result<()> {
+    let path = PathBuf::from("storage/db/evidence/ledger.jsonl");
+    if !path.exists() {
+        anyhow::bail!("evidence ledger not found at {}", path.display());
+    }
+    let file = std::fs::File::open(&path)?;
+    let reader = std::io::BufReader::new(file);
+    let mut entries = Vec::new();
+    for line in reader.lines() {
+        let line = line?;
+        if line.trim().is_empty() {
+            continue;
+        }
+        let entry: EvidenceLedgerEntry = serde_json::from_str(&line)?;
+        if let Some(workflow) = &workflow_filter {
+            let payload_workflow = entry
+                .payload
+                .get("workflow_id")
+                .and_then(|value| value.as_str());
+            if payload_workflow != Some(workflow.as_str()) {
+                continue;
+            }
+        }
+        entries.push(entry);
+    }
+
+    let to_print = limit.unwrap_or(entries.len());
+    for entry in entries.into_iter().rev().take(to_print) {
+        println!(
+            "{} | kind={:?} | reference={}",
+            entry.timestamp, entry.kind, entry.reference
+        );
+        println!("{}", serde_json::to_string_pretty(&entry.payload)?);
+    }
+    Ok(())
 }
 
 async fn build_daemon(config: DaemonArgs) -> Result<RelocationDaemon> {

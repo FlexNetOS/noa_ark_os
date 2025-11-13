@@ -9,6 +9,7 @@ use wasi_common::pipe::WritePipe;
 use wasmtime::ResourceLimiter;
 use wasmtime::{Config, Engine, Linker, Module, Store};
 use wasmtime_wasi::sync::{add_to_linker, WasiCtxBuilder};
+use wasmtime_wasi::{I32Exit, WasiCtx};
 use wasmtime_wasi::WasiCtx;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -105,6 +106,25 @@ impl WasmProbeRunner {
             let start_fn = func
                 .typed::<(), ()>(&mut store)
                 .map_err(WasmProbeError::Wasmtime)?;
+            if let Err(err) = start_fn.call(&mut store, ()) {
+                if let Some(exit) = err.downcast_ref::<I32Exit>() {
+                    if exit.0 != 0 {
+                        return Err(WasmProbeError::Wasi(format!(
+                            "probe exited with status {}",
+                            exit.0
+                        )));
+                    }
+                } else {
+                    match err.downcast::<wasmtime::Error>() {
+                        Ok(wasmtime_err) => {
+                            return Err(WasmProbeError::Wasmtime(wasmtime_err));
+                        }
+                        Err(other) => {
+                            return Err(WasmProbeError::Wasi(other.to_string()));
+                        }
+                    }
+                }
+            }
             start_fn.call(&mut store, ())?;
         }
         let duration = start.elapsed();
@@ -153,6 +173,9 @@ impl WasmProbeRunner {
         }
 
         for dir in &self.config.allowed_directories {
+            let cap_dir = Dir::open_ambient_dir(dir, ambient_authority())?;
+            builder
+                .preopened_dir(cap_dir, dir)
             // Canonicalize the directory to prevent path traversal and ensure absolute path
             let canonical_dir = std::fs::canonicalize(dir)
                 .map_err(|err| WasmProbeError::Wasi(format!("Failed to canonicalize directory '{}': {}", dir.display(), err)))?;

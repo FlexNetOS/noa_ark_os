@@ -3,13 +3,13 @@ use std::env;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
+use anyhow::{Context, Result};
 use axum::extract::ws::{Message, WebSocket};
 use axum::extract::{Multipart, Path as AxumPath, State, WebSocketUpgrade};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{Json, Router};
-use anyhow::{Context, Result};
 use bytes::Bytes;
 use chrono::Utc;
 use flate2::read::GzDecoder;
@@ -23,8 +23,8 @@ use tokio::fs;
 use tokio::sync::RwLock;
 use tokio::task;
 use tokio_stream::StreamExt;
-use zip::ZipArchive;
 use uuid::Uuid;
+use zip::ZipArchive;
 
 use crate::schema::PageEnvelope;
 use crate::session::SessionBridge;
@@ -383,7 +383,9 @@ async fn prepare_upload_receipt(
 
     let mut cas_objects = Vec::new();
 
-    let original_hash = cas.put_bytes(original_bytes).context("storing upload in CAS")?;
+    let original_hash = cas
+        .put_bytes(original_bytes)
+        .context("storing upload in CAS")?;
     let original_meta = fs::metadata(file_path)
         .await
         .context("reading upload metadata")?;
@@ -416,7 +418,11 @@ async fn prepare_upload_receipt(
     }
 
     let mut graph = CRCGraph::new();
-    graph.add_node(GraphNode::new(format!("digest::{}", drop_id), NodeKind::Analyze, Lane::Fast));
+    graph.add_node(GraphNode::new(
+        format!("digest::{}", drop_id),
+        NodeKind::Analyze,
+        Lane::Fast,
+    ));
     let engine = Engine::new(graph);
     let digest_dir = drop_root.join("receipts").join(drop_id).join("digest");
     fs::create_dir_all(&digest_dir)
@@ -497,9 +503,8 @@ async fn extract_archive(
 }
 
 fn extract_zip(archive_path: &Path, target: &Path) -> Result<Vec<PathBuf>> {
-    let file = std::fs::File::open(archive_path).with_context(|| {
-        format!("opening zip archive {}", archive_path.display())
-    })?;
+    let file = std::fs::File::open(archive_path)
+        .with_context(|| format!("opening zip archive {}", archive_path.display()))?;
     let mut archive = ZipArchive::new(file).context("parsing zip archive")?;
     let mut extracted = Vec::new();
     for index in 0..archive.len() {
@@ -539,10 +544,7 @@ fn extract_tar(archive_path: &Path, target: &Path, gz: bool) -> Result<Vec<PathB
         if entry.header().entry_type().is_dir() {
             continue;
         }
-        let relative = entry
-            .path()
-            .context("reading tar entry path")?
-            .into_owned();
+        let relative = entry.path().context("reading tar entry path")?.into_owned();
         if relative
             .components()
             .any(|component| matches!(component, std::path::Component::ParentDir))
@@ -597,9 +599,9 @@ mod tests {
     use axum::http::{Request, StatusCode as HttpStatus};
     use http_body_util::BodyExt;
     use serde::Deserialize;
+    use serde_json::Value;
     use std::sync::Mutex as StdMutex;
     use tower::ServiceExt;
-    use serde_json::Value;
 
     #[derive(Clone)]
     struct MockRegistry {
@@ -735,14 +737,20 @@ mod tests {
 
         let receipt_path = PathBuf::from(&parsed.receipt_path);
         assert!(receipt_path.exists());
-        let receipt: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&receipt_path).unwrap()).unwrap();
-        assert_eq!(receipt.get("drop_id").and_then(|v| v.as_str()), Some("drop-123"));
-        assert!(receipt
-            .get("cas_objects")
-            .and_then(|v| v.as_array())
-            .map(|arr| arr.len())
-            .unwrap_or(0)
-            >= 1);
+        let receipt: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&receipt_path).unwrap()).unwrap();
+        assert_eq!(
+            receipt.get("drop_id").and_then(|v| v.as_str()),
+            Some("drop-123")
+        );
+        assert!(
+            receipt
+                .get("cas_objects")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.len())
+                .unwrap_or(0)
+                >= 1
+        );
 
         let saved_path = drop_root.join("repos").join("example.txt");
         let saved = fs::read(&saved_path).await.unwrap();
