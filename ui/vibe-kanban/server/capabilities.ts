@@ -86,4 +86,7 @@ export function __resetCapabilityRegistryCacheForTests(): void {
   loadPromise = null;
 }
 
-void ensureLoadPromise();
+// Log capability registry initialization status at module load time
+ensureLoadPromise()
+  .then(() => console.log('Capability registry loaded'))
+  .catch(() => console.warn('Capability registry initialization deferred'));
