@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+
+import type { CapabilityFeatureGateStatus } from "@/shared/capabilities";
+
 import { AddColumnButton } from "./AddColumnButton";
 import type { BoardMetrics } from "./board-types";
 
@@ -20,11 +23,15 @@ type BoardHeaderProps = {
   lastUpdated: string;
   onRename: (name: string) => void;
   onAddColumn: () => void;
+  canAddColumn?: boolean;
+  addColumnDisabledReason?: string;
   columnCount: number;
   totalCardCount: number;
   completedCount: number;
   showMetrics?: boolean;
   metrics?: BoardMetrics;
+  capabilitySummary?: CapabilityFeatureGateStatus[];
+  capabilitiesLoading?: boolean;
 };
 
 export function BoardHeader({
@@ -32,11 +39,15 @@ export function BoardHeader({
   lastUpdated,
   onRename,
   onAddColumn,
+  canAddColumn = true,
+  addColumnDisabledReason,
   columnCount,
   totalCardCount,
   completedCount,
   showMetrics = true,
   metrics: advancedMetrics,
+  capabilitySummary = [],
+  capabilitiesLoading = false,
 }: BoardHeaderProps) {
   const [value, setValue] = useState(projectName);
 
@@ -45,7 +56,6 @@ export function BoardHeader({
   }, [projectName]);
 
   const metrics = useMemo(() => {
-    const base: Array<{ label: string; value: string }> = [
     const base: { label: string; value: string }[] = [
       { label: "Columns", value: columnCount.toString() },
       { label: "Active vibes", value: Math.max(totalCardCount - completedCount, 0).toString() },
@@ -62,6 +72,8 @@ export function BoardHeader({
     }
     return base;
   }, [advancedMetrics, columnCount, completedCount, totalCardCount]);
+
+  const hasCapabilitySummary = capabilitySummary.length > 0;
 
   return (
     <div className="flex flex-col gap-6 rounded-[2.5rem] border border-white/10 bg-surface/70 p-8 backdrop-blur-xl">
@@ -83,7 +95,11 @@ export function BoardHeader({
             Last synced <time dateTime={lastUpdated}>{formatDateLabel(lastUpdated)}</time>
           </p>
         </div>
-        <AddColumnButton onClick={onAddColumn} />
+        <AddColumnButton
+          onClick={onAddColumn}
+          disabled={!canAddColumn}
+          disabledReason={addColumnDisabledReason}
+        />
       </div>
 
       {showMetrics && (
@@ -99,6 +115,88 @@ export function BoardHeader({
           ))}
         </div>
       )}
+
+      {hasCapabilitySummary && (
+        <CapabilitySummaryPanel
+          items={capabilitySummary}
+          loading={capabilitiesLoading}
+        />
+      )}
+    </div>
+  );
+}
+
+type CapabilitySummaryPanelProps = {
+  items: CapabilityFeatureGateStatus[];
+  loading: boolean;
+};
+
+function CapabilitySummaryPanel({ items, loading }: CapabilitySummaryPanelProps) {
+  return (
+    <div className="rounded-2xl border border-white/5 bg-white/5 p-5 text-white/80">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="text-xs uppercase tracking-[0.3em] text-white/40">Capability summary</div>
+          <p className="mt-1 text-xs text-white/50">
+            Features adjust automatically based on the active registry.
+          </p>
+        </div>
+        <span className="rounded-full border border-white/10 bg-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-white/60">
+          {loading ? "Syncing" : "Updated"}
+        </span>
+      </div>
+      <ul className="mt-4 space-y-3">
+        {items.map((item) => (
+          (() => {
+            const statusLabel = loading
+              ? "Pending"
+              : item.available
+                ? "Available"
+                : "Unavailable";
+            const badgeClasses = loading
+              ? "border-white/20 bg-white/5 text-white/50"
+              : item.available
+                ? "border-emerald-400/60 bg-emerald-500/20 text-emerald-100"
+                : "border-amber-400/40 bg-amber-500/10 text-amber-100";
+            const icon = loading ? "…" : item.available ? "✓" : "!";
+            return (
+              <li
+                key={item.id}
+                data-testid={`capability-${item.id}`}
+                className="flex items-start gap-3 rounded-2xl border border-white/10 bg-surface/70 p-4"
+              >
+            <span
+              aria-hidden
+              className={`mt-0.5 flex h-6 w-6 items-center justify-center rounded-full border text-sm font-semibold ${badgeClasses}`}
+            >
+              {icon}
+            </span>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-white">{item.label}</span>
+                <span className={`text-xs font-semibold uppercase tracking-[0.2em] ${
+                  loading
+                    ? "text-white/60"
+                    : item.available
+                      ? "text-emerald-200"
+                      : "text-amber-200"
+                }`}
+                >
+                  {statusLabel}
+                </span>
+              </div>
+              <p className="text-xs text-white/60">{item.description}</p>
+              {!loading && !item.available && (
+                <p className="text-[11px] uppercase tracking-[0.2em] text-amber-200/80">
+                  Requires capability token: {item.capability}
+                </p>
+              )}
+              </div>
+            </li>
+            );
+          })()
+        ))}
+      </ul>
     </div>
   );
 }

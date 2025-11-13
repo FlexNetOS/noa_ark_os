@@ -1,14 +1,42 @@
 "use client";
 
+import type { CapabilityFeatureGateStatus } from "@/shared/capabilities";
+
 import type { VibeCard } from "./board-types";
 import type { BoardState } from "./useBoardState";
 
 type AssistPanelProps = {
   assist: BoardState["assist"];
   onRequest: () => void;
+  capability?: CapabilityFeatureGateStatus;
+  loading?: boolean;
 };
 
-export function AssistPanel({ assist, onRequest }: AssistPanelProps) {
+export function AssistPanel({ assist, onRequest, capability, loading = false }: AssistPanelProps) {
+  const available = capability ? capability.available : true;
+  const disabled = loading || !available;
+  const disabledReason = loading
+    ? "Syncing capability registry"
+    : !available
+      ? `Enable the ${capability?.capability ?? "kanban.assist"} capability to trigger assist.`
+      : undefined;
+  const buttonLabel = loading ? "Checking…" : "Spark assist";
+  const statusMessage = loading
+    ? "Syncing capability registry…"
+    : available
+      ? "Assist agent ready."
+      : `Requires capability token: ${capability?.capability ?? "kanban.assist"}.`;
+  const statusColor = loading
+    ? "text-white/50"
+    : available
+      ? "text-emerald-200/80"
+      : "text-amber-200/80";
+  const emptyStateMessage = loading
+    ? "We’re verifying available capabilities."
+    : available
+      ? "Tap spark assist to receive next-step intelligence."
+      : `Enable the ${capability?.capability ?? "kanban.assist"} capability to activate assist insights.`;
+
   return (
     <div className="rounded-3xl border border-white/10 bg-surface/70 p-5 text-white/70">
       <div className="flex items-center justify-between gap-4">
@@ -18,11 +46,21 @@ export function AssistPanel({ assist, onRequest }: AssistPanelProps) {
         </div>
         <button
           onClick={onRequest}
-          className="rounded-full border border-indigo-400/40 bg-indigo-500/10 px-4 py-2 text-xs font-semibold text-indigo-200 transition hover:border-indigo-300/60 hover:bg-indigo-500/20"
+          disabled={disabled}
+          aria-disabled={disabled}
+          title={disabledReason}
+          className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${
+            disabled
+              ? "cursor-not-allowed border-white/10 bg-white/5 text-white/40"
+              : "border-indigo-400/40 bg-indigo-500/10 text-indigo-200 hover:border-indigo-300/60 hover:bg-indigo-500/20"
+          }`}
         >
-          Spark assist
+          {buttonLabel}
         </button>
       </div>
+      <p className={`mt-3 text-[11px] uppercase tracking-[0.2em] ${statusColor}`} data-testid="assist-capability-status">
+        {statusMessage}
+      </p>
       {assist ? (
         <div className="mt-4 space-y-4">
           {assist.focusCard && (
@@ -41,7 +79,9 @@ export function AssistPanel({ assist, onRequest }: AssistPanelProps) {
           </p>
         </div>
       ) : (
-        <p className="mt-4 text-sm text-white/40">Tap spark assist to receive next-step intelligence.</p>
+        <p className="mt-4 text-sm text-white/40" data-testid="assist-empty-message">
+          {emptyStateMessage}
+        </p>
       )}
     </div>
   );
