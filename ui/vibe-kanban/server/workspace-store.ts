@@ -1,6 +1,8 @@
 import { promises as fs } from "fs";
 import path from "path";
 
+import { recordWorkspaceSnapshot } from "./memory-store";
+
 import type {
   ActivityEvent,
   NotificationEvent,
@@ -140,6 +142,9 @@ async function readStore(): Promise<WorkspaceStore> {
 async function writeStore(store: WorkspaceStore): Promise<void> {
   await ensureDataFile();
   await fs.writeFile(DATA_FILE, JSON.stringify(store, null, 2), "utf-8");
+  for (const workspace of store.workspaces) {
+    await recordWorkspaceSnapshot(workspace);
+  }
 }
 
 function getInMemoryStore(): { data: WorkspaceStore } {

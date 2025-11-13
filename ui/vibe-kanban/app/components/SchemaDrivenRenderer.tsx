@@ -12,6 +12,7 @@ import { IntegrationStatus } from "./IntegrationStatus";
 import { BoardShell } from "./BoardShell";
 import { PresenceBar } from "./PresenceBar";
 import { AssistPanel } from "./AssistPanel";
+import { PlannerPanel } from "./PlannerPanel";
 import { UploadPanel } from "./UploadPanel";
 import { AnalyticsPanel } from "./AnalyticsPanel";
 import { ActivityTimeline } from "./ActivityTimeline";
@@ -122,6 +123,14 @@ const widgetRegistry = {
     return (
       <WidgetSurface>
         <PresenceBar presence={boardState.presence} members={boardState.workspace?.members ?? []} />
+      </WidgetSurface>
+    );
+  },
+  "workspace.planner": ({ context }: ComponentRenderProps) => {
+    const { boardState } = context.data as SchemaDrivenRendererProps["context"]["data"];
+    return (
+      <WidgetSurface>
+        <PlannerPanel insights={boardState.goalInsights} onRefresh={boardState.refreshBoard} loading={boardState.loading} />
       </WidgetSurface>
     );
   },

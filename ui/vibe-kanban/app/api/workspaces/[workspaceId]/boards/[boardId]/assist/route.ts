@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 
-import { assertUser } from "../../../../../../lib/session";
-import { getBoard, getWorkspace } from "../../../../../../../server/workspace-store";
-import type { VibeCard, WorkspaceBoard } from "../../../../../../components/board-types";
 import { assertUser } from "@/app/lib/session";
-import { getBoard, getWorkspace } from "@/server/workspace-store";
 import type { VibeCard, WorkspaceBoard } from "@/app/components/board-types";
+import { aiDatabase } from "@/server/ai-database";
+import { appendGoalTrace, getGoalMemoryInsights } from "@/server/memory-store";
+import { getBoard, getWorkspace } from "@/server/workspace-store";
 
 function generateSuggestions(board: WorkspaceBoard) {
   const suggestions: { title: string; detail: string }[] = [];
@@ -61,9 +60,61 @@ export async function POST(
   if (!board) {
     return new NextResponse("Not Found", { status: 404 });
   }
+  const goalId = `board:${params.boardId}`;
+  const generatedAt = new Date().toISOString();
+  aiDatabase.recordGoalLifecycleEvent({
+    goalId,
+    workspaceId: workspace.id,
+    eventType: "assist.requested",
+    status: "received",
+    summary: `Assist requested by ${user.name ?? user.id}`,
+    payload: { boardId: board.id, workspaceId: workspace.id },
+  });
   const suggestions = generateSuggestions(board);
   const focusCard = pickFocusCard(board);
-  return NextResponse.json({ suggestions, focusCard });
+  aiDatabase.recordGoalLifecycleEvent({
+    goalId,
+    workspaceId: workspace.id,
+    eventType: "assist.generated",
+    status: "success",
+    summary: `Generated ${suggestions.length} suggestions`,
+    payload: { boardId: board.id, suggestionCount: suggestions.length },
+  });
+  aiDatabase.upsertGoalEmbedding({
+    goalId,
+    workspaceId: workspace.id,
+    embeddingModel: "kanban.board.stats.v1",
+    embedding: buildBoardEmbedding(board),
+  });
+  await appendGoalTrace({
+    id: `${goalId}-assist-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    goalId,
+    workspaceId: workspace.id,
+    boardId: board.id,
+    actorId: user.id,
+    actorName: user.name,
+    action: "assist.generated",
+    summary: `Assist suggestions generated`,
+    metadata: { suggestionCount: suggestions.length },
+    createdAt: generatedAt,
+  });
+  const memory = await getGoalMemoryInsights(goalId, workspace.id);
+  const lifecycle = aiDatabase.listGoalLifecycleEvents(goalId, 25);
+  const artifacts = aiDatabase.listArtifacts(goalId, 25);
+  const similarGoals = aiDatabase.searchSimilarGoals(goalId, "kanban.board.stats.v1", 5);
+  return NextResponse.json({
+    suggestions,
+    focusCard,
+    memory: {
+      summary: memory.summary,
+      traceCount: memory.traceCount,
+      lastSeen: memory.lastSeen,
+      traces: memory.traces,
+      lifecycle,
+      artifacts,
+      similarGoals,
+    },
+  });
 }
 
 function pickFocusCard(board: WorkspaceBoard): VibeCard | null {
@@ -75,4 +126,15 @@ function pickFocusCard(board: WorkspaceBoard): VibeCard | null {
     (a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt)
   );
   return sorted[0] ?? null;
+}
+
+function buildBoardEmbedding(board: WorkspaceBoard): number[] {
+  const totalCards = board.columns.reduce((count, column) => count + column.cards.length, 0);
+  const hypeCards = board.columns.flatMap((column) => column.cards.filter((card) => card.mood === "hype")).length;
+  const doneColumn = board.columns.find((column) => column.title.toLowerCase().includes("done"));
+  const completed = doneColumn?.cards.length ?? 0;
+  const focusCards = board.columns
+    .flatMap((column) => column.cards)
+    .filter((card) => card.mood === "focus").length;
+  return [totalCards, hypeCards, completed, focusCards].map((value) => Number(value));
 }
