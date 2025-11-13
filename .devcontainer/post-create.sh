@@ -20,7 +20,7 @@ rustup show || true
 # Workspace bootstrap (safe, idempotent)
 if [ -f "pnpm-workspace.yaml" ]; then
   pnpm install -w || true
-  pnpm dedupe -w || true
+  pnpm dedupe || true
 fi
 
 # Generate Cargo.lock without building (safe if Rust present)
