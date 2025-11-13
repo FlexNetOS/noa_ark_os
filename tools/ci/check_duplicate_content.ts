@@ -30,7 +30,8 @@ function loadConfig(repoRoot: string): Config {
 }
 
 function normalizePath(path: string): string {
-  return path.split("\\").join("/");
+  // Use path.normalize to handle ., .., double slashes, etc., then convert to forward slashes for consistency
+  return require("path").normalize(path).replace(/\\/g, "/");
 }
 
 function shouldIgnore(relPath: string, ignoreList: string[]): boolean {
