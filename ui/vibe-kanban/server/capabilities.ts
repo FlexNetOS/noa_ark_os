@@ -22,17 +22,25 @@ function cloneDefaultRegistry(): CapabilityRegistry {
   return { version: DEFAULT_CAPABILITY_REGISTRY.version, capabilities: [] };
 }
 
+// Type guard for Node.js error with code property
+function isNodeError(error: unknown): error is NodeJS.ErrnoException {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error
+  );
+}
+
 async function loadCapabilityRegistryFromDisk(): Promise<CapabilityRegistry> {
   try {
     const raw = await fs.readFile(CAPABILITY_REGISTRY_PATH, "utf-8");
     const parsed = JSON.parse(raw) as unknown;
     return normalizeCapabilityRegistry(parsed);
   } catch (error) {
-    const err = error as NodeJS.ErrnoException;
-    if (err?.code !== "ENOENT") {
+    if (!isNodeError(error) || error.code !== "ENOENT") {
       console.warn(
         `Failed to load capability registry from ${CAPABILITY_REGISTRY_PATH}:`,
-        err
+        error
       );
     }
     return cloneDefaultRegistry();
