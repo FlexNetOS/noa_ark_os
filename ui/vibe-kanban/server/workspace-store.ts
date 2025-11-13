@@ -1,7 +1,14 @@
 import { promises as fs } from "fs";
 import path from "path";
 
-import type { ActivityEvent, Workspace, WorkspaceBoard, WorkspaceMember } from "../app/components/board-types";
+import type {
+  ActivityEvent,
+  NotificationEvent,
+  UploadReceiptSummary,
+  Workspace,
+  WorkspaceBoard,
+  WorkspaceMember,
+} from "../app/components/board-types";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const DATA_FILE = path.join(DATA_DIR, "workspaces.json");
@@ -107,7 +114,9 @@ async function ensureDataFile(): Promise<void> {
           description: "Ava spawned the Launchpad board",
           createdAt: now
         }
-      ]
+      ],
+      notifications: [],
+      uploadReceipts: []
     };
 
     const initial: WorkspaceStore = { workspaces: [defaultWorkspace] };
@@ -118,7 +127,14 @@ async function ensureDataFile(): Promise<void> {
 async function readStore(): Promise<WorkspaceStore> {
   await ensureDataFile();
   const raw = await fs.readFile(DATA_FILE, "utf-8");
-  return JSON.parse(raw) as WorkspaceStore;
+  const parsed = JSON.parse(raw) as WorkspaceStore;
+  return {
+    workspaces: parsed.workspaces.map((workspace) => ({
+      ...workspace,
+      notifications: workspace.notifications ?? [],
+      uploadReceipts: workspace.uploadReceipts ?? [],
+    })),
+  };
 }
 
 async function writeStore(store: WorkspaceStore): Promise<void> {
@@ -201,6 +217,44 @@ export async function saveBoard(
 
   await upsertWorkspace({ ...workspace, lastSyncedAt: new Date().toISOString() } as Workspace);
   return { board: nextBoard, activity };
+}
+
+export async function recordUploadReceipt(
+  workspaceId: string,
+  receipt: Omit<UploadReceiptSummary, "id" | "workspaceId"> & { id?: string }
+): Promise<UploadReceiptSummary> {
+  const workspace = await getWorkspace(workspaceId);
+  if (!workspace) {
+    throw new Error(`Workspace ${workspaceId} not found`);
+  }
+  const entry: UploadReceiptSummary = {
+    id: receipt.id ?? `upload-${Date.now()}`,
+    workspaceId,
+    boardId: receipt.boardId,
+    dropId: receipt.dropId,
+    dropType: receipt.dropType,
+    originalName: receipt.originalName,
+    casKeys: receipt.casKeys,
+    receiptPath: receipt.receiptPath,
+    uploadedAt: receipt.uploadedAt,
+    uploadedBy: receipt.uploadedBy,
+  };
+  workspace.uploadReceipts = [entry, ...workspace.uploadReceipts].slice(0, 50);
+  await upsertWorkspace(workspace);
+  return entry;
+}
+
+export async function recordWorkspaceNotification(
+  workspaceId: string,
+  notification: NotificationEvent
+): Promise<NotificationEvent> {
+  const workspace = await getWorkspace(workspaceId);
+  if (!workspace) {
+    throw new Error(`Workspace ${workspaceId} not found`);
+  }
+  workspace.notifications = [notification, ...workspace.notifications].slice(0, 50);
+  await upsertWorkspace(workspace);
+  return notification;
 }
 
 export async function createBoard(

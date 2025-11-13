@@ -26,6 +26,10 @@ async-stream = "0.3"
 futures = "0.3"
 chrono = { version = "0.4", features = ["serde"] }
 noa_crc = { path = "../../crc" }
+anyhow = "1"
+flate2 = "1"
+tar = "0.4"
+zip = { version = "0.6", default-features = false, features = ["deflate"] }
 
 [dev-dependencies]
 hyper = "1"

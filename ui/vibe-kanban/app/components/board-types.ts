@@ -85,6 +85,8 @@ export type Workspace = {
   members: WorkspaceMember[];
   boards: WorkspaceBoard[];
   activity: ActivityEvent[];
+  notifications: NotificationEvent[];
+  uploadReceipts: UploadReceiptSummary[];
   lastSyncedAt?: string;
 };
 
@@ -106,6 +108,9 @@ export type NotificationEvent = {
   message: string;
   createdAt: string;
   severity: "info" | "success" | "warning" | "error";
+  href?: string;
+  casKeys?: string[];
+  receiptPath?: string;
 };
 
 export type WorkspaceIntegrationStatus = {
@@ -113,4 +118,20 @@ export type WorkspaceIntegrationStatus = {
   name: string;
   status: "healthy" | "running" | "degraded" | "error";
   lastEvent: string;
+};
+
+export type UploadReceiptSummary = {
+  id: string;
+  workspaceId: string;
+  boardId?: string;
+  dropId: string;
+  dropType: string;
+  originalName: string;
+  casKeys: string[];
+  receiptPath: string;
+  uploadedAt: string;
+  uploadedBy: {
+    id: string;
+    name: string;
+  };
 };

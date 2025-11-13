@@ -12,6 +12,7 @@ import { IntegrationStatus } from "./IntegrationStatus";
 import { BoardShell } from "./BoardShell";
 import { PresenceBar } from "./PresenceBar";
 import { AssistPanel } from "./AssistPanel";
+import { UploadPanel } from "./UploadPanel";
 import { AnalyticsPanel } from "./AnalyticsPanel";
 import { ActivityTimeline } from "./ActivityTimeline";
 import type { BoardState } from "./useBoardState";
@@ -129,6 +130,14 @@ const widgetRegistry = {
     return (
       <WidgetSurface>
         <AssistPanel assist={boardState.assist} onRequest={boardState.requestAssist} />
+      </WidgetSurface>
+    );
+  },
+  "workspace.uploads": ({ context }: ComponentRenderProps) => {
+    const { boardState } = context.data as SchemaDrivenRendererProps["context"]["data"];
+    return (
+      <WidgetSurface>
+        <UploadPanel state={boardState} />
       </WidgetSurface>
     );
   },

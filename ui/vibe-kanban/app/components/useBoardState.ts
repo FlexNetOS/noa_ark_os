@@ -6,6 +6,7 @@ import type {
   ActivityEvent,
   NotificationEvent,
   PresenceUser,
+  UploadReceiptSummary,
   VibeCard,
   VibeColumn,
   Workspace,
@@ -40,6 +41,7 @@ type WorkspaceHookState = {
   presence: PresenceUser[];
   activity: ActivityEvent[];
   notifications: NotificationEvent[];
+  uploadReceipts: UploadReceiptSummary[];
   integrations: WorkspaceIntegrationStatus[];
   assist: AssistState;
   setWorkspaceId: (workspaceId: string) => void;
@@ -49,6 +51,7 @@ type WorkspaceHookState = {
   createBoard: (projectName: string) => Promise<void>;
   dismissNotification: (id: string) => void;
   requestAssist: () => Promise<void>;
+  uploadArtifact: (input: { file: File; dropType: string }) => Promise<void>;
   addColumn: (title: string) => void;
   removeColumn: (columnId: string) => void;
   renameColumn: (columnId: string, title: string) => void;
@@ -72,6 +75,7 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
   const [presence, setPresence] = useState<PresenceUser[]>([]);
   const [activity, setActivity] = useState<ActivityEvent[]>([]);
   const [notifications, setNotifications] = useState<NotificationEvent[]>([]);
+  const [uploadReceipts, setUploadReceipts] = useState<UploadReceiptSummary[]>([]);
   const [integrations, setIntegrations] = useState<WorkspaceIntegrationStatus[]>([]);
   const [assist, setAssist] = useState<AssistState>(null);
   const [loading, setLoading] = useState(false);
@@ -113,6 +117,8 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     const payload = await response.json();
     setWorkspace(payload.workspace);
     setActivity(payload.workspace.activity ?? []);
+    setNotifications(payload.workspace.notifications ?? []);
+    setUploadReceipts(payload.workspace.uploadReceipts ?? []);
     setLoading(false);
     const firstBoard = payload.workspace.boards[0];
     const boardExists = payload.workspace.boards.some((board: WorkspaceBoard) => board.id === boardId);
@@ -438,6 +444,61 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     setNotifications((prev) => prev.filter((notification) => notification.id !== id));
   }, []);
 
+  const uploadArtifact = useCallback(
+    async ({ file, dropType }: { file: File; dropType: string }) => {
+      if (!workspaceId) {
+        throw new Error("Workspace required for uploads");
+      }
+      const formData = new FormData();
+      formData.append("workspaceId", workspaceId);
+      if (boardId) {
+        formData.append("boardId", boardId);
+      }
+      formData.append("dropType", dropType);
+      formData.append("file", file);
+
+      const response = await fetch("/api/uploads", {
+        method: "POST",
+        body: formData,
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Upload failed");
+      }
+      const { notification, upload } = (await response.json()) as {
+        notification?: NotificationEvent;
+        upload?: UploadReceiptSummary;
+      };
+      if (notification) {
+        setNotifications((prev) => [notification, ...prev].slice(0, 20));
+      }
+      if (upload) {
+        setUploadReceipts((prev) => [upload, ...prev].slice(0, 20));
+        setWorkspace((prev) =>
+          prev
+            ? {
+                ...prev,
+                uploadReceipts: [upload, ...(prev.uploadReceipts ?? [])].slice(0, 50),
+                notifications: notification
+                  ? [notification, ...(prev.notifications ?? [])].slice(0, 50)
+                  : prev.notifications ?? [],
+              }
+            : prev
+        );
+      } else if (notification) {
+        setWorkspace((prev) =>
+          prev
+            ? {
+                ...prev,
+                notifications: [notification, ...(prev.notifications ?? [])].slice(0, 50),
+              }
+            : prev
+        );
+      }
+    },
+    [workspaceId, boardId]
+  );
+
   const requestAssist = useCallback(async () => {
     if (!workspaceId || !boardId) return;
     const response = await fetch(`/api/workspaces/${workspaceId}/boards/${boardId}/assist`, { method: "POST" });
@@ -466,6 +527,7 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     presence,
     activity,
     notifications,
+    uploadReceipts,
     integrations,
     assist,
     setWorkspaceId,
@@ -475,6 +537,7 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     createBoard: createBoardMutation,
     dismissNotification,
     requestAssist,
+    uploadArtifact,
     addColumn,
     removeColumn,
     renameColumn,
