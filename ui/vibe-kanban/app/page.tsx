@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import type React from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { PageEnvelope, ResumeToken } from "@noa-ark/shared-ui/schema";
 import { createSchemaClient, SessionContinuityClient } from "@noa-ark/shared-ui/session";
 import { vibeDashboardEnvelope } from "@noa-ark/shared-ui/samples";
+import { ensureTraceId, logError, logInfo, logWarn } from "@noa-ark/shared-ui/logging";
 
 import { NotificationCenter } from "./components/NotificationCenter";
 import { SchemaDrivenRenderer } from "./components/SchemaDrivenRenderer";
@@ -15,6 +17,7 @@ export default function Page() {
   const state = useBoardState(session.user);
   const [envelope, setEnvelope] = useState<PageEnvelope>(vibeDashboardEnvelope);
   const [resumeToken, setResumeToken] = useState<ResumeToken | undefined>(vibeDashboardEnvelope.resumeToken);
+  const traceIdRef = useRef<string>(ensureTraceId());
 
   const ready = session.status === "ready" && !!session.user && state.hydrated && state.snapshot;
 
@@ -38,7 +41,20 @@ export default function Page() {
     const client = new SessionContinuityClient({ workflowEndpoint: endpoint });
     client.on("workflow:update", (event) => {
       if (event.eventType === "workflow/state" && event.payload?.state === "completed") {
-        state.refreshBoard().catch((error) => console.error("Failed to refresh board", error));
+        state.refreshBoard().catch((error) => {
+          logError({
+            component: "vibe.page",
+            event: "workflow_refresh_failed",
+            message: "Failed to refresh board after workflow completion",
+            outcome: "failure",
+            traceId: traceIdRef.current,
+            context: {
+              workflowEvent: event.eventType,
+              workflowState: event.payload?.state,
+            },
+            error,
+          });
+        });
       }
       if (event.eventType === "workflow/stage" && event.payload?.resumeToken) {
         setResumeToken(event.payload.resumeToken as ResumeToken);
@@ -47,8 +63,24 @@ export default function Page() {
     client.on("workflow:resume", (token) => setResumeToken(token));
     try {
       client.connectWebSocket();
+      logInfo({
+        component: "vibe.page",
+        event: "workflow_stream_connected",
+        message: "Connected to workflow stream",
+        outcome: "success",
+        traceId: traceIdRef.current,
+        context: { endpoint },
+      });
     } catch (error) {
-      console.warn("Unable to connect to workflow stream", error);
+      logWarn({
+        component: "vibe.page",
+        event: "workflow_stream_connection_failed",
+        message: "Unable to connect to workflow stream",
+        outcome: "degraded",
+        traceId: traceIdRef.current,
+        context: { endpoint },
+        error,
+      });
     }
     return () => client.disconnect();
   }, [state]);
@@ -60,11 +92,25 @@ export default function Page() {
             schema={envelope.schema}
             context={{
               resumeWorkflow: (workflowId) => {
-                console.info("Requesting resume for", workflowId);
+                logInfo({
+                  component: "vibe.page",
+                  event: "workflow_resume_requested",
+                  message: "Requesting workflow resume",
+                  outcome: "pending",
+                  traceId: traceIdRef.current,
+                  context: { workflowId },
+                });
                 void state.refreshBoard();
               },
               triggerEvent: (bindingId) => {
-                console.info("UI event triggered", bindingId);
+                logInfo({
+                  component: "vibe.page",
+                  event: "ui_event_triggered",
+                  message: "UI event triggered",
+                  outcome: "observed",
+                  traceId: traceIdRef.current,
+                  context: { bindingId },
+                });
               },
               data: {
                 boardState: state,

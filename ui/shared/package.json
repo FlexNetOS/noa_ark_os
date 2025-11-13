@@ -37,6 +37,10 @@
       "import": "./dist/session/index.js",
       "types": "./dist/session/index.d.ts"
     },
+    "./logging": {
+      "import": "./dist/logging.js",
+      "types": "./dist/logging.d.ts"
+    },
     "./samples": {
       "import": "./dist/samples/index.js",
       "types": "./dist/samples/index.d.ts"

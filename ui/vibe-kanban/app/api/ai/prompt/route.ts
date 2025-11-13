@@ -12,6 +12,7 @@ import { getProvider } from "@noa-ark/server/ai/router";
 
 import { aiDatabase } from "@/server/ai-database";
 import { aiRateLimiter } from "@/server/rate-limiter";
+import { ensureTraceId, logError, logInfo, logWarn } from "@noa-ark/shared-ui/logging";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -44,8 +45,17 @@ function getClientIdentity(request: Request) {
 
 export async function POST(request: Request) {
   const identity = getClientIdentity(request);
+  const traceSource = typeof request.headers?.get === "function" ? request.headers.get("x-trace-id") : null;
+  const traceId = ensureTraceId(traceSource);
   if (!aiRateLimiter.consume(identity)) {
-    console.warn(JSON.stringify({ type: "ai_assist.rate_limited", identity }));
+    logWarn({
+      component: "api.ai_prompt",
+      event: "rate_limited",
+      message: "AI assist request rate limited",
+      outcome: "rejected",
+      traceId,
+      context: { identity },
+    });
     return NextResponse.json(
       { error: "Rate limit exceeded. Please wait a minute before trying again." },
       { status: 429 },
@@ -56,12 +66,15 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch (error) {
-    console.error(
-      JSON.stringify({
-        type: "ai_assist.invalid_json",
-        error: error instanceof Error ? error.message : error,
-      }),
-    );
+    logError({
+      component: "api.ai_prompt",
+      event: "invalid_json",
+      message: "Invalid JSON payload received",
+      outcome: "rejected",
+      traceId,
+      context: { identity },
+      error,
+    });
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
@@ -88,6 +101,18 @@ export async function POST(request: Request) {
           status,
           errorMsg: errorMessage,
         });
+        logInfo({
+          component: "api.ai_prompt",
+          event: "provider_request_logged",
+          message: "AI prompt request logged",
+          outcome: status,
+          traceId,
+          context: {
+            cardId,
+            provider: providerName,
+            latencyMs,
+          },
+        });
       },
     });
 
@@ -97,13 +122,15 @@ export async function POST(request: Request) {
       completion: result.completion,
     });
   } catch (error) {
-    console.error(
-      JSON.stringify({
-        type: "ai_assist.error",
-        identity,
-        error: error instanceof Error ? error.message : error,
-      }),
-    );
+    logError({
+      component: "api.ai_prompt",
+      event: "prompt_generation_failed",
+      message: "Failed to build AI prompt",
+      outcome: "failure",
+      traceId,
+      context: { identity },
+      error,
+    });
     return NextResponse.json({ error: "Failed to build AI prompt." }, { status: 500 });
   }
 }
