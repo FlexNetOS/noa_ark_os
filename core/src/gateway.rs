@@ -117,6 +117,38 @@ pub struct Symbol {
 }
 
 impl Symbol {
+    pub fn with_stable_id(
+        name: impl AsRef<str>,
+        kind: SymbolKind,
+        version: impl Into<String>,
+        capabilities: HashSet<String>,
+        schema_hash: impl Into<String>,
+    ) -> Self {
+        let version_string = version.into();
+        let schema_hash_string = schema_hash.into();
+        let mut capability_fingerprint: Vec<_> = capabilities.iter().cloned().collect();
+        capability_fingerprint.sort();
+        let signature = format!(
+            "{}::{}::{}",
+            version_string,
+            capability_fingerprint.join("|"),
+            schema_hash_string
+        );
+        let id =
+            crate::symbols::stable_symbol_id("gateway", name.as_ref(), kind.as_str(), &signature);
+        Self {
+            id,
+            kind,
+            version: version_string,
+            capabilities,
+            schema_hash: schema_hash_string,
+        }
+    }
+
+    pub fn stable_id(&self) -> &str {
+        &self.id
+    }
+
     pub fn matches_capabilities(&self, required: &HashSet<String>) -> bool {
         required.is_subset(&self.capabilities)
     }
@@ -2314,13 +2346,13 @@ mod tests {
     }
 
     fn register_sample_symbol(gateway: &Gateway, id: &str) -> Symbol {
-        let symbol = Symbol {
-            id: id.into(),
-            kind: SymbolKind::Api,
-            version: "1.0.0".into(),
-            capabilities: HashSet::from(["stream".into(), "analytics".into()]),
-            schema_hash: "abc123".into(),
-        };
+        let symbol = Symbol::with_stable_id(
+            id,
+            SymbolKind::Api,
+            "1.0.0",
+            HashSet::from(["stream".into(), "analytics".into()]),
+            "abc123",
+        );
         gateway
             .register_symbol(symbol.clone(), sample_policy())
             .expect("registration should succeed");
@@ -2412,13 +2444,13 @@ mod tests {
             })
             .expect("schema should register");
 
-        let symbol = Symbol {
-            id: "restricted.api".into(),
-            kind: SymbolKind::Api,
-            version: "1.2.0".into(),
-            capabilities: HashSet::from(["restricted".into()]),
-            schema_hash: "feedface".into(),
-        };
+        let symbol = Symbol::with_stable_id(
+            "restricted.api",
+            SymbolKind::Api,
+            "1.2.0",
+            HashSet::from(["restricted".into()]),
+            "feedface",
+        );
 
         let mut policy = sample_policy();
         policy.allowed_zones = HashSet::from(["private".into()]);

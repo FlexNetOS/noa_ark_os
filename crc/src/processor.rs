@@ -150,7 +150,6 @@ impl DropProcessor {
             archive_info.hash
         );
 
-
         let mut metadata = validation.metadata;
         match serde_json::to_string(&build_artifacts) {
             Ok(serialized) => {

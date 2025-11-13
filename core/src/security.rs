@@ -32,6 +32,8 @@ pub enum Permission {
 pub enum OperationKind {
     FileMove,
     DocumentUpdate,
+    StageReceipt,
+    SecurityScan,
     #[serde(other)]
     Other,
 }
