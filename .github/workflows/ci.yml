@@ -54,6 +54,9 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      - name: Enforce single AI router entrypoint
+        run: pnpm exec tsx tools/ci/check_router_singleton.ts
+
       - name: Test
         run: pnpm test
 
