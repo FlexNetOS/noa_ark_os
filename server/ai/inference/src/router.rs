@@ -63,10 +63,12 @@ mod tests {
         let response = router
             .completion(CompletionRequest {
                 prompt: "hello".into(),
+                temperature: None,
                 max_tokens: Some(8),
+                stop: None,
             })
             .await
             .unwrap();
-        assert!(response.completion.contains("llama"));
+        assert!(response.content.contains("llama"));
     }
 }

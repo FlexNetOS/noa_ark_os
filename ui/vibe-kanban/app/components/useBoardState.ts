@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type {
   ActivityEvent,
@@ -14,6 +14,13 @@ import type {
   WorkspaceIntegrationStatus,
 } from "./board-types";
 import type { ClientSessionUser } from "./useSession";
+import {
+  DEFAULT_CAPABILITY_REGISTRY,
+  evaluateFeatureGates,
+  type CapabilityFeatureGateStatus,
+  type CapabilityRegistry,
+  normalizeCapabilityRegistry,
+} from "@/shared/capabilities";
 
 const accentPalette = [
   "from-indigo-500 via-purple-500 to-blue-500",
@@ -44,6 +51,12 @@ type WorkspaceHookState = {
   uploadReceipts: UploadReceiptSummary[];
   integrations: WorkspaceIntegrationStatus[];
   assist: AssistState;
+  capabilities: {
+    loading: boolean;
+    registry: CapabilityRegistry;
+    featureGates: CapabilityFeatureGateStatus[];
+    has: (token: string) => boolean;
+  };
   setWorkspaceId: (workspaceId: string) => void;
   setBoardId: (boardId: string) => void;
   refreshWorkspace: () => Promise<void>;
@@ -78,6 +91,11 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
   const [uploadReceipts, setUploadReceipts] = useState<UploadReceiptSummary[]>([]);
   const [integrations, setIntegrations] = useState<WorkspaceIntegrationStatus[]>([]);
   const [assist, setAssist] = useState<AssistState>(null);
+  const [capabilityRegistry, setCapabilityRegistry] = useState<CapabilityRegistry>(() => ({
+    version: DEFAULT_CAPABILITY_REGISTRY.version,
+    capabilities: [],
+  }));
+  const [capabilitiesLoading, setCapabilitiesLoading] = useState(true);
   const [loading, setLoading] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
@@ -91,6 +109,32 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     }
     return snapshot;
   }, [snapshot]);
+
+  const capabilityTokens = useMemo(() => {
+    const tokens = new Set<string>();
+    for (const capability of capabilityRegistry.capabilities) {
+      tokens.add(capability.id);
+      for (const provided of capability.provides ?? []) {
+        tokens.add(provided);
+      }
+    }
+    return tokens;
+  }, [capabilityRegistry]);
+
+  const featureGates = useMemo(
+    () => evaluateFeatureGates(capabilityRegistry),
+    [capabilityRegistry]
+  );
+
+  const hasCapability = useCallback(
+    (token: string) => {
+      if (capabilitiesLoading) {
+        return true;
+      }
+      return capabilityTokens.has(token);
+    },
+    [capabilityTokens, capabilitiesLoading]
+  );
 
   const fetchWorkspaces = useCallback(async () => {
     if (!user) return;
@@ -146,6 +190,43 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     const payload = await response.json();
     setIntegrations(payload.integrations ?? []);
   }, [workspaceId]);
+
+  useEffect(() => {
+    let active = true;
+    setCapabilitiesLoading(true);
+
+    fetch("/api/capabilities")
+      .then(async (response) => {
+        if (!response.ok) {
+          return { version: DEFAULT_CAPABILITY_REGISTRY.version, capabilities: [] };
+        }
+        try {
+          const payload = (await response.json()) as unknown;
+          return normalizeCapabilityRegistry(payload);
+        } catch {
+          return { version: DEFAULT_CAPABILITY_REGISTRY.version, capabilities: [] };
+        }
+      })
+      .then((registry) => {
+        if (!active) return;
+        setCapabilityRegistry(registry);
+      })
+      .catch(() => {
+        if (!active) return;
+        setCapabilityRegistry({
+          version: DEFAULT_CAPABILITY_REGISTRY.version,
+          capabilities: [],
+        });
+      })
+      .finally(() => {
+        if (!active) return;
+        setCapabilitiesLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!user) {
@@ -530,6 +611,12 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     uploadReceipts,
     integrations,
     assist,
+    capabilities: {
+      loading: capabilitiesLoading,
+      registry: capabilityRegistry,
+      featureGates,
+      has: hasCapability,
+    },
     setWorkspaceId,
     setBoardId,
     refreshWorkspace,

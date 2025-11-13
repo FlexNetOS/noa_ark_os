@@ -1,19 +1,7 @@
-import type { AIProvider } from "./types";
-
-class DisabledProvider implements AIProvider {
-  name = "disabled";
-
-  isConfigured() {
-    return false;
-  }
-
-  async completePrompt(_prompt: string): Promise<string> {
-    throw new Error("AI provider is not configured");
-  }
-}
-
-const disabledProvider = new DisabledProvider();
-
-export function getProvider(_env: NodeJS.ProcessEnv = process.env): AIProvider | null {
-  return disabledProvider.isConfigured() ? disabledProvider : null;
-}
+/**
+ * Thin wrapper that re-exports the canonical AI gateway router.
+ * Keeping this file preserves historical imports while ensuring
+ * all traffic flows through the shared @noa-ark/server entrypoint.
+ */
+export { getProvider, resetProviderCache } from "@noa-ark/server/ai/router";
+export type { AIProvider } from "@noa-ark/server/ai/providers/provider";

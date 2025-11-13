@@ -142,6 +142,18 @@ cicd.execute_pipeline(&pipeline_id)?;
 
 Configuration files are located in each component directory. See individual README files for component-specific configuration.
 
+## Capability registry and UI gating
+
+The Kanban workspace reads feature capabilities from the repository-wide registry to decide which controls are available offline.
+
+1. **Register a capability.** Add or update entries in `registry/capabilities.json`. Each capability can expose multiple tokens through its `provides` array (for example `kanban.manageColumns` or `kanban.assist`).
+2. **Server-side cache.** The module `ui/vibe-kanban/server/capabilities.ts` loads the registry at startup and caches the parsed structure. Extend `ui/vibe-kanban/shared/capabilities.ts` when you introduce new feature gates so the cache can evaluate them consistently.
+3. **API exposure.** The Next.js route at `ui/vibe-kanban/app/api/capabilities/route.ts` serves the cached registry with offline-friendly headers. Front-end components consume this endpoint via the `useBoardState` hook, which now returns a `capabilities` bag containing loading state, feature evaluations, and a `has()` helper.
+4. **Gate UI controls.** Use the evaluated gates to toggle controls (see `BoardHeader`, `AssistPanel`, and `BoardShell` for examples). Surface the summary in the UI so operators can immediately see why a control is disabled.
+5. **Test the change.** Add or update Vitest suites under `ui/vibe-kanban/app/**/__tests__` to cover both the API and the gated UI states (`pnpm --filter vibe-kanban test`).
+
+Following this workflow keeps the capability list authoritative, documents the intended behavior, and guarantees that offline users receive deterministic UI feedback when a feature is unavailable.
+
 ## Testing
 
 ```bash

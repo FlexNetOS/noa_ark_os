@@ -1,0 +1,89 @@
+{
+  "metadata": {
+    "version": 1,
+    "description": "Canonical roadmap task index for automated planners and downstream tooling.",
+    "schema": {
+      "task_code": {
+        "type": "string",
+        "description": "Unique roadmap anchor identifier (e.g. AGENTOS-1)."
+      },
+      "summary": {
+        "type": "string",
+        "description": "Concise task summary aligned with roadmap intent."
+      },
+      "owning_files": {
+        "type": "array",
+        "items": "string",
+        "description": "Relative file paths that own authoritative task context."
+      },
+      "dependencies": {
+        "type": "array",
+        "items": "string",
+        "description": "Task codes that must be completed first."
+      }
+    },
+    "follow_up": [
+      {
+        "summary": "Backfill historical tasks from docs/plans into this index so it remains the authoritative source.",
+        "related_files": ["docs/plans"],
+        "status": "scheduled"
+      }
+    ]
+  },
+  "tasks": [
+    {
+      "task_code": "AGENTOS-1",
+      "summary": "Establish kernel dependency graph & portable packaging",
+      "owning_files": [
+        "docs/plans/roadmap.md",
+        "docs/issues/AGENTOS-1-kernel-first-graph.md"
+      ],
+      "dependencies": []
+    },
+    {
+      "task_code": "AGENTOS-2",
+      "summary": "Design single-host AgentOS server profile",
+      "owning_files": [
+        "docs/plans/roadmap.md",
+        "docs/issues/AGENTOS-2-single-host-profile.md"
+      ],
+      "dependencies": ["AGENTOS-1"]
+    },
+    {
+      "task_code": "AGENTOS-3",
+      "summary": "Deliver unified UI/UX shell",
+      "owning_files": [
+        "docs/plans/roadmap.md",
+        "docs/issues/AGENTOS-3-unified-ui-shell.md"
+      ],
+      "dependencies": ["AGENTOS-2"]
+    },
+    {
+      "task_code": "AGENTOS-4",
+      "summary": "Implement adaptive runtime portability policies",
+      "owning_files": [
+        "docs/plans/roadmap.md",
+        "docs/issues/AGENTOS-4-adaptive-runtime.md"
+      ],
+      "dependencies": ["AGENTOS-2"]
+    },
+    {
+      "task_code": "AGENTOS-5",
+      "summary": "Advance gateway security & observability mesh",
+      "owning_files": [
+        "docs/plans/roadmap.md",
+        "docs/issues/AGENTOS-5-gateway-observability.md"
+      ],
+      "dependencies": ["AGENTOS-4"]
+    },
+    {
+      "task_code": "AGENTOS-6",
+      "summary": "Launch value-add automation & analytics kits",
+      "owning_files": [
+        "docs/plans/roadmap.md",
+        "docs/issues/AGENTOS-6-value-ecosystem.md"
+      ],
+      "dependencies": ["AGENTOS-5"]
+    }
+  ]
+}
