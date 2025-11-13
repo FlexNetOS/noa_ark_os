@@ -107,18 +107,24 @@ mod tests {
 
     struct EnvGuard {
         key: &'static str,
+        prev: Option<String>,
     }
 
     impl EnvGuard {
         fn set(key: &'static str, value: &Path) -> Self {
+            let prev = std::env::var(key).ok();
             std::env::set_var(key, value);
-            Self { key }
+            Self { key, prev }
         }
     }
 
     impl Drop for EnvGuard {
         fn drop(&mut self) {
-            std::env::remove_var(self.key);
+            if let Some(ref val) = self.prev {
+                std::env::set_var(self.key, val);
+            } else {
+                std::env::remove_var(self.key);
+            }
         }
     }
 
