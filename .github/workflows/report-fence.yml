@@ -14,9 +14,8 @@ jobs:
           new_md=$(git diff --name-status "$base"... | awk '$1=="A" && $2 ~ /\.(md|MD)$/ {print $2}')
           bad=0
           for f in $new_md; do
-            case "$f" in
-              docs/*) : ;; 
-              *) echo "New markdown outside docs/: $f" >&2; bad=1;;
-            esac
+            if echo "$f" | grep -qE '^docs/'; then :; else
+              echo "New markdown outside docs/: $f" >&2; bad=1
+            fi
           done
           exit $bad

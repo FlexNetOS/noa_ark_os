@@ -13,7 +13,7 @@ jobs:
           base=origin/${{ github.base_ref }}
           python3 - << 'PY'
 import hashlib, os, sys, subprocess
-ALLOW_PREFIXES = ("archive/", "out/", ".git/", ".next/")
+ALLOW_PREFIXES = ("archive/", "out/", ".git/", ".next/", "target/", "node_modules/", "dist/", "build/")
 base = os.environ.get('GITHUB_BASE_REF')
 if not base:
     print('GITHUB_BASE_REF missing', file=sys.stderr)
