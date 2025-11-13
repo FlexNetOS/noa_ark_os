@@ -15,6 +15,7 @@ import { AssistPanel } from "./AssistPanel";
 import { UploadPanel } from "./UploadPanel";
 import { AnalyticsPanel } from "./AnalyticsPanel";
 import { ActivityTimeline } from "./ActivityTimeline";
+import { AutomationPanel } from "./AutomationPanel";
 import type { BoardState } from "./useBoardState";
 import type { SessionState } from "./useSession";
 
@@ -162,6 +163,15 @@ const widgetRegistry = {
     return (
       <WidgetSurface>
         <ActivityTimeline activity={boardState.activity} />
+      </WidgetSurface>
+    );
+  },
+  "workspace.automation": ({ context }: ComponentRenderProps) => {
+    const { boardState } = context.data as SchemaDrivenRendererProps["context"]["data"];
+    const cards = boardState.snapshot?.columns.flatMap((column) => column.cards) ?? [];
+    return (
+      <WidgetSurface>
+        <AutomationPanel cards={cards} onRetry={boardState.retryAutomation} />
       </WidgetSurface>
     );
   },

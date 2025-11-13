@@ -3,12 +3,16 @@ import path from "path";
 
 import type {
   ActivityEvent,
+  AgentAutomationRun,
+  GoalAutomationState,
   NotificationEvent,
+  ToolExecutionTelemetry,
   UploadReceiptSummary,
   Workspace,
   WorkspaceBoard,
   WorkspaceMember,
 } from "../app/components/board-types";
+import { workspaceEventHub } from "./workspace-events";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const DATA_FILE = path.join(DATA_DIR, "workspaces.json");
@@ -16,6 +20,47 @@ const DATA_FILE = path.join(DATA_DIR, "workspaces.json");
 type WorkspaceStore = {
   workspaces: Workspace[];
 };
+
+function ensureAutomationState(
+  cardId: string,
+  automation: GoalAutomationState | null | undefined,
+  fallbackDate: string
+): GoalAutomationState | null {
+  if (automation === null) {
+    return null;
+  }
+  if (!automation) {
+    return {
+      goalId: cardId,
+      history: [],
+      lastUpdated: fallbackDate,
+      retryAvailable: true,
+    };
+  }
+  return {
+    goalId: automation.goalId ?? cardId,
+    history: Array.isArray(automation.history) ? automation.history : [],
+    lastUpdated: automation.lastUpdated ?? fallbackDate,
+    retryAvailable: automation.retryAvailable ?? true,
+  };
+}
+
+function normaliseBoard(board: WorkspaceBoard): WorkspaceBoard {
+  return {
+    ...board,
+    columns: board.columns.map((column) => ({
+      ...column,
+      cards: column.cards.map((card) => ({
+        ...card,
+        automation: ensureAutomationState(
+          card.id,
+          card.automation as GoalAutomationState | null | undefined,
+          card.createdAt ?? new Date().toISOString()
+        ),
+      })),
+    })),
+  };
+}
 
 async function ensureDataFile(): Promise<void> {
   await fs.mkdir(DATA_DIR, { recursive: true });
@@ -53,14 +98,16 @@ async function ensureDataFile(): Promise<void> {
                   title: "Ideate hero motion",
                   notes: "Sketch the flowing hero animation that loops smoothly across the dashboard.",
                   createdAt: now,
-                  mood: "flow"
+                  mood: "flow",
+                  automation: ensureAutomationState("card-1", null, now),
                 },
                 {
                   id: "card-2",
                   title: "Sound-reactive palette",
                   notes: "Research how to tie track BPM to gradient shifts on the home screen.",
                   createdAt: now,
-                  mood: "focus"
+                  mood: "focus",
+                  automation: ensureAutomationState("card-2", null, now),
                 }
               ]
             },
@@ -74,7 +121,8 @@ async function ensureDataFile(): Promise<void> {
                   title: "Prototype kanban drag",
                   notes: "Polish easing curve + inertia for drag transitions.",
                   createdAt: now,
-                  mood: "hype"
+                  mood: "hype",
+                  automation: ensureAutomationState("card-3", null, now),
                 }
               ]
             },
@@ -88,7 +136,8 @@ async function ensureDataFile(): Promise<void> {
                   title: "Mood-driven theme",
                   notes: "Shipped gradient system that syncs with vibes.",
                   createdAt: now,
-                  mood: "chill"
+                  mood: "chill",
+                  automation: ensureAutomationState("card-4", null, now),
                 }
               ]
             }
@@ -131,6 +180,7 @@ async function readStore(): Promise<WorkspaceStore> {
   return {
     workspaces: parsed.workspaces.map((workspace) => ({
       ...workspace,
+      boards: workspace.boards.map((board) => normaliseBoard(board as WorkspaceBoard)),
       notifications: workspace.notifications ?? [],
       uploadReceipts: workspace.uploadReceipts ?? [],
     })),
@@ -195,10 +245,15 @@ export async function saveBoard(
     throw new Error(`Workspace ${workspaceId} not found`);
   }
   const boardIndex = workspace.boards.findIndex((board) => board.id === nextBoard.id);
+  let normalisedBoard = normaliseBoard(nextBoard);
+  normalisedBoard = {
+    ...normalisedBoard,
+    metrics: computeBoardMetrics(normalisedBoard),
+  };
   if (boardIndex === -1) {
-    workspace.boards.push(nextBoard);
+    workspace.boards.push(normalisedBoard);
   } else {
-    workspace.boards[boardIndex] = nextBoard;
+    workspace.boards[boardIndex] = normalisedBoard;
   }
 
   const activity: ActivityEvent = {
@@ -206,17 +261,15 @@ export async function saveBoard(
     type: "board.updated",
     actorId: actor.id,
     actorName: actor.name,
-    boardId: nextBoard.id,
-    description: `${actor.name} synced ${nextBoard.projectName}`,
+    boardId: normalisedBoard.id,
+    description: `${actor.name} synced ${normalisedBoard.projectName}`,
     createdAt: new Date().toISOString(),
   };
   workspace.activity.unshift(activity);
   workspace.activity = workspace.activity.slice(0, 50);
 
-  nextBoard.metrics = computeBoardMetrics(nextBoard);
-
   await upsertWorkspace({ ...workspace, lastSyncedAt: new Date().toISOString() } as Workspace);
-  return { board: nextBoard, activity };
+  return { board: normalisedBoard, activity };
 }
 
 export async function recordUploadReceipt(
@@ -257,6 +310,94 @@ export async function recordWorkspaceNotification(
   return notification;
 }
 
+type AutomationUpdate = {
+  agentId: string;
+  agentName: string;
+  status: AgentAutomationRun["status"];
+  toolResults: ToolExecutionTelemetry[];
+  notes?: string;
+  attempt?: number;
+  occurredAt?: string;
+};
+
+export async function recordGoalAutomationProgress(
+  workspaceId: string,
+  boardId: string,
+  cardId: string,
+  update: AutomationUpdate
+): Promise<{ automation: GoalAutomationState; activity: ActivityEvent }> {
+  const workspace = await getWorkspace(workspaceId);
+  if (!workspace) {
+    throw new Error(`Workspace ${workspaceId} not found`);
+  }
+  const board = workspace.boards.find((entry) => entry.id === boardId);
+  if (!board) {
+    throw new Error(`Board ${boardId} not found in workspace ${workspaceId}`);
+  }
+
+  const column = board.columns.find((entry) => entry.cards.some((card) => card.id === cardId));
+  if (!column) {
+    throw new Error(`Card ${cardId} not found in workspace ${workspaceId}`);
+  }
+
+  const card = column.cards.find((entry) => entry.id === cardId);
+  if (!card) {
+    throw new Error(`Card ${cardId} not found`);
+  }
+
+  const timestamp = update.occurredAt ?? new Date().toISOString();
+  const automation = ensureAutomationState(cardId, card.automation ?? undefined, timestamp) ?? {
+    goalId: cardId,
+    history: [],
+    lastUpdated: timestamp,
+    retryAvailable: true,
+  };
+
+  const run: AgentAutomationRun = {
+    agentId: update.agentId,
+    agentName: update.agentName,
+    status: update.status,
+    attempt: update.attempt ?? automation.history.length + 1,
+    startedAt: timestamp,
+    finishedAt:
+      update.status === "completed" || update.status === "failed" ? timestamp : undefined,
+    notes: update.notes,
+    toolResults: update.toolResults.map((result) => ({
+      ...result,
+      occurredAt: result.occurredAt ?? timestamp,
+    })),
+  };
+
+  const nextHistory = [run, ...automation.history].slice(0, 25);
+  const nextAutomation: GoalAutomationState = {
+    ...automation,
+    history: nextHistory,
+    lastUpdated: timestamp,
+    retryAvailable: update.status !== "running",
+  };
+  card.automation = nextAutomation;
+
+  const activity: ActivityEvent = {
+    id: `act-${Date.now()}`,
+    type: "automation.triggered",
+    actorId: update.agentId,
+    actorName: update.agentName,
+    boardId,
+    description: `${update.agentName} ${update.status} automation for ${card.title}`,
+    createdAt: timestamp,
+  };
+
+  workspace.activity.unshift(activity);
+  workspace.activity = workspace.activity.slice(0, 50);
+
+  await upsertWorkspace(workspace);
+
+  workspaceEventHub.publishAutomation(workspaceId, boardId, cardId, nextAutomation);
+  workspaceEventHub.publishActivity(workspaceId, activity);
+
+  return { automation: nextAutomation, activity };
+}
+
 export async function createBoard(
   workspaceId: string,
   board: Omit<WorkspaceBoard, "workspaceId" | "metrics">,
@@ -266,10 +407,14 @@ export async function createBoard(
   if (!workspace) {
     throw new Error(`Workspace ${workspaceId} not found`);
   }
-  const newBoard: WorkspaceBoard = {
+  let newBoard: WorkspaceBoard = normaliseBoard({
     ...board,
     workspaceId,
     metrics: computeBoardMetrics(board),
+  } as WorkspaceBoard);
+  newBoard = {
+    ...newBoard,
+    metrics: computeBoardMetrics(newBoard),
   };
   workspace.boards.push(newBoard);
   const activity: ActivityEvent = {

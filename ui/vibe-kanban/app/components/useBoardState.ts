@@ -12,6 +12,7 @@ import type {
   Workspace,
   WorkspaceBoard,
   WorkspaceIntegrationStatus,
+  GoalAutomationState,
 } from "./board-types";
 import type { ClientSessionUser } from "./useSession";
 import {
@@ -76,6 +77,7 @@ type WorkspaceHookState = {
   moveCardToColumn: (activeColumnId: string, overColumnId: string, activeCardId: string, overCardId?: string) => void;
   moveColumn: (activeId: string, overId: string) => void;
   setProjectName: (name: string) => void;
+  retryAutomation: (cardId: string) => Promise<void>;
 };
 
 export type BoardState = WorkspaceHookState;
@@ -299,6 +301,28 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
       const payload = JSON.parse(event.data) as { users: PresenceUser[] };
       setPresence(payload.users ?? []);
     });
+    eventSource.addEventListener("automation", (event) => {
+      const payload = JSON.parse(event.data) as {
+        boardId: string;
+        cardId: string;
+        automation: GoalAutomationState;
+      };
+      if (payload.boardId !== boardId) {
+        return;
+      }
+      setSnapshot((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          columns: prev.columns.map((column) => ({
+            ...column,
+            cards: column.cards.map((card) =>
+              card.id === payload.cardId ? { ...card, automation: payload.automation } : card
+            ),
+          })),
+        };
+      });
+    });
     eventSourceRef.current = eventSource;
     return () => {
       eventSource.close();
@@ -389,19 +413,29 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     [updateColumns]
   );
 
-  const createCard = useCallback((partial: Partial<VibeCard> & { title: string }): VibeCard => {
-    const id = partial.id ?? (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `card-${Date.now()}`);
-    return {
-      id,
-      title: partial.title,
-      notes: partial.notes ?? "",
-      mood: partial.mood ?? "focus",
-      createdAt: partial.createdAt ?? new Date().toISOString(),
-      assigneeId: partial.assigneeId,
-      dueDate: partial.dueDate,
-      integrations: partial.integrations ?? [],
-    };
-  }, []);
+  const createCard = useCallback(
+    (partial: Partial<VibeCard> & { title: string }): VibeCard => {
+      const id =
+        partial.id ?? (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `card-${Date.now()}`);
+      return {
+        id,
+        title: partial.title,
+        notes: partial.notes ?? "",
+        mood: partial.mood ?? "focus",
+        createdAt: partial.createdAt ?? new Date().toISOString(),
+        assigneeId: partial.assigneeId,
+        dueDate: partial.dueDate,
+        integrations: partial.integrations ?? [],
+        automation: partial.automation ?? {
+          goalId: id,
+          history: [],
+          lastUpdated: new Date().toISOString(),
+          retryAvailable: true,
+        },
+      };
+    },
+    []
+  );
 
   const addCard = useCallback(
     (columnId: string, title: string, notes?: string) => {
@@ -615,6 +649,25 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     [workspaceId, boardId]
   );
 
+  const retryAutomation = useCallback(
+    async (cardId: string) => {
+      if (!workspaceId || !boardId) return;
+      try {
+        const response = await fetch(`/api/workspaces/${workspaceId}/boards/${boardId}/automation`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cardId, action: "retry" }),
+        });
+        if (!response.ok) {
+          throw new Error("Failed to retry automation");
+        }
+      } catch (error) {
+        logBoardError("automation_retry_failed", error, { workspaceId, boardId, cardId });
+      }
+    },
+    [workspaceId, boardId, logBoardError]
+  );
+
   const requestAssist = useCallback(async () => {
     if (!workspaceId || !boardId) return;
     const response = await fetch(`/api/workspaces/${workspaceId}/boards/${boardId}/assist`, { method: "POST" });
@@ -660,6 +713,7 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     dismissNotification,
     requestAssist,
     uploadArtifact,
+    retryAutomation,
     addColumn,
     removeColumn,
     renameColumn,
