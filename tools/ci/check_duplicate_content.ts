@@ -143,7 +143,7 @@ function main() {
     const relPaths = paths.map((p) => normalizePath(relative(repoRoot, p)));
     if (!isAllowedGroup(relPaths, config.allowedDuplicateGroups)) {
       failures.push(
-        `Hash ${hash} shared by multiple files without whitelist:\n${relPaths
+        `Hash ${hash} shared by multiple files not in allowed duplicate groups:\n${relPaths
           .map((p) => ` - ${p}`)
           .join("\n")}`
       );
