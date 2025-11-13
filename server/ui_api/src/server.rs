@@ -199,6 +199,16 @@ f.addEventListener('submit', async e=>{
 
     async fn get_page(
         State(state): State<UiApiState>,
+        AxumPath(page_id): AxumPath<String>,
+    ) -> Json<PageEnvelope> {
+        let mut pages = state.pages.write().await;
+        let envelope = pages
+            .entry(page_id.clone())
+            .or_insert_with(|| PageEnvelope::with_sample(&page_id))
+            .clone();
+        Json(envelope)
+    }
+
     async fn get_capabilities() -> Result<Json<JsonValue>, (StatusCode, Json<ErrorResponse>)> {
         let path = std::path::Path::new("registry/capabilities.json");
         match fs::read(path).await {
@@ -211,16 +221,6 @@ f.addEventListener('submit', async e=>{
             }
             Err(_) => Ok(Json(serde_json::json!({ "capabilities": [] }))),
         }
-    }
-
-        AxumPath(page_id): AxumPath<String>,
-    ) -> Json<PageEnvelope> {
-        let mut pages = state.pages.write().await;
-        let envelope = pages
-            .entry(page_id.clone())
-            .or_insert_with(|| PageEnvelope::with_sample(&page_id))
-            .clone();
-        Json(envelope)
     }
 
     async fn stream_events(
