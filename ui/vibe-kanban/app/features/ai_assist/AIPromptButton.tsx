@@ -4,7 +4,9 @@
  * Embedded inside Kanban cards and orchestrates loading, preview, and copy states.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+import { ensureTraceId, logError } from "@noa-ark/shared-ui/logging";
 
 import type { VibeCard } from "../../components/board-types";
 import { buildPromptPayload } from "./cardPrompt";
@@ -23,6 +25,7 @@ type AIPromptButtonProps = {
 };
 
 export function AIPromptButton({ card }: AIPromptButtonProps) {
+  const traceIdRef = useRef<string>(ensureTraceId());
   const [state, setState] = useState<FetchState>({
     prompt: null,
     completion: null,
@@ -67,9 +70,15 @@ export function AIPromptButton({ card }: AIPromptButtonProps) {
         showPreview: true,
       }));
     } catch (error) {
-      console.error(
-        JSON.stringify({ type: "ai_button.error", cardId: card.id, message: error instanceof Error ? error.message : error })
-      );
+      logError({
+        component: "ai.prompt_button",
+        event: "prompt_generation_failed",
+        message: "Failed to generate AI prompt",
+        outcome: "failure",
+        traceId: traceIdRef.current,
+        context: { cardId: card.id },
+        error,
+      });
       setState((current) => ({
         ...current,
         loading: false,
@@ -86,9 +95,15 @@ export function AIPromptButton({ card }: AIPromptButtonProps) {
       await navigator.clipboard.writeText(state.prompt);
       setState((current) => ({ ...current, copied: true }));
     } catch (error) {
-      console.error(
-        JSON.stringify({ type: "ai_button.copy_error", cardId: card.id, message: error instanceof Error ? error.message : error })
-      );
+      logError({
+        component: "ai.prompt_button",
+        event: "prompt_copy_failed",
+        message: "Failed to copy generated prompt",
+        outcome: "failure",
+        traceId: traceIdRef.current,
+        context: { cardId: card.id },
+        error,
+      });
       setState((current) => ({ ...current, error: "Unable to copy prompt. Please copy manually." }));
     }
   }, [card.id, state.prompt]);

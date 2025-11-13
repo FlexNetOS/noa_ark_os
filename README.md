@@ -279,6 +279,17 @@ Demonstrates:
 cargo run --example full_system_demo
 ```
 
+## Developer Tooling Updates
+
+- **Unified Makefile** – Use the new root `Makefile` for common tasks:
+  - `make build` runs the workspace `pnpm build`
+  - `make test` executes both the UI/Vitest suite and `cargo test -p noa_crc`
+  - `make digest` triggers `cargo run -p noa_crc -- ingest` to exercise the CRC pipeline locally
+  - `make run` starts the UI (`pnpm --filter vibe-kanban dev`) and UI API (`cargo run -p noa_ui_api`) side-by-side with automatic teardown
+  - `make ci:local` aggregates linting, type checking, formatting, and the test matrix used in CI so contributors can reproduce gates offline.
+- **Environment bootstrap** – Copy `.env.example` to `.env` (or `.env.local`) to apply safe defaults for `OFFLINE_FIRST`, `AI_PROVIDER`, `LLAMA_CPP_ENDPOINT`, `NOA_UI_DROP_ROOT`, `UPLOAD_TMP`, and UI bridge URLs. These values mirror the defaults expected by both the Node services and the Rust CRC/UI API crates.
+- **Structured logging** – UI handlers and Rust services now emit JSON logs with `trace_id`, `component`, and `outcome` fields. TypeScript routes use the shared helper in `@noa-ark/shared-ui/logging`, while Rust components register a `tracing_subscriber` JSON layer through `noa_crc::telemetry`. Update custom scripts to rely on these structured payloads rather than string parsing.
+
 Demonstrates:
 - All components working together
 - Agent Factory with hive mind

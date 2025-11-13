@@ -21,6 +21,7 @@ import {
   type CapabilityRegistry,
   normalizeCapabilityRegistry,
 } from "@/shared/capabilities";
+import { logError } from "@/shared/logging";
 
 const accentPalette = [
   "from-indigo-500 via-purple-500 to-blue-500",
@@ -102,6 +103,20 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
   const eventSourceRef = useRef<EventSource | null>(null);
   const presenceIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const latestBoardRef = useRef<WorkspaceBoard | null>(null);
+
+  const logBoardError = useCallback(
+    (event: string, error: unknown, context?: Record<string, unknown>) => {
+      logError({
+        component: "board.state",
+        event,
+        message: `Board state failure: ${event}`,
+        outcome: "failure",
+        error,
+        context,
+      });
+    },
+    []
+  );
 
   const ensureBoard = useCallback(() => {
     if (!snapshot) {
@@ -238,18 +253,24 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
       setHydrated(false);
       return;
     }
-    fetchWorkspaces().catch((error) => console.error(error));
+    fetchWorkspaces().catch((error) => logBoardError("workspaces_fetch_failed", error));
   }, [user, fetchWorkspaces]);
 
   useEffect(() => {
     if (!workspaceId) return;
-    fetchWorkspace().catch((error) => console.error(error));
-    fetchIntegrations().catch((error) => console.error(error));
+    fetchWorkspace().catch((error) =>
+      logBoardError("workspace_fetch_failed", error, { workspaceId })
+    );
+    fetchIntegrations().catch((error) =>
+      logBoardError("integrations_fetch_failed", error, { workspaceId })
+    );
   }, [workspaceId, fetchWorkspace, fetchIntegrations]);
 
   useEffect(() => {
     if (!workspaceId || !boardId) return;
-    fetchBoard().catch((error) => console.error(error));
+    fetchBoard().catch((error) =>
+      logBoardError("board_fetch_failed", error, { workspaceId, boardId })
+    );
   }, [workspaceId, boardId, fetchBoard]);
 
   useEffect(() => {
@@ -261,7 +282,9 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     eventSource.addEventListener("board-updated", (event) => {
       const payload = JSON.parse(event.data);
       if (payload.boardId === boardId) {
-        fetchBoard().catch((error) => console.error(error));
+        fetchBoard().catch((error) =>
+          logBoardError("board_refresh_failed", error, { workspaceId, boardId })
+        );
       }
     });
     eventSource.addEventListener("activity", (event) => {
@@ -290,7 +313,9 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ boardId }),
-      }).catch((error) => console.error(error));
+      }).catch((error) =>
+        logBoardError("presence_heartbeat_failed", error, { workspaceId, boardId })
+      );
     };
     sendHeartbeat();
     const interval = setInterval(sendHeartbeat, 12_000);
@@ -323,7 +348,12 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
         ...board,
         columns: updater(board.columns),
       };
-      persistBoard(nextBoard).catch((error) => console.error(error));
+      persistBoard(nextBoard).catch((error) =>
+        logBoardError("board_persist_failed", error, {
+          workspaceId,
+          boardId: nextBoard.id,
+        })
+      );
     },
     [ensureBoard, persistBoard]
   );
@@ -495,7 +525,12 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
         ...board,
         projectName: name.trim() || board.projectName,
       };
-      persistBoard(nextBoard).catch((error) => console.error(error));
+      persistBoard(nextBoard).catch((error) =>
+        logBoardError("board_persist_failed", error, {
+          workspaceId,
+          boardId: nextBoard.id,
+        })
+      );
     },
     [ensureBoard, persistBoard]
   );
