@@ -126,9 +126,6 @@ function main() {
   for (const file of files) {
     try {
       const stats = statSync(file);
-      if (stats.size === 0) {
-        continue;
-      }
     } catch (error) {
       console.warn(`Skipping file due to stat error (${file}): ${error}`);
       continue;
