@@ -1,3 +1,4 @@
+import { logWarn } from "../logging";
 import { PageEnvelope, RealTimeEvent, ResumeToken } from "../schema";
 
 class EventEmitter<Events extends Record<string, unknown>> {
@@ -52,16 +53,23 @@ export class SessionContinuityClient {
       this.emitter.emit("connection:closed", undefined);
       this.ws = undefined;
     };
-    this.ws.onmessage = (event) => {
+    this.ws.onmessage = (wsEvent) => {
       try {
-        const payload = JSON.parse(String(event.data)) as RealTimeEvent | ResumeToken;
+        const payload = JSON.parse(String(wsEvent.data)) as RealTimeEvent | ResumeToken;
         if ((payload as RealTimeEvent).eventType) {
           this.emitter.emit("workflow:update", payload as RealTimeEvent);
         } else {
           this.emitter.emit("workflow:resume", payload as ResumeToken);
         }
       } catch (error) {
-        console.warn("Failed to parse session event", error);
+        logWarn({
+          component: "session.continuity",
+          event: "session_event_parse_failed",
+          message: "Failed to parse workflow session event",
+          outcome: "failure",
+          context: { raw: String(wsEvent.data) },
+          error,
+        });
       }
     };
   }

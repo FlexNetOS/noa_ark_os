@@ -3,10 +3,15 @@
 pub mod trigger;
 pub mod validation;
 
+use noa_security_shim::{
+    run_gitleaks, run_grype, run_syft, run_trivy, ScanConfig, ScanResult, ScanStatus,
+};
+use noa_workflow::{PipelineInstrumentation, SecurityScanReport, SecurityScanStatus};
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use std::collections::HashMap;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -63,6 +68,132 @@ pub struct Pipeline {
     pub approvals_required: Vec<String>,
     #[serde(default)]
     pub approvals_granted: Vec<String>,
+    #[serde(default)]
+    pub security_scans: Vec<SecurityScanReport>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ScannerFlags {
+    pub syft: bool,
+    pub grype: bool,
+    pub trivy: bool,
+    pub gitleaks: bool,
+}
+
+impl Default for ScannerFlags {
+    fn default() -> Self {
+        Self {
+            syft: false,
+            grype: false,
+            trivy: false,
+            gitleaks: false,
+        }
+    }
+}
+
+fn map_scan_status(status: &ScanStatus) -> SecurityScanStatus {
+    match status {
+        ScanStatus::Passed => SecurityScanStatus::Passed,
+        ScanStatus::Failed => SecurityScanStatus::Failed,
+        ScanStatus::Skipped => SecurityScanStatus::Skipped,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::Path;
+    use tempfile::tempdir;
+
+    struct EnvGuard {
+        key: &'static str,
+        prev: Option<String>,
+    }
+
+    impl EnvGuard {
+        fn set(key: &'static str, value: &Path) -> Self {
+            let prev = std::env::var(key).ok();
+            std::env::set_var(key, value);
+            Self { key, prev }
+        }
+    }
+
+    impl Drop for EnvGuard {
+        fn drop(&mut self) {
+            if let Some(ref val) = self.prev {
+                std::env::set_var(self.key, val);
+            } else {
+                std::env::remove_var(self.key);
+            }
+        }
+    }
+
+    #[test]
+    fn validation_skips_when_scanners_disabled() {
+        let workspace = tempdir().unwrap();
+        let _guard = EnvGuard::set("NOA_WORKFLOW_ROOT", workspace.path());
+        let system = CICDSystem::new();
+        system.configure_workspace_root(workspace.path());
+
+        let pipeline_id = system
+            .trigger_pipeline("demo".into(), "abc123".into())
+            .expect("pipeline should trigger");
+        system
+            .validate(&pipeline_id)
+            .expect("validation should succeed when scanners disabled");
+
+        let pipelines = system.pipelines.lock().unwrap();
+        let pipeline = pipelines.get(&pipeline_id).unwrap();
+        assert!(!pipeline.security_scans.is_empty());
+        assert!(pipeline
+            .security_scans
+            .iter()
+            .all(|scan| scan.status == SecurityScanStatus::Skipped));
+    }
+
+    #[test]
+    fn validation_fails_when_secrets_detected() {
+        let workspace = tempdir().unwrap();
+        std::fs::write(workspace.path().join("secrets.env"), "API_TOKEN=SECRET=123").unwrap();
+        let _guard = EnvGuard::set("NOA_WORKFLOW_ROOT", workspace.path());
+        let system = CICDSystem::new();
+        system.configure_workspace_root(workspace.path());
+        system.configure_scanner_flags(ScannerFlags {
+            syft: false,
+            grype: false,
+            trivy: false,
+            gitleaks: true,
+        });
+
+        let pipeline_id = system
+            .trigger_pipeline("demo".into(), "abc123".into())
+            .expect("pipeline should trigger");
+        let result = system.validate(&pipeline_id);
+        assert!(result.is_err());
+
+        let pipelines = system.pipelines.lock().unwrap();
+        let pipeline = pipelines.get(&pipeline_id).unwrap();
+        assert!(pipeline
+            .security_scans
+            .iter()
+            .any(|scan| scan.tool == "gitleaks" && scan.status == SecurityScanStatus::Failed));
+    }
+}
+
+impl ScannerFlags {
+    fn from_env() -> Self {
+        fn enabled(key: &str) -> bool {
+            std::env::var(key)
+                .map(|value| matches!(value.as_str(), "1" | "true" | "TRUE"))
+                .unwrap_or(false)
+        }
+        Self {
+            syft: enabled("NOA_CICD_ENABLE_SYFT"),
+            grype: enabled("NOA_CICD_ENABLE_GRYPE"),
+            trivy: enabled("NOA_CICD_ENABLE_TRIVY"),
+            gitleaks: enabled("NOA_CICD_ENABLE_GITLEAKS"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -121,10 +252,15 @@ pub struct CICDSystem {
     baseline_metrics: Arc<Mutex<HashMap<Environment, HealthMetrics>>>,
     auto_approve_threshold: f32, // new
     single_host_profile: Arc<Mutex<Option<String>>>,
+    instrumentation: Arc<PipelineInstrumentation>,
+    scanner_flags: Arc<Mutex<ScannerFlags>>,
+    workspace_root: Arc<Mutex<PathBuf>>,
 }
 
 impl CICDSystem {
     pub fn new() -> Self {
+        let instrumentation = PipelineInstrumentation::new()
+            .expect("failed to initialise pipeline instrumentation for CI/CD");
         Self {
             pipelines: Arc::new(Mutex::new(HashMap::new())),
             deployments: Arc::new(Mutex::new(HashMap::new())),
@@ -133,11 +269,16 @@ impl CICDSystem {
             single_host_profile: Arc::new(Mutex::new(Some(
                 "server/profiles/single_host/profile.toml".to_string(),
             ))),
+            instrumentation: Arc::new(instrumentation),
+            scanner_flags: Arc::new(Mutex::new(ScannerFlags::from_env())),
+            workspace_root: Arc::new(Mutex::new(PathBuf::from("."))),
         }
     }
 
     /// Create CI/CD system with custom auto-approve threshold
     pub fn with_threshold(threshold: f32) -> Self {
+        let instrumentation = PipelineInstrumentation::new()
+            .expect("failed to initialise pipeline instrumentation for CI/CD");
         Self {
             pipelines: Arc::new(Mutex::new(HashMap::new())),
             deployments: Arc::new(Mutex::new(HashMap::new())),
@@ -146,6 +287,9 @@ impl CICDSystem {
             single_host_profile: Arc::new(Mutex::new(Some(
                 "server/profiles/single_host/profile.toml".to_string(),
             ))),
+            instrumentation: Arc::new(instrumentation),
+            scanner_flags: Arc::new(Mutex::new(ScannerFlags::from_env())),
+            workspace_root: Arc::new(Mutex::new(PathBuf::from("."))),
         }
     }
 
@@ -156,6 +300,24 @@ impl CICDSystem {
             .lock()
             .expect("single host profile lock poisoned");
         *guard = Some(profile_path.into());
+    }
+
+    /// Override the workspace root used by offline scanners.
+    pub fn configure_workspace_root<P: Into<PathBuf>>(&self, root: P) {
+        let mut guard = self
+            .workspace_root
+            .lock()
+            .expect("workspace root lock poisoned");
+        *guard = root.into();
+    }
+
+    /// Enable or disable specific offline scanners.
+    pub fn configure_scanner_flags(&self, flags: ScannerFlags) {
+        let mut guard = self
+            .scanner_flags
+            .lock()
+            .expect("scanner flag lock poisoned");
+        *guard = flags;
     }
 
     /// Trigger a new pipeline (can be triggered by CRC)
@@ -209,6 +371,7 @@ impl CICDSystem {
             diff_summary: None,
             approvals_required: Vec::new(),
             approvals_granted: Vec::new(),
+            security_scans: Vec::new(),
         };
 
         let mut pipelines = self.pipelines.lock().unwrap();
@@ -298,6 +461,7 @@ impl CICDSystem {
             diff_summary: Some(diff_summary),
             approvals_required,
             approvals_granted: Vec::new(),
+            security_scans: Vec::new(),
         };
 
         let mut pipelines = self.pipelines.lock().unwrap();
@@ -387,7 +551,7 @@ impl CICDSystem {
         // Simulate stage execution
         match stage.stage_type {
             PipelineStage::CRC => self.crc_stage()?,
-            PipelineStage::Validate => self.validate()?,
+            PipelineStage::Validate => self.validate(pipeline_id)?,
             PipelineStage::Build => self.build()?,
             PipelineStage::Test => self.test()?,
             PipelineStage::SingleHostAcceptance => self.single_host_acceptance()?,
@@ -409,10 +573,130 @@ impl CICDSystem {
     }
 
     /// Validation stage
-    fn validate(&self) -> Result<(), String> {
+    fn validate(&self, pipeline_id: &str) -> Result<(), String> {
         println!("[CI/CD] Running validation checks...");
-        // Lint, format, security scan
+        let flags = {
+            let guard = self
+                .scanner_flags
+                .lock()
+                .expect("scanner flag lock poisoned");
+            guard.clone()
+        };
+        let workspace = {
+            self.workspace_root
+                .lock()
+                .expect("workspace root lock poisoned")
+                .clone()
+        };
+
+        let mut results = Vec::new();
+        if flags.syft {
+            results.push(self.run_security_scan(pipeline_id, "syft", run_syft, &workspace)?);
+        } else {
+            results.push(self.log_skipped_scan(pipeline_id, "syft", "flag disabled")?);
+        }
+        if flags.grype {
+            results.push(self.run_security_scan(pipeline_id, "grype", run_grype, &workspace)?);
+        } else {
+            results.push(self.log_skipped_scan(pipeline_id, "grype", "flag disabled")?);
+        }
+        if flags.trivy {
+            results.push(self.run_security_scan(pipeline_id, "trivy", run_trivy, &workspace)?);
+        } else {
+            results.push(self.log_skipped_scan(pipeline_id, "trivy", "flag disabled")?);
+        }
+        if flags.gitleaks {
+            results.push(self.run_security_scan(
+                pipeline_id,
+                "gitleaks",
+                run_gitleaks,
+                &workspace,
+            )?);
+        } else {
+            results.push(self.log_skipped_scan(pipeline_id, "gitleaks", "flag disabled")?);
+        }
+
+        if results
+            .iter()
+            .any(|report| report.status == SecurityScanStatus::Failed)
+        {
+            return Err("Security scans reported failures".to_string());
+        }
+
         Ok(())
+    }
+
+    fn run_security_scan<Runner>(
+        &self,
+        pipeline_id: &str,
+        tool: &str,
+        runner: Runner,
+        workspace: &PathBuf,
+    ) -> Result<SecurityScanReport, String>
+    where
+        Runner: Fn(&ScanConfig) -> Result<ScanResult, noa_security_shim::ShimError>,
+    {
+        let config = ScanConfig {
+            target: workspace.clone(),
+            ..ScanConfig::default()
+        };
+        let result = runner(&config).map_err(|err| format!("{} scan failed: {}", tool, err))?;
+        let issues: Vec<String> = result
+            .findings
+            .iter()
+            .map(|finding| format!("{} [{}]", finding.description, finding.file))
+            .collect();
+        let metadata = serde_json::to_value(&result.findings).unwrap_or_else(|_| json!({}));
+        let report = self
+            .instrumentation
+            .as_ref()
+            .log_security_scan(
+                pipeline_id,
+                tool,
+                map_scan_status(&result.status),
+                issues,
+                result.report_path.clone(),
+                metadata,
+            )
+            .map_err(|err| format!("security instrumentation failed: {}", err))?;
+        self.record_security_scan(pipeline_id, report.clone())?;
+        Ok(report)
+    }
+
+    fn log_skipped_scan(
+        &self,
+        pipeline_id: &str,
+        tool: &str,
+        reason: &str,
+    ) -> Result<SecurityScanReport, String> {
+        let report = self
+            .instrumentation
+            .as_ref()
+            .log_security_scan(
+                pipeline_id,
+                tool,
+                SecurityScanStatus::Skipped,
+                Vec::new(),
+                None,
+                json!({"reason": reason}),
+            )
+            .map_err(|err| format!("security instrumentation failed: {}", err))?;
+        self.record_security_scan(pipeline_id, report.clone())?;
+        Ok(report)
+    }
+
+    fn record_security_scan(
+        &self,
+        pipeline_id: &str,
+        report: SecurityScanReport,
+    ) -> Result<(), String> {
+        let mut pipelines = self.pipelines.lock().unwrap();
+        if let Some(pipeline) = pipelines.get_mut(pipeline_id) {
+            pipeline.security_scans.push(report);
+            Ok(())
+        } else {
+            Err(format!("Pipeline not found: {}", pipeline_id))
+        }
     }
 
     /// Build stage
@@ -680,7 +964,7 @@ impl Default for CICDSystem {
 }
 
 #[cfg(test)]
-mod tests {
+mod pipeline_tests {
     use super::*;
 
     #[test]

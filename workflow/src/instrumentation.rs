@@ -1,3 +1,4 @@
+use crate::{Stage, StageType, Task};
 use noa_core::security::{self, OperationKind, OperationRecord, SignedOperation};
 use noa_core::utils::{current_timestamp_millis, simple_hash};
 use serde::{Deserialize, Serialize};
@@ -11,6 +12,10 @@ const INDEX_DIR: &str = ".workspace/indexes";
 const STORAGE_MIRROR_DIR: &str = "storage/db";
 const RELOCATION_LOG: &str = "relocation";
 const DOCUMENT_LOG: &str = "documentation";
+const STAGE_RECEIPT_LOG: &str = "stage_receipts";
+const SECURITY_SCAN_LOG: &str = "security_scans";
+const EVIDENCE_LEDGER_DIR: &str = "storage/db/evidence";
+const EVIDENCE_LEDGER_FILE: &str = "ledger.jsonl";
 
 #[derive(Debug)]
 pub enum InstrumentationError {
@@ -89,26 +94,203 @@ impl ImmutableLogEntry {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MerkleLeaf {
+    pub index: usize,
+    pub hash: String,
+    pub task_hash: String,
+    pub artifact_hash: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MerkleLevel {
+    pub level: usize,
+    pub nodes: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskReceipt {
+    pub task_index: usize,
+    pub task: Task,
+    pub task_hash: String,
+    pub artifact_hash: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StageReceipt {
+    pub workflow_id: String,
+    pub stage_id: String,
+    pub stage_type: StageType,
+    pub generated_at: u128,
+    pub merkle_root: String,
+    pub levels: Vec<MerkleLevel>,
+    pub leaves: Vec<MerkleLeaf>,
+    pub tasks: Vec<TaskReceipt>,
+}
+
+impl StageReceipt {
+    pub fn new(
+        workflow_id: &str,
+        stage: &Stage,
+        artifacts: &[Value],
+    ) -> Result<Self, InstrumentationError> {
+        let generated_at = current_timestamp_millis();
+        let mut leaves = Vec::new();
+        let mut tasks = Vec::new();
+
+        for (index, task) in stage.tasks.iter().enumerate() {
+            let artifact = artifacts.get(index).cloned().unwrap_or(Value::Null);
+            let artifact_repr = serde_json::to_string(&artifact)?;
+            let artifact_hash = simple_hash(&artifact_repr);
+            let task_repr = serde_json::to_string(task)?;
+            let task_hash = simple_hash(&task_repr);
+            let leaf_hash = simple_hash(&format!("{}::{}", task_hash, artifact_hash));
+            leaves.push(MerkleLeaf {
+                index,
+                hash: leaf_hash,
+                task_hash: task_hash.clone(),
+                artifact_hash: artifact_hash.clone(),
+            });
+            tasks.push(TaskReceipt {
+                task_index: index,
+                task: task.clone(),
+                task_hash,
+                artifact_hash,
+            });
+        }
+
+        let (levels, merkle_root) = build_merkle_tree(workflow_id, &stage.name, &leaves);
+
+        Ok(Self {
+            workflow_id: workflow_id.to_string(),
+            stage_id: stage.name.clone(),
+            stage_type: stage.stage_type.clone(),
+            generated_at,
+            merkle_root,
+            levels,
+            leaves,
+            tasks,
+        })
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum SecurityScanStatus {
+    Skipped,
+    Passed,
+    Failed,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SecurityScanReport {
+    pub subject: String,
+    pub tool: String,
+    pub status: SecurityScanStatus,
+    pub issues: Vec<String>,
+    pub report_artifact: Option<String>,
+    pub signed_operation: SignedOperation,
+    pub ledger_reference: String,
+    pub metadata: Value,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum EvidenceLedgerKind {
+    Genesis,
+    StageReceipt,
+    SecurityScan,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EvidenceLedgerEntry {
+    pub kind: EvidenceLedgerKind,
+    pub timestamp: u128,
+    pub reference: String,
+    pub payload: Value,
+    pub signed_operation: SignedOperation,
+}
+
+impl EvidenceLedgerEntry {
+    fn stage_receipt(receipt: &StageReceipt, signed: SignedOperation) -> Self {
+        Self {
+            kind: EvidenceLedgerKind::StageReceipt,
+            timestamp: receipt.generated_at,
+            reference: receipt.merkle_root.clone(),
+            payload: json!({
+                "workflow_id": receipt.workflow_id,
+                "stage_id": receipt.stage_id,
+                "stage_type": receipt.stage_type,
+                "levels": receipt.levels,
+                "leaves": receipt.leaves,
+            }),
+            signed_operation: signed,
+        }
+    }
+
+    fn security_scan(subject: &str, report: &SecurityScanReport) -> Self {
+        Self {
+            kind: EvidenceLedgerKind::SecurityScan,
+            timestamp: current_timestamp_millis(),
+            reference: report.ledger_reference.clone(),
+            payload: json!({
+                "subject": subject,
+                "tool": report.tool,
+                "status": report.status,
+                "issues": report.issues,
+                "report_artifact": report.report_artifact,
+                "metadata": report.metadata,
+            }),
+            signed_operation: report.signed_operation.clone(),
+        }
+    }
+
+    fn genesis() -> Self {
+        let record =
+            OperationRecord::new(OperationKind::Other, "system/bootstrap", "evidence_ledger")
+                .with_metadata(json!({"message": "ledger initialised"}));
+        let signed = security::enforce_operation(record).expect("genesis signing");
+        Self {
+            kind: EvidenceLedgerKind::Genesis,
+            timestamp: current_timestamp_millis(),
+            reference: "GENESIS".to_string(),
+            payload: json!({"message": "ledger initialised"}),
+            signed_operation: signed,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct PipelineInstrumentation {
     index_dir: PathBuf,
     mirror_dir: PathBuf,
+    evidence_dir: PathBuf,
+    evidence_ledger_path: PathBuf,
 }
 
 impl PipelineInstrumentation {
     pub fn new() -> Result<Self, InstrumentationError> {
         let index_dir = resolve_path(INDEX_DIR);
         let mirror_dir = resolve_path(STORAGE_MIRROR_DIR);
+        let evidence_dir = resolve_path(EVIDENCE_LEDGER_DIR);
         fs::create_dir_all(&index_dir)?;
         fs::create_dir_all(&mirror_dir)?;
+        fs::create_dir_all(&evidence_dir)?;
+
+        let evidence_ledger_path = evidence_dir.join(EVIDENCE_LEDGER_FILE);
 
         let instrumentation = Self {
             index_dir,
             mirror_dir,
+            evidence_dir,
+            evidence_ledger_path,
         };
 
         instrumentation.ensure_genesis(RELOCATION_LOG, OperationKind::FileMove)?;
         instrumentation.ensure_genesis(DOCUMENT_LOG, OperationKind::DocumentUpdate)?;
+        instrumentation.ensure_genesis(STAGE_RECEIPT_LOG, OperationKind::StageReceipt)?;
+        instrumentation.ensure_genesis(SECURITY_SCAN_LOG, OperationKind::SecurityScan)?;
+        instrumentation.ensure_evidence_ledger()?;
 
         Ok(instrumentation)
     }
@@ -240,6 +422,98 @@ impl PipelineInstrumentation {
         self.append_entry(DOCUMENT_LOG, event, record)
     }
 
+    pub fn log_stage_receipt(
+        &self,
+        workflow_id: &str,
+        stage: &Stage,
+        artifacts: &[Value],
+    ) -> Result<StageReceipt, InstrumentationError> {
+        let receipt = StageReceipt::new(workflow_id, stage, artifacts)?;
+        let stage_name = stage.name.clone();
+        let stage_type = stage.stage_type.clone();
+        let stage_name_for_metadata = stage_name.clone();
+        let stage_name_for_record = stage_name.clone();
+        let event_scope = format!("{}::{}", workflow_id, stage_name);
+        let record_metadata = json!({
+            "workflow_id": workflow_id,
+            "stage_id": stage_name_for_metadata,
+            "stage_type": stage_type,
+            "merkle_root": receipt.merkle_root,
+            "leaf_count": receipt.leaves.len(),
+        });
+        let event = PipelineLogEvent {
+            event_type: "stage_receipt".to_string(),
+            actor: "workflow_engine".to_string(),
+            scope: event_scope,
+            source: None,
+            target: None,
+            metadata: json!({ "receipt": receipt.clone() }),
+            timestamp: current_timestamp_millis(),
+        };
+        let record = OperationRecord::new(
+            OperationKind::StageReceipt,
+            workflow_id.to_string(),
+            stage_name_for_record,
+        )
+        .with_metadata(record_metadata);
+        let signed = self.append_entry(STAGE_RECEIPT_LOG, event, record)?;
+        self.append_evidence_ledger(EvidenceLedgerEntry::stage_receipt(&receipt, signed))?;
+        Ok(receipt)
+    }
+
+    pub fn log_security_scan(
+        &self,
+        subject: &str,
+        tool: &str,
+        status: SecurityScanStatus,
+        issues: Vec<String>,
+        report_artifact: Option<String>,
+        metadata: Value,
+    ) -> Result<SecurityScanReport, InstrumentationError> {
+        let issues_for_event = issues.clone();
+        let metadata_for_event = metadata.clone();
+        let report_artifact_for_event = report_artifact.clone();
+        let report_artifact_for_record = report_artifact.clone();
+        let report_artifact_for_report = report_artifact.clone();
+        let event = PipelineLogEvent {
+            event_type: "security_scan".to_string(),
+            actor: tool.to_string(),
+            scope: subject.to_string(),
+            source: None,
+            target: None,
+            metadata: json!({
+                "status": status,
+                "issues": issues_for_event,
+                "report_artifact": report_artifact_for_event,
+                "metadata": metadata_for_event,
+            }),
+            timestamp: current_timestamp_millis(),
+        };
+        let record = OperationRecord::new(
+            OperationKind::SecurityScan,
+            tool.to_string(),
+            subject.to_string(),
+        )
+        .with_metadata(json!({
+            "status": status,
+            "issue_count": issues.len(),
+            "report_artifact": report_artifact_for_record,
+        }));
+        let signed = self.append_entry(SECURITY_SCAN_LOG, event, record)?;
+        let report = SecurityScanReport {
+            subject: subject.to_string(),
+            tool: tool.to_string(),
+            status,
+            issues,
+            report_artifact: report_artifact_for_report,
+            signed_operation: signed.clone(),
+            ledger_reference: signed.signature.clone(),
+            metadata,
+        };
+        self.append_evidence_ledger(EvidenceLedgerEntry::security_scan(subject, &report))?;
+        Ok(report)
+    }
+
     fn append_entry(
         &self,
         log_name: &str,
@@ -252,6 +526,45 @@ impl PipelineInstrumentation {
             let entry = ImmutableLogEntry::new(event, signed.clone(), previous_hash)?;
             self.write_entry(log_name, &entry)?;
             Ok(signed)
+        })
+    }
+
+    fn ensure_evidence_ledger(&self) -> Result<(), InstrumentationError> {
+        with_log_lock(|| {
+            if self.evidence_ledger_path.exists() {
+                let content = fs::read_to_string(&self.evidence_ledger_path)?;
+                if !content.trim().is_empty() {
+                    return Ok(());
+                }
+            }
+
+            let mut file = OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&self.evidence_ledger_path)?;
+            let entry = EvidenceLedgerEntry::genesis();
+            let payload = serde_json::to_string(&entry)?;
+            writeln!(file, "{}", payload)?;
+            file.flush()?;
+            file.sync_all()?;
+            Ok(())
+        })
+    }
+
+    fn append_evidence_ledger(
+        &self,
+        entry: EvidenceLedgerEntry,
+    ) -> Result<(), InstrumentationError> {
+        with_log_lock(|| {
+            let payload = serde_json::to_string(&entry)?;
+            let mut file = OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&self.evidence_ledger_path)?;
+            writeln!(file, "{}", payload)?;
+            file.flush()?;
+            file.sync_all()?;
+            Ok(())
         })
     }
 
@@ -312,6 +625,52 @@ fn with_log_lock<T>(
     f()
 }
 
+fn build_merkle_tree(
+    workflow_id: &str,
+    stage_id: &str,
+    leaves: &[MerkleLeaf],
+) -> (Vec<MerkleLevel>, String) {
+    if leaves.is_empty() {
+        let root = simple_hash(&format!("{}::{}::empty", workflow_id, stage_id));
+        return (
+            vec![MerkleLevel {
+                level: 0,
+                nodes: vec![root.clone()],
+            }],
+            root,
+        );
+    }
+
+    let mut levels = Vec::new();
+    let mut current: Vec<String> = leaves.iter().map(|leaf| leaf.hash.clone()).collect();
+    levels.push(MerkleLevel {
+        level: 0,
+        nodes: current.clone(),
+    });
+    let mut level_index = 1;
+
+    while current.len() > 1 {
+        let mut next = Vec::new();
+        for chunk in current.chunks(2) {
+            let left = &chunk[0];
+            let right = if chunk.len() == 2 { &chunk[1] } else { left };
+            next.push(simple_hash(&format!("{}::{}", left, right)));
+        }
+        levels.push(MerkleLevel {
+            level: level_index,
+            nodes: next.clone(),
+        });
+        current = next;
+        level_index += 1;
+    }
+
+    let root = current
+        .first()
+        .cloned()
+        .unwrap_or_else(|| simple_hash(&format!("{}::{}::empty", workflow_id, stage_id)));
+    (levels, root)
+}
+
 // Manual Clone implementation for PipelineInstrumentation.
 // While PathBuf implements Clone, this explicit implementation is provided for
 // clarity and future extensibility. PathBuf::clone is cheap (Arc-based internally).
@@ -320,15 +679,102 @@ impl Clone for PipelineInstrumentation {
         Self {
             index_dir: self.index_dir.clone(),
             mirror_dir: self.mirror_dir.clone(),
+            evidence_dir: self.evidence_dir.clone(),
+            evidence_ledger_path: self.evidence_ledger_path.clone(),
         }
     }
 }
 
 fn resolve_path(relative: &str) -> PathBuf {
+    if let Ok(root) = std::env::var("NOA_WORKFLOW_ROOT") {
+        return PathBuf::from(root).join(relative);
+    }
     let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    if let Some(root) = manifest.parent() {
-        root.join(relative)
-    } else {
-        PathBuf::from(relative)
+    manifest
+        .parent()
+        .map(|root| root.join(relative))
+        .unwrap_or_else(|| PathBuf::from(relative))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+    use std::collections::HashMap;
+    use tempfile::tempdir;
+
+    struct EnvGuard {
+        key: &'static str,
+        prev: Option<std::ffi::OsString>,
+    }
+
+    impl EnvGuard {
+        fn set(key: &'static str, value: &PathBuf) -> Self {
+            let prev = std::env::var_os(key);
+            std::env::set_var(key, value);
+            Self { key, prev }
+        }
+    }
+
+    impl Drop for EnvGuard {
+        fn drop(&mut self) {
+            if let Some(ref val) = self.prev {
+                std::env::set_var(self.key, val);
+            } else {
+                std::env::remove_var(self.key);
+            }
+        }
+    }
+
+    fn sample_stage() -> Stage {
+        Stage {
+            name: "build".to_string(),
+            stage_type: StageType::Sequential,
+            depends_on: vec![],
+            tasks: vec![Task {
+                agent: "builder".to_string(),
+                action: "compile".to_string(),
+                parameters: HashMap::from([("target".to_string(), json!({"path": "src/main.rs"}))]),
+            }],
+        }
+    }
+
+    #[test]
+    fn merkle_roots_are_deterministic() {
+        let dir = tempdir().unwrap();
+        let root = dir.path().to_path_buf();
+        let _guard = EnvGuard::set("NOA_WORKFLOW_ROOT", &root);
+        let instrumentation = PipelineInstrumentation::new().unwrap();
+        let stage = sample_stage();
+        let artifacts = vec![json!({"status": "ok"})];
+
+        let first = instrumentation
+            .log_stage_receipt("wf", &stage, &artifacts)
+            .unwrap();
+        let second = instrumentation
+            .log_stage_receipt("wf", &stage, &artifacts)
+            .unwrap();
+
+        assert_eq!(first.merkle_root, second.merkle_root);
+        assert_eq!(first.leaves.len(), second.leaves.len());
+        assert_eq!(first.leaves[0].hash, second.leaves[0].hash);
+    }
+
+    #[test]
+    fn evidence_ledger_appends_stage_receipts() {
+        let dir = tempdir().unwrap();
+        let root = dir.path().to_path_buf();
+        let _guard = EnvGuard::set("NOA_WORKFLOW_ROOT", &root);
+        let instrumentation = PipelineInstrumentation::new().unwrap();
+        let stage = sample_stage();
+        let artifacts = vec![json!({"status": "ok"})];
+
+        instrumentation
+            .log_stage_receipt("wf", &stage, &artifacts)
+            .unwrap();
+
+        let ledger_path = root.join(EVIDENCE_LEDGER_DIR).join(EVIDENCE_LEDGER_FILE);
+        let content = fs::read_to_string(ledger_path).unwrap();
+        assert!(content.lines().count() >= 2); // genesis + receipt
     }
 }
