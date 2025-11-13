@@ -1,0 +1,40 @@
+name: Duplicate Fence
+on: [pull_request]
+jobs:
+  no-dupes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Detect duplicate files by SHA-256
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=origin/${{ github.base_ref }}
+          python3 - << 'PY'
+import hashlib, os, sys, subprocess
+ALLOW_PREFIXES = ("archive/", "out/", ".git/", ".next/")
+base = os.environ.get('GITHUB_BASE_REF')
+if not base:
+    print('GITHUB_BASE_REF missing', file=sys.stderr)
+    sys.exit(0)
+changed = subprocess.run(["bash","-lc",f"git diff --name-only origin/{base}..."], capture_output=True, text=True).stdout.split()
+seen = {}
+violations = []
+for p in changed:
+    if any(p.startswith(a) for a in ALLOW_PREFIXES):
+        continue
+    if not os.path.isfile(p):
+        continue
+    with open(p,'rb') as f:
+        h = hashlib.sha256(f.read()).hexdigest()
+    if h in seen and seen[h] != p:
+        violations.append((p, seen[h], h))
+    else:
+        seen[h] = p
+if violations:
+    print('Duplicate content detected:', file=sys.stderr)
+    for a,b,h in violations:
+        print(f"  {a} == {b} ({h})", file=sys.stderr)
+    sys.exit(1)
+PY

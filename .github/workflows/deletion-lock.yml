@@ -1,0 +1,20 @@
+name: Deletion Lock
+on: [pull_request]
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Fail on deletion/rename without archive proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=origin/${{ github.base_ref }}
+          git diff --name-status "$base"... | tee diff.txt
+          if grep -E '^(D|R[0-9]+)\s' diff.txt; then
+            if ! git diff --name-only "$base"... | grep -q '^archive/'; then
+              echo "Deletion/rename found but no archive/ artifacts present." >&2
+              exit 1
+            fi
+          fi

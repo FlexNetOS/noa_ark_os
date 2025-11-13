@@ -1,0 +1,41 @@
+name: TaskSpec Validate
+on: [pull_request]
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Validate TaskSpec JSON files
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=origin/${{ github.base_ref }}
+          specs=$(git diff --name-only "$base"... | grep -E '^workflow/tasks/.+\.json$' || true)
+          [ -z "$specs" ] && exit 0
+          python3 - << 'PY'
+import json,sys,glob
+required = {"id":str, "title":str, "scope_paths":list, "forbidden_paths":list, "budgets":dict, "acceptance":list, "artifacts":list, "evidence_ledger":str, "agents":list}
+errors=[]
+for p in sys.stdin.read().split():
+    try:
+        with open(p,'r',encoding='utf-8') as f:
+            data=json.load(f)
+    except Exception as e:
+        errors.append(f"{p}: invalid JSON: {e}")
+        continue
+    for k,t in required.items():
+        if k not in data:
+            errors.append(f"{p}: missing key '{k}'")
+        elif not isinstance(data[k], t):
+            errors.append(f"{p}: '{k}' must be {t.__name__}")
+    if isinstance(data.get('budgets'), dict):
+        for b in ('max_files','max_additions','allow_deletions'):
+            if b not in data['budgets']:
+                errors.append(f"{p}: budgets missing '{b}'")
+    if errors:
+        continue
+print('\n'.join(errors), file=sys.stderr)
+sys.exit(1 if errors else 0)
+PY
+          <<< "$specs"

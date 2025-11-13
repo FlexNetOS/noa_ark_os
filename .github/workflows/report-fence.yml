@@ -1,0 +1,22 @@
+name: Report Fence
+on: [pull_request]
+jobs:
+  reports_in_place:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Only allow new .md under docs/**
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=origin/${{ github.base_ref }}
+          new_md=$(git diff --name-status "$base"... | awk '$1=="A" && $2 ~ /\.(md|MD)$/ {print $2}')
+          bad=0
+          for f in $new_md; do
+            case "$f" in
+              docs/*) : ;; 
+              *) echo "New markdown outside docs/: $f" >&2; bad=1;;
+            esac
+          done
+          exit $bad
