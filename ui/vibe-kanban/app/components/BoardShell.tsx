@@ -82,10 +82,14 @@ export function BoardShell({ state }: BoardShellProps) {
 
   const ambientBackdropEnabled = isFeatureEnabled("ambientBackdrop");
   const boardMetricsEnabled =
-    isFeatureEnabled("boardMetrics") && state.capabilities.has("kanban.metrics");
+    !state.capabilities.loading &&
+    isFeatureEnabled("boardMetrics") &&
+    state.capabilities.has("kanban.metrics");
   const quickComposerEnabled =
-    isFeatureEnabled("quickComposer") && state.capabilities.has("kanban.quickComposer");
-  const canManageColumns = state.capabilities.has("kanban.manageColumns");
+    !state.capabilities.loading &&
+    isFeatureEnabled("quickComposer") &&
+    state.capabilities.has("kanban.quickComposer");
+  const canManageColumns = !state.capabilities.loading && state.capabilities.has("kanban.manageColumns");
   const addColumnDisabledReason = canManageColumns
     ? undefined
     : "Enable the kanban.manageColumns capability to add new columns.";
