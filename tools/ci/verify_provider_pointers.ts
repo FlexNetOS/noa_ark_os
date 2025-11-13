@@ -46,7 +46,8 @@ for (const check of checks) {
         "\n" +
         `Expected:\n${expected}` +
         "\n" +
-        `Received:\n${normalized}`
+        `Received:\n${normalized}` +
+        "\n"
     );
     hasError = true;
   }
