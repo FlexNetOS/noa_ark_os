@@ -37,13 +37,13 @@
         "ui/shared/src/index"
       ],
       "mitt": [
-        "./types/mitt"
+        "ui/vibe-kanban/types/mitt"
       ],
       "@noa-ark/server/*": [
         "server/*"
       ],
       "zod": [
-        "./node_modules/zod"
+        "ui/vibe-kanban/node_modules/zod"
       ]
     },
     "esModuleInterop": true

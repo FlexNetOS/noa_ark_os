@@ -38,7 +38,7 @@ describe("capability-gated UI", () => {
     const button = screen.getByRole("button", { name: /add column/i });
     expect(button.getAttribute("disabled")).not.toBeNull();
     expect(button.getAttribute("title")).toMatch(/Enable capability/i);
-    expect(screen.getByTestId("capability-kanban.manageColumns").textContent).toMatch(/unavailable/i);
+    expect((screen.getByTestId("capability-kanban.manageColumns").textContent ?? "")).toMatch(/unavailable/i);
   });
 
   it("gates the assist panel when the capability is missing and re-enables once restored", () => {
@@ -79,6 +79,6 @@ describe("capability-gated UI", () => {
 
     const enabledButton = screen.getByRole("button", { name: /spark assist/i });
     expect(enabledButton.disabled).toBe(false);
-    expect(screen.getByTestId("assist-capability-status").textContent).toMatch(/ready/i);
+    expect((screen.getByTestId("assist-capability-status").textContent ?? "")).toMatch(/ready/i);
   });
 });

@@ -20,9 +20,24 @@ function main(){
   const spec=JSON.parse(fs.readFileSync(specPath,'utf-8')) as TaskSpec;
   for(const cmd of spec.acceptance){ sh(cmd); }
   const artifacts:string[]=[]; const hashes:Record<string,string>={};
-  for(const glob of spec.artifacts){
-    if(glob.includes('*')) continue; // minimal: only exact paths for now
-    if(fs.existsSync(glob)){ artifacts.push(glob); hashes[glob]=hashFile(glob); }
+  for(const pattern of spec.artifacts){
+    if(pattern.includes('*')){
+      const r=spawnSync(`bash -lc 'ls -1 -d ${pattern}'`,{shell:true,encoding:'utf-8'});
+      if(r.status===0){
+        r.stdout.split('\n').filter(Boolean).forEach(p=>{ if(fs.existsSync(p)){ artifacts.push(p); hashes[p]=hashFile(p); }});
+      }
+  // Maintain tasks index
+  try{
+    const taskDir='workflow/tasks';
+    const files=fs.readdirSync(taskDir).filter(f=>f.endsWith('.json'));
+    const entries=files.map(f=>{ const j=JSON.parse(fs.readFileSync(`${taskDir}/${f}`,'utf-8')); return {id:j.id,title:j.title,ledger:j.evidence_ledger}; });
+    fs.mkdirSync('docs/tasks',{recursive:true});
+    fs.writeFileSync('docs/tasks/index.json', JSON.stringify({tasks:entries, updatedAt:new Date().toISOString()}, null, 2));
+  }catch{}
+
+    } else {
+      if(fs.existsSync(pattern)){ artifacts.push(pattern); hashes[pattern]=hashFile(pattern); }
+    }
   }
   const ledger={ task_id: spec.id, status: 'PASS', artifacts, checks: spec.acceptance, hashes };
   fs.mkdirSync(require('node:path').dirname(spec.evidence_ledger),{recursive:true});
