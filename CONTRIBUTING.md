@@ -229,6 +229,20 @@ Branch naming conventions:
 - Add tests for new functionality
 - Update documentation as needed
 
+### 2a. Run archival and duplicate-content checks locally
+
+Before staging your changes, validate that archival requirements and duplicate-content policies pass locally. These scripts match the CI jobs and will fail fast if additional work is required:
+
+```bash
+# Verify that any deletions or renames include archived artifacts and ledger entries
+BASE_REF=origin/main pnpm exec tsx tools/ci/verify_archival.ts
+
+# Detect identical file contents that are not registered in the whitelist
+pnpm exec tsx tools/ci/check_duplicate_content.ts
+```
+
+If a check fails for a legitimate exception, consult a maintainer. Do **not** rely on the override labels (`ci-allow-archive-skip`, `ci-allow-duplicate-content`) without explicit approval captured in the pull request summary.
+
 ### 3. Commit Your Changes
 
 Follow [Conventional Commits](https://www.conventionalcommits.org/):
