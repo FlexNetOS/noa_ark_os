@@ -252,17 +252,18 @@ fn collect_symbol(
 
     if node.kind() == "call_expression" {
         if let Some(name) = extract_identifier(language_id, node, source) {
-            let caller = simple_hash(&format!(
-                "{}::{}",
-                path.display(),
-                node.start_position().row
-            ));
-            let callee_id = stable_symbol_id(language_id, &name, "call", &name);
-            edges.push(SymbolEdge {
-                from: caller,
-                to: callee_id,
-                kind: "call".to_string(),
-            });
+            // Find the enclosing function/method node and use its stable_id as the caller
+            if let Some((enclosing_name, enclosing_kind, enclosing_signature)) =
+                find_enclosing_function(node, source, language_id)
+            {
+                let caller = stable_symbol_id(language_id, &enclosing_name, &enclosing_kind, &enclosing_signature);
+                let callee_id = stable_symbol_id(language_id, &name, "call", &name);
+                edges.push(SymbolEdge {
+                    from: caller,
+                    to: callee_id,
+                    kind: "call".to_string(),
+                });
+            }
         }
     }
 
