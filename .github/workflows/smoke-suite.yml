@@ -1,0 +1,36 @@
+name: Smoke Suite (CAS, Digest, Upload→Digest)
+on: [pull_request]
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    env:
+      OFFLINE_FIRST: "true"
+      AI_PROVIDER: llama.cpp
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            .
+      - name: CRC smoke tests (CAS + Digest)
+        run: |
+          cargo test -p noa_crc --test cas_smoke --test digest_smoke -- --nocapture
+      - name: UI Upload→Digest E2E (unit-level)
+        run: |
+          cargo test -p noa_ui_api -- --nocapture
+      - name: Ingest report
+        run: |
+          mkdir -p out/ci
+          cargo run -p noa_crc -- ingest --root . --report out/ci/ingest.json
+          test -f out/ci/ingest.json
+      - name: Archive artifacts
+        if: ${{ env.ACT != 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-artifacts
+          path: |
+            out/ci/ingest.json
+            crc/drop-in/incoming/receipts/**
