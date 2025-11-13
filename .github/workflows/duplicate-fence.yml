@@ -27,7 +27,13 @@ for p in changed:
     if not os.path.isfile(p):
         continue
     with open(p,'rb') as f:
-        h = hashlib.sha256(f.read()).hexdigest()
+        hasher = hashlib.sha256()
+        while True:
+            chunk = f.read(1024 * 1024)
+            if not chunk:
+                break
+            hasher.update(chunk)
+        h = hasher.hexdigest()
     if h in seen and seen[h] != p:
         violations.append((p, seen[h], h))
     else:
