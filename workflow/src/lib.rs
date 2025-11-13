@@ -16,7 +16,6 @@ pub use instrumentation::{
     EvidenceLedgerEntry, EvidenceLedgerKind, MerkleLeaf, MerkleLevel, PipelineInstrumentation,
     SecurityScanReport, SecurityScanStatus, StageReceipt, TaskReceipt,
 };
-pub use instrumentation::{EvidenceLedgerEntry, PipelineInstrumentation, StageReceipt};
 use tokio::sync::broadcast;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -287,8 +286,7 @@ impl WorkflowEngine {
         });
         if let Err(err) = self.instrumentation.log_stage_receipt(
             workflow_id,
-            &stage.name,
-            &stage.stage_type,
+            &stage,
             &artifacts,
         ) {
             return Err(format!("stage receipt failed: {}", err));
@@ -646,8 +644,6 @@ mod tests {
             .and_then(Value::as_str)
             .unwrap_or_default();
         assert!(!merkle_root.is_empty());
-            .find(|entry| entry.receipt.workflow_id == workflow_name)
-            .expect("stage receipt recorded");
 
         assert_eq!(receipt.receipt.stage_name, "stage-merkle");
         assert_eq!(receipt.receipt.leaf_count, 1);
