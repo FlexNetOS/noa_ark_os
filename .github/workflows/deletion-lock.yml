@@ -13,7 +13,38 @@ jobs:
           base=origin/${{ github.base_ref }}
           git diff --name-status "$base"... | tee diff.txt
           if grep -E '^(D|R[0-9]+)\s' diff.txt >/dev/null; then
-            changed=$(git diff --name-only "$base"...)
-            echo "$changed" | grep -q '^archive/' || { echo "Deletion/rename found but no archive/ artifacts present." >&2; exit 1; }
-            echo "$changed" | grep -q '^docs/verification/' || { echo "Deletion/rename found but no evidence ledger update under docs/verification/." >&2; exit 1; }
+            # Get list of deleted and renamed files (old paths)
+            deleted_files=$(awk '/^D\s/ {print $2} /^R[0-9]+\s/ {print $2}' diff.txt)
+            # Get list of added/modified files in archive/ and docs/verification/
+            archive_files=$(git diff --name-status "$base" | awk '/^(A|M)\sarchive\// {print $2}')
+            verification_files=$(git diff --name-status "$base" | awk '/^(A|M)\sdocs\/verification\// {print $2}')
+            missing_archive=0
+            missing_verification=0
+            for f in $deleted_files; do
+              found_archive=0
+              for af in $archive_files; do
+                if git show "$GITHUB_SHA:$af" 2>/dev/null | grep -Fq "$f"; then
+                  found_archive=1
+                  break
+                fi
+              done
+              if [ $found_archive -eq 0 ]; then
+                echo "Deleted/renamed file '$f' is not referenced in any archive/ artifact." >&2
+                missing_archive=1
+              fi
+              found_verification=0
+              for vf in $verification_files; do
+                if git show "$GITHUB_SHA:$vf" 2>/dev/null | grep -Fq "$f"; then
+                  found_verification=1
+                  break
+                fi
+              done
+              if [ $found_verification -eq 0 ]; then
+                echo "Deleted/renamed file '$f' is not referenced in any docs/verification/ ledger." >&2
+                missing_verification=1
+              fi
+            done
+            if [ $missing_archive -ne 0 ] || [ $missing_verification -ne 0 ]; then
+              exit 1
+            fi
           fi
