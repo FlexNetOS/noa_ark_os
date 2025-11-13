@@ -142,4 +142,7 @@
   "inlineChat.finishOnType": true,
   "inlineChat.lineEmptyHint": true,
   "inlineChat.notebookAgent": true
+  ,
+  // Prefer pnpm for this monorepo to avoid lockfile mismatch warnings
+  "npm.packageManager": "pnpm"
 }
