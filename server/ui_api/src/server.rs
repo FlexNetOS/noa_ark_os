@@ -9,13 +9,21 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{Json, Router};
+use anyhow::{Context, Result};
 use bytes::Bytes;
 use chrono::Utc;
+use flate2::read::GzDecoder;
+use noa_crc::cas::Cas;
+use noa_crc::engine::Engine;
+use noa_crc::graph::{CRCGraph, GraphNode, NodeKind};
+use noa_crc::ir::Lane;
 use noa_crc::{CRCState, CRCSystem, DropManifest, OriginalArtifact, Priority, SourceType};
 use serde::{Deserialize, Serialize};
 use tokio::fs;
 use tokio::sync::RwLock;
+use tokio::task;
 use tokio_stream::StreamExt;
+use zip::ZipArchive;
 use uuid::Uuid;
 
 use crate::schema::PageEnvelope;
@@ -223,6 +231,7 @@ impl UiApiServer {
 
         let sanitized_name = sanitize_file_name(file_name.as_deref());
         let file_path = target_dir.join(&sanitized_name);
+        let file_bytes = file_bytes.to_vec();
         fs::write(&file_path, &file_bytes)
             .await
             .map_err(|err| internal_error(format!("failed to persist upload: {err}")))?;
@@ -251,7 +260,24 @@ impl UiApiServer {
             .map(|state| format_crc_state(&state))
             .unwrap_or_else(|| format_crc_state(&CRCState::Incoming));
 
-        Ok(Json(DropUploadResponse { drop_id, status }))
+        let processing = prepare_upload_receipt(
+            &file_path,
+            &sanitized_name,
+            &drop_type_value,
+            &drop_root,
+            &drop_id,
+            &file_bytes,
+        )
+        .await
+        .map_err(|err| internal_error(format!("failed to process upload: {err}")))?;
+
+        Ok(Json(DropUploadResponse {
+            drop_id,
+            status,
+            cas_keys: processing.cas_keys,
+            receipt_path: processing.receipt_path,
+            receipt_url: processing.receipt_url,
+        }))
     }
 }
 
@@ -259,6 +285,10 @@ impl UiApiServer {
 struct DropUploadResponse {
     drop_id: String,
     status: String,
+    cas_keys: Vec<String>,
+    receipt_path: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    receipt_url: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -304,20 +334,243 @@ fn format_crc_state(state: &CRCState) -> String {
     }
 }
 
+#[derive(Clone, Serialize)]
+struct UploadReceiptEntry {
+    hash: String,
+    path: String,
+    size: u64,
+    kind: String,
+}
+
+#[derive(Serialize)]
+struct UploadReceiptDigest {
+    checkpoint: String,
+    executed_nodes: usize,
+}
+
+#[derive(Serialize)]
+struct UploadReceiptDocument {
+    drop_id: String,
+    drop_type: String,
+    original_name: String,
+    cas_objects: Vec<UploadReceiptEntry>,
+    digest: UploadReceiptDigest,
+    created_at: String,
+}
+
+struct UploadProcessingResult {
+    cas_keys: Vec<String>,
+    receipt_path: String,
+    receipt_url: Option<String>,
+}
+
+#[derive(Clone, Copy)]
+enum ArchiveKind {
+    Zip,
+    Tar,
+    TarGz,
+}
+
+async fn prepare_upload_receipt(
+    file_path: &Path,
+    original_name: &str,
+    drop_type: &str,
+    drop_root: &Path,
+    drop_id: &str,
+    original_bytes: &[u8],
+) -> Result<UploadProcessingResult> {
+    let cas = Cas::default().context("initializing CAS")?;
+
+    let mut cas_objects = Vec::new();
+
+    let original_hash = cas.put_bytes(original_bytes).context("storing upload in CAS")?;
+    let original_meta = fs::metadata(file_path)
+        .await
+        .context("reading upload metadata")?;
+    cas_objects.push(UploadReceiptEntry {
+        hash: original_hash,
+        path: relative_path(file_path, drop_root),
+        size: original_meta.len(),
+        kind: "upload".to_string(),
+    });
+
+    if let Some(kind) = detect_archive(original_name) {
+        let extracted = extract_archive(file_path, drop_root, drop_id, kind).await?;
+        for artifact in extracted {
+            let bytes = fs::read(&artifact)
+                .await
+                .with_context(|| format!("reading extracted artifact {}", artifact.display()))?;
+            let hash = cas
+                .put_bytes(&bytes)
+                .with_context(|| format!("storing extracted artifact {}", artifact.display()))?;
+            let meta = fs::metadata(&artifact)
+                .await
+                .with_context(|| format!("reading metadata for {}", artifact.display()))?;
+            cas_objects.push(UploadReceiptEntry {
+                hash,
+                path: relative_path(&artifact, drop_root),
+                size: meta.len(),
+                kind: "extracted".to_string(),
+            });
+        }
+    }
+
+    let mut graph = CRCGraph::new();
+    graph.add_node(GraphNode::new(format!("digest::{}", drop_id), NodeKind::Analyze, Lane::Fast));
+    let engine = Engine::new(graph);
+    let digest_dir = drop_root.join("receipts").join(drop_id).join("digest");
+    fs::create_dir_all(&digest_dir)
+        .await
+        .with_context(|| format!("creating digest directory {}", digest_dir.display()))?;
+    let summary = engine
+        .run(&digest_dir)
+        .await
+        .context("running CRC digest engine")?;
+
+    let receipt_dir = drop_root.join("receipts");
+    fs::create_dir_all(&receipt_dir)
+        .await
+        .with_context(|| format!("creating receipt directory {}", receipt_dir.display()))?;
+    let receipt_path = receipt_dir.join(format!("{drop_id}.receipt.json"));
+
+    let receipt = UploadReceiptDocument {
+        drop_id: drop_id.to_string(),
+        drop_type: drop_type.to_string(),
+        original_name: original_name.to_string(),
+        cas_objects: cas_objects.clone(),
+        digest: UploadReceiptDigest {
+            checkpoint: summary.checkpoint.to_string_lossy().to_string(),
+            executed_nodes: summary.executed.len(),
+        },
+        created_at: Utc::now().to_rfc3339(),
+    };
+
+    let serialized = serde_json::to_vec_pretty(&receipt).context("serializing upload receipt")?;
+    fs::write(&receipt_path, serialized)
+        .await
+        .with_context(|| format!("writing receipt {}", receipt_path.display()))?;
+
+    let cas_keys = cas_objects.iter().map(|entry| entry.hash.clone()).collect();
+    let receipt_path_str = receipt_path.to_string_lossy().to_string();
+    Ok(UploadProcessingResult {
+        cas_keys,
+        receipt_path: receipt_path_str.clone(),
+        receipt_url: Some(format!("file://{}", receipt_path_str)),
+    })
+}
+
+fn detect_archive(file_name: &str) -> Option<ArchiveKind> {
+    let lowered = file_name.to_lowercase();
+    if lowered.ends_with(".tar.gz") || lowered.ends_with(".tgz") {
+        Some(ArchiveKind::TarGz)
+    } else if lowered.ends_with(".tar") {
+        Some(ArchiveKind::Tar)
+    } else if lowered.ends_with(".zip") {
+        Some(ArchiveKind::Zip)
+    } else {
+        None
+    }
+}
+
+async fn extract_archive(
+    archive_path: &Path,
+    drop_root: &Path,
+    drop_id: &str,
+    kind: ArchiveKind,
+) -> Result<Vec<PathBuf>> {
+    let target = drop_root.join("extracted").join(drop_id);
+    fs::create_dir_all(&target)
+        .await
+        .with_context(|| format!("creating extraction directory {}", target.display()))?;
+    let archive_path = archive_path.to_path_buf();
+    let target_clone = target.clone();
+    let extracted = task::spawn_blocking(move || match kind {
+        ArchiveKind::Zip => extract_zip(&archive_path, &target_clone),
+        ArchiveKind::Tar => extract_tar(&archive_path, &target_clone, false),
+        ArchiveKind::TarGz => extract_tar(&archive_path, &target_clone, true),
+    })
+    .await
+    .context("joining archive extraction task")?;
+
+    let extracted = extracted?;
+    Ok(extracted)
+}
+
+fn extract_zip(archive_path: &Path, target: &Path) -> Result<Vec<PathBuf>> {
+    let file = std::fs::File::open(archive_path).with_context(|| {
+        format!("opening zip archive {}", archive_path.display())
+    })?;
+    let mut archive = ZipArchive::new(file).context("parsing zip archive")?;
+    let mut extracted = Vec::new();
+    for index in 0..archive.len() {
+        let mut entry = archive.by_index(index).context("reading zip entry")?;
+        if entry.is_dir() {
+            continue;
+        }
+        let Some(path) = entry.enclosed_name().map(|path| path.to_owned()) else {
+            continue;
+        };
+        let out_path = target.join(path);
+        if let Some(parent) = out_path.parent() {
+            std::fs::create_dir_all(parent)
+                .with_context(|| format!("creating directory {}", parent.display()))?;
+        }
+        let mut output = std::fs::File::create(&out_path)
+            .with_context(|| format!("creating {}", out_path.display()))?;
+        std::io::copy(&mut entry, &mut output)
+            .with_context(|| format!("extracting {}", out_path.display()))?;
+        extracted.push(out_path);
+    }
+    Ok(extracted)
+}
+
+fn extract_tar(archive_path: &Path, target: &Path, gz: bool) -> Result<Vec<PathBuf>> {
+    let file = std::fs::File::open(archive_path)
+        .with_context(|| format!("opening tar archive {}", archive_path.display()))?;
+    let reader: Box<dyn std::io::Read> = if gz {
+        Box::new(GzDecoder::new(file))
+    } else {
+        Box::new(file)
+    };
+    let mut archive = tar::Archive::new(reader);
+    let mut extracted = Vec::new();
+    for entry in archive.entries().context("iterating tar entries")? {
+        let mut entry = entry.context("reading tar entry")?;
+        if entry.header().entry_type().is_dir() {
+            continue;
+        }
+        let relative = entry
+            .path()
+            .context("reading tar entry path")?
+            .into_owned();
+        if relative
+            .components()
+            .any(|component| matches!(component, std::path::Component::ParentDir))
+        {
+            continue;
+        }
+        let out_path = target.join(&relative);
+        if let Some(parent) = out_path.parent() {
+            std::fs::create_dir_all(parent)
+                .with_context(|| format!("creating directory {}", parent.display()))?;
+        }
+        entry
+            .unpack(&out_path)
+            .with_context(|| format!("extracting {}", out_path.display()))?;
+        extracted.push(out_path);
+    }
+    Ok(extracted)
+}
+
+fn relative_path(path: &Path, drop_root: &Path) -> String {
+    path.strip_prefix(drop_root)
+        .map(|p| p.to_string_lossy().to_string())
+        .unwrap_or_else(|_| path.to_string_lossy().to_string())
+}
+
 async fn handle_websocket(mut socket: WebSocket, bridge: SessionBridge) {
     let mut events = bridge.subscribe();
     while let Some(event) = events.next().await {
-        match event {
-            Ok(event) => match serde_json::to_string(&SessionBridge::map_event(event)) {
-                Ok(payload) => {
-                    if socket.send(Message::Text(payload)).await.is_err() {
-                        break;
-                    }
-                }
-                Err(error) => {
-                    let _ = socket
-                        .send(Message::Text(format!("{{\"error\":\"{}\"}}", error)))
-                        .await;
         let Ok(event) = event.map(SessionBridge::map_event) else {
             continue;
         };
@@ -346,6 +599,7 @@ mod tests {
     use serde::Deserialize;
     use std::sync::Mutex as StdMutex;
     use tower::ServiceExt;
+    use serde_json::Value;
 
     #[derive(Clone)]
     struct MockRegistry {
@@ -410,6 +664,9 @@ mod tests {
     struct UploadResponseBody {
         drop_id: String,
         status: String,
+        cas_keys: Vec<String>,
+        receipt_path: String,
+        receipt_url: Option<String>,
     }
 
     fn multipart_request(boundary: &str, body: &str) -> Request<Body> {
@@ -450,6 +707,7 @@ mod tests {
         let boundary = "TESTBOUNDARY";
         let temp_dir = tempfile::tempdir().unwrap();
         let drop_root = temp_dir.path().to_path_buf();
+        std::env::set_var("CRC_CAS_DIR", drop_root.join("cas"));
 
         let registry = MockRegistry::success("drop-123", CRCState::Incoming);
         let server = UiApiServer::new()
@@ -473,6 +731,18 @@ mod tests {
         let parsed: UploadResponseBody = serde_json::from_slice(&bytes).unwrap();
         assert_eq!(parsed.drop_id, "drop-123");
         assert_eq!(parsed.status, "incoming");
+        assert!(!parsed.cas_keys.is_empty());
+
+        let receipt_path = PathBuf::from(&parsed.receipt_path);
+        assert!(receipt_path.exists());
+        let receipt: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&receipt_path).unwrap()).unwrap();
+        assert_eq!(receipt.get("drop_id").and_then(|v| v.as_str()), Some("drop-123"));
+        assert!(receipt
+            .get("cas_objects")
+            .and_then(|v| v.as_array())
+            .map(|arr| arr.len())
+            .unwrap_or(0)
+            >= 1);
 
         let saved_path = drop_root.join("repos").join("example.txt");
         let saved = fs::read(&saved_path).await.unwrap();
@@ -482,6 +752,8 @@ mod tests {
         assert!(recorded_path.ends_with("example.txt"));
         let manifest = registry.recorded_manifest().unwrap();
         assert!(matches!(manifest.source_type, SourceType::ExternalRepo));
+
+        std::env::remove_var("CRC_CAS_DIR");
     }
 
     #[tokio::test]
