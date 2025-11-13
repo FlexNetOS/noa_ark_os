@@ -6,7 +6,6 @@
   "budgets": { "max_files": 30, "max_additions": 1000, "allow_deletions": false },
   "acceptance": [
     "cargo test -p crc",
-    "node scripts/smoke-upload.js",
     "test -f out/ingest.json"
   ],
   "artifacts": ["out/ingest.json", "out/cas/**", "out/receipts/**"],

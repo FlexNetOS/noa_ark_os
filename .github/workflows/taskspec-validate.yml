@@ -33,8 +33,7 @@ for p in sys.stdin.read().split():
         for b in ('max_files','max_additions','allow_deletions'):
             if b not in data['budgets']:
                 errors.append(f"{p}: budgets missing '{b}'")
-    if errors:
-        continue
+# Removed unnecessary 'if errors: continue' block
 print('\n'.join(errors), file=sys.stderr)
 sys.exit(1 if errors else 0)
 PY
