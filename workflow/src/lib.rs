@@ -9,10 +9,10 @@ use noa_core::capabilities::KernelHandle;
 use noa_core::config::manifest::CAPABILITY_PROCESS;
 use noa_core::process::ProcessService;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{json, Value};
 
 mod instrumentation;
-use instrumentation::PipelineInstrumentation;
+pub use instrumentation::{EvidenceLedgerEntry, PipelineInstrumentation, StageReceipt};
 use tokio::sync::broadcast;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -143,8 +143,6 @@ impl WorkflowEngine {
 
     /// Create a workflow engine that interacts with kernel capabilities.
     pub fn with_kernel(kernel: KernelHandle) -> Self {
-        let instrumentation = PipelineInstrumentation::new()
-            .expect("failed to initialise pipeline instrumentation");
         let instrumentation =
             PipelineInstrumentation::new().expect("failed to initialise pipeline instrumentation");
         Self {
@@ -254,12 +252,26 @@ impl WorkflowEngine {
         // Update stage state
         self.set_stage_state(workflow_id, &stage.name, StageState::Running);
 
-        match stage.stage_type {
+        let artifacts = match stage.stage_type {
             StageType::Sequential => self.execute_sequential(stage)?,
             StageType::Parallel => self.execute_parallel(stage)?,
             StageType::Conditional => self.execute_conditional(stage)?,
             StageType::Loop => self.execute_loop(stage)?,
+        };
+
+        if let Err(err) = self.instrumentation.log_stage_receipt(
+            workflow_id,
+            &stage.name,
+            &stage.stage_type,
+            &artifacts,
+        ) {
+            return Err(format!("stage receipt failed: {}", err));
         }
+
+        println!(
+            "[WORKFLOW] Stage receipt generated for {}::{}",
+            workflow_id, stage.name
+        );
 
         // Mark stage as completed
         self.set_stage_state(workflow_id, &stage.name, StageState::Completed);
@@ -267,42 +279,44 @@ impl WorkflowEngine {
     }
 
     /// Execute tasks sequentially
-    fn execute_sequential(&self, stage: &Stage) -> Result<(), String> {
+    fn execute_sequential(&self, stage: &Stage) -> Result<Vec<Value>, String> {
+        let mut artifacts = Vec::with_capacity(stage.tasks.len());
         for task in &stage.tasks {
-            self.execute_task(task)?;
+            artifacts.push(self.execute_task(task)?);
         }
-        Ok(())
+        Ok(artifacts)
     }
 
     /// Execute tasks in parallel
-    fn execute_parallel(&self, stage: &Stage) -> Result<(), String> {
+    fn execute_parallel(&self, stage: &Stage) -> Result<Vec<Value>, String> {
         println!(
             "[WORKFLOW] Executing {} tasks in parallel",
             stage.tasks.len()
         );
 
         // In a real implementation, this would spawn threads/processes
+        let mut artifacts = Vec::with_capacity(stage.tasks.len());
         for task in &stage.tasks {
-            self.execute_task(task)?;
+            artifacts.push(self.execute_task(task)?);
         }
 
-        Ok(())
+        Ok(artifacts)
     }
 
     /// Execute tasks conditionally
-    fn execute_conditional(&self, stage: &Stage) -> Result<(), String> {
+    fn execute_conditional(&self, stage: &Stage) -> Result<Vec<Value>, String> {
         // Implementation would check conditions
         self.execute_sequential(stage)
     }
 
     /// Execute tasks in a loop
-    fn execute_loop(&self, stage: &Stage) -> Result<(), String> {
+    fn execute_loop(&self, stage: &Stage) -> Result<Vec<Value>, String> {
         // Implementation would loop based on condition
         self.execute_sequential(stage)
     }
 
     /// Execute a single task
-    fn execute_task(&self, task: &Task) -> Result<(), String> {
+    fn execute_task(&self, task: &Task) -> Result<Value, String> {
         println!(
             "[WORKFLOW] Executing task: agent={}, action={}",
             task.agent, task.action
@@ -325,8 +339,13 @@ impl WorkflowEngine {
                 );
             }
         }
-        // Implementation would dispatch to appropriate agent
-        Ok(())
+        Ok(json!({
+            "agent": task.agent,
+            "action": task.action,
+            "parameters": parameters_to_value(&task.parameters),
+            "status": "completed",
+            "timestamp": now_iso(),
+        }))
     }
 
     fn observe_task(&self, task: &Task) -> Result<(), String> {
@@ -457,8 +476,13 @@ impl Default for WorkflowEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::Utc;
     use noa_core::security;
     use serde_json::json;
+    use std::fs;
+    use std::path::PathBuf;
+
+    use crate::instrumentation::EvidenceLedgerEntry;
 
     #[test]
     fn test_workflow_creation() {
@@ -496,5 +520,46 @@ mod tests {
             )
             .expect("documentation log should succeed");
         assert!(security::verify_signed_operation(&documentation));
+    }
+
+    #[test]
+    fn stage_merkle_receipt_is_recorded() {
+        let engine = WorkflowEngine::new();
+        let workflow_name = format!("merkle-{}", Utc::now().timestamp_nanos());
+        let workflow = Workflow {
+            name: workflow_name.clone(),
+            version: "1.0".to_string(),
+            stages: vec![Stage {
+                name: "stage-merkle".to_string(),
+                stage_type: StageType::Sequential,
+                depends_on: vec![],
+                tasks: vec![Task {
+                    agent: "tester".to_string(),
+                    action: "document".to_string(),
+                    parameters: HashMap::from([(String::from("path"), json!("docs/test.md"))]),
+                }],
+            }],
+        };
+
+        let id = engine.load_workflow(workflow).unwrap();
+        engine.execute(&id).unwrap();
+
+        let ledger_path = {
+            let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+            let repo_root = root.parent().expect("workspace root available");
+            repo_root.join(".workspace/indexes/evidence/evidence.ledger.jsonl")
+        };
+        let content = fs::read_to_string(&ledger_path)
+            .unwrap_or_else(|_| panic!("ledger missing at {:?}", ledger_path));
+
+        let receipt = content
+            .lines()
+            .filter_map(|line| serde_json::from_str::<EvidenceLedgerEntry>(line).ok())
+            .find(|entry| entry.receipt.workflow_id == workflow_name)
+            .expect("stage receipt recorded");
+
+        assert_eq!(receipt.receipt.stage_name, "stage-merkle");
+        assert_eq!(receipt.receipt.leaf_count, 1);
+        assert!(!receipt.receipt.merkle_root.is_empty());
     }
 }
