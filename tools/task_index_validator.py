@@ -62,11 +62,13 @@ def main() -> None:
         _fail("docs/tasks/index.json is missing.")
 
     try:
-        data = json.loads(INDEX_PATH.read_text(encoding="utf-8"))
+        text = INDEX_PATH.read_text(encoding="utf-8")
+    except OSError as exc:
+        _fail(f"Could not read {INDEX_PATH}: {exc}")
+    try:
+        data = json.loads(text)
     except json.JSONDecodeError as exc:
         _fail(f"Invalid JSON: {exc}")
-
-    if not isinstance(data, dict):
         _fail("Top-level JSON must be an object.")
 
     metadata = data.get("metadata")
