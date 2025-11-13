@@ -52,6 +52,7 @@ jobs:
           fi
 
       - name: Verify archival artifacts
+        if: github.event_name != 'pull_request' || !contains(github.event.pull_request.labels.*.name, 'ci-allow-archive-skip')
         env:
           BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before || 'origin/main' }}
         run: pnpm exec tsx tools/ci/verify_archival.ts
