@@ -189,7 +189,7 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     let active = true;
     setCapabilitiesLoading(true);
 
-    fetch("/api/capabilities", { cache: "force-cache" })
+    fetch("/api/capabilities")
       .then(async (response) => {
         if (!response.ok) {
           return { version: DEFAULT_CAPABILITY_REGISTRY.version, capabilities: [] };
