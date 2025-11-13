@@ -21,6 +21,13 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate roadmap task index
+        run: python tools/task_index_validator.py
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
         with:
