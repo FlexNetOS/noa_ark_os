@@ -77,7 +77,7 @@ describe("capability-gated UI", () => {
       />
     );
 
-    const enabledButton = screen.getByRole("button", { name: /spark assist/i });
+    const enabledButton = screen.getByRole("button", { name: /spark assist/i }) as HTMLButtonElement;
     expect(enabledButton.disabled).toBe(false);
     expect((screen.getByTestId("assist-capability-status").textContent ?? "")).toMatch(/ready/i);
   });
