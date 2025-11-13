@@ -29,34 +29,28 @@ jobs:
         run: python tools/task_index_validator.py
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v4
         with:
           version: 8.15.4
+          run_install: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install dependencies
+      - name: Show tool versions
         run: |
-          set -e
-          echo "Attempting offline pnpm install..."
-          if pnpm install --frozen-lockfile --offline; then
-            echo "Offline install succeeded."
-          else
-            echo "::warning::Offline pnpm install failed. Falling back to online install."
-            echo "---- pnpm offline install error log ----"
-            # Try again to capture error output for logging
-            pnpm install --frozen-lockfile --offline || true
-            echo "----------------------------------------"
-            echo "Attempting online pnpm install..."
-            pnpm install --frozen-lockfile
-          fi
+          node --version
+          pnpm --version
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
       - name: Verify provider instruction pointers
         run: pnpm exec tsx tools/ci/verify_provider_pointers.ts
 
