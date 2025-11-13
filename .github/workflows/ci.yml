@@ -50,6 +50,8 @@ jobs:
             echo "Attempting online pnpm install..."
             pnpm install --frozen-lockfile
           fi
+      - name: Verify provider instruction pointers
+        run: pnpm exec tsx tools/ci/verify_provider_pointers.ts
 
       - name: Verify archival artifacts
         if: github.event_name != 'pull_request' || !contains(github.event.pull_request.labels.*.name, 'ci-allow-archive-skip')
