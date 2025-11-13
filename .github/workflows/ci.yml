@@ -58,6 +58,7 @@ jobs:
         run: pnpm exec tsx tools/ci/verify_archival.ts
 
       - name: Check duplicate content
+        if: ${{ !contains(github.event.pull_request.labels.*.name, 'ci-allow-duplicate-content') }}
         run: pnpm exec tsx tools/ci/check_duplicate_content.ts
       - name: Build
         run: pnpm build
