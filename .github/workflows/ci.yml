@@ -45,6 +45,8 @@ jobs:
             echo "Attempting online pnpm install..."
             pnpm install --frozen-lockfile
           fi
+      - name: Verify provider instruction pointers
+        run: pnpm exec tsx tools/ci/verify_provider_pointers.ts
       - name: Build
         run: pnpm build
 

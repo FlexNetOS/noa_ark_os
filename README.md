@@ -4,6 +4,8 @@
 
 A self-contained operating system platform that unifies applications, AI models, and services.
 
+> **Provider Instruction Policy:** All provider-specific guidance defers to [AGENT.md](./AGENT.md), which is the single source of truth for execution rules and policies.
+
 ## Architecture Overview
 
 NOA ARK OS is designed as a fully self-contained operating system with:
