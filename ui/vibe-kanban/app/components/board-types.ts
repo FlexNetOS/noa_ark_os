@@ -1,3 +1,5 @@
+import type { ResumeToken } from "@noa-ark/shared-ui/schema";
+
 export type VibeMood = "focus" | "flow" | "chill" | "hype";
 
 export type CardIntegrationSnapshot = {
@@ -134,4 +136,28 @@ export type UploadReceiptSummary = {
     id: string;
     name: string;
   };
+};
+
+export type PlannerStageState = {
+  id: string;
+  name: string;
+  state: "pending" | "running" | "completed" | "failed" | "skipped";
+};
+
+export type PlannerPlan = {
+  goalId: string;
+  goalTitle: string;
+  workflowId: string;
+  status: "pending" | "running" | "paused" | "completed" | "failed";
+  resumeToken?: ResumeToken;
+  startedAt: string;
+  updatedAt: string;
+  stages: PlannerStageState[];
+};
+
+export type PlannerState = {
+  status: "idle" | "planning" | "ready" | "error";
+  plans: PlannerPlan[];
+  activePlanId?: string;
+  lastError?: string;
 };

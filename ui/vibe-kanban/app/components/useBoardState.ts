@@ -5,6 +5,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   ActivityEvent,
   NotificationEvent,
+  PlannerPlan,
+  PlannerState,
   PresenceUser,
   UploadReceiptSummary,
   VibeCard,
@@ -21,7 +23,9 @@ import {
   type CapabilityRegistry,
   normalizeCapabilityRegistry,
 } from "@/shared/capabilities";
-import { logError } from "@/shared/logging";
+import { logError, logWarn } from "@noa-ark/shared-ui/logging";
+import type { ResumeToken, RealTimeEvent } from "@noa-ark/shared-ui/schema";
+import { SessionContinuityClient } from "@noa-ark/shared-ui/session";
 
 const accentPalette = [
   "from-indigo-500 via-purple-500 to-blue-500",
@@ -52,6 +56,7 @@ type WorkspaceHookState = {
   uploadReceipts: UploadReceiptSummary[];
   integrations: WorkspaceIntegrationStatus[];
   assist: AssistState;
+  planner: PlannerState;
   capabilities: {
     loading: boolean;
     registry: CapabilityRegistry;
@@ -76,6 +81,7 @@ type WorkspaceHookState = {
   moveCardToColumn: (activeColumnId: string, overColumnId: string, activeCardId: string, overCardId?: string) => void;
   moveColumn: (activeId: string, overId: string) => void;
   setProjectName: (name: string) => void;
+  resumePlan: (token: ResumeToken) => void;
 };
 
 export type BoardState = WorkspaceHookState;
@@ -92,6 +98,7 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
   const [uploadReceipts, setUploadReceipts] = useState<UploadReceiptSummary[]>([]);
   const [integrations, setIntegrations] = useState<WorkspaceIntegrationStatus[]>([]);
   const [assist, setAssist] = useState<AssistState>(null);
+  const [planner, setPlanner] = useState<PlannerState>({ status: "idle", plans: [] });
   const [capabilityRegistry, setCapabilityRegistry] = useState<CapabilityRegistry>(() => ({
     version: DEFAULT_CAPABILITY_REGISTRY.version,
     capabilities: [],
@@ -103,6 +110,7 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
   const eventSourceRef = useRef<EventSource | null>(null);
   const presenceIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const latestBoardRef = useRef<WorkspaceBoard | null>(null);
+  const continuityClientRef = useRef<SessionContinuityClient | null>(null);
 
   const logBoardError = useCallback(
     (event: string, error: unknown, context?: Record<string, unknown>) => {
@@ -615,13 +623,156 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     [workspaceId, boardId]
   );
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!workspaceId || !boardId) return;
+
+    const endpoint = process.env.NEXT_PUBLIC_WORKFLOW_STREAM ?? "ws://localhost:8787/ui/session";
+    const client = new SessionContinuityClient({ workflowEndpoint: endpoint });
+    continuityClientRef.current = client;
+
+    const handleEvent = (event: RealTimeEvent) => {
+      setPlanner((prev) => reducePlannerFromEvent(prev, event));
+      const workflowState = normalizeWorkflowState((event.payload ?? {}).state);
+      if (getEventType(event) === "workflow/state" && workflowState === "completed") {
+        refreshBoard().catch((error) => {
+          logBoardError("workflow_refresh_failed", error, {
+            workflowId: getWorkflowId(event),
+            eventType: getEventType(event),
+          });
+        });
+      }
+    };
+
+    client.on("workflow:update", handleEvent);
+    try {
+      client.connectWebSocket();
+    } catch (error) {
+      logWarn({
+        component: "board.state",
+        event: "workflow_stream_connection_failed",
+        message: "Failed to connect to workflow stream",
+        outcome: "degraded",
+        context: { endpoint },
+        error,
+      });
+    }
+
+    return () => {
+      client.off("workflow:update", handleEvent);
+      client.disconnect();
+      if (continuityClientRef.current === client) {
+        continuityClientRef.current = null;
+      }
+    };
+  }, [workspaceId, boardId, refreshBoard, logBoardError, logWarn]);
+
   const requestAssist = useCallback(async () => {
     if (!workspaceId || !boardId) return;
-    const response = await fetch(`/api/workspaces/${workspaceId}/boards/${boardId}/assist`, { method: "POST" });
-    if (!response.ok) return;
-    const payload = await response.json();
-    setAssist({ suggestions: payload.suggestions ?? [], focusCard: payload.focusCard ?? null, updatedAt: new Date().toISOString() });
-  }, [workspaceId, boardId]);
+    const board = latestBoardRef.current;
+    if (!board) return;
+
+    const focusCard = pickFocusCard(board);
+    const goalId = `goal-${Date.now()}`;
+    const goalPayload = {
+      id: goalId,
+      title: focusCard?.title ? `Amplify ${focusCard.title}` : `${board.projectName} momentum`,
+      summary: focusCard?.notes ?? board.description ?? "",
+      workspaceId,
+      boardId,
+      createdBy: user?.id ?? "guest",
+      focusCardId: focusCard?.id,
+      context: {
+        boardSnapshot: board,
+        signals: buildGoalSignals(board),
+      },
+    };
+
+    setPlanner((prev) => ({ ...prev, status: "planning", lastError: undefined }));
+
+    try {
+      const response = await fetch(`/api/workspaces/${workspaceId}/boards/${boardId}/assist`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ goal: goalPayload }),
+      });
+      if (!response.ok) {
+        throw new Error(`Assist request failed with status ${response.status}`);
+      }
+      const payload = await response.json();
+      setAssist({
+        suggestions: payload.suggestions ?? [],
+        focusCard: payload.focusCard ?? null,
+        updatedAt: new Date().toISOString(),
+      });
+
+      if (payload.plan) {
+        const plan = payload.plan as {
+          goalId: string;
+          goalTitle: string;
+          workflowId: string;
+          state?: string;
+          resumeToken?: ResumeToken;
+          startedAt?: string;
+          stages?: { id?: string; name: string; state?: string }[];
+        };
+
+        const stageStates = (plan.stages ?? []).map((stage) => ({
+          id: normalizeStageIdentifier(stage.id ?? stage.name),
+          name: stage.name,
+          state: normalizeStageState(stage.state) ?? "pending",
+        }));
+
+        const nextPlan: PlannerPlan = {
+          goalId: plan.goalId,
+          goalTitle: plan.goalTitle,
+          workflowId: plan.workflowId,
+          status: normalizeWorkflowState(plan.state) ?? "pending",
+          resumeToken: plan.resumeToken,
+          startedAt: plan.startedAt ?? new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          stages: stageStates,
+        };
+
+        setPlanner((prev) => ({
+          status: "ready",
+          plans: [...prev.plans.filter((item) => item.workflowId !== nextPlan.workflowId), nextPlan],
+          activePlanId: nextPlan.goalId,
+          lastError: undefined,
+        }));
+      } else {
+        setPlanner((prev) => ({ ...prev, status: "ready" }));
+      }
+    } catch (error) {
+      setPlanner((prev) => ({
+        ...prev,
+        status: "error",
+        lastError: error instanceof Error ? error.message : "Unknown planning failure",
+      }));
+      logBoardError("assist_request_failed", error, {
+        workspaceId,
+        boardId,
+      });
+    }
+  }, [workspaceId, boardId, user, logBoardError]);
+
+  const resumePlan = useCallback(
+    (token: ResumeToken) => {
+      if (!token) return;
+      if (continuityClientRef.current) {
+        continuityClientRef.current.requestResume(token);
+      } else {
+        logWarn({
+          component: "board.state",
+          event: "workflow_resume_unavailable",
+          message: "Attempted to resume workflow without an active session",
+          outcome: "degraded",
+          context: { workflowId: token.workflowId },
+        });
+      }
+    },
+    [logWarn]
+  );
 
   const refreshWorkspace = useCallback(async () => {
     await fetchWorkspace();
@@ -646,6 +797,7 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     uploadReceipts,
     integrations,
     assist,
+    planner,
     capabilities: {
       loading: capabilitiesLoading,
       registry: capabilityRegistry,
@@ -670,5 +822,227 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     moveCardToColumn,
     moveColumn,
     setProjectName,
+    resumePlan,
+  };
+}
+
+function pickFocusCard(board: WorkspaceBoard | null): VibeCard | null {
+  if (!board) return null;
+  const inProgress = board.columns.find((column) => column.title.toLowerCase().includes("progress"));
+  if (inProgress && inProgress.cards.length) {
+    return [...inProgress.cards].sort(
+      (a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt)
+    )[0];
+  }
+  for (const column of board.columns) {
+    if (column.cards.length) {
+      return column.cards[0];
+    }
+  }
+  return null;
+}
+
+function buildGoalSignals(board: WorkspaceBoard): Record<string, unknown>[] {
+  const totalCards = board.columns.reduce((count, column) => count + column.cards.length, 0);
+  const hypeCards = board.columns.reduce(
+    (count, column) => count + column.cards.filter((card) => card.mood === "hype").length,
+    0
+  );
+  const staleCards = board.columns
+    .flatMap((column) => column.cards)
+    .filter((card) => Date.now() - Date.parse(card.createdAt) > 1000 * 60 * 60 * 24 * 7).length;
+
+  return [
+    { name: "totalCards", value: totalCards },
+    { name: "hypeCards", value: hypeCards },
+    { name: "staleCards", value: staleCards },
+  ];
+}
+
+type ContinuityEvent = RealTimeEvent & { event_type?: string; workflow_id?: string; payload: Record<string, unknown> };
+
+function getEventType(event: ContinuityEvent): string {
+  return event.eventType ?? event.event_type ?? "";
+}
+
+function getWorkflowId(event: ContinuityEvent): string {
+  return event.workflowId ?? event.workflow_id ?? "";
+}
+
+function normalizeWorkflowState(value: unknown): PlannerPlan["status"] | undefined {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.toLowerCase();
+  if (normalized === "pending" || normalized === "running" || normalized === "paused" || normalized === "completed" || normalized === "failed") {
+    return normalized;
+  }
+  return undefined;
+}
+
+function normalizeStageState(
+  value: unknown
+): PlannerPlan["stages"][number]["state"] | undefined {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.toLowerCase();
+  if (normalized === "pending" || normalized === "running" || normalized === "completed" || normalized === "failed" || normalized === "skipped") {
+    return normalized;
+  }
+  return undefined;
+}
+
+function normalizeStageIdentifier(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function normalizeResumeToken(value: unknown): ResumeToken | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const source = value as Record<string, unknown>;
+  const workflowId =
+    typeof source.workflowId === "string"
+      ? source.workflowId
+      : typeof source.workflow_id === "string"
+        ? (source.workflow_id as string)
+        : undefined;
+  if (!workflowId) return undefined;
+
+  const stageId =
+    typeof source.stageId === "string"
+      ? (source.stageId as string)
+      : typeof source.stage_id === "string"
+        ? (source.stage_id as string)
+        : undefined;
+
+  const checkpoint =
+    typeof source.checkpoint === "string" ? (source.checkpoint as string) : "";
+  const issuedAt =
+    typeof source.issuedAt === "string"
+      ? (source.issuedAt as string)
+      : typeof source.issued_at === "string"
+        ? (source.issued_at as string)
+        : new Date().toISOString();
+  const expiresAt =
+    typeof source.expiresAt === "string"
+      ? (source.expiresAt as string)
+      : typeof source.expires_at === "string"
+        ? (source.expires_at as string)
+        : new Date().toISOString();
+
+  return {
+    workflowId,
+    stageId,
+    checkpoint,
+    issuedAt,
+    expiresAt,
+  };
+}
+
+function mergeStageStates(
+  stages: PlannerPlan["stages"],
+  stageId: string,
+  state: PlannerPlan["stages"][number]["state"]
+): PlannerPlan["stages"] {
+  const existing = stages.find((stage) => stage.id === stageId);
+  if (!existing) {
+    return [...stages, { id: stageId, name: stageId, state }];
+  }
+  return stages.map((stage) => (stage.id === stageId ? { ...stage, state } : stage));
+}
+
+function reducePlannerFromEvent(prev: PlannerState, event: RealTimeEvent): PlannerState {
+  const workflowId = getWorkflowId(event as ContinuityEvent);
+  if (!workflowId) {
+    return prev;
+  }
+
+  const timestamp = typeof event.timestamp === "string" ? event.timestamp : new Date().toISOString();
+  let handled = false;
+
+  const plans = prev.plans.map((plan) => {
+    if (plan.workflowId !== workflowId) {
+      return plan;
+    }
+
+    handled = true;
+    const eventType = getEventType(event as ContinuityEvent);
+    const payload = event.payload ?? {};
+    let nextPlan: PlannerPlan = { ...plan, updatedAt: timestamp };
+
+    if (eventType === "workflow/state") {
+      const nextState = normalizeWorkflowState(payload.state);
+      if (nextState) {
+        nextPlan = { ...nextPlan, status: nextState };
+        if (nextState === "completed" || nextState === "failed") {
+          nextPlan = { ...nextPlan, resumeToken: undefined };
+        }
+      }
+      const resumeToken = normalizeResumeToken(payload.resumeToken ?? payload.resume_token);
+      if (resumeToken) {
+        nextPlan = { ...nextPlan, resumeToken };
+      }
+    } else if (eventType === "workflow/stage") {
+      const stageIdentifier = payload.stage_id ?? payload.stageId;
+      const stageState = normalizeStageState(payload.state);
+      if (typeof stageIdentifier === "string" && stageState) {
+        const stageId = normalizeStageIdentifier(stageIdentifier);
+        nextPlan = {
+          ...nextPlan,
+          stages: mergeStageStates(nextPlan.stages, stageId, stageState),
+        };
+        if (stageState === "running" && nextPlan.status === "pending") {
+          nextPlan = { ...nextPlan, status: "running" };
+        }
+        if (stageState === "failed") {
+          nextPlan = { ...nextPlan, status: "failed" };
+        }
+      }
+      const resumeToken = normalizeResumeToken(payload.resumeToken ?? payload.resume_token);
+      if (resumeToken) {
+        nextPlan = { ...nextPlan, resumeToken };
+      }
+    } else if (eventType === "workflow/resume") {
+      const resumeToken = normalizeResumeToken(payload.resumeToken ?? payload.token);
+      if (resumeToken) {
+        nextPlan = { ...nextPlan, resumeToken };
+      }
+    }
+
+    return nextPlan;
+  });
+
+  if (!handled) {
+    return prev;
+  }
+
+  let plannerStatus = prev.status === "idle" ? "ready" : prev.status;
+  let activePlanId = prev.activePlanId;
+  const updatedPlan = plans.find((plan) => plan.workflowId === workflowId);
+
+  if (updatedPlan) {
+    if (updatedPlan.status === "completed" || updatedPlan.status === "failed") {
+      if (prev.activePlanId === updatedPlan.goalId) {
+        activePlanId = plans.find(
+          (plan) =>
+            plan.workflowId !== workflowId &&
+            (plan.status === "running" || plan.status === "pending" || plan.status === "paused")
+        )?.goalId;
+      }
+      if (updatedPlan.status === "failed") {
+        plannerStatus = "error";
+      }
+    } else {
+      activePlanId = updatedPlan.goalId;
+      if (updatedPlan.status === "running") {
+        plannerStatus = plannerStatus === "planning" ? "planning" : "ready";
+      }
+    }
+  }
+
+  return {
+    status: plannerStatus,
+    plans,
+    activePlanId,
+    lastError: prev.lastError,
   };
 }

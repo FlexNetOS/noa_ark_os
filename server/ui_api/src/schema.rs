@@ -14,6 +14,7 @@ pub enum WidgetKind {
     WorkspaceAnalytics,
     WorkspaceActivity,
     WorkspaceAssist,
+    WorkspacePlanner,
     WorkspaceIntegrations,
     WorkspacePresence,
     LayoutRegion,
@@ -212,6 +213,13 @@ impl PageEnvelope {
                                 variant: None,
                                 props: None,
                                 component: Some("AssistPanel".into()),
+                            },
+                            WidgetSchema {
+                                id: "planner".into(),
+                                kind: WidgetKind::WorkspacePlanner,
+                                variant: None,
+                                props: None,
+                                component: Some("PlannerPanel".into()),
                             },
                             WidgetSchema {
                                 id: "analytics".into(),

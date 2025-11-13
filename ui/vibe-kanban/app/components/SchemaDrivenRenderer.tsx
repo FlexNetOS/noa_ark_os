@@ -15,6 +15,7 @@ import { AssistPanel } from "./AssistPanel";
 import { UploadPanel } from "./UploadPanel";
 import { AnalyticsPanel } from "./AnalyticsPanel";
 import { ActivityTimeline } from "./ActivityTimeline";
+import { PlannerPanel } from "./PlannerPanel";
 import type { BoardState } from "./useBoardState";
 import type { SessionState } from "./useSession";
 
@@ -26,6 +27,7 @@ export interface SchemaDrivenRendererProps {
       session: SessionState;
       resumeToken?: ResumeToken;
     };
+    resumeWorkflow?: (token: ResumeToken) => void;
   };
 }
 
@@ -146,6 +148,21 @@ const widgetRegistry = {
     return (
       <WidgetSurface>
         <UploadPanel state={boardState} />
+      </WidgetSurface>
+    );
+  },
+  "workspace.planner": ({ context }: ComponentRenderProps) => {
+    const { boardState } = context.data as SchemaDrivenRendererProps["context"]["data"];
+    const resume = context.resumeWorkflow;
+    return (
+      <WidgetSurface>
+        <PlannerPanel
+          planner={boardState.planner}
+          onResume={(token) => {
+            boardState.resumePlan(token);
+            resume?.(token);
+          }}
+        />
       </WidgetSurface>
     );
   },
