@@ -146,56 +146,54 @@ function CapabilitySummaryPanel({ items, loading }: CapabilitySummaryPanelProps)
         </span>
       </div>
       <ul className="mt-4 space-y-3">
-        {items.map((item) => (
-          (() => {
-            const statusLabel = loading
-              ? "Pending"
-              : item.available
-                ? "Available"
-                : "Unavailable";
-            const badgeClasses = loading
-              ? "border-white/20 bg-white/5 text-white/50"
-              : item.available
-                ? "border-emerald-400/60 bg-emerald-500/20 text-emerald-100"
-                : "border-amber-400/40 bg-amber-500/10 text-amber-100";
-            const icon = loading ? "…" : item.available ? "✓" : "!";
-            return (
-              <li
-                key={item.id}
-                data-testid={`capability-${item.id}`}
-                className="flex items-start gap-3 rounded-2xl border border-white/10 bg-surface/70 p-4"
-              >
-            <span
-              aria-hidden
-              className={`mt-0.5 flex h-6 w-6 items-center justify-center rounded-full border text-sm font-semibold ${badgeClasses}`}
+        {items.map((item) => {
+          const statusLabel = loading
+            ? "Pending"
+            : item.available
+              ? "Available"
+              : "Unavailable";
+          const badgeClasses = loading
+            ? "border-white/20 bg-white/5 text-white/50"
+            : item.available
+              ? "border-emerald-400/60 bg-emerald-500/20 text-emerald-100"
+              : "border-amber-400/40 bg-amber-500/10 text-amber-100";
+          const icon = loading ? "…" : item.available ? "✓" : "!";
+          return (
+            <li
+              key={item.id}
+              data-testid={`capability-${item.id}`}
+              className="flex items-start gap-3 rounded-2xl border border-white/10 bg-surface/70 p-4"
             >
-              {icon}
-            </span>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-white">{item.label}</span>
-                <span className={`text-xs font-semibold uppercase tracking-[0.2em] ${
-                  loading
-                    ? "text-white/60"
-                    : item.available
-                      ? "text-emerald-200"
-                      : "text-amber-200"
-                }`}
-                >
-                  {statusLabel}
-                </span>
-              </div>
-              <p className="text-xs text-white/60">{item.description}</p>
-              {!loading && !item.available && (
-                <p className="text-[11px] uppercase tracking-[0.2em] text-amber-200/80">
-                  Requires capability token: {item.capability}
-                </p>
-              )}
-              </div>
-            </li>
-            );
-          })()
-        ))}
+          <span
+            aria-hidden
+            className={`mt-0.5 flex h-6 w-6 items-center justify-center rounded-full border text-sm font-semibold ${badgeClasses}`}
+          >
+            {icon}
+          </span>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-white">{item.label}</span>
+              <span className={`text-xs font-semibold uppercase tracking-[0.2em] ${
+                loading
+                  ? "text-white/60"
+                  : item.available
+                    ? "text-emerald-200"
+                    : "text-amber-200"
+              }`}
+              >
+                {statusLabel}
+              </span>
+            </div>
+            <p className="text-xs text-white/60">{item.description}</p>
+            {!loading && !item.available && (
+              <p className="text-[11px] uppercase tracking-[0.2em] text-amber-200/80">
+                Requires capability token: {item.capability}
+              </p>
+            )}
+            </div>
+          </li>
+          );
+        })}
       </ul>
     </div>
   );
