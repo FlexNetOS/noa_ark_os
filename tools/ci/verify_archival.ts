@@ -181,12 +181,17 @@ function main() {
     return;
   }
 
+  const ledgerPath = join(repoRoot, "archive", "ledger.jsonl");
   const ledgerEntries = loadLedger(repoRoot);
   const errors: string[] = [];
 
-  if (ledgerEntries.length === 0) {
+  if (!existsSync(ledgerPath)) {
     errors.push(
-      "archive/ledger.jsonl is missing or empty. Provide ledger entries for archival operations."
+      "archive/ledger.jsonl is missing. Provide a ledger file for archival operations."
+    );
+  } else if (ledgerEntries.length === 0) {
+    errors.push(
+      "archive/ledger.jsonl is empty or contains only invalid entries. Provide valid ledger entries for archival operations."
     );
   }
 
