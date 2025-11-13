@@ -10,6 +10,7 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{Json, Router};
+use axum::response::Response;
 use bytes::Bytes;
 use chrono::Utc;
 use flate2::read::GzDecoder;
@@ -19,6 +20,7 @@ use noa_crc::graph::{CRCGraph, GraphNode, NodeKind};
 use noa_crc::ir::Lane;
 use noa_crc::{CRCState, CRCSystem, DropManifest, OriginalArtifact, Priority, SourceType};
 use serde::{Deserialize, Serialize};
+use serde_json::Value as JsonValue;
 use tokio::fs;
 use tokio::sync::RwLock;
 use tokio::task;
@@ -154,12 +156,63 @@ impl UiApiServer {
         Router::new()
             .route("/ui/pages/:page_id", get(Self::get_page))
             .route("/ui/pages/:page_id/events", get(Self::stream_events))
+            // Upload → Digest
             .route("/ui/drop-in/upload", post(Self::upload_drop))
+            .route("/api/uploads", post(Self::upload_drop))
+            .route("/ui/drop-in/panel", get(Self::upload_panel))
+            // Capabilities surfacing
+            .route("/api/capabilities", get(Self::get_capabilities))
             .with_state(self.state.clone())
+    }
+
+    async fn upload_panel() -> impl IntoResponse {
+        const HTML: &str = r#"<!doctype html><html><head><meta charset=\"utf-8\"><title>Upload → Digest</title></head>
+<body style=\"font-family: system-ui; margin:2rem;\">
+<h2>Upload → Digest</h2>
+<form id=\"f\" method=\"post\" action=\"/ui/drop-in/upload\" enctype=\"multipart/form-data\">
+  <label>Type:
+    <select name=\"type\">
+      <option value=\"repos\">Repo</option>
+      <option value=\"forks\">Fork</option>
+      <option value=\"mirrors\">Mirror</option>
+      <option value=\"stale\">Stale</option>
+    </select>
+  </label>
+  <br/><br/>
+  <input type=\"file\" name=\"file\" required />
+  <button type=\"submit\">Upload</button>
+</form>
+<pre id=\"out\"></pre>
+<script>
+const f=document.getElementById('f');
+f.addEventListener('submit', async e=>{
+  e.preventDefault();
+  const fd=new FormData(f);
+  const r=await fetch(f.action,{method:'POST',body:fd});
+  const t=await r.text();
+  document.getElementById('out').textContent=t;
+});
+</script>
+</body></html>"#;
+        ([("content-type", "text/html; charset=utf-8")], HTML)
     }
 
     async fn get_page(
         State(state): State<UiApiState>,
+    async fn get_capabilities() -> Result<Json<JsonValue>, (StatusCode, Json<ErrorResponse>)> {
+        let path = std::path::Path::new("registry/capabilities.json");
+        match fs::read(path).await {
+            Ok(bytes) => {
+                let value: Result<JsonValue, _> = serde_json::from_slice(&bytes);
+                match value {
+                    Ok(v) => Ok(Json(v)),
+                    Err(err) => Err(internal_error(format!("invalid JSON in capabilities.json: {err}"))),
+                }
+            }
+            Err(_) => Ok(Json(serde_json::json!({ "capabilities": [] }))),
+        }
+    }
+
         AxumPath(page_id): AxumPath<String>,
     ) -> Json<PageEnvelope> {
         let mut pages = state.pages.write().await;

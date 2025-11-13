@@ -5,10 +5,12 @@
   "forbidden_paths": ["archive/", "out/"],
   "budgets": { "max_files": 30, "max_additions": 1000, "allow_deletions": false },
   "acceptance": [
-    "cargo test -p crc",
-    "test -f out/ingest.json"
+    "cargo test -p noa_crc --test cas_smoke --test digest_smoke",
+    "cargo test -p noa_ui_api",
+    "cargo run -p noa_crc -- ingest --root . --report out/ci/ingest.json",
+    "test -f out/ci/ingest.json"
   ],
-  "artifacts": ["out/ingest.json", "out/cas/**", "out/receipts/**"],
+  "artifacts": ["out/ci/ingest.json", "out/cas/**", "crc/drop-in/incoming/receipts/**"],
   "evidence_ledger": "docs/verification/T-EXAMPLE-0001.json",
   "agents": ["researcher", "cross_ref", "executor", "verifier", "reporter"]
 }

@@ -48,7 +48,6 @@ class AiDatabase {
       )`
     );
 
-    const appliedRows = this.db.prepare(`SELECT id FROM schema_migrations`).all() as Array<{ id: string }>;
     const appliedRows = this.db
       .prepare(`SELECT id FROM schema_migrations`)
       .all() as Array<{ id: string }>;
