@@ -56,8 +56,8 @@ importers:
         specifier: 14.5.2
         version: 14.5.2(@testing-library/dom@10.4.1)
       '@types/better-sqlite3':
-        specifier: 7.6.8
-        version: 7.6.8
+        specifier: ^7.6.13
+        version: 7.6.13
       '@types/node':
         specifier: 20.12.7
         version: 20.12.7
@@ -1243,8 +1243,8 @@ packages:
       '@babel/types': 7.28.5
     dev: true
 
-  /@types/better-sqlite3@7.6.8:
-    resolution: {integrity: sha512-ASndM4rdGrzk7iXXqyNC4fbwt4UEjpK0i3j4q4FyeQrLAthfB6s7EF135ZJE0qQxtKIMFwmyT6x0switET7uIw==}
+  /@types/better-sqlite3@7.6.13:
+    resolution: {integrity: sha512-NMv9ASNARoKksWtsq/SHakpYAYnhBrQgGD8zkLYk/jaK8jUGn08CfEdTRgYhMypUQAfzSP8W6gNLe0q19/t4VA==}
     dependencies:
       '@types/node': 20.12.7
     dev: true

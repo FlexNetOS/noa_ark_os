@@ -2,6 +2,14 @@
 
 Multi-layered AI agent system with hive mind coordination, swarm deployments, and disposable sub-agents.
 
+## Task Planning Source of Truth
+
+Automated planners and supporting tooling must source roadmap directives from the machine-readable index at
+`docs/tasks/index.json`. The index provides structured task codes, summaries, authoritative owning files, and declared
+dependencies so planners can queue work without scraping free-form roadmap text. Consumers should validate the file with
+`python tools/task_index_validator.py` before executing generated plans to ensure the dependency graph and file references
+are up to date.
+
 ## Architecture
 
 ### 5-Layer Agent Hierarchy

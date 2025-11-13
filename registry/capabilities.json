@@ -21,6 +21,26 @@
       "semver": "0.1.0",
       "requires": ["cargo", "wasmtime"],
       "provides": ["tests", "coverage"]
+    },
+    {
+      "id": "ui.kanban.core",
+      "type": "ui",
+      "semver": "1.0.0",
+      "provides": ["kanban.manageColumns", "kanban.quickComposer"]
+    },
+    {
+      "id": "ui.kanban.metrics",
+      "type": "ui",
+      "semver": "1.0.0",
+      "requires": ["analytics.pipeline"],
+      "provides": ["kanban.metrics"]
+    },
+    {
+      "id": "ui.kanban.assist",
+      "type": "ai",
+      "semver": "0.1.0",
+      "requires": ["digestor.openapi"],
+      "provides": ["kanban.assist"]
     }
   ]
 }

@@ -126,9 +126,17 @@ const widgetRegistry = {
   },
   "workspace.assist": ({ context }: ComponentRenderProps) => {
     const { boardState } = context.data as SchemaDrivenRendererProps["context"]["data"];
+    const assistGate = boardState.capabilities.featureGates.find(
+      (gate) => gate.id === "kanban.assist"
+    );
     return (
       <WidgetSurface>
-        <AssistPanel assist={boardState.assist} onRequest={boardState.requestAssist} />
+        <AssistPanel
+          assist={boardState.assist}
+          onRequest={boardState.requestAssist}
+          capability={assistGate}
+          loading={boardState.capabilities.loading}
+        />
       </WidgetSurface>
     );
   },
