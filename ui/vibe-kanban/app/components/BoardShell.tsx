@@ -81,8 +81,18 @@ export function BoardShell({ state }: BoardShellProps) {
   }, [snapshot]);
 
   const ambientBackdropEnabled = isFeatureEnabled("ambientBackdrop");
-  const boardMetricsEnabled = isFeatureEnabled("boardMetrics");
-  const quickComposerEnabled = isFeatureEnabled("quickComposer");
+  const boardMetricsEnabled =
+    !state.capabilities.loading &&
+    isFeatureEnabled("boardMetrics") &&
+    state.capabilities.has("kanban.metrics");
+  const quickComposerEnabled =
+    !state.capabilities.loading &&
+    isFeatureEnabled("quickComposer") &&
+    state.capabilities.has("kanban.quickComposer");
+  const canManageColumns = !state.capabilities.loading && state.capabilities.has("kanban.manageColumns");
+  const addColumnDisabledReason = canManageColumns
+    ? undefined
+    : "Enable the kanban.manageColumns capability to add new columns.";
 
   if (!snapshot) {
     return null;
@@ -198,11 +208,15 @@ export function BoardShell({ state }: BoardShellProps) {
           lastUpdated={snapshot.lastUpdated}
           onRename={setProjectName}
           onAddColumn={() => addColumn("New Column")}
+          canAddColumn={canManageColumns}
+          addColumnDisabledReason={addColumnDisabledReason}
           columnCount={snapshot.columns.length}
           totalCardCount={totalCards}
           completedCount={completedCount}
           showMetrics={boardMetricsEnabled}
           metrics={snapshot.metrics}
+          capabilitySummary={state.capabilities.featureGates}
+          capabilitiesLoading={state.capabilities.loading}
         />
 
         <div className="relative overflow-hidden rounded-[3rem] border border-white/10 bg-surface/60 p-8 shadow-[0_60px_160px_-60px_rgba(14,165,233,0.35)]">
