@@ -16,7 +16,7 @@ import hashlib, os, sys, subprocess
 ALLOW_PREFIXES = ("archive/", "out/", ".git/", ".next/", "target/", "node_modules/", "dist/", "build/")
 base = os.environ.get('GITHUB_BASE_REF')
 if not base:
-    print('GITHUB_BASE_REF missing', file=sys.stderr)
+    print('Skipping duplicate file check: GITHUB_BASE_REF is missing. This usually means the workflow is not running in a pull request context or the environment is misconfigured.', file=sys.stderr)
     sys.exit(0)
 changed = subprocess.run(["bash","-lc",f"git diff --name-only origin/{base}..."], capture_output=True, text=True).stdout.split()
 seen = {}
