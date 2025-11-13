@@ -16,7 +16,7 @@ jobs:
           echo "Files: $files, Adds: $adds"
           test $files -le 40   || (echo "Too many files changed" && exit 1)
           test $adds  -le 1200 || (echo "Too many lines added" && exit 1)
-          disallowed=$(git diff --name-only "$base"... | grep -Ev '^(crc/|server/|ui/|docs/|.github/)') || true
+          disallowed=$(git diff --name-only "$base"... | grep -Ev '^(crc/|server/|ui/|docs/|.github/(?!workflows/))') || true
           if [ -n "$disallowed" ]; then
             echo "Disallowed paths:\n$disallowed" >&2
             exit 1
