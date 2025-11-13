@@ -16,6 +16,7 @@ pub use instrumentation::{
     EvidenceLedgerEntry, EvidenceLedgerKind, MerkleLeaf, MerkleLevel, PipelineInstrumentation,
     SecurityScanReport, SecurityScanStatus, StageReceipt, TaskReceipt,
 };
+pub use instrumentation::{EvidenceLedgerEntry, PipelineInstrumentation, StageReceipt};
 use tokio::sync::broadcast;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -284,6 +285,19 @@ impl WorkflowEngine {
             receipt,
             timestamp: now_iso(),
         });
+        if let Err(err) = self.instrumentation.log_stage_receipt(
+            workflow_id,
+            &stage.name,
+            &stage.stage_type,
+            &artifacts,
+        ) {
+            return Err(format!("stage receipt failed: {}", err));
+        }
+
+        println!(
+            "[WORKFLOW] Stage receipt generated for {}::{}",
+            workflow_id, stage.name
+        );
 
         // Mark stage as completed
         self.set_stage_state(workflow_id, &stage.name, StageState::Completed);
@@ -519,6 +533,9 @@ mod tests {
             }
         }
     }
+    use std::path::PathBuf;
+
+    use crate::instrumentation::EvidenceLedgerEntry;
 
     #[test]
     fn test_workflow_creation() {
@@ -566,6 +583,8 @@ mod tests {
         let _guard = EnvGuard::set("NOA_WORKFLOW_ROOT", dir.path());
         let engine = WorkflowEngine::new();
         let workflow_name = format!("merkle-{}", Utc::now().timestamp_nanos_opt().unwrap());
+        let engine = WorkflowEngine::new();
+        let workflow_name = format!("merkle-{}", Utc::now().timestamp_nanos());
         let workflow = Workflow {
             name: workflow_name.clone(),
             version: "1.0".to_string(),
@@ -585,6 +604,11 @@ mod tests {
         engine.execute(&id).unwrap();
 
         let ledger_path = dir.path().join("storage/db/evidence/ledger.jsonl");
+        let ledger_path = {
+            let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+            let repo_root = root.parent().expect("workspace root available");
+            repo_root.join(".workspace/indexes/evidence/evidence.ledger.jsonl")
+        };
         let content = fs::read_to_string(&ledger_path)
             .unwrap_or_else(|_| panic!("ledger missing at {:?}", ledger_path));
 
@@ -622,5 +646,11 @@ mod tests {
             .and_then(Value::as_str)
             .unwrap_or_default();
         assert!(!merkle_root.is_empty());
+            .find(|entry| entry.receipt.workflow_id == workflow_name)
+            .expect("stage receipt recorded");
+
+        assert_eq!(receipt.receipt.stage_name, "stage-merkle");
+        assert_eq!(receipt.receipt.leaf_count, 1);
+        assert!(!receipt.receipt.merkle_root.is_empty());
     }
 }

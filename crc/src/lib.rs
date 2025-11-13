@@ -25,6 +25,7 @@ pub mod processor;
 pub mod transform;
 pub mod types;
 pub mod watcher;
+pub mod telemetry;
 
 // Re-export common types
 pub use build::{BuildArtifact, BuildManifest, TargetProfile};
@@ -32,6 +33,7 @@ pub use error::{Error, Result};
 pub use types::*;
 
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -311,7 +313,14 @@ impl CRCSystem {
 
     /// Scan for new drops in incoming folder
     pub fn scan_incoming(&self) -> std::result::Result<Vec<String>, String> {
-        println!("[CRC] Scanning for new code drops...");
+        crate::telemetry::info(
+            "crc.system",
+            "scan_incoming",
+            "Scanning for new code drops",
+            "started",
+            None,
+            None,
+        );
 
         // In real implementation, scan filesystem
         // For now, return empty
@@ -342,13 +351,27 @@ impl CRCSystem {
         let mut drops = self.drops.lock().unwrap();
         drops.insert(id.clone(), drop);
 
-        println!("[CRC] Registered code drop: {}", id);
+        crate::telemetry::info(
+            "crc.system",
+            "drop_registered",
+            "Registered incoming code drop",
+            "queued",
+            None,
+            Some(json!({ "drop_id": id })),
+        );
         Ok(id)
     }
 
     /// Analyze code drop
     pub fn analyze(&self, drop_id: &str) -> std::result::Result<AnalysisResult, String> {
-        println!("[CRC] Analyzing code drop: {}", drop_id);
+        crate::telemetry::info(
+            "crc.system",
+            "analyze_drop",
+            "Analyzing code drop",
+            "started",
+            None,
+            Some(json!({ "drop_id": drop_id })),
+        );
 
         // Update state
         self.update_state(drop_id, CRCState::Analyzing)?;
