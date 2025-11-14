@@ -3,7 +3,7 @@ SHELL := /bin/bash
 PNPM ?= pnpm
 CARGO ?= cargo
 
-.PHONY: build test digest run ci:local lint typecheck format
+.PHONY: build test digest run ci:local lint typecheck format docs:check
 .PHONY: pipeline.local world-verify world-fix kernel snapshot rollback verify publish-audit setup
 
 build:
@@ -26,7 +26,10 @@ format:
 typecheck:
 	$(PNPM) typecheck
 
-ci:local: lint typecheck format test
+docs:check:
+	$(PNPM) docs:lint
+
+ci:local: lint typecheck format docs:check test
 
 run:
 	@set -euo pipefail; \

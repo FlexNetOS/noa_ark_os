@@ -76,6 +76,19 @@ Establish one strict operating policy for every agent-driven action so each task
 8. **Organization Management & Gateway Reuse:** Enforce single sources of truth, re-use assets via gateways, and keep duplicate-check CI passing.
 9. **Provider Instruction Uniformity:** Provider files remain empty pointers that direct readers back to this policy.
 
+### Phase 0.5–10 Operator Patterns
+
+Detailed execution guidance for the active roadmap phases lives in
+`docs/guides/AGENTIC_OS_GUIDE.md` (sourced from
+`docs/tasks/ROADMAP_AGENTIC_KERNEL_TASK_LINKS.md`). Operators must:
+
+- **Phase 0.5 (CLI-First Foundation):** Drive all actions through CLI targets (`Makefile`, `pnpm`, `cargo`) and record evidence snapshots before state changes.
+- **Phase 1 (Kernel Baseline):** Keep kernel manifests authoritative and trigger `make snapshot` prior to structural migrations.
+- **Phase 2–4 (North Star, Contract Tests, CLI Expansion):** Extend capability registries instead of importing subsystems directly and publish machine-readable evidence for automation replay.
+- **Phase 5 (Gateway Tokens):** Enforce registry-only execution; capability tokens issued via `services/gateway/` gate all runtime launches.
+- **Phase 6–7 (Retrieval Discipline, Reward System):** Update metrics and analytics in lock-step with capability changes to preserve reproducibility.
+- **Phase 8–10 (SBOM Split, Deployment Profiles, Machine-First Pipelines):** Generate SBOM placeholders, promote deployments through gateway-controlled profiles, and document machine-first behaviors in Truth Gate artifacts.
+
 ---
 
 ## 3) Repository Structure Map (Where Things Belong)
@@ -269,6 +282,7 @@ Before marking a task complete:
 * `HIERARCHY.md`, `WORKSPACE_ORGANIZATION_PLAN.md`, `WORKSPACE_MEMORY.md`
 * `docs/architecture/`, `docs/plans/`, `docs/roadmap/`
 * `.workspace/registry/` inventories and `.graphs/` diagrams
+* `docs/guides/AGENTIC_OS_GUIDE.md` for end-to-end operator workflows, kernel sovereignty diagrams, and Phase 0.5–10 patterns
 * `.github/workflows/` CI/CD enforcement points
 
 ### B) Provider Pointer Snippets
