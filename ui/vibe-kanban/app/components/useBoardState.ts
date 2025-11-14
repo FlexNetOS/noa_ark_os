@@ -623,51 +623,6 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     [workspaceId, boardId]
   );
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (!workspaceId || !boardId) return;
-
-    const endpoint = process.env.NEXT_PUBLIC_WORKFLOW_STREAM ?? "ws://localhost:8787/ui/session";
-    const client = new SessionContinuityClient({ workflowEndpoint: endpoint });
-    continuityClientRef.current = client;
-
-    const handleEvent = (event: RealTimeEvent) => {
-      setPlanner((prev) => reducePlannerFromEvent(prev, event));
-      const workflowState = normalizeWorkflowState((event.payload ?? {}).state);
-      if (getEventType(event) === "workflow/state" && workflowState === "completed") {
-        refreshBoard().catch((error) => {
-          logBoardError("workflow_refresh_failed", error, {
-            workflowId: getWorkflowId(event),
-            eventType: getEventType(event),
-          });
-        });
-      }
-    };
-
-    client.on("workflow:update", handleEvent);
-    try {
-      client.connectWebSocket();
-    } catch (error) {
-      logWarn({
-        component: "board.state",
-        event: "workflow_stream_connection_failed",
-        message: "Failed to connect to workflow stream",
-        outcome: "degraded",
-        context: { endpoint },
-        error,
-      });
-    }
-
-    return () => {
-      client.off("workflow:update", handleEvent);
-      client.disconnect();
-      if (continuityClientRef.current === client) {
-        continuityClientRef.current = null;
-      }
-    };
-  }, [workspaceId, boardId, refreshBoard, logBoardError, logWarn]);
-
-  const requestAssist = useCallback(async () => {
     if (!workspaceId || !boardId) return;
     const board = latestBoardRef.current;
     if (!board) return;
