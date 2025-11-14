@@ -41,6 +41,20 @@
       "semver": "0.1.0",
       "requires": ["digestor.openapi"],
       "provides": ["kanban.assist"]
+    },
+    {
+      "id": "workflow.automation.dispatcher",
+      "type": "workflow",
+      "semver": "0.1.0",
+      "requires": ["agents.factory"],
+      "provides": ["workflow.taskDispatch", "workflow.agentTelemetry"]
+    },
+    {
+      "id": "workflow.automation.tool-logger",
+      "type": "telemetry",
+      "semver": "0.1.0",
+      "requires": ["workflow.automation.dispatcher"],
+      "provides": ["workflow.toolReceipts"]
     }
   ]
 }
