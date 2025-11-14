@@ -36,6 +36,13 @@
       "provides": ["kanban.metrics"]
     },
     {
+      "id": "ui.kanban.goal_insights",
+      "type": "ui",
+      "semver": "1.1.0",
+      "requires": ["ui.kanban.metrics"],
+      "provides": ["kanban.goalInsights"]
+    },
+    {
       "id": "ui.kanban.assist",
       "type": "ai",
       "semver": "0.1.0",
@@ -43,18 +50,11 @@
       "provides": ["kanban.assist"]
     },
     {
-      "id": "workflow.automation.dispatcher",
-      "type": "workflow",
+      "id": "ui.kanban.autonomy",
+      "type": "ai",
       "semver": "0.1.0",
-      "requires": ["agents.factory"],
-      "provides": ["workflow.taskDispatch", "workflow.agentTelemetry"]
-    },
-    {
-      "id": "workflow.automation.tool-logger",
-      "type": "telemetry",
-      "semver": "0.1.0",
-      "requires": ["workflow.automation.dispatcher"],
-      "provides": ["workflow.toolReceipts"]
+      "requires": ["ui.kanban.assist"],
+      "provides": ["kanban.autonomousRetry", "kanban.agentEscalation"]
     }
   ]
 }
