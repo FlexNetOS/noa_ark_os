@@ -47,7 +47,12 @@ def run_self_heal(output: Path) -> Dict[str, object]:
         results.append(_exercise_service(gateway, service_id, rule))
 
     telemetry_path = gateway.export_telemetry("self-heal-metrics.json")
-    status = "ok" if all(entry.get("status") == 200 for entry in results if isinstance(entry.get("status"), int)) else "attention"
+    all_services_healthy = all(
+        entry.get("status") == 200
+        for entry in results
+        if isinstance(entry.get("status"), int)
+    )
+    status = "ok" if all_services_healthy else "attention"
     payload = {
         "status": status,
         "results": results,
