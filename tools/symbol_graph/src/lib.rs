@@ -256,7 +256,12 @@ fn collect_symbol(
             if let Some((enclosing_name, enclosing_kind, enclosing_signature)) =
                 find_enclosing_function(node, source, language_id)
             {
-                let caller = stable_symbol_id(language_id, &enclosing_name, &enclosing_kind, &enclosing_signature);
+                let caller = stable_symbol_id(
+                    language_id,
+                    &enclosing_name,
+                    &enclosing_kind,
+                    &enclosing_signature,
+                );
                 let callee_id = stable_symbol_id(language_id, &name, "call", &name);
                 edges.push(SymbolEdge {
                     from: caller,
@@ -332,12 +337,19 @@ fn collect_typescript_symbol(
     Ok(())
 }
 
-fn find_enclosing_function(node: Node, source: &str, _language: &str) -> Option<(String, String, String)> {
+fn find_enclosing_function(
+    node: Node,
+    source: &str,
+    _language: &str,
+) -> Option<(String, String, String)> {
     let mut current = node;
     loop {
         if let Some(parent) = current.parent() {
             match parent.kind() {
-                "function_definition" | "function_declaration" | "method_definition" | "arrow_function" => {
+                "function_definition"
+                | "function_declaration"
+                | "method_definition"
+                | "arrow_function" => {
                     if let Some(name) = extract_identifier("rust", parent, source) {
                         let signature = normalise_signature("rust", parent, source);
                         let kind = parent.kind().to_string();

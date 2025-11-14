@@ -103,6 +103,16 @@ impl AgentDispatcher {
     }
 
     pub fn dispatch(&self, task: &Task) -> Result<TaskDispatchReceipt, AgentDispatchError> {
+        let metadata = self
+            .registry
+            .get(&task.agent)
+            .or_else(|| {
+                self.registry
+                    .all()
+                    .into_iter()
+                    .find(|agent| agent.name == task.agent)
+            })
+            .ok_or_else(|| AgentDispatchError::AgentNotFound(task.agent.clone()))?;
         let metadata = self.resolve_agent_metadata(task)?;
 
         let instance_id = self
