@@ -1,4 +1,4 @@
-use crate::{Stage, StageType, Task};
+use crate::{Stage, StageType, Task, TaskDispatchReceipt};
 use chrono::Utc;
 use noa_core::security::{self, OperationKind, OperationRecord, SignedOperation};
 use noa_core::utils::{current_timestamp_millis, simple_hash};

@@ -14,7 +14,6 @@ use serde_json::{json, Value};
 
 mod agent_dispatch;
 mod instrumentation;
-use agent_dispatch::ToolExecutionStatus;
 pub use agent_dispatch::{
     AgentDispatchError, AgentDispatcher, TaskDispatchReceipt, ToolExecutionReceipt, ToolExecutionStatus,
     ToolRequirement,
@@ -144,6 +143,10 @@ impl GoalRunTracker {
             agent: agent.to_string(),
             success,
         });
+    }
+
+    fn snapshot(&self) -> Vec<AgentExecutionResult> {
+        self.agents.clone()
     }
 
     fn into_snapshot(self) -> Vec<AgentExecutionResult> {
