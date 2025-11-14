@@ -65,10 +65,11 @@ Translate the policy stack (AGENT.md), goal inventory, and the Agentic Kernel Ro
 | --- | --- |
 | 1 | Run `source server/tools/activate-cargo-wsl.sh && server/tools/activate-node.sh` (to be created) and ensure PATH contains only portable binaries. |
 | 2 | Execute `make pipeline.local` with network disabled; confirm caches satisfy all dependencies. |
-| 3 | Capture snapshot + SBOM hashes and log them in `audit/` + Evidence Ledger. |
-| 4 | Inspect CLI output via `noa kernel status --json` (once implemented) to confirm machine-readable contract. |
-| 5 | Review gateway logs to ensure every command carries a capability token tied to an active profile. |
-| 6 | Apply Truth Gate checklist before claiming success; attach logs to `docs/reports/` as needed. |
+| 3 | Commit the generated `audit/local_pipeline_status.json` proof (hashes + timestamp) so git hooks and GitHub workflows can verify the run before merging. |
+| 4 | Capture snapshot + SBOM hashes and log them in `audit/` + Evidence Ledger. |
+| 5 | Inspect CLI output via `noa kernel status --json` (once implemented) to confirm machine-readable contract. |
+| 6 | Review gateway logs to ensure every command carries a capability token tied to an active profile. |
+| 7 | Apply Truth Gate checklist before claiming success; attach logs to `docs/reports/` as needed. |
 
 ## Documentation & Reporting Hooks
 

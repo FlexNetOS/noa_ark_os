@@ -2,7 +2,11 @@ SHELL := /bin/bash
 
 PNPM ?= pnpm
 CARGO ?= cargo
+<<<<<<< HEAD
 PYTHON ?= python3
+=======
+BASE_REF ?= origin/main
+>>>>>>> 0aa72fd (feat: implement local-first pipeline evidence validation and GitHub workflow integration)
 
 ACTIVATION_CHECK := \
 	@if [ -z "$$NOA_CARGO_ENV" ] || [ -z "$$NOA_NODE_ENV" ]; then \
@@ -20,6 +24,8 @@ SNAPSHOT_TAR_COMPRESS ?= --zstd
 SNAPSHOT_TAR_DECOMPRESS ?= --zstd
 SNAPSHOT_BUNDLE_EXT ?= tar.zst
 .PHONY: pipeline.local world-verify world-fix kernel snapshot rollback verify publish-audit setup
+.PHONY: provider-pointers archival-verify duplicate-check router-singleton conventional-commits export-roadmap
+.PHONY: record-local-pipeline
 
 
 deps:
@@ -62,8 +68,41 @@ run: deps
 	wait $$UI_PID $$API_PID
 
 # Machine-First Pipeline (authoritative local pipeline)
+<<<<<<< HEAD
 pipeline.local: world-verify build sbom test package sign verify scorekeeper publish-audit
 @echo "✅ Pipeline complete"
+=======
+pipeline.local: world-verify build provider-pointers archival-verify duplicate-check router-singleton ci-local sbom scorekeeper package sign conventional-commits export-roadmap record-local-pipeline
+	@echo "✅ Pipeline complete"
+>>>>>>> 0aa72fd (feat: implement local-first pipeline evidence validation and GitHub workflow integration)
+
+provider-pointers: deps
+	$(ACTIVATION_CHECK)
+	$(PNPM) exec tsx tools/ci/verify_provider_pointers.ts
+
+archival-verify: deps
+	$(ACTIVATION_CHECK)
+	BASE_REF="$(BASE_REF)" $(PNPM) exec tsx tools/ci/verify_archival.ts
+
+duplicate-check: deps
+	$(ACTIVATION_CHECK)
+	$(PNPM) exec tsx tools/ci/check_duplicate_content.ts
+
+router-singleton: deps
+	$(ACTIVATION_CHECK)
+	$(PNPM) exec tsx tools/ci/check_router_singleton.ts
+
+conventional-commits: deps
+	$(ACTIVATION_CHECK)
+	$(PNPM) exec tsx tools/commit_copilot/cli.ts enforce
+
+export-roadmap: deps
+	$(ACTIVATION_CHECK)
+	$(PNPM) export:roadmap
+
+record-local-pipeline:
+	$(ACTIVATION_CHECK)
+	scripts/pipeline/record_local_pipeline.sh "make pipeline.local"
 
 # World model verification
 world-verify:

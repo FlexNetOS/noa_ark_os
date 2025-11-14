@@ -78,3 +78,10 @@ updates.
   - pnpm: `7d26cc57186850a2d71ab77da7cf52ff0eeabf680ac446c8da2324aa63808aac`
 - **Manifest**: `server/tools/node-portable.manifest.json`
 - **Purpose**: Establishes the HT-01 hermetic Node toolchain mirrored into the workspace so Make targets and pnpm installs remain offline once cached.
+
+## 2025-11-14 – Local Pipeline Evidence Gate (HT-03)
+
+- **Artifacts**: `audit/local_pipeline_status.json`, `tools/git-hooks/pre-push.sh`, `.github/workflows/{ci,pipeline}.yml`
+- **Inputs**: Hashes of `build_output.txt` and `test_output.txt`, commit SHA, tool versions from portable bundles
+- **Process**: `scripts/pipeline/record_local_pipeline.sh` runs at the end of `make pipeline.local`, writing immutable metadata; git pre-push hook and GitHub Actions both execute `tools/ci/require_local_pipeline.py` to verify the evidence before any remote workflow proceeds.
+- **Purpose**: Guarantees that every merge candidate has already passed the offline pipeline, keeping local execution authoritative and remote CI as a thin witness layer.

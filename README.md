@@ -158,6 +158,14 @@ cargo test --workspace
 
 See [Getting Started Guide](docs/GETTING_STARTED.md) for detailed instructions.
 
+## Local-First Merge Gate
+
+- Activate the portable toolchains each session (`source server/tools/activate-cargo.sh` and `source server/tools/activate-node.sh`).
+- Run `make pipeline.local` (or the VS Code task **Pipeline Local (Portable)**) before committing changes; this run is the source of truth.
+- The pipeline automatically refreshes `audit/local_pipeline_status.json`, which includes commit SHA, tool versions, and hashes of `build_output.txt`/`test_output.txt`; commit this file with your changes.
+- Configure git once with `git config core.hooksPath tools/git-hooks`; the bundled `pre-push` hook blocks pushes until the evidence file matches `HEAD`.
+- GitHub workflows now call `tools/ci/require_local_pipeline.py`, so remote CI simply confirms the recorded local run instead of replacing it.
+
 ## AI Assist for Kanban
 
 - The Vibe Kanban app now includes an **AI** button on every card that assembles an engineer-ready implementation prompt.

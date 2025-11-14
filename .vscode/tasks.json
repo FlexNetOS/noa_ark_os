@@ -71,6 +71,19 @@
       "type": "shell",
       "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo check",
       "windows": {
+    {
+      "label": "Pipeline Local (Portable)",
+      "type": "shell",
+      "command": ".\server\tools\activate-cargo.ps1 -Silent; .\server\tools\activate-node.ps1 -Silent; make pipeline.local",
+      "windows": {
+        "command": ".\server\tools\activate-cargo.ps1 -Silent; .\server\tools\activate-node.ps1 -Silent; make pipeline.local"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
         "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo check"
       },
       "linux": {
