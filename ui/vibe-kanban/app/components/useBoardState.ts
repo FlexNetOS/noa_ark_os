@@ -714,22 +714,25 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     [workspaceId, boardId]
   );
 
+  useEffect(() => {
     if (!workspaceId || !boardId) return;
-    const response = await fetch(`/api/workspaces/${workspaceId}/boards/${boardId}/assist`, { method: "POST" });
-    if (!response.ok) return;
-    const payload = await response.json();
-    const updatedAt = new Date().toISOString();
-    const memory = payload.memory ? normalizeGoalMemory({ ...payload.memory, goalId: `board:${boardId}`, workspaceId }) : goalInsights;
-    if (payload.memory && memory) {
-      setGoalInsights(memory);
-    }
-    setAssist({
-      suggestions: payload.suggestions ?? [],
-      focusCard: payload.focusCard ?? null,
-      updatedAt,
-      memory: memory ?? null,
-      longTermSuggestions: memory ? buildMemorySuggestions(memory) : undefined,
-    });
+    (async () => {
+      const response = await fetch(`/api/workspaces/${workspaceId}/boards/${boardId}/assist`, { method: "POST" });
+      if (!response.ok) return;
+      const payload = await response.json();
+      const updatedAt = new Date().toISOString();
+      const memory = payload.memory ? normalizeGoalMemory({ ...payload.memory, goalId: `board:${boardId}`, workspaceId }) : goalInsights;
+      if (payload.memory && memory) {
+        setGoalInsights(memory);
+      }
+      setAssist({
+        suggestions: payload.suggestions ?? [],
+        focusCard: payload.focusCard ?? null,
+        updatedAt,
+        memory: memory ?? null,
+        longTermSuggestions: memory ? buildMemorySuggestions(memory) : undefined,
+      });
+    })();
   }, [workspaceId, boardId, goalInsights]);
 
   useEffect(() => {

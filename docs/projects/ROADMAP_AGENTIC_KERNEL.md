@@ -38,6 +38,10 @@
 
 ## CLI-First Philosophy ⭐
 
+### Hermetic Execution Targets (NEW)
+
+To keep the CLI transformation self-contained, the dedicated checklist in [`docs/projects/HERMETIC_TARGETS.md`](HERMETIC_TARGETS.md) tracks the required portable toolchains, offline pipeline guarantees, gateway/profile enforcement, and Truth Gate evidence artifacts. Phase owners should update that catalog whenever Phase 0.5–P10 work lands so hermetic behavior stays measurable.
+
 **Core Principle:** The `noa` CLI is the **primary interface** for all system operations, designed for both human operators and AI agents.
 
 ### Why CLI-First?

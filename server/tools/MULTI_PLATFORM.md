@@ -1,12 +1,14 @@
-# Multi-Platform Cargo Setup Guide
+# Multi-Platform Cargo & Node Setup Guide
 
 ## 🌐 Overview
 
 This workspace supports development on **three platforms**:
 
-1. **Windows (PowerShell)** - Uses portable Cargo in `server/tools/cargo-portable/`
-2. **WSL (Windows Subsystem for Linux)** - Can use native Linux Rust or Windows portable
-3. **Ubuntu/Linux** - Uses system Rust installation
+1. **Windows (PowerShell)** – Portable Cargo lives in `server/tools/cargo-portable/` and portable Node/pnpm in `server/tools/node-portable/`.
+2. **WSL (Windows Subsystem for Linux)** – Can use native Linux Rust, but must still source the hermetic Node bundle for pnpm operations.
+3. **Ubuntu/Linux** – Typically uses system Rust plus the shared Node bundle to keep builds offline.
+
+**Rule:** Activate both cargo *and* node scripts before running `make`, `pnpm`, or any CI pipelines.
 
 ---
 
@@ -14,300 +16,165 @@ This workspace supports development on **three platforms**:
 
 ### First Time Setup
 
-```powershell
-# Run setup script (one-time)
-.\server\tools\setup-portable-cargo.ps1
-```
+````powershell
+# Run once per machine
+./server/tools/setup-portable-cargo.ps1
+./server/tools/setup-portable-node.ps1
+````
 
 ### Every Session
 
-```powershell
-# Activate portable Cargo
-.\server\tools\activate-cargo.ps1
+````powershell
+./server/tools/activate-cargo.ps1
+./server/tools/activate-node.ps1
 
-# Verify
 cargo --version
-```
+pnpm -v
+node -v
+````
 
-### Location
+### Portable Locations
 - **Cargo**: `D:\dev\workspaces\noa_ark_os\server\tools\cargo-portable\`
 - **Rustup**: `D:\dev\workspaces\noa_ark_os\server\tools\rustup-portable\`
+- **Node/pnpm**: `D:\dev\workspaces\noa_ark_os\server\tools\node-portable\`
 
 ---
 
-## 🐧 WSL/Ubuntu Setup
+## 🐧 WSL / Ubuntu Setup
 
-You have **two options** for using Rust in WSL:
+### Option 1 – Native Linux Rust (Recommended)
 
-### Option 1: Native Linux Rust (Recommended)
-
-**Install Rust in WSL:**
-
-```bash
-# Install Rust
+````bash
+# One-time install
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
-# Activate for current session
-source $HOME/.cargo/env
+# Each session
+source "$HOME/.cargo/env"
+source ./server/tools/activate-node.sh
 
-# Verify
 cargo --version
-```
+pnpm -v
+````
 
-**Every Session:**
+### Option 2 – Use Windows Portable Cargo from WSL
 
-```bash
-# Activate Cargo
-source ./server/tools/activate-cargo.sh
-
-# Or add to ~/.bashrc for automatic loading:
-echo 'source $HOME/.cargo/env' >> ~/.bashrc
-```
-
-### Option 2: Use Windows Portable Cargo from WSL
-
-**Setup:**
-
-```bash
-# Set environment variables
+````bash
 export CARGO_HOME="/mnt/d/dev/workspaces/noa_ark_os/server/tools/cargo-portable"
 export RUSTUP_HOME="/mnt/d/dev/workspaces/noa_ark_os/server/tools/rustup-portable"
 export PATH="/mnt/d/dev/workspaces/noa_ark_os/server/tools/cargo-portable/bin:$PATH"
 
-# Use .exe extension
+source ./server/tools/activate-node.sh
 cargo.exe --version
-```
+````
 
-**Note**: This option is **slower** because it runs Windows executables through WSL interop.
+**Reminder:** Windows binaries via WSL interop are slower; prefer native Rust where possible, but always reuse the portable Node bundle.
 
 ---
 
 ## 🎯 VS Code Terminal Profiles
 
-The workspace is configured with multiple terminal profiles:
+- **PowerShell** – Default for portable toolchains on Windows
+- **WSL** – Ubuntu shell
+- **Git Bash / CMD** – Optional
 
-### Windows Terminals:
-- **PowerShell** (Default for Windows) - Use for portable Cargo
-- **Command Prompt** - Available if needed
-- **WSL** - Ubuntu subsystem
-- **Git Bash** - If installed
-
-### Switch Terminals:
-1. Click the dropdown arrow (v) in terminal panel
-2. Select desired profile
-3. Or press `Ctrl+Shift+P` → "Terminal: Select Default Profile"
+Switch via the terminal dropdown or `Ctrl+Shift+P → Terminal: Select Default Profile`.
 
 ---
 
-## 📋 Quick Reference by Platform
+## 📋 Quick Reference
 
-### PowerShell (Windows)
-```powershell
-# Activate
-.\server\tools\activate-cargo.ps1
-
-# Build
-cargo build
-
-# Run
-cargo run
-```
-
-### Bash (WSL/Ubuntu with native Rust)
-```bash
-# Activate
-source ./server/tools/activate-cargo.sh
-
-# Build
-cargo build
-
-# Run
-cargo run
-```
-
-### Bash (WSL using Windows Cargo)
-```bash
-# Activate
-source ./server/tools/activate-cargo.sh
-# (Choose option to use Windows Cargo)
-
-# Build (use .exe)
-cargo.exe build
-
-# Run (use .exe)
-cargo.exe run
-```
+| Platform | Activation | Common Build Loop |
+| --- | --- | --- |
+| PowerShell (Windows) | `./server/tools/activate-cargo.ps1`<br>`./server/tools/activate-node.ps1` | `pnpm install --frozen-lockfile`<br>`cargo build` |
+| Bash (WSL/Linux native Rust) | `source ./server/tools/activate-cargo.sh`<br>`source ./server/tools/activate-node.sh` | `pnpm install --frozen-lockfile`<br>`cargo build` |
+| Bash (WSL using Windows Cargo) | `source ./server/tools/activate-cargo.sh` (choose Windows portable)<br>`source ./server/tools/activate-node.sh` | `pnpm install --frozen-lockfile`<br>`cargo.exe build` |
 
 ---
 
 ## 🔧 VS Code Tasks
 
-Pre-configured tasks work with **PowerShell** (portable Cargo):
+Tasks now assume both activators are available:
+- **Activate Portable Cargo** – Preps `CARGO_HOME` / `RUSTUP_HOME`
+- **Activate Portable Node** – Preps `NOA_NODE_HOME`, `COREPACK_HOME`, PATH
+- **Cargo Build/Test/Run (Portable)** – Chains the activators before executing
 
-Press `Ctrl+Shift+P` → `Tasks: Run Task`:
-- **Cargo Build (Portable)** - Builds in PowerShell
-- **Cargo Run (Portable)** - Runs in PowerShell
-- **Cargo Test (Portable)** - Tests in PowerShell
-- **Cargo Check (Portable)** - Checks in PowerShell
-
-For WSL/Linux, use the terminal directly.
+Trigger via `Ctrl+Shift+P → Tasks: Run Task` or bind them to shortcuts.
 
 ---
 
 ## 📊 Comparison Matrix
 
-| Feature | PowerShell (Windows) | WSL (Native Rust) | WSL (Windows Cargo) |
-|---------|---------------------|-------------------|---------------------|
-| **Speed** | ⚡ Fast | ⚡ Fast | 🐌 Slower |
-| **Setup** | Run setup script | Install Rust | Use Windows install |
-| **Isolation** | ✅ Workspace-local | ❌ System-wide | ✅ Workspace-local |
-| **Command** | `cargo` | `cargo` | `cargo.exe` |
-| **Best For** | Windows dev | Linux-native dev | Quick testing |
-
----
-
-## 🎓 Recommendations
-
-### When to Use Each Platform:
-
-**Use PowerShell (Windows) when:**
-- ✅ Primary Windows development
-- ✅ Need workspace-isolated tooling
-- ✅ Want portable, self-contained setup
-- ✅ Building for Windows targets
-
-**Use WSL (Native Rust) when:**
-- ✅ Cross-platform development
-- ✅ Building for Linux targets
-- ✅ Using Linux-specific tools
-- ✅ Prefer Linux development workflow
-
-**Use WSL (Windows Cargo) when:**
-- ⚠️ Quick testing only
-- ⚠️ Don't want to install Rust in WSL
-- ⚠️ Performance is not critical
+| Feature | PowerShell | WSL Native | WSL w/ Windows Cargo |
+| --- | --- | --- | --- |
+| Rust Source | Portable (`server/tools/cargo-portable`) | `~/.cargo` | Portable via `/mnt/d/...` |
+| Node Source | Portable (`server/tools/node-portable`) | Same portable bundle | Same portable bundle |
+| Performance | ⚡ Fast | ⚡ Fast | 🐌 Slower |
+| Isolation | ✅ Workspace-local | ⚠️ Rust global, Node portable | ✅ Workspace-local |
+| Recommended Use | Primary Windows dev | Cross-platform / Linux targets | Quick verification only |
 
 ---
 
 ## 🔍 Verification Commands
 
-### Check Active Environment
-
-**PowerShell:**
-```powershell
+**PowerShell**
+````powershell
 $env:CARGO_HOME
-$env:RUSTUP_HOME
-where.exe cargo
+$env:NOA_NODE_HOME
+where cargo
+where pnpm
 cargo --version
-```
+pnpm -v
+node -v
+````
 
-**Bash (WSL/Ubuntu):**
-```bash
+**Bash**
+````bash
 echo $CARGO_HOME
-echo $RUSTUP_HOME
+echo $NOA_NODE_HOME
 which cargo
+which pnpm
 cargo --version
-```
+pnpm -v
+node -v
+````
 
-### Expected Output
-
-**PowerShell (Portable):**
-```
-CARGO_HOME: D:\dev\workspaces\noa_ark_os\server\tools\cargo-portable
-RUSTUP_HOME: D:\dev\workspaces\noa_ark_os\server\tools\rustup-portable
-cargo 1.90.0 (...)
-```
-
-**WSL (Native):**
-```
-CARGO_HOME: /home/username/.cargo
-RUSTUP_HOME: /home/username/.rustup
-cargo 1.90.0 (...)
-```
+Outputs should always reference `server/tools/...` once activated.
 
 ---
 
 ## 🆘 Troubleshooting
 
-### "Command not found" in PowerShell
-- **Solution**: Run `.\server\tools\activate-cargo.ps1`
-
-### "Command not found" in WSL
-- **Solution**: Run `source ./server/tools/activate-cargo.sh`
-- Or install Rust: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
-
-### Rust-analyzer not working
-- **Windows**: Check `.vscode/settings.json` has correct paths
-- **WSL**: Ensure native Rust is installed
-- **Reload**: `Ctrl+Shift+P` → "Developer: Reload Window"
-
-### Wrong Cargo version
-- **Check**: Run `where.exe cargo` (Windows) or `which cargo` (Linux)
-- **Fix**: Ensure activation script ran successfully
-
-### Mixing Windows and WSL
-- **Issue**: Using Windows paths in WSL or vice versa
-- **Fix**: Use appropriate activation script for your terminal
-- **Tip**: Check prompt - `PS D:\...` = PowerShell, `deflex@...` = WSL
+| Issue | Resolution |
+| --- | --- |
+| `pnpm`/`node` missing | Run `source ./server/tools/activate-node.sh` or `./server/tools/activate-node.ps1`. |
+| Host pnpm still used | Ensure `$NOA_NODE_HOME/bin` sits at the front of `PATH`. Re-run the activation scripts. |
+| Make target fails early | Confirm the shell already sourced both activators; `make` now expects the env to be ready. |
+| Wrong cargo version | Run `where cargo` / `which cargo` and re-source the corresponding activation script. |
 
 ---
 
-## 📁 File Structure
+## 📁 Portable Tool Layout
 
 ```
 server/tools/
-├── cargo-portable/         # Windows portable Cargo (gitignored)
-├── rustup-portable/        # Windows Rustup data (gitignored)
-├── setup-portable-cargo.ps1   # Windows setup (committed)
-├── activate-cargo.ps1      # Windows activation (committed)
-├── activate-cargo.sh       # Linux/WSL activation (committed)
-├── README.md              # Detailed documentation
-├── QUICK_START.md         # Quick reference
-└── MULTI_PLATFORM.md      # This file
-```
-
-**WSL/Linux Rust** (if installed):
-```
-~/.cargo/        # Cargo installation
-~/.rustup/       # Rustup data
+├── cargo-portable/          # Portable Cargo + rustc (gitignored)
+├── rustup-portable/         # Rustup data (gitignored)
+├── node-portable/           # Node 20 + pnpm 8 bundle (gitignored)
+│   └── manifest.json        # Version + hash manifest (tracked)
+├── setup-portable-cargo.ps1
+├── setup-portable-node.ps1
+├── setup-portable-node.sh
+├── activate-cargo.ps1 / activate-cargo.sh / activate-cargo-wsl.sh
+├── activate-node.ps1 / activate-node.sh
+└── README / QUICK_START / MULTI_PLATFORM docs
 ```
 
 ---
 
 ## 🚀 Getting Started
 
-### First Time (Choose Your Platform)
+1. Run both setup scripts for your platform.
+2. Activate cargo + node in every new terminal.
+3. Use `pnpm` and `cargo` confidently knowing they originate from `server/tools/` and satisfy HT‑01.
 
-**Windows Developer:**
-```powershell
-# PowerShell
-.\server\tools\setup-portable-cargo.ps1
-.\server\tools\activate-cargo.ps1
-```
-
-**Linux/WSL Developer:**
-```bash
-# WSL/Ubuntu
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-source $HOME/.cargo/env
-```
-
-**Multi-Platform Developer:**
-- Do both! Keep them separate:
-  - Windows portable in `server/tools/`
-  - Linux system-wide in `~/.cargo/`
-
----
-
-## 💡 Tips
-
-1. **VS Code will auto-detect** your active terminal and use appropriate commands
-2. **Rust-analyzer** is configured for Windows portable by default
-3. **Tasks** use PowerShell, run them from PowerShell terminal
-4. **Add to shell profile** for automatic activation:
-   - PowerShell: Add to `$PROFILE`
-   - Bash: Add to `~/.bashrc`
-
----
-
-**Choose the setup that fits your workflow best!** 🎯
+**Keep the environment portable, offline-ready, and policy-compliant.**

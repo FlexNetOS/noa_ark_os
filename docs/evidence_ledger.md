@@ -66,3 +66,15 @@ updates.
 - **Verifier Responsibilities:** Agent verifiers must ensure metric thresholds
   provided in the evaluation plan are satisfied before writing ledger entries
   and must annotate any manual overrides in the `evaluation.notes` payload.
+
+---
+## Hermetic Toolchain Evidence
+## 2025-11-14 – Portable Node/pnpm Bundle (HT-01)
+
+- **Artifacts**: `server/tools/node-portable/current/bin/node`, `.../pnpm`
+- **Versions**: Node v20.19.5, pnpm v8.15.4
+- **Hashes**:
+  - Node: `8d01d4c50e7a9047d70196f8fc6f1b165069065b44bd9402491544bd70586c7d`
+  - pnpm: `7d26cc57186850a2d71ab77da7cf52ff0eeabf680ac446c8da2324aa63808aac`
+- **Manifest**: `server/tools/node-portable.manifest.json`
+- **Purpose**: Establishes the HT-01 hermetic Node toolchain mirrored into the workspace so Make targets and pnpm installs remain offline once cached.
