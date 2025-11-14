@@ -1,5 +1,5 @@
 <!--
-  Template used by the AI assist endpoint to compose engineer prompts from Kanban cards.
+  Template used by the AI assist endpoint to compose engineer prompts from Kanban goals.
   Loaded in server/ai/controllers/prompt.ts via the Next.js API route.
 -->
 You are implementing a single feature inside this repository.

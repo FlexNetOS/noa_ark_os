@@ -12,6 +12,7 @@ import { IntegrationStatus } from "./IntegrationStatus";
 import { BoardShell } from "./BoardShell";
 import { PresenceBar } from "./PresenceBar";
 import { AssistPanel } from "./AssistPanel";
+import { PlannerPanel } from "./PlannerPanel";
 import { UploadPanel } from "./UploadPanel";
 import { AnalyticsPanel } from "./AnalyticsPanel";
 import { ActivityTimeline } from "./ActivityTimeline";
@@ -27,6 +28,7 @@ export interface SchemaDrivenRendererProps {
       session: SessionState;
       resumeToken?: ResumeToken;
     };
+    resumeWorkflow?: (token: ResumeToken) => void;
   };
 }
 
@@ -126,6 +128,14 @@ const widgetRegistry = {
       </WidgetSurface>
     );
   },
+  "workspace.planner": ({ context }: ComponentRenderProps) => {
+    const { boardState } = context.data as SchemaDrivenRendererProps["context"]["data"];
+    return (
+      <WidgetSurface>
+        <PlannerPanel insights={boardState.goalInsights} onRefresh={boardState.refreshBoard} loading={boardState.loading} />
+      </WidgetSurface>
+    );
+  },
   "workspace.assist": ({ context }: ComponentRenderProps) => {
     const { boardState } = context.data as SchemaDrivenRendererProps["context"]["data"];
     const assistGate = boardState.capabilities.featureGates.find(
@@ -150,6 +160,21 @@ const widgetRegistry = {
       </WidgetSurface>
     );
   },
+  "workspace.planner": ({ context }: ComponentRenderProps) => {
+    const { boardState } = context.data as SchemaDrivenRendererProps["context"]["data"];
+    const resume = context.resumeWorkflow;
+    return (
+      <WidgetSurface>
+        <PlannerPanel
+          planner={boardState.planner}
+          onResume={(token) => {
+            boardState.resumePlan(token);
+            resume?.(token);
+          }}
+        />
+      </WidgetSurface>
+    );
+  },
   "workspace.analytics": ({ context }: ComponentRenderProps) => {
     const { boardState } = context.data as SchemaDrivenRendererProps["context"]["data"];
     const enableGoalInsights =
@@ -167,6 +192,15 @@ const widgetRegistry = {
     return (
       <WidgetSurface>
         <ActivityTimeline activity={boardState.activity} />
+      </WidgetSurface>
+    );
+  },
+  "workspace.automation": ({ context }: ComponentRenderProps) => {
+    const { boardState } = context.data as SchemaDrivenRendererProps["context"]["data"];
+    const cards = boardState.snapshot?.columns.flatMap((column) => column.cards) ?? [];
+    return (
+      <WidgetSurface>
+        <AutomationPanel cards={cards} onRetry={boardState.retryAutomation} />
       </WidgetSurface>
     );
   },

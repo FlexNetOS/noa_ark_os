@@ -9,6 +9,7 @@ import type { AIProvider } from "../providers/provider";
 
 const PromptPayloadSchema = z
   .object({
+    goalId: z.string().max(128).optional(),
     cardId: z.string().max(128).optional(),
     title: z.string().min(1).max(512),
     description: z.string().max(4000).optional(),
@@ -28,6 +29,7 @@ export interface PromptControllerDependencies {
 }
 
 export type AiRequestLogEntry = {
+  goalId?: string;
   cardId?: string;
   title: string;
   provider: string | null;
@@ -100,8 +102,10 @@ export async function handlePromptRequest(
     }
 
     const finished = now();
+    const identifier = payload.goalId ?? payload.cardId;
     await deps.logRequest({
-      cardId: payload.cardId,
+      goalId: payload.goalId ?? undefined,
+      cardId: payload.cardId ?? identifier,
       title: payload.title,
       provider: providerName,
       status: "success",
@@ -116,8 +120,10 @@ export async function handlePromptRequest(
   } catch (error) {
     const finished = now();
     const message = error instanceof Error ? error.message : "Unknown error";
+    const identifier = payload.goalId ?? payload.cardId;
     await deps.logRequest({
-      cardId: payload.cardId,
+      goalId: payload.goalId ?? undefined,
+      cardId: payload.cardId ?? undefined,
       title: payload.title,
       provider: deps.provider?.name ?? null,
       status: "error",

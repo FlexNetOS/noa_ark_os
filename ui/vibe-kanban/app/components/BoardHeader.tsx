@@ -26,8 +26,8 @@ type BoardHeaderProps = {
   canAddColumn?: boolean;
   addColumnDisabledReason?: string;
   columnCount: number;
-  totalCardCount: number;
-  completedCount: number;
+  totalGoalCount: number;
+  completedGoalCount: number;
   showMetrics?: boolean;
   metrics?: BoardMetrics;
   goalInsightsEnabled?: boolean;
@@ -43,8 +43,8 @@ export function BoardHeader({
   canAddColumn = true,
   addColumnDisabledReason,
   columnCount,
-  totalCardCount,
-  completedCount,
+  totalGoalCount,
+  completedGoalCount,
   showMetrics = true,
   metrics: advancedMetrics,
   goalInsightsEnabled = false,
@@ -60,11 +60,11 @@ export function BoardHeader({
   const metrics = useMemo(() => {
     const base: { label: string; value: string }[] = [
       { label: "Columns", value: columnCount.toString() },
-      { label: "Active vibes", value: Math.max(totalCardCount - completedCount, 0).toString() },
-      { label: "Completed", value: completedCount.toString() },
+      { label: "Active goals", value: Math.max(totalGoalCount - completedGoalCount, 0).toString() },
+      { label: "Completed goals", value: completedGoalCount.toString() },
     ];
     if (advancedMetrics) {
-      base.push({ label: "Vibe momentum", value: `${advancedMetrics.vibeMomentum}%` });
+      base.push({ label: "Goal momentum", value: `${advancedMetrics.goalMomentum}%` });
       if (advancedMetrics.cycleTimeDays) {
         base.push({ label: "Cycle time", value: `${advancedMetrics.cycleTimeDays}d` });
       }
