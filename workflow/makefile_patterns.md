@@ -227,7 +227,7 @@ phase8: ## Phase 8 - PROMOTE (No-op here; use prompt guidance for production)
 ```
 
 **Purpose**: Placeholder for production deployment  
-**Note**: Actual deployment left to user discretion  
+**Note**: Actual deployment left to orchestrator discretion
 **Pattern**: Follow rsync + symlink pattern from Phase 5
 
 ---
