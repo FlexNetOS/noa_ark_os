@@ -212,8 +212,7 @@ stages:
           echo "Validating capability tokens for all profiles"
           for PROFILE in single_host air_gapped devcontainer edge_lite; do
             echo "→ Checking ${PROFILE}"
-            NOA_PROFILE="server/profiles/${PROFILE}/profile.toml" \
-              cargo test -p noa_core profile_switching --release -- --nocapture
+            cargo test -p noa_core profile_switching --release -- --nocapture
           done
           echo "✓ Capability tokens validated across profiles"
 
