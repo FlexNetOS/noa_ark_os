@@ -90,7 +90,7 @@
 
 **Serves Goals:** 1, 5, 7, 9, 10, 11, 16  
 **Objective:** Zero zombie code; instant reversibility.  
-**Status:** 📋 Planned
+**Status:** ✅ Complete (accepted)
 
 ### Tasks
 
@@ -102,11 +102,11 @@
 
 ### Acceptance Criteria
 
-- [ ] Quarantine directory structure exists with documented format
-- [ ] CI enforces no-reference policy for quarantined code
-- [ ] Auto-archive automation runs successfully on schedule
-- [ ] Snapshot/rollback commands work end-to-end
-- [ ] AGENT.md updated with quarantine procedures
+- [x] Quarantine directory structure exists with documented format
+- [x] CI enforces no-reference policy for quarantined code
+- [x] Auto-archive automation runs successfully on schedule
+- [x] Snapshot/rollback commands work end-to-end
+- [x] AGENT.md updated with quarantine procedures
 
 ---
 
@@ -276,10 +276,11 @@
 
 ### Acceptance Criteria
 
-- [ ] World graph schema validated against repository state
-- [ ] Reconciler detects and reports drift accurately
-- [ ] Contract tests exist for all major integrations
-- [ ] Make targets pass in CI
+- [ ] `kernel/world/world.graph.schema.json` and seed graph validate against repository state
+- [ ] Reconciler detects and reports drift accurately with remediation plans
+- [ ] Contract tests cover clean + drift scenarios using fixtures in `tests/world_model/`
+- [ ] `make world-verify` / `make world-fix` wrap the reconciler and fail CI on drift
+- [ ] CLI `noa world verify` / `noa world fix` documented for Phase 0.5 rollout
 
 ---
 

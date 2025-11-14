@@ -21,6 +21,10 @@ path = "src/lib.rs"
 name = "noa_kernel"
 path = "src/bin/kernel.rs"
 
+[[bin]]
+name = "noa_world"
+path = "src/bin/world.rs"
+
 [dev-dependencies]
 tempfile = "3.8"
 [profile.release]
