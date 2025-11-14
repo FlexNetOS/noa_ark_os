@@ -346,8 +346,11 @@ function normalizeEmbeddingRow(row: GoalEmbeddingRecord): GoalEmbeddingRecord {
 }
 
 function cosineSimilarity(a: number[], normA: number, b: number[], normB: number) {
-  if (!normA || !normB || a.length !== b.length) {
+  if (!normA || !normB) {
     return 0;
+  }
+  if (a.length !== b.length) {
+    return NaN;
   }
   let dot = 0;
   for (let index = 0; index < a.length; index += 1) {
