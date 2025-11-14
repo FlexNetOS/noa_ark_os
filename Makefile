@@ -4,20 +4,24 @@ PNPM ?= pnpm
 CARGO ?= cargo
 PYTHON ?= python3
 
+.PHONY: deps build test digest run ci-local lint typecheck format
+
+# Snapshot configuration (retained from local-first pipeline additions)
 SNAPSHOT_ARCHIVE_ROOT ?= archive
 SNAPSHOT_BUNDLE_PREFIX ?= noa-ark-os
 SNAPSHOT_LEDGER_NAME ?= ledger.json
 SNAPSHOT_TAR_COMPRESS ?= --zstd
 SNAPSHOT_TAR_DECOMPRESS ?= --zstd
 SNAPSHOT_BUNDLE_EXT ?= tar.zst
-
-.PHONY: build test digest run ci-local ci\:local lint typecheck format
 .PHONY: pipeline.local world-verify world-fix kernel snapshot rollback verify publish-audit setup
 
-build:
+deps:
+	$(PNPM) install --frozen-lockfile
+
+build: deps
 	$(PNPM) build
 
-test:
+test: deps
 	$(PNPM) test
 	$(CARGO) test -p noa_crc
 	bash tests/shell/test_snapshot.sh
@@ -25,23 +29,19 @@ test:
 digest:
 	$(CARGO) run -p noa_crc -- ingest
 
-lint:
+lint: deps
 	$(PNPM) lint
 
-format:
+format: deps
 	$(PNPM) format
 	$(CARGO) fmt --all
 
-typecheck:
+typecheck: deps
 	$(PNPM) typecheck
 
 ci-local: lint typecheck format test
 
-ci\:local:
-	@echo "⚠️  'ci:local' is deprecated; forwarding to 'ci-local'"
-	@$(MAKE) ci-local
-
-run:
+run: deps
 	@set -euo pipefail; \
 	UI_PID=""; \
 	API_PID=""; \
