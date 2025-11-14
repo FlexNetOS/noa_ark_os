@@ -19,4 +19,11 @@ class SampleAdapter:
 
     def invoke(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         self.invocations.append(payload)
-        return {"status": "ok", "payload": payload, "fs_scopes": self.kernel_claims.fs_scopes if self.kernel_claims else ()}
+        return {
+            "status": "ok",
+            "payload": payload,
+            "fs_scopes": (
+                self.kernel_claims.fs_scopes
+                if self.kernel_claims else ()
+            ),
+        }
