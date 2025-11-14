@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { DragEvent as ReactDragEvent } from "react";
 
-import type { VibeCard, VibeColumn } from "./board-types";
+import type { Goal, VibeColumn } from "./board-types";
 import { KanbanCard } from "./KanbanCard";
 import { AddCardComposer } from "./AddCardComposer";
 import { DRAG_DATA_TYPE } from "./drag-utils";
@@ -14,14 +14,14 @@ type BoardColumnProps = {
   column: VibeColumn;
   onRemove: (id: string) => void;
   onRename: (id: string, title: string) => void;
-  onAddCard: (title: string, notes?: string) => void;
-  onCardOpen: (card: VibeCard) => void;
+  onAddGoal: (title: string, notes?: string) => void;
+  onGoalOpen: (goal: Goal) => void;
   enableComposer: boolean;
-  onCardDragStart: (card: VibeCard, event: ReactDragEvent<HTMLButtonElement>) => void;
-  onCardDragOver: (cardId: string, event: ReactDragEvent<HTMLButtonElement>) => void;
-  onCardDragLeave: (cardId: string) => void;
-  onCardDrop: (cardId: string, event: ReactDragEvent<HTMLButtonElement>) => void;
-  onCardDragEnd: () => void;
+  onGoalDragStart: (goal: Goal, event: ReactDragEvent<HTMLButtonElement>) => void;
+  onGoalDragOver: (goalId: string, event: ReactDragEvent<HTMLButtonElement>) => void;
+  onGoalDragLeave: (goalId: string) => void;
+  onGoalDrop: (goalId: string, event: ReactDragEvent<HTMLButtonElement>) => void;
+  onGoalDragEnd: () => void;
   onColumnDragStart: (event: ReactDragEvent<HTMLButtonElement>) => void;
   onColumnDragEnd: () => void;
   onColumnSurfaceDragOver: (event: ReactDragEvent<HTMLDivElement>) => void;
@@ -29,23 +29,23 @@ type BoardColumnProps = {
   onColumnSurfaceDrop: (event: ReactDragEvent<HTMLDivElement>) => void;
   isDraggingColumn: boolean;
   isColumnDropTarget: boolean;
-  isCardDropZoneActive: boolean;
-  draggingCardId: string | null;
-  dropTargetCardId: string | null;
+  isGoalDropZoneActive: boolean;
+  draggingGoalId: string | null;
+  dropTargetGoalId: string | null;
 };
 
 export function BoardColumn({
   column,
   onRemove,
   onRename,
-  onAddCard,
-  onCardOpen,
+  onAddGoal,
+  onGoalOpen,
   enableComposer,
-  onCardDragStart,
-  onCardDragOver,
-  onCardDragLeave,
-  onCardDrop,
-  onCardDragEnd,
+  onGoalDragStart,
+  onGoalDragOver,
+  onGoalDragLeave,
+  onGoalDrop,
+  onGoalDragEnd,
   onColumnDragStart,
   onColumnDragEnd,
   onColumnSurfaceDragOver,
@@ -53,9 +53,9 @@ export function BoardColumn({
   onColumnSurfaceDrop,
   isDraggingColumn,
   isColumnDropTarget,
-  isCardDropZoneActive,
-  draggingCardId,
-  dropTargetCardId,
+  isGoalDropZoneActive,
+  draggingGoalId,
+  dropTargetGoalId,
 }: BoardColumnProps) {
   const [isHoveringSurface, setIsHoveringSurface] = useState(false);
 
@@ -92,7 +92,7 @@ export function BoardColumn({
     columnClasses.push("border-accent-300/80 shadow-glow");
   }
 
-  if (isCardDropZoneActive || isHoveringSurface) {
+  if (isGoalDropZoneActive || isHoveringSurface) {
     columnClasses.push("ring-2 ring-accent-300/40 ring-offset-2 ring-offset-surface");
   }
 
@@ -145,21 +145,21 @@ export function BoardColumn({
       </div>
       <div className="mt-6 flex flex-1 flex-col gap-4 overflow-y-auto pr-2">
         <div className="flex flex-col gap-4">
-          {column.cards.map((card) => (
+          {column.goals.map((goal) => (
             <KanbanCard
-              key={card.id}
-              card={card}
-              onOpen={onCardOpen}
-              onDragStart={(event) => onCardDragStart(card, event)}
-              onDragOver={(event) => onCardDragOver(card.id, event)}
-              onDragLeave={() => onCardDragLeave(card.id)}
-              onDrop={(event) => onCardDrop(card.id, event)}
-              onDragEnd={onCardDragEnd}
-              isDragging={draggingCardId === card.id}
-              isDropTarget={dropTargetCardId === card.id}
+              key={goal.id}
+              goal={goal}
+              onOpen={onGoalOpen}
+              onDragStart={(event) => onGoalDragStart(goal, event)}
+              onDragOver={(event) => onGoalDragOver(goal.id, event)}
+              onDragLeave={() => onGoalDragLeave(goal.id)}
+              onDrop={(event) => onGoalDrop(goal.id, event)}
+              onDragEnd={onGoalDragEnd}
+              isDragging={draggingGoalId === goal.id}
+              isDropTarget={dropTargetGoalId === goal.id}
             />
           ))}
-          {enableComposer && <AddCardComposer onSubmit={onAddCard} />}
+          {enableComposer && <AddCardComposer onSubmit={onAddGoal} />}
         </div>
       </div>
       <div className="pointer-events-none absolute inset-0 rounded-3xl border border-white/5" />
