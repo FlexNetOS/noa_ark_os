@@ -4,6 +4,7 @@ resolver = "2"
 members = [
     "core",
     "agents",
+    "ai/runtime",
     "workflow",
     "sandbox",
     "cicd",
