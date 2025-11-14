@@ -74,6 +74,54 @@ export function AssistPanel({ assist, onRequest, capability, loading = false }: 
               </li>
             ))}
           </ul>
+          {assist.longTermSuggestions && assist.longTermSuggestions.length > 0 && (
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-[0.3em] text-white/40">Memory insights</div>
+              <ul className="mt-2 space-y-3">
+                {assist.longTermSuggestions.map((suggestion, index) => (
+                  <li key={`memory-${index}`} className="rounded-2xl border border-indigo-400/20 bg-indigo-500/10 p-4">
+                    <div className="text-sm font-semibold text-indigo-100">{suggestion.title}</div>
+                    <p className="mt-1 text-xs text-indigo-100/70">{suggestion.detail}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {assist.memory && (
+            <div className="space-y-3">
+              <div>
+                <div className="text-xs uppercase tracking-[0.3em] text-white/40">Long-term memory</div>
+                <p className="mt-1 text-xs text-white/60">{assist.memory.summary}</p>
+              </div>
+              {assist.memory.traces.length > 0 && (
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="text-xs uppercase tracking-[0.3em] text-white/40">Recent traces</div>
+                  <ul className="mt-2 space-y-2 text-xs text-white/60">
+                    {assist.memory.traces.slice(0, 3).map((trace) => (
+                      <li key={trace.id} className="flex flex-col gap-1">
+                        <span className="font-semibold text-white/80">{trace.action}</span>
+                        <span className="text-[11px] text-white/50">{new Date(trace.createdAt).toLocaleString()}</span>
+                        {trace.summary && <span>{trace.summary}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {assist.memory.artifacts.length > 0 && (
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="text-xs uppercase tracking-[0.3em] text-white/40">Artifacts</div>
+                  <ul className="mt-2 space-y-2 text-xs text-white/60">
+                    {assist.memory.artifacts.slice(0, 3).map((artifact) => (
+                      <li key={artifact.id}>
+                        <span className="font-semibold text-white/80">{artifact.title ?? artifact.artifactType}</span>
+                        <div className="text-[11px] text-white/50">{artifact.summary ?? artifact.artifactUri}</div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
           <p className="text-[11px] uppercase tracking-[0.2em] text-white/30">
             Refreshed {new Date(assist.updatedAt).toLocaleTimeString()}
           </p>

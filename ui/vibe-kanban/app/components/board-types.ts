@@ -166,26 +166,56 @@ export type UploadReceiptSummary = {
   };
 };
 
-export type PlannerStageState = {
+export type GoalMemoryTrace = {
   id: string;
-  name: string;
-  state: "pending" | "running" | "completed" | "failed" | "skipped";
-};
-
-export type PlannerPlan = {
   goalId: string;
-  goalTitle: string;
-  workflowId: string;
-  status: "pending" | "running" | "paused" | "completed" | "failed";
-  resumeToken?: ResumeToken;
-  startedAt: string;
-  updatedAt: string;
-  stages: PlannerStageState[];
+  workspaceId: string;
+  boardId?: string | null;
+  actorId?: string | null;
+  actorName?: string | null;
+  action: string;
+  summary?: string | null;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
 };
 
-export type PlannerState = {
-  status: "idle" | "planning" | "ready" | "error";
-  plans: PlannerPlan[];
-  activePlanId?: string;
-  lastError?: string;
+export type GoalLifecycleEventSnapshot = {
+  id: number;
+  goalId: string;
+  workspaceId: string;
+  eventType: string;
+  status?: string | null;
+  summary?: string | null;
+  payload?: unknown;
+  createdAt: string;
+};
+
+export type GoalArtifactSnapshot = {
+  id: number;
+  goalId: string;
+  workspaceId: string;
+  artifactType: string;
+  artifactUri: string;
+  title?: string | null;
+  summary?: string | null;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+};
+
+export type GoalMemorySimilarGoal = {
+  goalId: string;
+  workspaceId: string;
+  score: number;
+};
+
+export type GoalMemoryInsights = {
+  summary: string;
+  traceCount: number;
+  lastSeen: string | null;
+  traces: GoalMemoryTrace[];
+  lifecycle: GoalLifecycleEventSnapshot[];
+  artifacts: GoalArtifactSnapshot[];
+  similarGoals: GoalMemorySimilarGoal[];
+  insightSummary?: string;
+  updatedAt: string;
 };
