@@ -210,6 +210,18 @@ export async function recordWorkspaceSnapshot(workspace: Workspace): Promise<voi
         workspaceId: workspace.id,
       },
     });
+}
+
+// Re-export for CJS interop if necessary
+module.exports = {
+  appendGoalTrace,
+  listGoalTraces,
+  summarizeGoalMemory,
+  recordWorkspaceSnapshot,
+  getWorkspaceSnapshots,
+  getGoalMemoryInsights,
+};
+
     throw error;
   }
 
