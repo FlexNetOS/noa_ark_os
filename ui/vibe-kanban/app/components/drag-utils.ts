@@ -2,9 +2,9 @@ import type { DragEvent as ReactDragEvent } from "react";
 
 export const DRAG_DATA_TYPE = "application/x-vibe-kanban";
 
-type DragCardPayload = {
-  type: "card";
-  cardId: string;
+type DragGoalPayload = {
+  type: "goal";
+  goalId: string;
   columnId: string;
 };
 
@@ -13,7 +13,7 @@ type DragColumnPayload = {
   columnId: string;
 };
 
-export type DragPayload = DragCardPayload | DragColumnPayload;
+export type DragPayload = DragGoalPayload | DragColumnPayload;
 
 export function setDragData(event: ReactDragEvent, payload: DragPayload) {
   if (!event.dataTransfer) return;
@@ -29,7 +29,7 @@ export function readDragData(event: ReactDragEvent): DragPayload | null {
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as DragPayload;
-    if (parsed.type === "card" || parsed.type === "column") {
+    if (parsed.type === "goal" || parsed.type === "column") {
       return parsed;
     }
     return null;

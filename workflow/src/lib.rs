@@ -4,19 +4,26 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use chrono::{Duration, Utc};
-use noa_agents::{AgentFactory, AGENT_FACTORY_CAPABILITY};
+use noa_agents::{AgentFactory, AgentRegistry, AGENT_FACTORY_CAPABILITY};
 use noa_core::capabilities::KernelHandle;
 use noa_core::config::manifest::CAPABILITY_PROCESS;
 use noa_core::process::ProcessService;
+use noa_core::utils::current_timestamp_millis;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
+mod agent_dispatch;
 mod instrumentation;
+use agent_dispatch::ToolExecutionStatus;
+pub use agent_dispatch::{
+    AgentDispatchError, AgentDispatcher, TaskDispatchReceipt, ToolExecutionReceipt, ToolExecutionStatus,
+    ToolRequirement,
+};
 pub use instrumentation::{
-    EvidenceLedgerEntry, EvidenceLedgerKind, MerkleLeaf, MerkleLevel, PipelineInstrumentation,
+    AgentExecutionResult, EvidenceLedgerEntry, EvidenceLedgerKind, GoalAgentMetric,
+    GoalMetricSnapshot, GoalOutcomeRecord, MerkleLeaf, MerkleLevel, PipelineInstrumentation,
     SecurityScanReport, SecurityScanStatus, StageReceipt, TaskReceipt,
 };
-pub use instrumentation::{EvidenceLedgerEntry, PipelineInstrumentation, StageReceipt};
 use tokio::sync::broadcast;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -48,6 +55,8 @@ pub struct Task {
     pub agent: String,
     pub action: String,
     pub parameters: HashMap<String, serde_json::Value>,
+    #[serde(default)]
+    pub tool_requirements: Vec<ToolRequirement>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -124,11 +133,30 @@ impl WorkflowEventStream {
     }
 }
 
+#[derive(Default, Clone)]
+struct GoalRunTracker {
+    agents: Vec<AgentExecutionResult>,
+}
+
+impl GoalRunTracker {
+    fn record(&mut self, agent: &str, success: bool) {
+        self.agents.push(AgentExecutionResult {
+            agent: agent.to_string(),
+            success,
+        });
+    }
+
+    fn into_snapshot(self) -> Vec<AgentExecutionResult> {
+        self.agents
+    }
+}
+
 pub struct WorkflowEngine {
     workflows: Arc<Mutex<HashMap<String, Workflow>>>,
     states: Arc<Mutex<HashMap<String, WorkflowState>>>,
     stage_states: Arc<Mutex<HashMap<String, HashMap<String, StageState>>>>,
     instrumentation: Arc<PipelineInstrumentation>,
+    dispatcher: Arc<AgentDispatcher>,
     kernel: Option<KernelHandle>,
     event_stream: Arc<Mutex<Option<WorkflowEventStream>>>,
 }
@@ -137,11 +165,15 @@ impl WorkflowEngine {
     pub fn new() -> Self {
         let instrumentation =
             PipelineInstrumentation::new().expect("failed to initialise pipeline instrumentation");
+        let registry = AgentRegistry::with_default_data().unwrap_or_else(|_| AgentRegistry::new());
+        let factory = AgentFactory::new();
+        let dispatcher = AgentDispatcher::new(registry, factory);
         Self {
             workflows: Arc::new(Mutex::new(HashMap::new())),
             states: Arc::new(Mutex::new(HashMap::new())),
             stage_states: Arc::new(Mutex::new(HashMap::new())),
             instrumentation: Arc::new(instrumentation),
+            dispatcher: Arc::new(dispatcher),
             kernel: None,
             event_stream: Arc::new(Mutex::new(None)),
         }
@@ -155,11 +187,16 @@ impl WorkflowEngine {
     pub fn with_kernel(kernel: KernelHandle) -> Self {
         let instrumentation =
             PipelineInstrumentation::new().expect("failed to initialise pipeline instrumentation");
+        let registry = AgentRegistry::with_default_data().unwrap_or_else(|_| AgentRegistry::new());
+        let factory = AgentFactory::with_kernel(kernel.clone())
+            .unwrap_or_else(|_| AgentFactory::new());
+        let dispatcher = AgentDispatcher::new(registry, factory);
         Self {
             workflows: Arc::new(Mutex::new(HashMap::new())),
             states: Arc::new(Mutex::new(HashMap::new())),
             stage_states: Arc::new(Mutex::new(HashMap::new())),
             instrumentation: Arc::new(instrumentation),
+            dispatcher: Arc::new(dispatcher),
             kernel: Some(kernel),
             event_stream: Arc::new(Mutex::new(None)),
         }
@@ -219,6 +256,9 @@ impl WorkflowEngine {
 
         println!("[WORKFLOW] Executing workflow: {}", workflow.name);
 
+        let run_started_at = current_timestamp_millis();
+        let mut tracker = GoalRunTracker::default();
+
         // Execute stages
         for stage in &workflow.stages {
             // Check dependencies
@@ -230,7 +270,58 @@ impl WorkflowEngine {
                 continue;
             }
 
-            self.execute_stage(workflow_id, stage)?;
+            if let Err(err) = self.execute_stage(workflow_id, stage, &mut tracker) {
+                println!(
+                    "[WORKFLOW] Stage {} failed for workflow {}: {}",
+                    stage.name, workflow.name, err
+                );
+                self.set_stage_state(workflow_id, &stage.name, StageState::Failed);
+                {
+                    let mut states = self.states.lock().unwrap();
+                    states.insert(workflow_id.to_string(), WorkflowState::Failed);
+                }
+                self.emit_event(WorkflowEvent::WorkflowState {
+                    workflow_id: workflow_id.to_string(),
+                    state: WorkflowState::Failed,
+                    timestamp: now_iso(),
+                });
+                let completed_at = current_timestamp_millis();
+                let outcome = GoalOutcomeRecord {
+                    goal_id: workflow_id.to_string(),
+                    workflow_id: workflow.name.clone(),
+                    started_at: run_started_at,
+                    completed_at,
+                    duration_ms: completed_at.saturating_sub(run_started_at),
+                    success: false,
+                    agents: tracker.snapshot(),
+                };
+                if let Err(metric_err) =
+                    self.instrumentation.record_goal_outcome(outcome)
+                {
+                    println!(
+                        "[WORKFLOW] Failed to record goal outcome: {}",
+                        metric_err
+                    );
+                }
+                return Err(err);
+            }
+        }
+
+        let completed_at = current_timestamp_millis();
+        let outcome = GoalOutcomeRecord {
+            goal_id: workflow_id.to_string(),
+            workflow_id: workflow.name.clone(),
+            started_at: run_started_at,
+            completed_at,
+            duration_ms: completed_at.saturating_sub(run_started_at),
+            success: true,
+            agents: tracker.snapshot(),
+        };
+        if let Err(metric_err) = self.instrumentation.record_goal_outcome(outcome) {
+            println!(
+                "[WORKFLOW] Failed to record goal outcome: {}",
+                metric_err
+            );
         }
 
         // Mark as completed
@@ -253,7 +344,12 @@ impl WorkflowEngine {
     }
 
     /// Execute a single stage
-    fn execute_stage(&self, workflow_id: &str, stage: &Stage) -> Result<(), String> {
+    fn execute_stage(
+        &self,
+        workflow_id: &str,
+        stage: &Stage,
+        tracker: &mut GoalRunTracker,
+    ) -> Result<(), String> {
         println!(
             "[WORKFLOW] Executing stage: {} (type: {:?})",
             stage.name, stage.stage_type
@@ -263,10 +359,10 @@ impl WorkflowEngine {
         self.set_stage_state(workflow_id, &stage.name, StageState::Running);
 
         let artifacts = match stage.stage_type {
-            StageType::Sequential => self.execute_sequential(stage)?,
-            StageType::Parallel => self.execute_parallel(stage)?,
-            StageType::Conditional => self.execute_conditional(stage)?,
-            StageType::Loop => self.execute_loop(stage)?,
+            StageType::Sequential => self.execute_sequential(stage, tracker)?,
+            StageType::Parallel => self.execute_parallel(stage, tracker)?,
+            StageType::Conditional => self.execute_conditional(stage, tracker)?,
+            StageType::Loop => self.execute_loop(stage, tracker)?,
         };
 
         let receipt = self
@@ -285,36 +381,30 @@ impl WorkflowEngine {
             receipt,
             timestamp: now_iso(),
         });
-        if let Err(err) = self.instrumentation.log_stage_receipt(
-            workflow_id,
-            &stage.name,
-            &stage.stage_type,
-            &artifacts,
-        ) {
-            return Err(format!("stage receipt failed: {}", err));
-        }
-
-        println!(
-            "[WORKFLOW] Stage receipt generated for {}::{}",
-            workflow_id, stage.name
-        );
-
         // Mark stage as completed
         self.set_stage_state(workflow_id, &stage.name, StageState::Completed);
         Ok(())
     }
 
     /// Execute tasks sequentially
-    fn execute_sequential(&self, stage: &Stage) -> Result<Vec<Value>, String> {
+    fn execute_sequential(
+        &self,
+        stage: &Stage,
+        tracker: &mut GoalRunTracker,
+    ) -> Result<Vec<Value>, String> {
         let mut artifacts = Vec::with_capacity(stage.tasks.len());
         for task in &stage.tasks {
-            artifacts.push(self.execute_task(task)?);
+            artifacts.push(self.execute_task(task, tracker)?);
         }
         Ok(artifacts)
     }
 
     /// Execute tasks in parallel
-    fn execute_parallel(&self, stage: &Stage) -> Result<Vec<Value>, String> {
+    fn execute_parallel(
+        &self,
+        stage: &Stage,
+        tracker: &mut GoalRunTracker,
+    ) -> Result<Vec<Value>, String> {
         println!(
             "[WORKFLOW] Executing {} tasks in parallel",
             stage.tasks.len()
@@ -323,55 +413,74 @@ impl WorkflowEngine {
         // In a real implementation, this would spawn threads/processes
         let mut artifacts = Vec::with_capacity(stage.tasks.len());
         for task in &stage.tasks {
-            artifacts.push(self.execute_task(task)?);
+            artifacts.push(self.execute_task(task, tracker)?);
         }
 
         Ok(artifacts)
     }
 
     /// Execute tasks conditionally
-    fn execute_conditional(&self, stage: &Stage) -> Result<Vec<Value>, String> {
+    fn execute_conditional(
+        &self,
+        stage: &Stage,
+        tracker: &mut GoalRunTracker,
+    ) -> Result<Vec<Value>, String> {
         // Implementation would check conditions
-        self.execute_sequential(stage)
+        self.execute_sequential(stage, tracker)
     }
 
     /// Execute tasks in a loop
-    fn execute_loop(&self, stage: &Stage) -> Result<Vec<Value>, String> {
+    fn execute_loop(
+        &self,
+        stage: &Stage,
+        tracker: &mut GoalRunTracker,
+    ) -> Result<Vec<Value>, String> {
         // Implementation would loop based on condition
-        self.execute_sequential(stage)
+        self.execute_sequential(stage, tracker)
     }
 
     /// Execute a single task
-    fn execute_task(&self, task: &Task) -> Result<Value, String> {
-        println!(
-            "[WORKFLOW] Executing task: agent={}, action={}",
-            task.agent, task.action
-        );
-        self.observe_task(task)?;
-        println!(
-            "[WORKFLOW] Executing task via kernel: agent={}, action={}",
-            task.agent, task.action
-        );
+    fn execute_task(&self, task: &Task, tracker: &mut GoalRunTracker) -> Result<Value, String> {
+        let result = (|| {
+            println!(
+                "[WORKFLOW] Executing task: agent={}, action={}",
+                task.agent, task.action
+            );
+            self.observe_task(task)?;
+            println!(
+                "[WORKFLOW] Executing task via kernel: agent={}, action={}",
+                task.agent, task.action
+            );
 
-        if let Some(kernel) = &self.kernel {
-            if let Ok(process_service) = kernel.request::<ProcessService>(CAPABILITY_PROCESS) {
-                let _ = process_service.create_process(format!("workflow::{}", task.agent));
+            if let Some(kernel) = &self.kernel {
+                if let Ok(process_service) = kernel.request::<ProcessService>(CAPABILITY_PROCESS) {
+                    let _ = process_service.create_process(format!("workflow::{}", task.agent));
+                }
+
+                if let Ok(factory) = kernel.request::<AgentFactory>(AGENT_FACTORY_CAPABILITY) {
+                    println!(
+                        "[WORKFLOW] Agent factory accessible: {} total agents",
+                        factory.list_agents().len()
+                    );
+                }
             }
 
-            if let Ok(factory) = kernel.request::<AgentFactory>(AGENT_FACTORY_CAPABILITY) {
-                println!(
-                    "[WORKFLOW] Agent factory accessible: {} total agents",
-                    factory.list_agents().len()
-                );
-            }
+            Ok(json!({
+                "agent": task.agent,
+                "action": task.action,
+                "parameters": parameters_to_value(&task.parameters),
+                "status": "completed",
+                "timestamp": now_iso(),
+            }))
+        })();
+
+        if result.is_ok() {
+            tracker.record(&task.agent, true);
+        } else {
+            tracker.record(&task.agent, false);
         }
-        Ok(json!({
-            "agent": task.agent,
-            "action": task.action,
-            "parameters": parameters_to_value(&task.parameters),
-            "status": "completed",
-            "timestamp": now_iso(),
-        }))
+
+        result
     }
 
     fn observe_task(&self, task: &Task) -> Result<(), String> {
@@ -507,6 +616,7 @@ mod tests {
     use serde_json::json;
     use std::fs;
     use std::path::Path;
+    use std::collections::HashMap;
 
     use crate::instrumentation::{EvidenceLedgerEntry, EvidenceLedgerKind};
     use tempfile::tempdir;
@@ -575,6 +685,46 @@ mod tests {
             )
             .expect("documentation log should succeed");
         assert!(security::verify_signed_operation(&documentation));
+    }
+
+    #[test]
+    fn task_dispatch_events_logged_with_tool_requirements() {
+        let dir = tempdir().unwrap();
+        let _guard = EnvGuard::set("NOA_WORKFLOW_ROOT", dir.path());
+        let engine = WorkflowEngine::new();
+        let workflow_name = format!("dispatch-{}", Utc::now().timestamp_nanos());
+        let workflow = Workflow {
+            name: workflow_name.clone(),
+            version: "1.0".to_string(),
+            stages: vec![Stage {
+                name: "dispatch-stage".to_string(),
+                stage_type: StageType::Sequential,
+                depends_on: vec![],
+                tasks: vec![Task {
+                    agent: "ModelSelectorAgent".to_string(),
+                    action: "evaluate_tools".to_string(),
+                    parameters: HashMap::from([(String::from("scope"), json!("tests"))]),
+                    tool_requirements: vec![ToolRequirement {
+                        name: "Analysis pass".to_string(),
+                        capability: "workflow.taskDispatch".to_string(),
+                        optional: false,
+                        parameters: json!({"depth": 1}),
+                    }],
+                }],
+            }],
+        };
+
+        let id = engine.load_workflow(workflow).unwrap();
+        engine.execute(&id).unwrap();
+
+        let log_path = dir
+            .path()
+            .join(".workspace")
+            .join("indexes")
+            .join("task_dispatches.log");
+        let content = fs::read_to_string(&log_path).expect("dispatch log present");
+        assert!(content.contains("\"tool_receipts\""));
+        assert!(content.contains("workflow::dispatch-stage"));
     }
 
     #[test]

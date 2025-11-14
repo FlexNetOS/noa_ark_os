@@ -24,6 +24,7 @@ This document captures the current capabilities that ship with the NOA ARK OS UI
 - Added chat-to-action wiring that triggers workflow runs and performs navigation updates through the shared API contract.
 - Connected a WebSocket event log to `/ws/events`, surfacing feedback from workflow triggers, agent scale operations, and CI reruns.
 - Hardened the unified gateway modules with missing imports, richer schemas, and expanded pytest coverage to validate workflows, analytics, chat, and CI endpoints.
+- Promoted the Vibe Kanban data model from cards to goals, updating board metrics, assist flows, and workspace serialization to speak in outcome-oriented language.
 
 These changes align the UI codebase with the unified shell roadmap and deliver an actionable single surface for operations and AI-assisted development flows.
 

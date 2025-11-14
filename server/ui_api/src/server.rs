@@ -198,6 +198,9 @@ impl UiApiServer {
         State(state): State<UiApiState>,
         Json(request): Json<WorkflowStartRequest>,
     ) -> Result<Json<WorkflowStartResponse>, (StatusCode, Json<ErrorResponse>)> {
+        if request.workflow.name.trim().is_empty() {
+            return Err(bad_request("workflow name cannot be empty".into()));
+        }
         if request.workflow.stages.is_empty() {
             return Err(bad_request("workflow requires at least one stage".into()));
         }
@@ -408,14 +411,20 @@ fn sanitize_file_name(file_name: Option<&str>) -> String {
         .unwrap_or_else(|| format!("upload-{}.bin", Uuid::new_v4()))
 }
 
+/// Slugifies a stage name for use in URLs or identifiers.
+///
+/// This implementation **must** stay in sync with the TypeScript `slugifyStage` function.
+/// It lowercases, replaces non-alphanumerics with hyphens, and collapses consecutive hyphens.
 fn slugify_stage(name: &str) -> String {
     name
         .to_lowercase()
         .chars()
         .map(|ch| if ch.is_ascii_alphanumeric() { ch } else { '-' })
         .collect::<String>()
-        .trim_matches('-')
-        .to_string()
+        .split('-')
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<_>>()
+        .join("-")
 }
 
 fn format_crc_state(state: &CRCState) -> String {

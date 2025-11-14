@@ -4,16 +4,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type {
   ActivityEvent,
+  GoalMemoryInsights,
   NotificationEvent,
   PlannerPlan,
   PlannerState,
   PresenceUser,
   UploadReceiptSummary,
-  VibeCard,
   VibeColumn,
   Workspace,
   WorkspaceBoard,
   WorkspaceIntegrationStatus,
+  GoalAutomationState,
 } from "./board-types";
 import type { ClientSessionUser } from "./useSession";
 import {
@@ -23,9 +24,8 @@ import {
   type CapabilityRegistry,
   normalizeCapabilityRegistry,
 } from "@/shared/capabilities";
-import { logError, logWarn } from "@noa-ark/shared-ui/logging";
-import type { ResumeToken, RealTimeEvent } from "@noa-ark/shared-ui/schema";
-import { SessionContinuityClient } from "@noa-ark/shared-ui/session";
+import { logError } from "@/shared/logging";
+import { isFeatureEnabled } from "./featureFlags";
 
 const accentPalette = [
   "from-indigo-500 via-purple-500 to-blue-500",
@@ -35,11 +35,22 @@ const accentPalette = [
   "from-emerald-500 via-lime-400 to-teal-400",
 ];
 
+type MemorySuggestion = { title: string; detail: string; source: "memory" | "realtime" };
+
 type AssistState = {
   suggestions: { title: string; detail: string }[];
-  focusCard: VibeCard | null;
+  focusGoal: Goal | null;
   updatedAt: string;
+  memory?: GoalMemoryInsights | null;
+  longTermSuggestions?: MemorySuggestion[];
 } | null;
+
+type AutonomyState = {
+  replanTriggered: boolean;
+  escalationTriggered: boolean;
+  lastTriggeredAt: string | null;
+  summary: string | null;
+};
 
 type WorkspaceHookState = {
   hydrated: boolean;
@@ -56,7 +67,7 @@ type WorkspaceHookState = {
   uploadReceipts: UploadReceiptSummary[];
   integrations: WorkspaceIntegrationStatus[];
   assist: AssistState;
-  planner: PlannerState;
+  autonomy: AutonomyState;
   capabilities: {
     loading: boolean;
     registry: CapabilityRegistry;
@@ -74,11 +85,11 @@ type WorkspaceHookState = {
   addColumn: (title: string) => void;
   removeColumn: (columnId: string) => void;
   renameColumn: (columnId: string, title: string) => void;
-  addCard: (columnId: string, title: string, notes?: string) => void;
-  updateCard: (columnId: string, cardId: string, patch: Partial<VibeCard>) => void;
-  removeCard: (columnId: string, cardId: string) => void;
-  moveCardWithinColumn: (columnId: string, activeId: string, overId: string) => void;
-  moveCardToColumn: (activeColumnId: string, overColumnId: string, activeCardId: string, overCardId?: string) => void;
+  addGoal: (columnId: string, title: string, notes?: string) => void;
+  updateGoal: (columnId: string, goalId: string, patch: Partial<Goal>) => void;
+  removeGoal: (columnId: string, goalId: string) => void;
+  moveGoalWithinColumn: (columnId: string, activeId: string, overId: string) => void;
+  moveGoalToColumn: (activeColumnId: string, overColumnId: string, activeGoalId: string, overGoalId?: string) => void;
   moveColumn: (activeId: string, overId: string) => void;
   setProjectName: (name: string) => void;
   resumePlan: (token: ResumeToken) => void;
@@ -98,7 +109,12 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
   const [uploadReceipts, setUploadReceipts] = useState<UploadReceiptSummary[]>([]);
   const [integrations, setIntegrations] = useState<WorkspaceIntegrationStatus[]>([]);
   const [assist, setAssist] = useState<AssistState>(null);
-  const [planner, setPlanner] = useState<PlannerState>({ status: "idle", plans: [] });
+  const [autonomy, setAutonomy] = useState<AutonomyState>({
+    replanTriggered: false,
+    escalationTriggered: false,
+    lastTriggeredAt: null,
+    summary: null,
+  });
   const [capabilityRegistry, setCapabilityRegistry] = useState<CapabilityRegistry>(() => ({
     version: DEFAULT_CAPABILITY_REGISTRY.version,
     capabilities: [],
@@ -110,7 +126,10 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
   const eventSourceRef = useRef<EventSource | null>(null);
   const presenceIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const latestBoardRef = useRef<WorkspaceBoard | null>(null);
-  const continuityClientRef = useRef<SessionContinuityClient | null>(null);
+  const goalEvaluationRef = useRef<{ boardId: string | null; signature: string | null }>({
+    boardId: null,
+    signature: null,
+  });
 
   const logBoardError = useCallback(
     (event: string, error: unknown, context?: Record<string, unknown>) => {
@@ -194,6 +213,33 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     }
   }, [workspaceId, boardId]);
 
+  const fetchGoalInsights = useCallback(async () => {
+    if (!workspaceId || !boardId) {
+      setGoalInsights(null);
+      return;
+    }
+    const response = await fetch(`/api/goals/${boardId}/memory?workspaceId=${workspaceId}`, { cache: "no-store" });
+    if (!response.ok) {
+      return;
+    }
+    try {
+      const payload = await response.json();
+      const normalized = normalizeGoalMemory(payload);
+      setGoalInsights(normalized);
+      setAssist((previous) =>
+        previous
+          ? {
+              ...previous,
+              memory: normalized,
+              longTermSuggestions: buildMemorySuggestions(normalized),
+            }
+          : previous
+      );
+    } catch (error) {
+      logBoardError("goal_memory_parse_failed", error, { workspaceId, boardId });
+    }
+  }, [workspaceId, boardId, logBoardError]);
+
   const fetchBoard = useCallback(async () => {
     if (!workspaceId || !boardId) return;
     const response = await fetch(`/api/workspaces/${workspaceId}/boards/${boardId}`, { cache: "no-store" });
@@ -204,7 +250,8 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     setSnapshot(payload.board);
     latestBoardRef.current = payload.board;
     setHydrated(true);
-  }, [workspaceId, boardId]);
+    void fetchGoalInsights();
+  }, [workspaceId, boardId, fetchGoalInsights]);
 
   const fetchIntegrations = useCallback(async () => {
     if (!workspaceId) return;
@@ -282,6 +329,16 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
   }, [workspaceId, boardId, fetchBoard]);
 
   useEffect(() => {
+    if (!workspaceId || !boardId) {
+      setGoalInsights(null);
+      return;
+    }
+    fetchGoalInsights().catch((error) =>
+      logBoardError("goal_memory_fetch_failed", error, { workspaceId, boardId })
+    );
+  }, [workspaceId, boardId, fetchGoalInsights, logBoardError]);
+
+  useEffect(() => {
     if (!workspaceId || !user) return;
     const eventSource = new EventSource(`/api/workspaces/${workspaceId}/events`);
     eventSource.onmessage = (event) => {
@@ -306,6 +363,28 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     eventSource.addEventListener("presence", (event) => {
       const payload = JSON.parse(event.data) as { users: PresenceUser[] };
       setPresence(payload.users ?? []);
+    });
+    eventSource.addEventListener("automation", (event) => {
+      const payload = JSON.parse(event.data) as {
+        boardId: string;
+        cardId: string;
+        automation: GoalAutomationState;
+      };
+      if (payload.boardId !== boardId) {
+        return;
+      }
+      setSnapshot((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          columns: prev.columns.map((column) => ({
+            ...column,
+            cards: column.cards.map((card) =>
+              card.id === payload.cardId ? { ...card, automation: payload.automation } : card
+            ),
+          })),
+        };
+      });
     });
     eventSourceRef.current = eventSource;
     return () => {
@@ -374,7 +453,7 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
           id: `column-${Date.now()}`,
           title: title.trim() || "Untitled",
           accent: accentPalette[columns.length % accentPalette.length],
-          cards: [],
+          goals: [],
         },
       ]);
     },
@@ -397,48 +476,58 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     [updateColumns]
   );
 
-  const createCard = useCallback((partial: Partial<VibeCard> & { title: string }): VibeCard => {
-    const id = partial.id ?? (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `card-${Date.now()}`);
-    return {
-      id,
-      title: partial.title,
-      notes: partial.notes ?? "",
-      mood: partial.mood ?? "focus",
-      createdAt: partial.createdAt ?? new Date().toISOString(),
-      assigneeId: partial.assigneeId,
-      dueDate: partial.dueDate,
-      integrations: partial.integrations ?? [],
-    };
-  }, []);
+  const createCard = useCallback(
+    (partial: Partial<VibeCard> & { title: string }): VibeCard => {
+      const id =
+        partial.id ?? (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `card-${Date.now()}`);
+      return {
+        id,
+        title: partial.title,
+        notes: partial.notes ?? "",
+        mood: partial.mood ?? "focus",
+        createdAt: partial.createdAt ?? new Date().toISOString(),
+        assigneeId: partial.assigneeId,
+        dueDate: partial.dueDate,
+        integrations: partial.integrations ?? [],
+        automation: partial.automation ?? {
+          goalId: id,
+          history: [],
+          lastUpdated: new Date().toISOString(),
+          retryAvailable: true,
+        },
+      };
+    },
+    []
+  );
 
-  const addCard = useCallback(
+  const addGoal = useCallback(
     (columnId: string, title: string, notes?: string) => {
       updateColumns((columns) =>
         columns.map((column) =>
           column.id === columnId
-            ? { ...column, cards: [...column.cards, createCard({ title, notes })] }
+            ? { ...column, goals: [...column.goals, createGoal({ title, notes })] }
             : column
         )
       );
     },
-    [updateColumns, createCard]
+    [updateColumns, createGoal]
   );
 
-  const updateCard = useCallback(
-    (columnId: string, cardId: string, patch: Partial<VibeCard>) => {
+  const updateGoal = useCallback(
+    (columnId: string, goalId: string, patch: Partial<Goal>) => {
       updateColumns((columns) =>
         columns.map((column) =>
           column.id === columnId
             ? {
                 ...column,
-                cards: column.cards.map((card) =>
-                  card.id === cardId
+                goals: column.goals.map((goal) =>
+                  goal.id === goalId
                     ? {
-                        ...card,
+                        ...goal,
                         ...patch,
-                        title: patch.title ? patch.title.trim() || card.title : card.title,
+                        title: patch.title ? patch.title.trim() || goal.title : goal.title,
                       }
-                    : card
+                    : goal
                 ),
               }
             : column
@@ -448,12 +537,12 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     [updateColumns]
   );
 
-  const removeCard = useCallback(
-    (columnId: string, cardId: string) => {
+  const removeGoal = useCallback(
+    (columnId: string, goalId: string) => {
       updateColumns((columns) =>
         columns.map((column) =>
           column.id === columnId
-            ? { ...column, cards: column.cards.filter((card) => card.id !== cardId) }
+            ? { ...column, goals: column.goals.filter((goal) => goal.id !== goalId) }
             : column
         )
       );
@@ -469,23 +558,23 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     return next;
   }, []);
 
-  const moveCardWithinColumn = useCallback(
+  const moveGoalWithinColumn = useCallback(
     (columnId: string, activeId: string, overId: string) => {
       updateColumns((columns) =>
         columns.map((column) => {
           if (column.id !== columnId) return column;
-          const oldIndex = column.cards.findIndex((card) => card.id === activeId);
-          const newIndex = column.cards.findIndex((card) => card.id === overId);
+          const oldIndex = column.goals.findIndex((goal) => goal.id === activeId);
+          const newIndex = column.goals.findIndex((goal) => goal.id === overId);
           if (oldIndex === -1 || newIndex === -1) return column;
-          return { ...column, cards: arrayMove(column.cards, oldIndex, newIndex) };
+          return { ...column, goals: arrayMove(column.goals, oldIndex, newIndex) };
         })
       );
     },
     [updateColumns, arrayMove]
   );
 
-  const moveCardToColumn = useCallback(
-    (activeColumnId: string, overColumnId: string, activeCardId: string, overCardId?: string) => {
+  const moveGoalToColumn = useCallback(
+    (activeColumnId: string, overColumnId: string, activeGoalId: string, overGoalId?: string) => {
       if (activeColumnId === overColumnId) return;
       updateColumns((columns) => {
         const sourceIndex = columns.findIndex((column) => column.id === activeColumnId);
@@ -493,20 +582,22 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
         if (sourceIndex === -1 || targetIndex === -1) return columns;
         const sourceColumn = columns[sourceIndex];
         const targetColumn = columns[targetIndex];
-        const activeCardIndex = sourceColumn.cards.findIndex((card) => card.id === activeCardId);
-        if (activeCardIndex === -1) return columns;
+        const activeGoalIndex = sourceColumn.goals.findIndex((goal) => goal.id === activeGoalId);
+        if (activeGoalIndex === -1) return columns;
 
-        const updatedSourceCards = [...sourceColumn.cards];
-        const [movedCard] = updatedSourceCards.splice(activeCardIndex, 1);
+        const updatedSourceGoals = [...sourceColumn.goals];
+        const [movedGoal] = updatedSourceGoals.splice(activeGoalIndex, 1);
 
-        const updatedTargetCards = [...targetColumn.cards];
-        const insertAt = overCardId ? updatedTargetCards.findIndex((card) => card.id === overCardId) : updatedTargetCards.length;
-        const nextCards = [...updatedTargetCards];
-        nextCards.splice(insertAt === -1 ? nextCards.length : insertAt, 0, movedCard);
+        const updatedTargetGoals = [...targetColumn.goals];
+        const insertAt = overGoalId
+          ? updatedTargetGoals.findIndex((goal) => goal.id === overGoalId)
+          : updatedTargetGoals.length;
+        const nextGoals = [...updatedTargetGoals];
+        nextGoals.splice(insertAt === -1 ? nextGoals.length : insertAt, 0, movedGoal);
 
         const nextColumns = [...columns];
-        nextColumns[sourceIndex] = { ...sourceColumn, cards: updatedSourceCards };
-        nextColumns[targetIndex] = { ...targetColumn, cards: nextCards };
+        nextColumns[sourceIndex] = { ...sourceColumn, goals: updatedSourceGoals };
+        nextColumns[targetIndex] = { ...targetColumn, goals: nextGoals };
         return nextColumns;
       });
     },
@@ -623,156 +714,125 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     [workspaceId, boardId]
   );
 
+    if (!workspaceId || !boardId) return;
+    const response = await fetch(`/api/workspaces/${workspaceId}/boards/${boardId}/assist`, { method: "POST" });
+    if (!response.ok) return;
+    const payload = await response.json();
+    const updatedAt = new Date().toISOString();
+    const memory = payload.memory ? normalizeGoalMemory({ ...payload.memory, goalId: `board:${boardId}`, workspaceId }) : goalInsights;
+    if (payload.memory && memory) {
+      setGoalInsights(memory);
+    }
+    setAssist({
+      suggestions: payload.suggestions ?? [],
+      focusCard: payload.focusCard ?? null,
+      updatedAt,
+      memory: memory ?? null,
+      longTermSuggestions: memory ? buildMemorySuggestions(memory) : undefined,
+    });
+  }, [workspaceId, boardId, goalInsights]);
+
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (!workspaceId || !boardId) return;
+    if (!snapshot || capabilitiesLoading) return;
+    if (!snapshot.metrics) return;
 
-    const endpoint = process.env.NEXT_PUBLIC_WORKFLOW_STREAM ?? "ws://localhost:8787/ui/session";
-    const client = new SessionContinuityClient({ workflowEndpoint: endpoint });
-    continuityClientRef.current = client;
+    const boardKey = snapshot.id ?? "unknown-board";
+    const signature = [
+      boardKey,
+      snapshot.lastUpdated,
+      snapshot.metrics.goalSuccessRate ?? "na",
+      snapshot.metrics.goalLeadTimeHours ?? "na",
+    ].join("::");
 
-    const handleEvent = (event: RealTimeEvent) => {
-      setPlanner((prev) => reducePlannerFromEvent(prev, event));
-      const workflowState = normalizeWorkflowState((event.payload ?? {}).state);
-      if (getEventType(event) === "workflow/state" && workflowState === "completed") {
-        refreshBoard().catch((error) => {
-          logBoardError("workflow_refresh_failed", error, {
-            workflowId: getWorkflowId(event),
-            eventType: getEventType(event),
-          });
-        });
-      }
-    };
-
-    client.on("workflow:update", handleEvent);
-    try {
-      client.connectWebSocket();
-    } catch (error) {
-      logWarn({
-        component: "board.state",
-        event: "workflow_stream_connection_failed",
-        message: "Failed to connect to workflow stream",
-        outcome: "degraded",
-        context: { endpoint },
-        error,
-      });
+    if (
+      goalEvaluationRef.current.boardId === boardKey &&
+      goalEvaluationRef.current.signature === signature
+    ) {
+      return;
     }
 
-    return () => {
-      client.off("workflow:update", handleEvent);
-      client.disconnect();
-      if (continuityClientRef.current === client) {
-        continuityClientRef.current = null;
-      }
-    };
-  }, [workspaceId, boardId, refreshBoard, logBoardError, logWarn]);
+    goalEvaluationRef.current = { boardId: boardKey, signature };
 
-  const requestAssist = useCallback(async () => {
-    if (!workspaceId || !boardId) return;
-    const board = latestBoardRef.current;
-    if (!board) return;
+    const nowIso = new Date().toISOString();
+    const goalInsightsFlag = isFeatureEnabled("goalInsights");
+    const autoRetryFlag = isFeatureEnabled("autonomousRetry");
+    const escalationFlag = isFeatureEnabled("agentEscalation");
+    const hasGoalInsights = goalInsightsFlag && capabilityTokens.has("kanban.goalInsights");
+    const autoRetryEnabled = autoRetryFlag && capabilityTokens.has("kanban.autonomousRetry");
+    const escalationEnabled = escalationFlag && capabilityTokens.has("kanban.agentEscalation");
 
-    const focusCard = pickFocusCard(board);
-    const goalId = `goal-${Date.now()}`;
-    const goalPayload = {
-      id: goalId,
-      title: focusCard?.title ? `Amplify ${focusCard.title}` : `${board.projectName} momentum`,
-      summary: focusCard?.notes ?? board.description ?? "",
-      workspaceId,
-      boardId,
-      createdBy: user?.id ?? "guest",
-      focusCardId: focusCard?.id,
-      context: {
-        boardSnapshot: board,
-        signals: buildGoalSignals(board),
-      },
-    };
+    let replanTriggered = false;
+    let escalationTriggered = false;
+    let summary: string | null = null;
 
-    setPlanner((prev) => ({ ...prev, status: "planning", lastError: undefined }));
-
-    try {
-      const response = await fetch(`/api/workspaces/${workspaceId}/boards/${boardId}/assist`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ goal: goalPayload }),
-      });
-      if (!response.ok) {
-        throw new Error(`Assist request failed with status ${response.status}`);
-      }
-      const payload = await response.json();
-      setAssist({
-        suggestions: payload.suggestions ?? [],
-        focusCard: payload.focusCard ?? null,
-        updatedAt: new Date().toISOString(),
-      });
-
-      if (payload.plan) {
-        const plan = payload.plan as {
-          goalId: string;
-          goalTitle: string;
-          workflowId: string;
-          state?: string;
-          resumeToken?: ResumeToken;
-          startedAt?: string;
-          stages?: { id?: string; name: string; state?: string }[];
-        };
-
-        const stageStates = (plan.stages ?? []).map((stage) => ({
-          id: normalizeStageIdentifier(stage.id ?? stage.name),
-          name: stage.name,
-          state: normalizeStageState(stage.state) ?? "pending",
-        }));
-
-        const nextPlan: PlannerPlan = {
-          goalId: plan.goalId,
-          goalTitle: plan.goalTitle,
-          workflowId: plan.workflowId,
-          status: normalizeWorkflowState(plan.state) ?? "pending",
-          resumeToken: plan.resumeToken,
-          startedAt: plan.startedAt ?? new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          stages: stageStates,
-        };
-
-        setPlanner((prev) => ({
-          status: "ready",
-          plans: [...prev.plans.filter((item) => item.workflowId !== nextPlan.workflowId), nextPlan],
-          activePlanId: nextPlan.goalId,
-          lastError: undefined,
-        }));
-      } else {
-        setPlanner((prev) => ({ ...prev, status: "ready" }));
-      }
-    } catch (error) {
-      setPlanner((prev) => ({
-        ...prev,
-        status: "error",
-        lastError: error instanceof Error ? error.message : "Unknown planning failure",
-      }));
-      logBoardError("assist_request_failed", error, {
-        workspaceId,
-        boardId,
-      });
-    }
-  }, [workspaceId, boardId, user, logBoardError]);
-
-  const resumePlan = useCallback(
-    (token: ResumeToken) => {
-      if (!token) return;
-      if (continuityClientRef.current) {
-        continuityClientRef.current.requestResume(token);
-      } else {
-        logWarn({
-          component: "board.state",
-          event: "workflow_resume_unavailable",
-          message: "Attempted to resume workflow without an active session",
-          outcome: "degraded",
-          context: { workflowId: token.workflowId },
+    if (hasGoalInsights && autoRetryEnabled && typeof snapshot.metrics.goalSuccessRate === "number") {
+      if (snapshot.metrics.goalSuccessRate < 60) {
+        replanTriggered = true;
+        summary = `Autonomous retry scheduled at ${snapshot.metrics.goalSuccessRate}% success rate.`;
+        requestAssist().catch((error) =>
+          logBoardError("autonomous_retry_failed", error, {
+            boardId: snapshot.id,
+            successRate: snapshot.metrics?.goalSuccessRate,
+          })
+        );
+        setNotifications((prev) => {
+          const notification = {
+            id: `auto-replan-${Date.now()}`,
+            message: `Success rate dipped to ${snapshot.metrics?.goalSuccessRate ?? 0}%. Triggered an autonomous retry cycle.`,
+            createdAt: nowIso,
+            severity: "warning" as const,
+          };
+          const items = [notification, ...(prev ?? [])];
+          return items.slice(0, 20);
         });
       }
-    },
-    [logWarn]
-  );
+    }
+
+    if (hasGoalInsights && escalationEnabled && typeof snapshot.metrics.goalLeadTimeHours === "number") {
+      if (snapshot.metrics.goalLeadTimeHours > 12) {
+        escalationTriggered = true;
+        const message = `Goal lead time reached ${snapshot.metrics.goalLeadTimeHours}h. Escalating to senior agent.`;
+        summary = summary ? `${summary} ${message}` : message;
+        setNotifications((prev) => {
+          const notification = {
+            id: `auto-escalate-${Date.now()}`,
+            message,
+            createdAt: nowIso,
+            severity: "warning" as const,
+          };
+          const items = [notification, ...(prev ?? [])];
+          return items.slice(0, 20);
+        });
+      }
+    }
+
+    if (replanTriggered || escalationTriggered) {
+      setAutonomy({
+        replanTriggered,
+        escalationTriggered,
+        lastTriggeredAt: nowIso,
+        summary,
+      });
+    } else {
+      setAutonomy((prev) =>
+        prev.replanTriggered || prev.escalationTriggered
+          ? {
+              replanTriggered: false,
+              escalationTriggered: false,
+              lastTriggeredAt: nowIso,
+              summary: null,
+            }
+          : prev
+      );
+    }
+  }, [
+    snapshot,
+    capabilitiesLoading,
+    capabilityTokens,
+    requestAssist,
+    logBoardError,
+    setNotifications,
+  ]);
 
   const refreshWorkspace = useCallback(async () => {
     await fetchWorkspace();
@@ -797,7 +857,7 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     uploadReceipts,
     integrations,
     assist,
-    planner,
+    autonomy,
     capabilities: {
       loading: capabilitiesLoading,
       registry: capabilityRegistry,
@@ -812,14 +872,15 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     dismissNotification,
     requestAssist,
     uploadArtifact,
+    retryAutomation,
     addColumn,
     removeColumn,
     renameColumn,
-    addCard,
-    updateCard,
-    removeCard,
-    moveCardWithinColumn,
-    moveCardToColumn,
+    addGoal,
+    updateGoal,
+    removeGoal,
+    moveGoalWithinColumn,
+    moveGoalToColumn,
     moveColumn,
     setProjectName,
     resumePlan,
@@ -1045,4 +1106,128 @@ function reducePlannerFromEvent(prev: PlannerState, event: RealTimeEvent): Plann
     activePlanId,
     lastError: prev.lastError,
   };
+}
+
+function normalizeGoalMemory(payload: unknown): GoalMemoryInsights {
+  const value = (typeof payload === "object" && payload) || {};
+  const summary = typeof (value as { summary?: unknown }).summary === "string" ? (value as { summary: string }).summary : "";
+  const traceCountRaw = (value as { traceCount?: unknown }).traceCount;
+  const tracesRaw = (value as { traces?: unknown }).traces;
+  const traceCount = Number.isFinite(traceCountRaw)
+    ? Number(traceCountRaw)
+    : Array.isArray(tracesRaw)
+      ? tracesRaw.length
+      : 0;
+  const lastSeenRaw = (value as { lastSeen?: unknown }).lastSeen;
+  const lastSeen = typeof lastSeenRaw === "string" ? lastSeenRaw : null;
+  const traces = Array.isArray(tracesRaw)
+    ? tracesRaw.map((trace) => ({
+        id: String((trace as { id?: unknown }).id ?? cryptoRandom()),
+        goalId: String((trace as { goalId?: unknown }).goalId ?? ""),
+        workspaceId: String((trace as { workspaceId?: unknown }).workspaceId ?? ""),
+        boardId: (trace as { boardId?: unknown }).boardId ?? null,
+        actorId: (trace as { actorId?: unknown }).actorId ? String((trace as { actorId?: unknown }).actorId) : null,
+        actorName: (trace as { actorName?: unknown }).actorName ? String((trace as { actorName?: unknown }).actorName) : null,
+        action: String((trace as { action?: unknown }).action ?? "unknown"),
+        summary: (trace as { summary?: unknown }).summary ? String((trace as { summary?: unknown }).summary) : null,
+        metadata:
+          (trace as { metadata?: unknown }).metadata && typeof (trace as { metadata?: unknown }).metadata === "object"
+            ? ((trace as { metadata: Record<string, unknown> }).metadata as Record<string, unknown>)
+            : null,
+        createdAt: String((trace as { createdAt?: unknown }).createdAt ?? new Date().toISOString()),
+      }))
+    : [];
+  const lifecycleRaw = (value as { lifecycle?: unknown }).lifecycle;
+  const lifecycle = Array.isArray(lifecycleRaw)
+    ? lifecycleRaw.map((event) => ({
+        id: Number((event as { id?: unknown }).id ?? Date.now()),
+        goalId: String((event as { goalId?: unknown }).goalId ?? ""),
+        workspaceId: String((event as { workspaceId?: unknown }).workspaceId ?? ""),
+        eventType: String((event as { eventType?: unknown }).eventType ?? "unknown"),
+        status: (event as { status?: unknown }).status ? String((event as { status?: unknown }).status) : null,
+        summary: (event as { summary?: unknown }).summary ? String((event as { summary?: unknown }).summary) : null,
+        payload: (event as { payload?: unknown }).payload,
+        createdAt: String((event as { createdAt?: unknown }).createdAt ?? new Date().toISOString()),
+      }))
+    : [];
+  const artifactsRaw = (value as { artifacts?: unknown }).artifacts;
+  const artifacts = Array.isArray(artifactsRaw)
+    ? artifactsRaw.map((artifact) => ({
+        id: Number((artifact as { id?: unknown }).id ?? Date.now()),
+        goalId: String((artifact as { goalId?: unknown }).goalId ?? ""),
+        workspaceId: String((artifact as { workspaceId?: unknown }).workspaceId ?? ""),
+        artifactType: String((artifact as { artifactType?: unknown }).artifactType ?? "unknown"),
+        artifactUri: String((artifact as { artifactUri?: unknown }).artifactUri ?? ""),
+        title: (artifact as { title?: unknown }).title ? String((artifact as { title?: unknown }).title) : null,
+        summary: (artifact as { summary?: unknown }).summary ? String((artifact as { summary?: unknown }).summary) : null,
+        metadata:
+          (artifact as { metadata?: unknown }).metadata && typeof (artifact as { metadata?: unknown }).metadata === "object"
+            ? ((artifact as { metadata: Record<string, unknown> }).metadata as Record<string, unknown>)
+            : null,
+        createdAt: String((artifact as { createdAt?: unknown }).createdAt ?? new Date().toISOString()),
+      }))
+    : [];
+  const similarGoalsRaw = (value as { similarGoals?: unknown }).similarGoals;
+  const similarGoals = Array.isArray(similarGoalsRaw)
+    ? similarGoalsRaw.map((goal) => ({
+        goalId: String((goal as { goalId?: unknown }).goalId ?? ""),
+        workspaceId: String((goal as { workspaceId?: unknown }).workspaceId ?? ""),
+        score: Number((goal as { score?: unknown }).score ?? 0),
+      }))
+    : [];
+  const insightSummaryRaw = (value as { insightSummary?: unknown }).insightSummary;
+  const insightSummary = typeof insightSummaryRaw === "string" ? insightSummaryRaw : undefined;
+  return {
+    summary,
+    traceCount,
+    lastSeen,
+    traces,
+    lifecycle,
+    artifacts,
+    similarGoals,
+    insightSummary,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function buildMemorySuggestions(memory: GoalMemoryInsights): MemorySuggestion[] {
+  const suggestions: MemorySuggestion[] = [];
+  if (memory.traceCount > 0) {
+    suggestions.push({
+      title: "Replay last successful move",
+      detail: `Last execution recorded ${memory.lastSeen ? new Date(memory.lastSeen).toLocaleString() : "recently"}. Revisit the stored steps before planning next actions.`,
+      source: "memory",
+    });
+  }
+  if (memory.artifacts.length) {
+    const latestArtifact = memory.artifacts[0];
+    suggestions.push({
+      title: "Review stored artifact",
+      detail: `Artifact ${latestArtifact.title ?? latestArtifact.artifactType} is available at ${latestArtifact.artifactUri}.`,
+      source: "memory",
+    });
+  }
+  if (memory.similarGoals.length) {
+    const topMatch = memory.similarGoals[0];
+    suggestions.push({
+      title: "Borrow from similar goal",
+      detail: `Goal ${topMatch.goalId} (${topMatch.score.toFixed(2)}) in workspace ${topMatch.workspaceId} may contain reusable playbooks.`,
+      source: "memory",
+    });
+  }
+  if (!suggestions.length && memory.summary) {
+    suggestions.push({
+      title: "No memory backlog",
+      detail: memory.summary,
+      source: "memory",
+    });
+  }
+  return suggestions;
+}
+
+function cryptoRandom() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
 }
