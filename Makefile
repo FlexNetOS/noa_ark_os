@@ -3,7 +3,14 @@ SHELL := /bin/bash
 PNPM ?= pnpm
 CARGO ?= cargo
 
-.PHONY: build test digest run ci:local lint typecheck format
+SNAPSHOT_ARCHIVE_ROOT ?= archive
+SNAPSHOT_BUNDLE_PREFIX ?= noa-ark-os
+SNAPSHOT_LEDGER_NAME ?= ledger.json
+SNAPSHOT_TAR_COMPRESS ?= --zstd
+SNAPSHOT_TAR_DECOMPRESS ?= --zstd
+SNAPSHOT_BUNDLE_EXT ?= tar.zst
+
+.PHONY: build test digest run ci-local ci\:local lint typecheck format
 .PHONY: pipeline.local world-verify world-fix kernel snapshot rollback verify publish-audit setup
 
 build:
@@ -12,6 +19,7 @@ build:
 test:
 	$(PNPM) test
 	$(CARGO) test -p noa_crc
+	bash tests/shell/test_snapshot.sh
 
 digest:
 	$(CARGO) run -p noa_crc -- ingest
@@ -26,7 +34,11 @@ format:
 typecheck:
 	$(PNPM) typecheck
 
-ci:local: lint typecheck format test
+ci-local: lint typecheck format test
+
+ci\:local:
+	@echo "⚠️  'ci:local' is deprecated; forwarding to 'ci-local'"
+	@$(MAKE) ci-local
 
 run:
 	@set -euo pipefail; \
@@ -92,16 +104,51 @@ sign:
 
 # Snapshot creation
 snapshot:
-	@echo "📸 Creating system snapshot..."
-	@mkdir -p .snapshots
-	@# TODO: Implement snapshot creation with git tags or similar
-	@echo "⚠️  Snapshot not yet implemented (Phase 0)"
+	@set -euo pipefail; \
+	TS="$$(date -u +%Y-%m-%dT%H:%M:%SZ)"; \
+	TS_SAFE="$$(date -u +%Y%m%dT%H%M%SZ)"; \
+	YEAR="$$(date -u +%Y)"; \
+	MONTH="$$(date -u +%m)"; \
+	ARCHIVE_DIR="$(SNAPSHOT_ARCHIVE_ROOT)/$$YEAR/$$MONTH"; \
+	SNAPSHOT_DIR="$$ARCHIVE_DIR/snapshots"; \
+	mkdir -p "$$SNAPSHOT_DIR"; \
+        BUNDLE_NAME="$(SNAPSHOT_BUNDLE_PREFIX)-$$TS_SAFE.$(SNAPSHOT_BUNDLE_EXT)"; \
+        BUNDLE_PATH="$$SNAPSHOT_DIR/$$BUNDLE_NAME"; \
+        echo "🧾 Bundling tracked files into $$BUNDLE_PATH"; \
+        git rev-parse HEAD >/dev/null; \
+        FILE_LIST="$$SNAPSHOT_DIR/.snapshot-files-$$TS_SAFE"; \
+        git ls-files -z > "$$FILE_LIST"; \
+        tar --force-local $(SNAPSHOT_TAR_COMPRESS) -cf "$$BUNDLE_PATH" --null -T "$$FILE_LIST"; \
+	rm -f "$$FILE_LIST"; \
+	SHA="$$(sha256sum "$$BUNDLE_PATH" | awk '{print $$1}')"; \
+	LEDGER="$$ARCHIVE_DIR/$(SNAPSHOT_LEDGER_NAME)"; \
+	if [[ ! -f "$$LEDGER" ]]; then echo "[]" > "$$LEDGER"; fi; \
+	COMMIT="$$(git rev-parse HEAD)"; \
+	python3 tools/snapshot_ledger.py snapshot "$$LEDGER" "$$BUNDLE_PATH" "$$SHA" "$$COMMIT" "$$TS" "$(SNAPSHOT_BUNDLE_PREFIX)"; \
+	echo "✅ Snapshot recorded at $$BUNDLE_PATH"
 
 # Rollback to previous snapshot
 rollback:
-	@echo "⏪ Rolling back to previous snapshot..."
-	@# TODO: Implement rollback mechanism
-	@echo "⚠️  Rollback not yet implemented (Phase 0)"
+	@set -euo pipefail; \
+        echo "⏪ Rolling back to previous snapshot..."; \
+        BUNDLE_VALUE="$(BUNDLE)"; \
+        if [[ -z "$$BUNDLE_VALUE" ]]; then BUNDLE_VALUE="${BUNDLE:-}"; fi; \
+        if [[ -z "$$BUNDLE_VALUE" ]]; then echo "BUNDLE variable is required, e.g. make rollback BUNDLE=$(SNAPSHOT_ARCHIVE_ROOT)/YYYY/MM/snapshots/<file>.tar.zst" >&2; exit 2; fi; \
+        if [[ ! -f "$$BUNDLE_VALUE" ]]; then echo "Bundle $$BUNDLE_VALUE not found" >&2; exit 3; fi; \
+        SHA="$$(sha256sum "$$BUNDLE_VALUE" | awk '{print $$1}')"; \
+        TS="$$(date -u +%Y-%m-%dT%H:%M:%SZ)"; \
+        BUNDLE_DIR="$$(dirname "$$BUNDLE_VALUE")"; \
+	MONTH_DIR="$$(dirname "$$BUNDLE_DIR")"; \
+	YEAR_DIR="$$(dirname "$$MONTH_DIR")"; \
+	MONTH="$$(basename "$$MONTH_DIR")"; \
+	YEAR="$$(basename "$$YEAR_DIR")"; \
+	LEDGER="$(SNAPSHOT_ARCHIVE_ROOT)/$$YEAR/$$MONTH/$(SNAPSHOT_LEDGER_NAME)"; \
+	if [[ ! -f "$$LEDGER" ]]; then echo "Ledger $$LEDGER not found for bundle" >&2; exit 4; fi; \
+        python3 tools/snapshot_ledger.py rollback "$$LEDGER" "$$BUNDLE_VALUE" "$$SHA" "$$TS"; \
+        TAR_DECOMPRESS="$(SNAPSHOT_TAR_DECOMPRESS)"; \
+        if [[ "$$TAR_DECOMPRESS" == "" ]]; then TAR_DECOMPRESS=""; fi; \
+        tar --force-local $$TAR_DECOMPRESS -xf "$$BUNDLE_VALUE"; \
+        echo "✅ Rollback complete from $$BUNDLE_VALUE"
 
 # Verify build reproducibility
 verify:
