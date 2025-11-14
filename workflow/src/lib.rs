@@ -13,15 +13,24 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
 mod agent_dispatch;
+mod auto_fixers;
+mod budget_guardian;
 mod instrumentation;
 pub use agent_dispatch::{
     AgentDispatchError, AgentDispatcher, TaskDispatchReceipt, ToolExecutionReceipt,
     ToolExecutionStatus, ToolRequirement,
 };
+pub use auto_fixers::{
+    AutoFixActionPlan, AutoFixCoordinator, AutoFixError, AutoFixOutcome, AutoFixRequest, AutoFixerKind,
+};
 pub use instrumentation::{
-    AgentExecutionResult, DeploymentOutcomeRecord, EvidenceLedgerEntry, EvidenceLedgerKind,
-    GoalAgentMetric, GoalMetricSnapshot, GoalOutcomeRecord, MerkleLeaf, MerkleLevel,
-    PipelineInstrumentation, SecurityScanReport, SecurityScanStatus, StageReceipt, TaskReceipt,
+    AgentExecutionResult, AutoFixActionReceipt, BudgetDecisionRecord, DeploymentOutcomeRecord,
+    EvidenceLedgerEntry, EvidenceLedgerKind, GoalAgentMetric, GoalMetricSnapshot, GoalOutcomeRecord,
+    MerkleLeaf, MerkleLevel, PipelineInstrumentation, PolicyDecisionRecord, SecurityScanReport,
+    SecurityScanStatus, StageReceipt, TaskReceipt,
+};
+pub use budget_guardian::{
+    BudgetAction, BudgetDecision, BudgetGuardian, BudgetGuardianError, BudgetLimits, BudgetUsage,
 };
 use tokio::sync::broadcast;
 
@@ -157,6 +166,7 @@ pub struct WorkflowEngine {
     states: Arc<Mutex<HashMap<String, WorkflowState>>>,
     stage_states: Arc<Mutex<HashMap<String, HashMap<String, StageState>>>>,
     instrumentation: Arc<PipelineInstrumentation>,
+    budget_guardian: BudgetGuardian,
     dispatcher: Arc<AgentDispatcher>,
     kernel: Option<KernelHandle>,
     event_stream: Arc<Mutex<Option<WorkflowEventStream>>>,
@@ -164,8 +174,10 @@ pub struct WorkflowEngine {
 
 impl WorkflowEngine {
     pub fn new() -> Self {
-        let instrumentation =
-            PipelineInstrumentation::new().expect("failed to initialise pipeline instrumentation");
+        let instrumentation = Arc::new(
+            PipelineInstrumentation::new().expect("failed to initialise pipeline instrumentation"),
+        );
+        let budget_guardian = BudgetGuardian::new(Arc::clone(&instrumentation));
         let registry = AgentRegistry::with_default_data().unwrap_or_else(|_| AgentRegistry::new());
         let factory = AgentFactory::new();
         let dispatcher = AgentDispatcher::new(registry, factory);
@@ -173,7 +185,8 @@ impl WorkflowEngine {
             workflows: Arc::new(Mutex::new(HashMap::new())),
             states: Arc::new(Mutex::new(HashMap::new())),
             stage_states: Arc::new(Mutex::new(HashMap::new())),
-            instrumentation: Arc::new(instrumentation),
+            instrumentation,
+            budget_guardian,
             dispatcher: Arc::new(dispatcher),
             kernel: None,
             event_stream: Arc::new(Mutex::new(None)),
@@ -184,10 +197,16 @@ impl WorkflowEngine {
         Arc::clone(&self.instrumentation)
     }
 
+    pub fn budget_guardian(&self) -> &BudgetGuardian {
+        &self.budget_guardian
+    }
+
     /// Create a workflow engine that interacts with kernel capabilities.
     pub fn with_kernel(kernel: KernelHandle) -> Self {
-        let instrumentation =
-            PipelineInstrumentation::new().expect("failed to initialise pipeline instrumentation");
+        let instrumentation = Arc::new(
+            PipelineInstrumentation::new().expect("failed to initialise pipeline instrumentation"),
+        );
+        let budget_guardian = BudgetGuardian::new(Arc::clone(&instrumentation));
         let registry = AgentRegistry::with_default_data().unwrap_or_else(|_| AgentRegistry::new());
         let factory =
             AgentFactory::with_kernel(kernel.clone()).unwrap_or_else(|_| AgentFactory::new());
@@ -196,7 +215,8 @@ impl WorkflowEngine {
             workflows: Arc::new(Mutex::new(HashMap::new())),
             states: Arc::new(Mutex::new(HashMap::new())),
             stage_states: Arc::new(Mutex::new(HashMap::new())),
-            instrumentation: Arc::new(instrumentation),
+            instrumentation,
+            budget_guardian,
             dispatcher: Arc::new(dispatcher),
             kernel: Some(kernel),
             event_stream: Arc::new(Mutex::new(None)),

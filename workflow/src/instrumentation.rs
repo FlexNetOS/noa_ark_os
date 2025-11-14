@@ -17,6 +17,10 @@ const DOCUMENT_LOG: &str = "documentation";
 const STAGE_RECEIPT_LOG: &str = "stage_receipts";
 const SECURITY_SCAN_LOG: &str = "security_scans";
 const TASK_DISPATCH_LOG: &str = "task_dispatches";
+const AUTO_FIX_LOG: &str = "auto_fix_actions";
+const BUDGET_DECISION_LOG: &str = "budget_guardian";
+const AUTO_FIX_DIR: &str = "auto_fix";
+const BUDGET_GUARDIAN_DIR: &str = "budget_guardian";
 const EVIDENCE_LEDGER_DIR: &str = "storage/db/evidence";
 const EVIDENCE_LEDGER_FILE: &str = "ledger.jsonl";
 const GOAL_ANALYTICS_DIR: &str = "storage/db/analytics";
@@ -98,6 +102,41 @@ impl ImmutableLogEntry {
             entry_hash,
         })
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PolicyDecisionRecord {
+    pub decision: String,
+    pub reason: String,
+    #[serde(default)]
+    pub signals: Vec<String>,
+    #[serde(default)]
+    pub metadata: Value,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AutoFixActionReceipt {
+    pub fixer: String,
+    pub target: String,
+    pub snapshot_path: PathBuf,
+    pub plan: Value,
+    pub policy: PolicyDecisionRecord,
+    pub signed_operation: SignedOperation,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BudgetDecisionRecord {
+    pub workflow_id: String,
+    pub stage_id: String,
+    pub tokens_used: f64,
+    pub token_limit: f64,
+    pub latency_ms: f64,
+    pub latency_limit: f64,
+    pub action: String,
+    #[serde(default)]
+    pub rewritten_plan: Option<Value>,
+    pub snapshot_path: PathBuf,
+    pub signed_operation: SignedOperation,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -387,6 +426,8 @@ pub enum EvidenceLedgerKind {
     StageReceipt,
     SecurityScan,
     TaskDispatch,
+    AutoFixAction,
+    BudgetDecision,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -454,6 +495,60 @@ impl EvidenceLedgerEntry {
         }
     }
 
+    fn auto_fix_action(
+        fixer: &str,
+        target: &str,
+        snapshot: &PathBuf,
+        plan: &Value,
+        policy: &PolicyDecisionRecord,
+        signed: SignedOperation,
+    ) -> Self {
+        Self {
+            kind: EvidenceLedgerKind::AutoFixAction,
+            timestamp: current_timestamp_millis(),
+            reference: signed.signature.clone(),
+            payload: json!({
+                "fixer": fixer,
+                "target": target,
+                "snapshot": snapshot,
+                "plan": plan,
+                "policy": policy,
+            }),
+            signed_operation: signed,
+        }
+    }
+
+    fn budget_decision(
+        workflow_id: &str,
+        stage_id: &str,
+        tokens_used: f64,
+        token_limit: f64,
+        latency_ms: f64,
+        latency_limit: f64,
+        action: &str,
+        rewritten_plan: &Option<Value>,
+        snapshot: &PathBuf,
+        signed: SignedOperation,
+    ) -> Self {
+        Self {
+            kind: EvidenceLedgerKind::BudgetDecision,
+            timestamp: current_timestamp_millis(),
+            reference: signed.signature.clone(),
+            payload: json!({
+                "workflow_id": workflow_id,
+                "stage_id": stage_id,
+                "tokens_used": tokens_used,
+                "token_limit": token_limit,
+                "latency_ms": latency_ms,
+                "latency_limit": latency_limit,
+                "action": action,
+                "rewritten_plan": rewritten_plan,
+                "snapshot": snapshot,
+            }),
+            signed_operation: signed,
+        }
+    }
+
     fn genesis() -> Self {
         let record =
             OperationRecord::new(OperationKind::Other, "system/bootstrap", "evidence_ledger")
@@ -474,6 +569,8 @@ pub struct PipelineInstrumentation {
     index_dir: PathBuf,
     mirror_dir: PathBuf,
     evidence_dir: PathBuf,
+    auto_fix_dir: PathBuf,
+    budget_guardian_dir: PathBuf,
     evidence_ledger_path: PathBuf,
     goal_metrics_path: PathBuf,
     deployment_report_path: PathBuf,
@@ -490,6 +587,10 @@ impl PipelineInstrumentation {
         fs::create_dir_all(&mirror_dir)?;
         fs::create_dir_all(&evidence_dir)?;
         fs::create_dir_all(&analytics_dir)?;
+        let auto_fix_dir = mirror_dir.join(AUTO_FIX_DIR);
+        let budget_guardian_dir = mirror_dir.join(BUDGET_GUARDIAN_DIR);
+        fs::create_dir_all(&auto_fix_dir)?;
+        fs::create_dir_all(&budget_guardian_dir)?;
 
         let evidence_ledger_path = evidence_dir.join(EVIDENCE_LEDGER_FILE);
         let goal_metrics_path = analytics_dir.join(GOAL_ANALYTICS_FILE);
@@ -503,6 +604,8 @@ impl PipelineInstrumentation {
             index_dir,
             mirror_dir,
             evidence_dir,
+            auto_fix_dir,
+            budget_guardian_dir,
             evidence_ledger_path,
             goal_metrics_path,
             deployment_report_path,
@@ -513,6 +616,8 @@ impl PipelineInstrumentation {
         instrumentation.ensure_genesis(DOCUMENT_LOG, OperationKind::DocumentUpdate)?;
         instrumentation.ensure_genesis(STAGE_RECEIPT_LOG, OperationKind::StageReceipt)?;
         instrumentation.ensure_genesis(TASK_DISPATCH_LOG, OperationKind::Other)?;
+        instrumentation.ensure_genesis(AUTO_FIX_LOG, OperationKind::Other)?;
+        instrumentation.ensure_genesis(BUDGET_DECISION_LOG, OperationKind::Other)?;
         instrumentation.ensure_genesis(SECURITY_SCAN_LOG, OperationKind::SecurityScan)?;
         instrumentation.ensure_evidence_ledger()?;
         instrumentation.ensure_goal_metrics()?;
@@ -722,6 +827,144 @@ impl PipelineInstrumentation {
         .with_metadata(record_metadata);
         let signed = self.append_entry(STAGE_RECEIPT_LOG, event, record)?;
         self.append_evidence_ledger(EvidenceLedgerEntry::stage_receipt(&receipt, signed))?;
+        Ok(receipt)
+    }
+
+    pub fn record_budget_decision(
+        &self,
+        workflow_id: &str,
+        stage_id: &str,
+        tokens_used: f64,
+        token_limit: f64,
+        latency_ms: f64,
+        latency_limit: f64,
+        action: &str,
+        rewritten_plan: Option<Value>,
+    ) -> Result<BudgetDecisionRecord, InstrumentationError> {
+        let timestamp = current_timestamp_millis();
+        let filename = format!("{}-{}-{}-budget.json", timestamp, workflow_id, stage_id.replace('/', "_"));
+        let snapshot_path = self.budget_guardian_dir.join(filename);
+        if let Some(parent) = snapshot_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        let manifest = json!({
+            "workflow_id": workflow_id,
+            "stage_id": stage_id,
+            "recorded_at": timestamp,
+            "tokens_used": tokens_used,
+            "token_limit": token_limit,
+            "latency_ms": latency_ms,
+            "latency_limit": latency_limit,
+            "action": action,
+            "rewritten_plan": rewritten_plan,
+        });
+        fs::write(&snapshot_path, serde_json::to_string_pretty(&manifest)?)?;
+
+        let event = PipelineLogEvent {
+            event_type: "budget.guardian".to_string(),
+            actor: workflow_id.to_string(),
+            scope: stage_id.to_string(),
+            source: None,
+            target: Some(snapshot_path.to_string_lossy().to_string()),
+            metadata: manifest.clone(),
+            timestamp,
+        };
+        let record = OperationRecord::new(OperationKind::Other, workflow_id.to_string(), stage_id.to_string())
+            .with_metadata(json!({
+                "tokens_used": tokens_used,
+                "token_limit": token_limit,
+                "latency_ms": latency_ms,
+                "latency_limit": latency_limit,
+                "action": action,
+                "snapshot": snapshot_path.to_string_lossy(),
+            }));
+        let signed = self.append_entry(BUDGET_DECISION_LOG, event, record)?;
+        let record = BudgetDecisionRecord {
+            workflow_id: workflow_id.to_string(),
+            stage_id: stage_id.to_string(),
+            tokens_used,
+            token_limit,
+            latency_ms,
+            latency_limit,
+            action: action.to_string(),
+            rewritten_plan: rewritten_plan.clone(),
+            snapshot_path: snapshot_path.clone(),
+            signed_operation: signed.clone(),
+        };
+        self.append_evidence_ledger(EvidenceLedgerEntry::budget_decision(
+            workflow_id,
+            stage_id,
+            tokens_used,
+            token_limit,
+            latency_ms,
+            latency_limit,
+            action,
+            &record.rewritten_plan,
+            &record.snapshot_path,
+            signed,
+        ))?;
+        Ok(record)
+    }
+
+    pub fn record_auto_fix_action(
+        &self,
+        fixer: &str,
+        target: &str,
+        plan: &Value,
+        policy: &PolicyDecisionRecord,
+    ) -> Result<AutoFixActionReceipt, InstrumentationError> {
+        let timestamp = current_timestamp_millis();
+        let filename = format!("{}-{}-auto-fix.json", timestamp, fixer.replace('/', "_"));
+        let snapshot_path = self.auto_fix_dir.join(filename);
+        if let Some(parent) = snapshot_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        let manifest = json!({
+            "fixer": fixer,
+            "target": target,
+            "recorded_at": timestamp,
+            "plan": plan,
+            "policy": policy,
+        });
+        fs::write(&snapshot_path, serde_json::to_string_pretty(&manifest)?)?;
+
+        let plan_serialised = serde_json::to_string(plan)?;
+        let policy_serialised = serde_json::to_string(policy)?;
+
+        let event = PipelineLogEvent {
+            event_type: "auto_fix.action".to_string(),
+            actor: fixer.to_string(),
+            scope: target.to_string(),
+            source: None,
+            target: Some(snapshot_path.to_string_lossy().to_string()),
+            metadata: manifest.clone(),
+            timestamp,
+        };
+        let record = OperationRecord::new(OperationKind::Other, fixer.to_string(), target.to_string())
+            .with_metadata(json!({
+                "snapshot": snapshot_path.to_string_lossy(),
+                "plan_digest": simple_hash(&plan_serialised),
+                "policy_digest": simple_hash(&policy_serialised),
+            }));
+        let signed = self.append_entry(AUTO_FIX_LOG, event, record)?;
+        let receipt = AutoFixActionReceipt {
+            fixer: fixer.to_string(),
+            target: target.to_string(),
+            snapshot_path: snapshot_path.clone(),
+            plan: plan.clone(),
+            policy: policy.clone(),
+            signed_operation: signed.clone(),
+        };
+        self.append_evidence_ledger(EvidenceLedgerEntry::auto_fix_action(
+            fixer,
+            target,
+            &snapshot_path,
+            plan,
+            policy,
+            signed,
+        ))?;
         Ok(receipt)
     }
 
@@ -1057,6 +1300,8 @@ impl Clone for PipelineInstrumentation {
             index_dir: self.index_dir.clone(),
             mirror_dir: self.mirror_dir.clone(),
             evidence_dir: self.evidence_dir.clone(),
+            auto_fix_dir: self.auto_fix_dir.clone(),
+            budget_guardian_dir: self.budget_guardian_dir.clone(),
             evidence_ledger_path: self.evidence_ledger_path.clone(),
             goal_metrics_path: self.goal_metrics_path.clone(),
             deployment_report_path: self.deployment_report_path.clone(),
