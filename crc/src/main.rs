@@ -14,8 +14,8 @@ use noa_crc::engine::Engine;
 use noa_crc::graph::{CRCGraph, GraphNode, NodeKind};
 use noa_crc::ir::Lane;
 use noa_crc::parallel::ParallelDropProcessor;
-use noa_crc::transform::{execute_plan, DummyVerifier, FileReplacePlan, TransformPlan};
 use noa_crc::telemetry;
+use noa_crc::transform::{execute_plan, DummyVerifier, FileReplacePlan, TransformPlan};
 use noa_crc::watcher::spawn_watcher;
 use noa_crc::{CRCConfig, CRCSystem};
 use serde::Deserialize;
@@ -337,7 +337,9 @@ async fn ingest(args: IngestArgs) -> Result<(), Box<dyn std::error::Error>> {
         "Ingest report written",
         "success",
         Some(&trace_id),
-        Some(json!({ "report_path": args.report, "asset_count": assets.len(), "coverage": coverage })),
+        Some(
+            json!({ "report_path": args.report, "asset_count": assets.len(), "coverage": coverage }),
+        ),
     );
     Ok(())
 }
