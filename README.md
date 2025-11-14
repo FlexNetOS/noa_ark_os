@@ -158,6 +158,12 @@ cargo test --workspace
 
 See [Getting Started Guide](docs/GETTING_STARTED.md) for detailed instructions.
 
+## Developer Environment (CLI-first)
+
+- Build and run the development container with the cross-platform scripts in [`scripts/dev-env.sh`](scripts/dev-env.sh) or [`scripts/dev-env.ps1`](scripts/dev-env.ps1).
+- Configuration details (base image, language runtimes, editor extensions) live in [`tools/devshell/dev-env.manifest.toml`](tools/devshell/dev-env.manifest.toml).
+- Usage guides, Visual Studio replacement workflow, and environment smoke tests are documented in [`docs/guides/dev-environment-cli.md`](docs/guides/dev-environment-cli.md).
+
 ## AI Assist for Kanban
 
 - The Vibe Kanban app now includes an **AI** button on every card that assembles an engineer-ready implementation prompt.
