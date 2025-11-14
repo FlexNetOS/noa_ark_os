@@ -276,10 +276,11 @@
 
 ### Acceptance Criteria
 
-- [ ] World graph schema validated against repository state
-- [ ] Reconciler detects and reports drift accurately
-- [ ] Contract tests exist for all major integrations
-- [ ] Make targets pass in CI
+- [ ] `kernel/world/world.graph.schema.json` and seed graph validate against repository state
+- [ ] Reconciler detects and reports drift accurately with remediation plans
+- [ ] Contract tests cover clean + drift scenarios using fixtures in `tests/world_model/`
+- [ ] `make world-verify` / `make world-fix` wrap the reconciler and fail CI on drift
+- [ ] CLI `noa world verify` / `noa world fix` documented for Phase 0.5 rollout
 
 ---
 
