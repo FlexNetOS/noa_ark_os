@@ -88,7 +88,7 @@ class AiDatabase {
   }) {
     this.insertStatement.run({
       source: entry.source,
-      cardId: entry.cardId ?? entry.goalId ?? null,
+      cardId: entry.goalId ?? entry.cardId ?? null,
       title: entry.title,
       provider: entry.provider ?? null,
       latencyMs: entry.latencyMs,
