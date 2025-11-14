@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { ensureCommandAllowed } from "../../automation/command_policy.ts";
 
 const MAX_GIT_BUFFER = 10 * 1024 * 1024;
 
@@ -7,6 +8,7 @@ export type GitOptions = {
 };
 
 export function runGit(args: string[], options: GitOptions = {}) {
+  ensureCommandAllowed(["git", ...args], { context: "offline-pr-queue" });
   const result = spawnSync("git", args, {
     stdio: ["ignore", "pipe", "pipe"],
     encoding: "utf8",

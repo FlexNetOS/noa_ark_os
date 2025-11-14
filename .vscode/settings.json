@@ -145,6 +145,8 @@
   // Prefer pnpm for this monorepo to avoid lockfile mismatch warnings
   "npm.packageManager": "pnpm",
   "githubPullRequests.assignCreated": "Co-Pilot",
+  // Shared command safety policy lives in tools/automation/policy.yaml.
+  // The VS Code settings mirror that policy for editor parity.
   "chat.tools.terminal.autoApprove": {
     // Read-only / navigation / inspection commands (auto-approved)
     "cd": true,
