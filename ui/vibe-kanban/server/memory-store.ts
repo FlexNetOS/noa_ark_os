@@ -187,18 +187,31 @@ export async function recordWorkspaceSnapshot(workspace: Workspace): Promise<voi
       });
     }
   }
-  await writeStore(store);
-  logInfo({
-    component: "workspace.memory",
-    event: "workspace_snapshot_recorded",
-    message: `Snapshot recorded for workspace ${workspace.id}`,
-    outcome: "success",
-    context: {
-      boardCount: snapshot.boardCount,
-      cardCount: snapshot.cardCount,
-    },
-  });
-}
+  try {
+    await writeStore(store);
+    logInfo({
+      component: "workspace.memory",
+      event: "workspace_snapshot_recorded",
+      message: `Snapshot recorded for workspace ${workspace.id}`,
+      outcome: "success",
+      context: {
+        boardCount: snapshot.boardCount,
+        cardCount: snapshot.cardCount,
+      },
+    });
+  } catch (error) {
+    logWarn({
+      component: "workspace.memory",
+      event: "workspace_snapshot_write_failed",
+      message: `Failed to write workspace snapshot for workspace ${workspace.id}`,
+      outcome: "error",
+      context: {
+        error: error instanceof Error ? error.message : String(error),
+        workspaceId: workspace.id,
+      },
+    });
+    throw error;
+  }
 
 export async function getWorkspaceSnapshots(workspaceId: string): Promise<WorkspaceSnapshot[]> {
   const store = await readStore();

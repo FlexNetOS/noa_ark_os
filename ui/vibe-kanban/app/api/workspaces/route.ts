@@ -8,21 +8,17 @@ export async function GET() {
   const user = assertUser();
   const workspaces = await listWorkspacesForUser(user.id);
   const now = new Date().toISOString();
-  await Promise.all(
-    workspaces.map((workspace) =>
-      appendGoalTrace({
-        id: `${workspace.id}-trace-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`,
-        goalId: `workspace:${workspace.id}`,
-        workspaceId: workspace.id,
-        boardId: undefined,
-        actorId: user.id,
-        actorName: user.name,
-        action: "workspace.listed",
-        summary: `Workspace listed for ${user.name ?? "unknown"}`,
-        metadata: { endpoint: "/api/workspaces" },
-        createdAt: now,
-      })
-    )
-  );
+  await appendGoalTrace({
+    id: `workspaces-list-trace-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`,
+    goalId: `workspaces:list`,
+    workspaceId: undefined,
+    boardId: undefined,
+    actorId: user.id,
+    actorName: user.name,
+    action: "workspaces.listed",
+    summary: `User ${user.name ?? "unknown"} listed their workspaces (${workspaces.length} total)`,
+    metadata: { endpoint: "/api/workspaces", workspaceCount: workspaces.length },
+    createdAt: now,
+  });
   return NextResponse.json({ workspaces });
 }

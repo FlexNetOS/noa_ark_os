@@ -15,7 +15,7 @@ import type {
   WorkspaceBoard,
   WorkspaceMember,
 } from "../app/components/board-types";
-import { workspaceEventHub } from "./workspace-events";
+import { findGoalMetric } from "./goal-analytics";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const DATA_FILE = path.join(DATA_DIR, "workspaces.json");
@@ -86,6 +86,7 @@ async function ensureDataFile(): Promise<void> {
         {
           id: "launchpad",
           workspaceId: "studio",
+          goalId: "launchpad",
           projectName: "Vibe Coding Launchpad",
           description: "Ship the new kanban workspace with presence-aware collaboration.",
           lastUpdated: now,
@@ -312,6 +313,14 @@ export async function saveBoard(
   workspace.activity.unshift(activity);
   workspace.activity = workspace.activity.slice(0, 50);
 
+  const goalId = nextBoard.goalId ?? nextBoard.id;
+  nextBoard.goalId = goalId;
+  nextBoard.metrics = await computeBoardMetrics({
+    columns: nextBoard.columns,
+    goalId,
+    id: nextBoard.id,
+  });
+
   await upsertWorkspace({ ...workspace, lastSyncedAt: new Date().toISOString() } as Workspace);
   return { board: normalisedBoard, activity };
 }
@@ -451,14 +460,16 @@ export async function createBoard(
   if (!workspace) {
     throw new Error(`Workspace ${workspaceId} not found`);
   }
-  let newBoard: WorkspaceBoard = normaliseBoard({
+  const goalId = board.goalId ?? board.id;
+  const newBoard: WorkspaceBoard = {
     ...board,
     workspaceId,
-    metrics: computeBoardMetrics(board),
-  } as WorkspaceBoard);
-  newBoard = {
-    ...newBoard,
-    metrics: computeBoardMetrics(newBoard),
+    goalId,
+    metrics: await computeBoardMetrics({
+      columns: board.columns,
+      goalId,
+      id: board.id,
+    }),
   };
   workspace.boards.push(newBoard);
   const activity: ActivityEvent = {
@@ -494,13 +505,23 @@ export async function removeBoard(workspaceId: string, boardId: string, actor: W
   await upsertWorkspace(workspace);
 }
 
-function computeBoardMetrics(board: Pick<WorkspaceBoard, "columns">): BoardMetrics {
-  const completed = board.columns.find((col) => col.title.toLowerCase().includes("done"))?.goals.length ?? 0;
-  const active = board.columns.reduce((count, column) => count + column.goals.length, 0) - completed;
-  const goalMomentum = Math.min(100, Math.max(0, 40 + active * 5 - completed * 3));
-  return {
-    completedGoals: completed,
-    activeGoals: active,
-    goalMomentum,
+async function computeBoardMetrics(
+  board: Pick<WorkspaceBoard, "columns" | "goalId" | "id">
+): Promise<WorkspaceBoard["metrics"]> {
+  const completed = board.columns.find((col) => col.title.toLowerCase().includes("done"))?.cards.length ?? 0;
+  const active = board.columns.reduce((count, column) => count + column.cards.length, 0) - completed;
+  const vibeMomentum = Math.min(100, Math.max(0, 40 + active * 5 - completed * 3));
+  const metrics: WorkspaceBoard["metrics"] = {
+    completedCards: completed,
+    activeCards: active,
+    vibeMomentum,
   };
+  if (board.goalId) {
+    const analytics = await findGoalMetric(board.goalId);
+    if (analytics) {
+      metrics.goalLeadTimeHours = Number((analytics.averageLeadTimeMs / 3_600_000).toFixed(2));
+      metrics.goalSuccessRate = Number((analytics.successRate * 100).toFixed(1));
+    }
+  }
+  return metrics;
 }
