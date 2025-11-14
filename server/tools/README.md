@@ -91,9 +91,56 @@ server/tools/
 │   │   └── rustfmt.exe
 │   └── lib/
 ├── rustup-portable/         # Rustup data
+├── node-portable/           # Portable Node 20 + pnpm 8 toolchain (gitignored)
+│   ├── artifacts/           # Downloaded archives
+│   ├── current/             # Symlink to extracted Node release
+│   └── corepack/            # pnpm asset cache
+├── node-portable.manifest.json # Tracked manifest copy (versions + hashes)
 ├── setup-portable-cargo.ps1 # One-time setup script
+├── setup-portable-node.ps1  # One-time Node setup (Windows)
+├── setup-portable-node.sh   # One-time Node setup (Linux/WSL/macOS)
 └── activate-cargo.ps1       # Activation script (run every session)
+	activate-node.ps1        # Node activation (powershell)
+	activate-node.sh         # Node activation (bash/zsh)
 ```
+
+---
+
+## 🟢 Portable Node + pnpm (HT-01)
+
+Node.js v20.19.5 and pnpm v8.15.4 are mirrored locally so `pnpm`, `node`, and
+`npm` executions never depend on host-level installations.
+
+### Install / Refresh
+
+```bash
+# Linux/WSL/macOS
+./server/tools/setup-portable-node.sh
+```
+
+```powershell
+# Windows PowerShell
+./server/tools/setup-portable-node.ps1
+```
+
+Both scripts download the official Node + pnpm release artifacts, place them in
+`server/tools/node-portable/`, and generate `manifest.json` with SHA-256 hashes
+recorded for evidence tracking.
+
+### Activate per Shell Session
+
+```bash
+source ./server/tools/activate-node.sh
+```
+
+```powershell
+./server/tools/activate-node.ps1
+```
+
+Activation prepends `server/tools/node-portable/current/bin` to `PATH` and
+exports `NOA_NODE_HOME` / `COREPACK_HOME` so all Make targets resolve tooling
+from the hermetic bundle. Combine this with the cargo activation scripts before
+invoking `make`, `pnpm`, or the pipeline tasks.
 
 ---
 
