@@ -1,3 +1,5 @@
+import type { ResumeToken } from "@noa-ark/shared-ui/schema";
+
 export type VibeMood = "focus" | "flow" | "chill" | "hype";
 
 export type CardIntegrationSnapshot = {
@@ -5,6 +7,33 @@ export type CardIntegrationSnapshot = {
   label: string;
   status: "idle" | "running" | "success" | "failed";
   details?: string;
+};
+
+export type ToolExecutionTelemetry = {
+  name: string;
+  capability: string;
+  status: "pending" | "running" | "succeeded" | "failed" | "skipped";
+  output?: string;
+  error?: string;
+  occurredAt?: string;
+};
+
+export type AgentAutomationRun = {
+  agentId: string;
+  agentName: string;
+  status: "queued" | "running" | "completed" | "failed";
+  attempt: number;
+  startedAt: string;
+  finishedAt?: string;
+  notes?: string;
+  toolResults: ToolExecutionTelemetry[];
+};
+
+export type GoalAutomationState = {
+  goalId: string;
+  history: AgentAutomationRun[];
+  lastUpdated: string;
+  retryAvailable: boolean;
 };
 
 export type VibeCard = {
@@ -16,13 +45,14 @@ export type VibeCard = {
   assigneeId?: string;
   dueDate?: string;
   integrations?: CardIntegrationSnapshot[];
+  automation?: GoalAutomationState | null;
 };
 
 export type VibeColumn = {
   id: string;
   title: string;
   accent: string;
-  cards: VibeCard[];
+  goals: Goal[];
 };
 
 export type BoardMoodSample = {
@@ -34,9 +64,9 @@ export type BoardMoodSample = {
 };
 
 export type BoardMetrics = {
-  completedCards: number;
-  activeCards: number;
-  vibeMomentum: number;
+  completedGoals: number;
+  activeGoals: number;
+  goalMomentum: number;
   cycleTimeDays?: number;
   flowEfficiency?: number;
 };

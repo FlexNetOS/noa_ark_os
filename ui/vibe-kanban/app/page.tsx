@@ -3,9 +3,9 @@
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { PageEnvelope, ResumeToken } from "@noa-ark/shared-ui/schema";
-import { createSchemaClient, SessionContinuityClient } from "@noa-ark/shared-ui/session";
+import { createSchemaClient } from "@noa-ark/shared-ui/session";
 import { vibeDashboardEnvelope } from "@noa-ark/shared-ui/samples";
-import { ensureTraceId, logError, logInfo, logWarn } from "@noa-ark/shared-ui/logging";
+import { ensureTraceId, logInfo } from "@noa-ark/shared-ui/logging";
 
 import { NotificationCenter } from "./components/NotificationCenter";
 import { SchemaDrivenRenderer } from "./components/SchemaDrivenRenderer";
@@ -35,55 +35,8 @@ export default function Page() {
       });
   }, []);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const endpoint = process.env.NEXT_PUBLIC_WORKFLOW_STREAM ?? "ws://localhost:8787/ui/session";
-    const client = new SessionContinuityClient({ workflowEndpoint: endpoint });
-    client.on("workflow:update", (event) => {
-      if (event.eventType === "workflow/state" && event.payload?.state === "completed") {
-        state.refreshBoard().catch((error) => {
-          logError({
-            component: "vibe.page",
-            event: "workflow_refresh_failed",
-            message: "Failed to refresh board after workflow completion",
-            outcome: "failure",
-            traceId: traceIdRef.current,
-            context: {
-              workflowEvent: event.eventType,
-              workflowState: event.payload?.state,
-            },
-            error,
-          });
-        });
-      }
-      if (event.eventType === "workflow/stage" && event.payload?.resumeToken) {
-        setResumeToken(event.payload.resumeToken as ResumeToken);
-      }
-    });
-    client.on("workflow:resume", (token) => setResumeToken(token));
-    try {
-      client.connectWebSocket();
-      logInfo({
-        component: "vibe.page",
-        event: "workflow_stream_connected",
-        message: "Connected to workflow stream",
-        outcome: "success",
-        traceId: traceIdRef.current,
-        context: { endpoint },
-      });
-    } catch (error) {
-      logWarn({
-        component: "vibe.page",
-        event: "workflow_stream_connection_failed",
-        message: "Unable to connect to workflow stream",
-        outcome: "degraded",
-        traceId: traceIdRef.current,
-        context: { endpoint },
-        error,
-      });
-    }
-    return () => client.disconnect();
-  }, [state]);
+  const plannerResumeToken = state.planner.plans.find((plan) => plan.resumeToken)?.resumeToken;
+  const effectiveResumeToken = plannerResumeToken ?? resumeToken;
 
   const schemaRenderer = useMemo(() => {
     return ready
@@ -91,16 +44,16 @@ export default function Page() {
           <SchemaDrivenRenderer
             schema={envelope.schema}
             context={{
-              resumeWorkflow: (workflowId) => {
+              resumeWorkflow: (token) => {
                 logInfo({
                   component: "vibe.page",
                   event: "workflow_resume_requested",
                   message: "Requesting workflow resume",
                   outcome: "pending",
                   traceId: traceIdRef.current,
-                  context: { workflowId },
+                  context: { workflowId: token.workflowId },
                 });
-                void state.refreshBoard();
+                state.resumePlan(token);
               },
               triggerEvent: (bindingId) => {
                 logInfo({
@@ -112,16 +65,16 @@ export default function Page() {
                   context: { bindingId },
                 });
               },
-              data: {
-                boardState: state,
-                session,
-                resumeToken,
-              },
-            }}
-          />
+                data: {
+                  boardState: state,
+                  session,
+                  resumeToken: effectiveResumeToken,
+                },
+              }}
+            />
         )
       : null;
-  }, [ready, envelope.schema, state, session, resumeToken]);
+  }, [ready, envelope.schema, state, session, effectiveResumeToken]);
 
   if (session.status === "loading") {
     return <FullScreenMessage label="Initializing workspace…" />;

@@ -1,4 +1,4 @@
-use crate::{Stage, StageType, Task};
+use crate::{agent_dispatch::TaskDispatchReceipt, Stage, StageType, Task};
 use noa_core::security::{self, OperationKind, OperationRecord, SignedOperation};
 use noa_core::utils::{current_timestamp_millis, simple_hash};
 use serde::{Deserialize, Serialize};
@@ -14,6 +14,7 @@ const RELOCATION_LOG: &str = "relocation";
 const DOCUMENT_LOG: &str = "documentation";
 const STAGE_RECEIPT_LOG: &str = "stage_receipts";
 const SECURITY_SCAN_LOG: &str = "security_scans";
+const TASK_DISPATCH_LOG: &str = "task_dispatches";
 const EVIDENCE_LEDGER_DIR: &str = "storage/db/evidence";
 const EVIDENCE_LEDGER_FILE: &str = "ledger.jsonl";
 
@@ -200,6 +201,7 @@ pub enum EvidenceLedgerKind {
     Genesis,
     StageReceipt,
     SecurityScan,
+    TaskDispatch,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -242,6 +244,28 @@ impl EvidenceLedgerEntry {
                 "metadata": report.metadata,
             }),
             signed_operation: report.signed_operation.clone(),
+        }
+    }
+
+    fn task_dispatch(
+        workflow_id: &str,
+        stage_id: &str,
+        receipt: &TaskDispatchReceipt,
+        signed: SignedOperation,
+    ) -> Self {
+        Self {
+            kind: EvidenceLedgerKind::TaskDispatch,
+            timestamp: current_timestamp_millis(),
+            reference: signed.signature.clone(),
+            payload: json!({
+                "workflow_id": workflow_id,
+                "stage_id": stage_id,
+                "agent": receipt.agent_metadata.agent_id,
+                "agent_name": receipt.agent_metadata.name,
+                "tool_receipts": receipt.tool_receipts,
+                "output": receipt.output,
+            }),
+            signed_operation: signed,
         }
     }
 
@@ -289,6 +313,7 @@ impl PipelineInstrumentation {
         instrumentation.ensure_genesis(RELOCATION_LOG, OperationKind::FileMove)?;
         instrumentation.ensure_genesis(DOCUMENT_LOG, OperationKind::DocumentUpdate)?;
         instrumentation.ensure_genesis(STAGE_RECEIPT_LOG, OperationKind::StageReceipt)?;
+        instrumentation.ensure_genesis(TASK_DISPATCH_LOG, OperationKind::Other)?;
         instrumentation.ensure_genesis(SECURITY_SCAN_LOG, OperationKind::SecurityScan)?;
         instrumentation.ensure_evidence_ledger()?;
 
@@ -420,6 +445,44 @@ impl PipelineInstrumentation {
         .with_context(None, Some(document_path.to_string()))
         .with_metadata(record_metadata);
         self.append_entry(DOCUMENT_LOG, event, record)
+    }
+
+    pub fn log_task_dispatch(
+        &self,
+        workflow_id: &str,
+        stage_id: &str,
+        receipt: &TaskDispatchReceipt,
+    ) -> Result<(), InstrumentationError> {
+        let event = PipelineLogEvent {
+            event_type: "task.dispatch".to_string(),
+            actor: receipt.agent_metadata.agent_id.clone(),
+            scope: format!("{}::{}", workflow_id, stage_id),
+            source: Some(workflow_id.to_string()),
+            target: Some(stage_id.to_string()),
+            metadata: json!({
+                "agent": receipt.agent_metadata.agent_id,
+                "tool_receipts": receipt.tool_receipts,
+                "output": receipt.output,
+            }),
+            timestamp: current_timestamp_millis(),
+        };
+        let record = OperationRecord::new(
+            OperationKind::Other,
+            receipt.agent_metadata.agent_id.clone(),
+            stage_id.to_string(),
+        )
+        .with_context(Some(workflow_id.to_string()), Some(stage_id.to_string()))
+        .with_metadata(json!({
+            "agent_name": receipt.agent_metadata.name,
+            "tool_receipts": receipt.tool_receipts,
+        }));
+        let signed = self.append_entry(TASK_DISPATCH_LOG, event, record)?;
+        self.append_evidence_ledger(EvidenceLedgerEntry::task_dispatch(
+            workflow_id,
+            stage_id,
+            receipt,
+            signed,
+        ))
     }
 
     pub fn log_stage_receipt(

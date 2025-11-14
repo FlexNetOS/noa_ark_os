@@ -6,13 +6,15 @@ import type {
   ActivityEvent,
   GoalMemoryInsights,
   NotificationEvent,
+  PlannerPlan,
+  PlannerState,
   PresenceUser,
   UploadReceiptSummary,
-  VibeCard,
   VibeColumn,
   Workspace,
   WorkspaceBoard,
   WorkspaceIntegrationStatus,
+  GoalAutomationState,
 } from "./board-types";
 import type { ClientSessionUser } from "./useSession";
 import {
@@ -22,7 +24,9 @@ import {
   type CapabilityRegistry,
   normalizeCapabilityRegistry,
 } from "@/shared/capabilities";
-import { logError } from "@/shared/logging";
+import { logError, logWarn } from "@noa-ark/shared-ui/logging";
+import type { ResumeToken, RealTimeEvent } from "@noa-ark/shared-ui/schema";
+import { SessionContinuityClient } from "@noa-ark/shared-ui/session";
 
 const accentPalette = [
   "from-indigo-500 via-purple-500 to-blue-500",
@@ -36,7 +40,7 @@ type MemorySuggestion = { title: string; detail: string; source: "memory" | "rea
 
 type AssistState = {
   suggestions: { title: string; detail: string }[];
-  focusCard: VibeCard | null;
+  focusGoal: Goal | null;
   updatedAt: string;
   memory?: GoalMemoryInsights | null;
   longTermSuggestions?: MemorySuggestion[];
@@ -75,13 +79,14 @@ type WorkspaceHookState = {
   addColumn: (title: string) => void;
   removeColumn: (columnId: string) => void;
   renameColumn: (columnId: string, title: string) => void;
-  addCard: (columnId: string, title: string, notes?: string) => void;
-  updateCard: (columnId: string, cardId: string, patch: Partial<VibeCard>) => void;
-  removeCard: (columnId: string, cardId: string) => void;
-  moveCardWithinColumn: (columnId: string, activeId: string, overId: string) => void;
-  moveCardToColumn: (activeColumnId: string, overColumnId: string, activeCardId: string, overCardId?: string) => void;
+  addGoal: (columnId: string, title: string, notes?: string) => void;
+  updateGoal: (columnId: string, goalId: string, patch: Partial<Goal>) => void;
+  removeGoal: (columnId: string, goalId: string) => void;
+  moveGoalWithinColumn: (columnId: string, activeId: string, overId: string) => void;
+  moveGoalToColumn: (activeColumnId: string, overColumnId: string, activeGoalId: string, overGoalId?: string) => void;
   moveColumn: (activeId: string, overId: string) => void;
   setProjectName: (name: string) => void;
+  resumePlan: (token: ResumeToken) => void;
 };
 
 export type BoardState = WorkspaceHookState;
@@ -110,6 +115,7 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
   const eventSourceRef = useRef<EventSource | null>(null);
   const presenceIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const latestBoardRef = useRef<WorkspaceBoard | null>(null);
+  const continuityClientRef = useRef<SessionContinuityClient | null>(null);
 
   const logBoardError = useCallback(
     (event: string, error: unknown, context?: Record<string, unknown>) => {
@@ -344,6 +350,28 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
       const payload = JSON.parse(event.data) as { users: PresenceUser[] };
       setPresence(payload.users ?? []);
     });
+    eventSource.addEventListener("automation", (event) => {
+      const payload = JSON.parse(event.data) as {
+        boardId: string;
+        cardId: string;
+        automation: GoalAutomationState;
+      };
+      if (payload.boardId !== boardId) {
+        return;
+      }
+      setSnapshot((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          columns: prev.columns.map((column) => ({
+            ...column,
+            cards: column.cards.map((card) =>
+              card.id === payload.cardId ? { ...card, automation: payload.automation } : card
+            ),
+          })),
+        };
+      });
+    });
     eventSourceRef.current = eventSource;
     return () => {
       eventSource.close();
@@ -411,7 +439,7 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
           id: `column-${Date.now()}`,
           title: title.trim() || "Untitled",
           accent: accentPalette[columns.length % accentPalette.length],
-          cards: [],
+          goals: [],
         },
       ]);
     },
@@ -434,48 +462,58 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     [updateColumns]
   );
 
-  const createCard = useCallback((partial: Partial<VibeCard> & { title: string }): VibeCard => {
-    const id = partial.id ?? (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `card-${Date.now()}`);
-    return {
-      id,
-      title: partial.title,
-      notes: partial.notes ?? "",
-      mood: partial.mood ?? "focus",
-      createdAt: partial.createdAt ?? new Date().toISOString(),
-      assigneeId: partial.assigneeId,
-      dueDate: partial.dueDate,
-      integrations: partial.integrations ?? [],
-    };
-  }, []);
+  const createCard = useCallback(
+    (partial: Partial<VibeCard> & { title: string }): VibeCard => {
+      const id =
+        partial.id ?? (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `card-${Date.now()}`);
+      return {
+        id,
+        title: partial.title,
+        notes: partial.notes ?? "",
+        mood: partial.mood ?? "focus",
+        createdAt: partial.createdAt ?? new Date().toISOString(),
+        assigneeId: partial.assigneeId,
+        dueDate: partial.dueDate,
+        integrations: partial.integrations ?? [],
+        automation: partial.automation ?? {
+          goalId: id,
+          history: [],
+          lastUpdated: new Date().toISOString(),
+          retryAvailable: true,
+        },
+      };
+    },
+    []
+  );
 
-  const addCard = useCallback(
+  const addGoal = useCallback(
     (columnId: string, title: string, notes?: string) => {
       updateColumns((columns) =>
         columns.map((column) =>
           column.id === columnId
-            ? { ...column, cards: [...column.cards, createCard({ title, notes })] }
+            ? { ...column, goals: [...column.goals, createGoal({ title, notes })] }
             : column
         )
       );
     },
-    [updateColumns, createCard]
+    [updateColumns, createGoal]
   );
 
-  const updateCard = useCallback(
-    (columnId: string, cardId: string, patch: Partial<VibeCard>) => {
+  const updateGoal = useCallback(
+    (columnId: string, goalId: string, patch: Partial<Goal>) => {
       updateColumns((columns) =>
         columns.map((column) =>
           column.id === columnId
             ? {
                 ...column,
-                cards: column.cards.map((card) =>
-                  card.id === cardId
+                goals: column.goals.map((goal) =>
+                  goal.id === goalId
                     ? {
-                        ...card,
+                        ...goal,
                         ...patch,
-                        title: patch.title ? patch.title.trim() || card.title : card.title,
+                        title: patch.title ? patch.title.trim() || goal.title : goal.title,
                       }
-                    : card
+                    : goal
                 ),
               }
             : column
@@ -485,12 +523,12 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     [updateColumns]
   );
 
-  const removeCard = useCallback(
-    (columnId: string, cardId: string) => {
+  const removeGoal = useCallback(
+    (columnId: string, goalId: string) => {
       updateColumns((columns) =>
         columns.map((column) =>
           column.id === columnId
-            ? { ...column, cards: column.cards.filter((card) => card.id !== cardId) }
+            ? { ...column, goals: column.goals.filter((goal) => goal.id !== goalId) }
             : column
         )
       );
@@ -506,23 +544,23 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     return next;
   }, []);
 
-  const moveCardWithinColumn = useCallback(
+  const moveGoalWithinColumn = useCallback(
     (columnId: string, activeId: string, overId: string) => {
       updateColumns((columns) =>
         columns.map((column) => {
           if (column.id !== columnId) return column;
-          const oldIndex = column.cards.findIndex((card) => card.id === activeId);
-          const newIndex = column.cards.findIndex((card) => card.id === overId);
+          const oldIndex = column.goals.findIndex((goal) => goal.id === activeId);
+          const newIndex = column.goals.findIndex((goal) => goal.id === overId);
           if (oldIndex === -1 || newIndex === -1) return column;
-          return { ...column, cards: arrayMove(column.cards, oldIndex, newIndex) };
+          return { ...column, goals: arrayMove(column.goals, oldIndex, newIndex) };
         })
       );
     },
     [updateColumns, arrayMove]
   );
 
-  const moveCardToColumn = useCallback(
-    (activeColumnId: string, overColumnId: string, activeCardId: string, overCardId?: string) => {
+  const moveGoalToColumn = useCallback(
+    (activeColumnId: string, overColumnId: string, activeGoalId: string, overGoalId?: string) => {
       if (activeColumnId === overColumnId) return;
       updateColumns((columns) => {
         const sourceIndex = columns.findIndex((column) => column.id === activeColumnId);
@@ -530,20 +568,22 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
         if (sourceIndex === -1 || targetIndex === -1) return columns;
         const sourceColumn = columns[sourceIndex];
         const targetColumn = columns[targetIndex];
-        const activeCardIndex = sourceColumn.cards.findIndex((card) => card.id === activeCardId);
-        if (activeCardIndex === -1) return columns;
+        const activeGoalIndex = sourceColumn.goals.findIndex((goal) => goal.id === activeGoalId);
+        if (activeGoalIndex === -1) return columns;
 
-        const updatedSourceCards = [...sourceColumn.cards];
-        const [movedCard] = updatedSourceCards.splice(activeCardIndex, 1);
+        const updatedSourceGoals = [...sourceColumn.goals];
+        const [movedGoal] = updatedSourceGoals.splice(activeGoalIndex, 1);
 
-        const updatedTargetCards = [...targetColumn.cards];
-        const insertAt = overCardId ? updatedTargetCards.findIndex((card) => card.id === overCardId) : updatedTargetCards.length;
-        const nextCards = [...updatedTargetCards];
-        nextCards.splice(insertAt === -1 ? nextCards.length : insertAt, 0, movedCard);
+        const updatedTargetGoals = [...targetColumn.goals];
+        const insertAt = overGoalId
+          ? updatedTargetGoals.findIndex((goal) => goal.id === overGoalId)
+          : updatedTargetGoals.length;
+        const nextGoals = [...updatedTargetGoals];
+        nextGoals.splice(insertAt === -1 ? nextGoals.length : insertAt, 0, movedGoal);
 
         const nextColumns = [...columns];
-        nextColumns[sourceIndex] = { ...sourceColumn, cards: updatedSourceCards };
-        nextColumns[targetIndex] = { ...targetColumn, cards: nextCards };
+        nextColumns[sourceIndex] = { ...sourceColumn, goals: updatedSourceGoals };
+        nextColumns[targetIndex] = { ...targetColumn, goals: nextGoals };
         return nextColumns;
       });
     },
@@ -660,7 +700,6 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     [workspaceId, boardId]
   );
 
-  const requestAssist = useCallback(async () => {
     if (!workspaceId || !boardId) return;
     const response = await fetch(`/api/workspaces/${workspaceId}/boards/${boardId}/assist`, { method: "POST" });
     if (!response.ok) return;
@@ -717,16 +756,239 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     dismissNotification,
     requestAssist,
     uploadArtifact,
+    retryAutomation,
     addColumn,
     removeColumn,
     renameColumn,
-    addCard,
-    updateCard,
-    removeCard,
-    moveCardWithinColumn,
-    moveCardToColumn,
+    addGoal,
+    updateGoal,
+    removeGoal,
+    moveGoalWithinColumn,
+    moveGoalToColumn,
     moveColumn,
     setProjectName,
+    resumePlan,
+  };
+}
+
+function pickFocusCard(board: WorkspaceBoard | null): VibeCard | null {
+  if (!board) return null;
+  const inProgress = board.columns.find((column) => column.title.toLowerCase().includes("progress"));
+  if (inProgress && inProgress.cards.length) {
+    return [...inProgress.cards].sort(
+      (a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt)
+    )[0];
+  }
+  for (const column of board.columns) {
+    if (column.cards.length) {
+      return column.cards[0];
+    }
+  }
+  return null;
+}
+
+function buildGoalSignals(board: WorkspaceBoard): Record<string, unknown>[] {
+  const totalCards = board.columns.reduce((count, column) => count + column.cards.length, 0);
+  const hypeCards = board.columns.reduce(
+    (count, column) => count + column.cards.filter((card) => card.mood === "hype").length,
+    0
+  );
+  const staleCards = board.columns
+    .flatMap((column) => column.cards)
+    .filter((card) => Date.now() - Date.parse(card.createdAt) > 1000 * 60 * 60 * 24 * 7).length;
+
+  return [
+    { name: "totalCards", value: totalCards },
+    { name: "hypeCards", value: hypeCards },
+    { name: "staleCards", value: staleCards },
+  ];
+}
+
+type ContinuityEvent = RealTimeEvent & { event_type?: string; workflow_id?: string; payload: Record<string, unknown> };
+
+function getEventType(event: ContinuityEvent): string {
+  return event.eventType ?? event.event_type ?? "";
+}
+
+function getWorkflowId(event: ContinuityEvent): string {
+  return event.workflowId ?? event.workflow_id ?? "";
+}
+
+function normalizeWorkflowState(value: unknown): PlannerPlan["status"] | undefined {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.toLowerCase();
+  if (normalized === "pending" || normalized === "running" || normalized === "paused" || normalized === "completed" || normalized === "failed") {
+    return normalized;
+  }
+  return undefined;
+}
+
+function normalizeStageState(
+  value: unknown
+): PlannerPlan["stages"][number]["state"] | undefined {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.toLowerCase();
+  if (normalized === "pending" || normalized === "running" || normalized === "completed" || normalized === "failed" || normalized === "skipped") {
+    return normalized;
+  }
+  return undefined;
+}
+
+function normalizeStageIdentifier(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function normalizeResumeToken(value: unknown): ResumeToken | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const source = value as Record<string, unknown>;
+  const workflowId =
+    typeof source.workflowId === "string"
+      ? source.workflowId
+      : typeof source.workflow_id === "string"
+        ? (source.workflow_id as string)
+        : undefined;
+  if (!workflowId) return undefined;
+
+  const stageId =
+    typeof source.stageId === "string"
+      ? (source.stageId as string)
+      : typeof source.stage_id === "string"
+        ? (source.stage_id as string)
+        : undefined;
+
+  const checkpoint =
+    typeof source.checkpoint === "string" ? (source.checkpoint as string) : "";
+  const issuedAt =
+    typeof source.issuedAt === "string"
+      ? (source.issuedAt as string)
+      : typeof source.issued_at === "string"
+        ? (source.issued_at as string)
+        : new Date().toISOString();
+  const expiresAt =
+    typeof source.expiresAt === "string"
+      ? (source.expiresAt as string)
+      : typeof source.expires_at === "string"
+        ? (source.expires_at as string)
+        : new Date().toISOString();
+
+  return {
+    workflowId,
+    stageId,
+    checkpoint,
+    issuedAt,
+    expiresAt,
+  };
+}
+
+function mergeStageStates(
+  stages: PlannerPlan["stages"],
+  stageId: string,
+  state: PlannerPlan["stages"][number]["state"]
+): PlannerPlan["stages"] {
+  const existing = stages.find((stage) => stage.id === stageId);
+  if (!existing) {
+    return [...stages, { id: stageId, name: stageId, state }];
+  }
+  return stages.map((stage) => (stage.id === stageId ? { ...stage, state } : stage));
+}
+
+function reducePlannerFromEvent(prev: PlannerState, event: RealTimeEvent): PlannerState {
+  const workflowId = getWorkflowId(event as ContinuityEvent);
+  if (!workflowId) {
+    return prev;
+  }
+
+  const timestamp = typeof event.timestamp === "string" ? event.timestamp : new Date().toISOString();
+  let handled = false;
+
+  const plans = prev.plans.map((plan) => {
+    if (plan.workflowId !== workflowId) {
+      return plan;
+    }
+
+    handled = true;
+    const eventType = getEventType(event as ContinuityEvent);
+    const payload = event.payload ?? {};
+    let nextPlan: PlannerPlan = { ...plan, updatedAt: timestamp };
+
+    if (eventType === "workflow/state") {
+      const nextState = normalizeWorkflowState(payload.state);
+      if (nextState) {
+        nextPlan = { ...nextPlan, status: nextState };
+        if (nextState === "completed" || nextState === "failed") {
+          nextPlan = { ...nextPlan, resumeToken: undefined };
+        }
+      }
+      const resumeToken = normalizeResumeToken(payload.resumeToken ?? payload.resume_token);
+      if (resumeToken) {
+        nextPlan = { ...nextPlan, resumeToken };
+      }
+    } else if (eventType === "workflow/stage") {
+      const stageIdentifier = payload.stage_id ?? payload.stageId;
+      const stageState = normalizeStageState(payload.state);
+      if (typeof stageIdentifier === "string" && stageState) {
+        const stageId = normalizeStageIdentifier(stageIdentifier);
+        nextPlan = {
+          ...nextPlan,
+          stages: mergeStageStates(nextPlan.stages, stageId, stageState),
+        };
+        if (stageState === "running" && nextPlan.status === "pending") {
+          nextPlan = { ...nextPlan, status: "running" };
+        }
+        if (stageState === "failed") {
+          nextPlan = { ...nextPlan, status: "failed" };
+        }
+      }
+      const resumeToken = normalizeResumeToken(payload.resumeToken ?? payload.resume_token);
+      if (resumeToken) {
+        nextPlan = { ...nextPlan, resumeToken };
+      }
+    } else if (eventType === "workflow/resume") {
+      const resumeToken = normalizeResumeToken(payload.resumeToken ?? payload.token);
+      if (resumeToken) {
+        nextPlan = { ...nextPlan, resumeToken };
+      }
+    }
+
+    return nextPlan;
+  });
+
+  if (!handled) {
+    return prev;
+  }
+
+  let plannerStatus = prev.status === "idle" ? "ready" : prev.status;
+  let activePlanId = prev.activePlanId;
+  const updatedPlan = plans.find((plan) => plan.workflowId === workflowId);
+
+  if (updatedPlan) {
+    if (updatedPlan.status === "completed" || updatedPlan.status === "failed") {
+      if (prev.activePlanId === updatedPlan.goalId) {
+        activePlanId = plans.find(
+          (plan) =>
+            plan.workflowId !== workflowId &&
+            (plan.status === "running" || plan.status === "pending" || plan.status === "paused")
+        )?.goalId;
+      }
+      if (updatedPlan.status === "failed") {
+        plannerStatus = "error";
+      }
+    } else {
+      activePlanId = updatedPlan.goalId;
+      if (updatedPlan.status === "running") {
+        plannerStatus = plannerStatus === "planning" ? "planning" : "ready";
+      }
+    }
+  }
+
+  return {
+    status: plannerStatus,
+    plans,
+    activePlanId,
+    lastError: prev.lastError,
   };
 }
 

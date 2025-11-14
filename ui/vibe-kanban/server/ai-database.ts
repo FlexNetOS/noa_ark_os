@@ -47,6 +47,7 @@ export type AiRequestLog = {
   createdAt: string;
   source: string;
   cardId?: string | null;
+  goalId?: string | null;
   title: string;
   provider?: string | null;
   latencyMs: number;
@@ -162,6 +163,7 @@ class AiDatabase {
 
   logRequest(entry: {
     source: string;
+    goalId?: string;
     cardId?: string;
     title: string;
     provider: string | null;
@@ -171,7 +173,7 @@ class AiDatabase {
   }) {
     this.insertStatement.run({
       source: entry.source,
-      cardId: entry.cardId ?? null,
+      cardId: entry.goalId ?? entry.cardId ?? null,
       title: entry.title,
       provider: entry.provider ?? null,
       latencyMs: entry.latencyMs,
@@ -181,7 +183,8 @@ class AiDatabase {
   }
 
   listRecent(limit = 50): AiRequestLog[] {
-    return this.listStatement.all({ limit }) as AiRequestLog[];
+    const rows = this.listStatement.all({ limit }) as AiRequestLog[];
+    return rows.map((row) => ({ ...row, goalId: row.goalId ?? row.cardId ?? null }));
   }
 
   recordGoalLifecycleEvent(event: {

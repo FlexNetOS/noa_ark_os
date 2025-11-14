@@ -16,6 +16,7 @@ import { PlannerPanel } from "./PlannerPanel";
 import { UploadPanel } from "./UploadPanel";
 import { AnalyticsPanel } from "./AnalyticsPanel";
 import { ActivityTimeline } from "./ActivityTimeline";
+import { PlannerPanel } from "./PlannerPanel";
 import type { BoardState } from "./useBoardState";
 import type { SessionState } from "./useSession";
 
@@ -27,6 +28,7 @@ export interface SchemaDrivenRendererProps {
       session: SessionState;
       resumeToken?: ResumeToken;
     };
+    resumeWorkflow?: (token: ResumeToken) => void;
   };
 }
 
@@ -158,6 +160,21 @@ const widgetRegistry = {
       </WidgetSurface>
     );
   },
+  "workspace.planner": ({ context }: ComponentRenderProps) => {
+    const { boardState } = context.data as SchemaDrivenRendererProps["context"]["data"];
+    const resume = context.resumeWorkflow;
+    return (
+      <WidgetSurface>
+        <PlannerPanel
+          planner={boardState.planner}
+          onResume={(token) => {
+            boardState.resumePlan(token);
+            resume?.(token);
+          }}
+        />
+      </WidgetSurface>
+    );
+  },
   "workspace.analytics": ({ context }: ComponentRenderProps) => {
     const { boardState } = context.data as SchemaDrivenRendererProps["context"]["data"];
     return (
@@ -171,6 +188,15 @@ const widgetRegistry = {
     return (
       <WidgetSurface>
         <ActivityTimeline activity={boardState.activity} />
+      </WidgetSurface>
+    );
+  },
+  "workspace.automation": ({ context }: ComponentRenderProps) => {
+    const { boardState } = context.data as SchemaDrivenRendererProps["context"]["data"];
+    const cards = boardState.snapshot?.columns.flatMap((column) => column.cards) ?? [];
+    return (
+      <WidgetSurface>
+        <AutomationPanel cards={cards} onRetry={boardState.retryAutomation} />
       </WidgetSurface>
     );
   },
