@@ -516,9 +516,8 @@ async function computeBoardMetrics(
     activeCards: active,
     vibeMomentum,
   };
-  const goalId = board.goalId ?? board.id;
-  if (goalId) {
-    const analytics = await findGoalMetric(goalId);
+  if (board.goalId) {
+    const analytics = await findGoalMetric(board.goalId);
     if (analytics) {
       metrics.goalLeadTimeHours = Number((analytics.averageLeadTimeMs / 3_600_000).toFixed(2));
       metrics.goalSuccessRate = Number((analytics.successRate * 100).toFixed(1));
