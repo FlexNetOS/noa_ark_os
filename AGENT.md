@@ -223,7 +223,7 @@ Set environment variables when supported:
 ### Capability Token Flow (Phase 5 Rollout)
 
 1. **Kernel issuance:** Use `core/kernel/security/issue_capability_token` for controlled tooling/tests. Each token carries `fs`, `network`, and `rate_limit_per_minute` claims signed with the kernel secret defined in `core/kernel/security/tokens.py`.
-2. **Gateway enforcement:** `services/gateway/service.py` must call `verify_capability_token` before routing. Reject when client IDs mismatch, required FS/network scopes are absent, or token rates fall below `PolicyRule.rate_limit_per_minute`.
+2. **Gateway enforcement:** `services/gateway/service.py` must call `verify_capability_token` before routing. Reject when client IDs mismatch, required fs/network scopes are absent, or token rates fall below `PolicyRule.rate_limit_per_minute`.
 3. **Effective throttling:** Honor the stricter of gateway policy vs. token allowance to prevent clients from exceeding kernel quotas while keeping telemetry coherent.
 4. **Extension loading:** Route every adapter load through `extensions.ExtensionRegistry`. Declarative manifests (`extensions/*/manifest.json`) declare scope requirements; registry refreshes allow hot-swaps without process restarts while guarding adapters with the same capability token checks.
 5. **Telemetry + auditing:** Persist gateway telemetry with scope metadata (`fs_scope`, `network_scope`, `token_rate_limit`) so audits can trace which claim combinations were exercised per request.
