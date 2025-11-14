@@ -4,6 +4,12 @@ PNPM ?= pnpm
 CARGO ?= cargo
 PYTHON ?= python3
 
+ACTIVATION_CHECK := \
+	@if [ -z "$$NOA_CARGO_ENV" ] || [ -z "$$NOA_NODE_ENV" ]; then \
+		echo "❌ Portable toolchain not activated. Run 'source ./server/tools/activate-cargo.sh' and 'source ./server/tools/activate-node.sh' first." >&2; \
+		exit 1; \
+	fi
+
 .PHONY: deps build test digest run ci-local lint typecheck format
 
 # Snapshot configuration (retained from local-first pipeline additions)
@@ -15,7 +21,9 @@ SNAPSHOT_TAR_DECOMPRESS ?= --zstd
 SNAPSHOT_BUNDLE_EXT ?= tar.zst
 .PHONY: pipeline.local world-verify world-fix kernel snapshot rollback verify publish-audit setup
 
+
 deps:
+	$(ACTIVATION_CHECK)
 	$(PNPM) install --frozen-lockfile
 
 build: deps
@@ -68,6 +76,7 @@ world-fix:
 
 # Kernel build
 kernel:
+	$(ACTIVATION_CHECK)
 	@echo "🔨 Building kernel independently..."
 	$(CARGO) build -p noa_core --release
 	@echo "✅ Kernel build complete"

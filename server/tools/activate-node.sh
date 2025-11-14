@@ -5,6 +5,8 @@
 __NOA_PREV_SHELL_OPTS="$(set +o)"
 set -euo pipefail
 
+NOA_ACTIVATE_SILENT="${NOA_ACTIVATE_SILENT:-0}"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 NODE_HOME_ROOT="$SCRIPT_DIR/node-portable"
 CURRENT_LINK="$NODE_HOME_ROOT/current"
@@ -37,7 +39,7 @@ if command -v hash >/dev/null 2>&1; then
     hash -r 2>/dev/null || true
 fi
 
-if [[ "${NOA_ACTIVATE_SILENT:-0}" != "1" ]]; then
+if [[ "$NOA_ACTIVATE_SILENT" != "1" ]]; then
     NODE_VERSION_STR="$($NOA_NODE_HOME/bin/node -v 2>/dev/null || echo "node unavailable")"
     PNPM_VERSION_STR="$($NOA_NODE_HOME/bin/pnpm -v 2>/dev/null || echo "pnpm unavailable")"
     echo

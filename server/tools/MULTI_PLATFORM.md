@@ -8,7 +8,7 @@ This workspace supports development on **three platforms**:
 2. **WSL (Windows Subsystem for Linux)** – Can use native Linux Rust, but must still source the hermetic Node bundle for pnpm operations.
 3. **Ubuntu/Linux** – Typically uses system Rust plus the shared Node bundle to keep builds offline.
 
-**Rule:** Activate both cargo *and* node scripts before running `make`, `pnpm`, or any CI pipelines.
+**Rule:** Activate both cargo *and* node scripts before running `make`, `pnpm`, or any CI pipelines so PATH resolves to the hermetic tool bundles and HT‑01 stays satisfied. The exact hashes live in `server/tools/node-portable.manifest.json` for auditability.
 
 ---
 

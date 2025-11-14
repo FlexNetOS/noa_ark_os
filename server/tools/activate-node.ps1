@@ -2,6 +2,10 @@ param(
     [switch]$Silent
 )
 
+if ($env:NOA_ACTIVATE_SILENT -eq "1") {
+    $Silent = $true
+}
+
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $nodeRoot = Join-Path $scriptDir "node-portable"
 $current = Join-Path $nodeRoot "current"
