@@ -198,6 +198,9 @@ impl UiApiServer {
         State(state): State<UiApiState>,
         Json(request): Json<WorkflowStartRequest>,
     ) -> Result<Json<WorkflowStartResponse>, (StatusCode, Json<ErrorResponse>)> {
+        if request.workflow.name.trim().is_empty() {
+            return Err(bad_request("workflow name cannot be empty".into()));
+        }
         if request.workflow.stages.is_empty() {
             return Err(bad_request("workflow requires at least one stage".into()));
         }
