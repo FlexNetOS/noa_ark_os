@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use chrono::{Duration, Utc};
-use noa_agents::{AgentFactory, AGENT_FACTORY_CAPABILITY};
+use noa_agents::{AgentFactory, AgentRegistry, AGENT_FACTORY_CAPABILITY};
 use noa_core::capabilities::KernelHandle;
 use noa_core::config::manifest::CAPABILITY_PROCESS;
 use noa_core::process::ProcessService;
@@ -12,7 +12,13 @@ use noa_core::utils::current_timestamp_millis;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
+mod agent_dispatch;
 mod instrumentation;
+use agent_dispatch::ToolExecutionStatus;
+pub use agent_dispatch::{
+    AgentDispatchError, AgentDispatcher, TaskDispatchReceipt, ToolExecutionReceipt, ToolExecutionStatus,
+    ToolRequirement,
+};
 pub use instrumentation::{
     AgentExecutionResult, EvidenceLedgerEntry, EvidenceLedgerKind, GoalAgentMetric,
     GoalMetricSnapshot, GoalOutcomeRecord, MerkleLeaf, MerkleLevel, PipelineInstrumentation,
@@ -49,6 +55,8 @@ pub struct Task {
     pub agent: String,
     pub action: String,
     pub parameters: HashMap<String, serde_json::Value>,
+    #[serde(default)]
+    pub tool_requirements: Vec<ToolRequirement>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -148,6 +156,7 @@ pub struct WorkflowEngine {
     states: Arc<Mutex<HashMap<String, WorkflowState>>>,
     stage_states: Arc<Mutex<HashMap<String, HashMap<String, StageState>>>>,
     instrumentation: Arc<PipelineInstrumentation>,
+    dispatcher: Arc<AgentDispatcher>,
     kernel: Option<KernelHandle>,
     event_stream: Arc<Mutex<Option<WorkflowEventStream>>>,
 }
@@ -156,11 +165,15 @@ impl WorkflowEngine {
     pub fn new() -> Self {
         let instrumentation =
             PipelineInstrumentation::new().expect("failed to initialise pipeline instrumentation");
+        let registry = AgentRegistry::with_default_data().unwrap_or_else(|_| AgentRegistry::new());
+        let factory = AgentFactory::new();
+        let dispatcher = AgentDispatcher::new(registry, factory);
         Self {
             workflows: Arc::new(Mutex::new(HashMap::new())),
             states: Arc::new(Mutex::new(HashMap::new())),
             stage_states: Arc::new(Mutex::new(HashMap::new())),
             instrumentation: Arc::new(instrumentation),
+            dispatcher: Arc::new(dispatcher),
             kernel: None,
             event_stream: Arc::new(Mutex::new(None)),
         }
@@ -174,11 +187,16 @@ impl WorkflowEngine {
     pub fn with_kernel(kernel: KernelHandle) -> Self {
         let instrumentation =
             PipelineInstrumentation::new().expect("failed to initialise pipeline instrumentation");
+        let registry = AgentRegistry::with_default_data().unwrap_or_else(|_| AgentRegistry::new());
+        let factory = AgentFactory::with_kernel(kernel.clone())
+            .unwrap_or_else(|_| AgentFactory::new());
+        let dispatcher = AgentDispatcher::new(registry, factory);
         Self {
             workflows: Arc::new(Mutex::new(HashMap::new())),
             states: Arc::new(Mutex::new(HashMap::new())),
             stage_states: Arc::new(Mutex::new(HashMap::new())),
             instrumentation: Arc::new(instrumentation),
+            dispatcher: Arc::new(dispatcher),
             kernel: Some(kernel),
             event_stream: Arc::new(Mutex::new(None)),
         }
@@ -598,6 +616,7 @@ mod tests {
     use serde_json::json;
     use std::fs;
     use std::path::Path;
+    use std::collections::HashMap;
 
     use crate::instrumentation::{EvidenceLedgerEntry, EvidenceLedgerKind};
     use tempfile::tempdir;
@@ -666,6 +685,46 @@ mod tests {
             )
             .expect("documentation log should succeed");
         assert!(security::verify_signed_operation(&documentation));
+    }
+
+    #[test]
+    fn task_dispatch_events_logged_with_tool_requirements() {
+        let dir = tempdir().unwrap();
+        let _guard = EnvGuard::set("NOA_WORKFLOW_ROOT", dir.path());
+        let engine = WorkflowEngine::new();
+        let workflow_name = format!("dispatch-{}", Utc::now().timestamp_nanos());
+        let workflow = Workflow {
+            name: workflow_name.clone(),
+            version: "1.0".to_string(),
+            stages: vec![Stage {
+                name: "dispatch-stage".to_string(),
+                stage_type: StageType::Sequential,
+                depends_on: vec![],
+                tasks: vec![Task {
+                    agent: "ModelSelectorAgent".to_string(),
+                    action: "evaluate_tools".to_string(),
+                    parameters: HashMap::from([(String::from("scope"), json!("tests"))]),
+                    tool_requirements: vec![ToolRequirement {
+                        name: "Analysis pass".to_string(),
+                        capability: "workflow.taskDispatch".to_string(),
+                        optional: false,
+                        parameters: json!({"depth": 1}),
+                    }],
+                }],
+            }],
+        };
+
+        let id = engine.load_workflow(workflow).unwrap();
+        engine.execute(&id).unwrap();
+
+        let log_path = dir
+            .path()
+            .join(".workspace")
+            .join("indexes")
+            .join("task_dispatches.log");
+        let content = fs::read_to_string(&log_path).expect("dispatch log present");
+        assert!(content.contains("\"tool_receipts\""));
+        assert!(content.contains("workflow::dispatch-stage"));
     }
 
     #[test]
