@@ -123,7 +123,7 @@ export async function handlePromptRequest(
     const identifier = payload.goalId ?? payload.cardId;
     await deps.logRequest({
       goalId: payload.goalId ?? undefined,
-      cardId: payload.cardId ?? identifier,
+      cardId: payload.cardId ?? undefined,
       title: payload.title,
       provider: deps.provider?.name ?? null,
       status: "error",
