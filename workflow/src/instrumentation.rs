@@ -1,4 +1,4 @@
-use crate::{Stage, StageType, Task};
+use crate::{Stage, StageType, Task, TaskDispatchReceipt};
 use chrono::Utc;
 use noa_core::security::{self, OperationKind, OperationRecord, SignedOperation};
 use noa_core::utils::{current_timestamp_millis, simple_hash};
@@ -17,6 +17,7 @@ const DOCUMENT_LOG: &str = "documentation";
 const STAGE_RECEIPT_LOG: &str = "stage_receipts";
 const SECURITY_SCAN_LOG: &str = "security_scans";
 const TASK_DISPATCH_LOG: &str = "task_dispatches";
+const PIPELINE_EVENT_LOG: &str = "pipeline_events";
 const EVIDENCE_LEDGER_DIR: &str = "storage/db/evidence";
 const EVIDENCE_LEDGER_FILE: &str = "ledger.jsonl";
 const GOAL_ANALYTICS_DIR: &str = "storage/db/analytics";
@@ -238,7 +239,11 @@ impl GoalAggregate {
             .iter()
             .map(|(agent, aggregate)| aggregate.to_metric(agent))
             .collect();
-        agents.sort_by(|a, b| b.success_rate.partial_cmp(&a.success_rate).unwrap_or(std::cmp::Ordering::Equal));
+        agents.sort_by(|a, b| {
+            b.success_rate
+                .partial_cmp(&a.success_rate)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         GoalMetricSnapshot {
             goal_id: self.goal_id.clone(),
@@ -491,6 +496,7 @@ impl PipelineInstrumentation {
         instrumentation.ensure_genesis(STAGE_RECEIPT_LOG, OperationKind::StageReceipt)?;
         instrumentation.ensure_genesis(TASK_DISPATCH_LOG, OperationKind::Other)?;
         instrumentation.ensure_genesis(SECURITY_SCAN_LOG, OperationKind::SecurityScan)?;
+        instrumentation.ensure_genesis(PIPELINE_EVENT_LOG, OperationKind::Other)?;
         instrumentation.ensure_evidence_ledger()?;
         instrumentation.ensure_goal_metrics()?;
 
@@ -754,6 +760,30 @@ impl PipelineInstrumentation {
         Ok(report)
     }
 
+    pub fn log_pipeline_event(
+        &self,
+        actor: &str,
+        subject: &str,
+        event_type: &str,
+        metadata: Value,
+    ) -> Result<SignedOperation, InstrumentationError> {
+        let metadata_for_event = metadata.clone();
+        let event = PipelineLogEvent {
+            event_type: event_type.to_string(),
+            actor: actor.to_string(),
+            scope: subject.to_string(),
+            source: Some(actor.to_string()),
+            target: Some(subject.to_string()),
+            metadata: metadata_for_event,
+            timestamp: current_timestamp_millis(),
+        };
+        let record =
+            OperationRecord::new(OperationKind::Other, actor.to_string(), subject.to_string())
+                .with_context(Some(actor.to_string()), Some(subject.to_string()))
+                .with_metadata(metadata);
+        self.append_entry(PIPELINE_EVENT_LOG, event, record)
+    }
+
     pub fn record_goal_outcome(
         &self,
         outcome: GoalOutcomeRecord,
@@ -1010,7 +1040,8 @@ fn load_goal_metrics(path: &PathBuf) -> Result<GoalMetricStore, InstrumentationE
                 let mut aggregate = GoalAggregate::new(&snapshot.goal_id, &snapshot.workflow_id);
                 aggregate.total_runs = snapshot.total_runs;
                 aggregate.successful_runs = snapshot.successful_runs;
-                let duration = (snapshot.average_lead_time_ms * snapshot.total_runs as f64).round() as u128;
+                let duration =
+                    (snapshot.average_lead_time_ms * snapshot.total_runs as f64).round() as u128;
                 aggregate.total_duration_ms = duration;
                 for agent in snapshot.agents {
                     aggregate.agents.insert(
