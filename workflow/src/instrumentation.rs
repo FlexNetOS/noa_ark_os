@@ -22,6 +22,7 @@ const EVIDENCE_LEDGER_DIR: &str = "storage/db/evidence";
 const EVIDENCE_LEDGER_FILE: &str = "ledger.jsonl";
 const GOAL_ANALYTICS_DIR: &str = "storage/db/analytics";
 const GOAL_ANALYTICS_FILE: &str = "goal_kpis.json";
+const DEPLOYMENT_REPORT_PATH: &str = "docs/reports/AGENT_DEPLOYMENT_OUTCOMES.md";
 
 #[derive(Debug)]
 pub enum InstrumentationError {
@@ -150,6 +151,18 @@ pub struct GoalOutcomeRecord {
     pub success: bool,
     #[serde(default)]
     pub agents: Vec<AgentExecutionResult>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeploymentOutcomeRecord {
+    pub workflow_id: String,
+    pub stage_id: String,
+    pub agent_role: String,
+    pub agent_id: String,
+    pub action: String,
+    pub status: String,
+    pub notes: Value,
+    pub recorded_at: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -464,6 +477,7 @@ pub struct PipelineInstrumentation {
     evidence_dir: PathBuf,
     evidence_ledger_path: PathBuf,
     goal_metrics_path: PathBuf,
+    deployment_report_path: PathBuf,
     goal_metrics: Mutex<GoalMetricStore>,
 }
 
@@ -480,6 +494,10 @@ impl PipelineInstrumentation {
 
         let evidence_ledger_path = evidence_dir.join(EVIDENCE_LEDGER_FILE);
         let goal_metrics_path = analytics_dir.join(GOAL_ANALYTICS_FILE);
+        let deployment_report_path = resolve_path(DEPLOYMENT_REPORT_PATH);
+        if let Some(parent) = deployment_report_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
         let goal_metrics = Mutex::new(load_goal_metrics(&goal_metrics_path)?);
 
         let instrumentation = Self {
@@ -488,6 +506,7 @@ impl PipelineInstrumentation {
             evidence_dir,
             evidence_ledger_path,
             goal_metrics_path,
+            deployment_report_path,
             goal_metrics,
         };
 
@@ -499,6 +518,7 @@ impl PipelineInstrumentation {
         instrumentation.ensure_genesis(PIPELINE_EVENT_LOG, OperationKind::Other)?;
         instrumentation.ensure_evidence_ledger()?;
         instrumentation.ensure_goal_metrics()?;
+        instrumentation.ensure_deployment_report()?;
 
         Ok(instrumentation)
     }
@@ -782,6 +802,37 @@ impl PipelineInstrumentation {
                 .with_context(Some(actor.to_string()), Some(subject.to_string()))
                 .with_metadata(metadata);
         self.append_entry(PIPELINE_EVENT_LOG, event, record)
+    pub fn record_deployment_outcome(
+        &self,
+        record: DeploymentOutcomeRecord,
+    ) -> Result<(), InstrumentationError> {
+        self.ensure_deployment_report()?;
+        let notes = serde_json::to_string(&record.notes)?;
+        let sanitized_notes = notes.replace('|', "\\|").replace('\n', " ");
+        let row = format!(
+            "| {} | {} | {} | {} | {} | {} | {} | {} |",
+            record.recorded_at,
+            record.workflow_id,
+            record.stage_id,
+            record.agent_role,
+            record.agent_id,
+            record.action,
+            record.status,
+            sanitized_notes
+        );
+        with_log_lock(|| {
+            if let Some(parent) = self.deployment_report_path.parent() {
+                fs::create_dir_all(parent)?;
+            }
+            let mut file = OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&self.deployment_report_path)?;
+            writeln!(file, "{}", row)?;
+            file.flush()?;
+            file.sync_all()?;
+            Ok(())
+        })
     }
 
     pub fn record_goal_outcome(
@@ -851,6 +902,31 @@ impl PipelineInstrumentation {
                 .truncate(true)
                 .open(&self.goal_metrics_path)?;
             file.write_all(payload.as_bytes())?;
+            file.flush()?;
+            file.sync_all()?;
+            Ok(())
+        })
+    }
+
+    fn ensure_deployment_report(&self) -> Result<(), InstrumentationError> {
+        with_log_lock(|| {
+            if self.deployment_report_path.exists() {
+                let content = fs::read_to_string(&self.deployment_report_path)?;
+                if !content.trim().is_empty() {
+                    return Ok(());
+                }
+            }
+
+            if let Some(parent) = self.deployment_report_path.parent() {
+                fs::create_dir_all(parent)?;
+            }
+
+            let mut file = OpenOptions::new()
+                .create(true)
+                .write(true)
+                .truncate(true)
+                .open(&self.deployment_report_path)?;
+            file.write_all(b"# Agent Deployment Outcomes\n\n| Timestamp | Workflow | Stage | Agent Role | Agent ID | Action | Status | Notes |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n")?;
             file.flush()?;
             file.sync_all()?;
             Ok(())
@@ -1007,6 +1083,7 @@ impl Clone for PipelineInstrumentation {
             evidence_dir: self.evidence_dir.clone(),
             evidence_ledger_path: self.evidence_ledger_path.clone(),
             goal_metrics_path: self.goal_metrics_path.clone(),
+            deployment_report_path: self.deployment_report_path.clone(),
             goal_metrics: Mutex::new(metrics),
         }
     }
@@ -1098,6 +1175,8 @@ mod tests {
                 agent: "builder".to_string(),
                 action: "compile".to_string(),
                 parameters: HashMap::from([("target".to_string(), json!({"path": "src/main.rs"}))]),
+                agent_role: None,
+                tool_requirements: vec![],
             }],
         }
     }
