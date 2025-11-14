@@ -17,6 +17,7 @@ const DOCUMENT_LOG: &str = "documentation";
 const STAGE_RECEIPT_LOG: &str = "stage_receipts";
 const SECURITY_SCAN_LOG: &str = "security_scans";
 const TASK_DISPATCH_LOG: &str = "task_dispatches";
+const PIPELINE_EVENT_LOG: &str = "pipeline_events";
 const EVIDENCE_LEDGER_DIR: &str = "storage/db/evidence";
 const EVIDENCE_LEDGER_FILE: &str = "ledger.jsonl";
 const GOAL_ANALYTICS_DIR: &str = "storage/db/analytics";
@@ -514,6 +515,7 @@ impl PipelineInstrumentation {
         instrumentation.ensure_genesis(STAGE_RECEIPT_LOG, OperationKind::StageReceipt)?;
         instrumentation.ensure_genesis(TASK_DISPATCH_LOG, OperationKind::Other)?;
         instrumentation.ensure_genesis(SECURITY_SCAN_LOG, OperationKind::SecurityScan)?;
+        instrumentation.ensure_genesis(PIPELINE_EVENT_LOG, OperationKind::Other)?;
         instrumentation.ensure_evidence_ledger()?;
         instrumentation.ensure_goal_metrics()?;
         instrumentation.ensure_deployment_report()?;
@@ -778,6 +780,28 @@ impl PipelineInstrumentation {
         Ok(report)
     }
 
+    pub fn log_pipeline_event(
+        &self,
+        actor: &str,
+        subject: &str,
+        event_type: &str,
+        metadata: Value,
+    ) -> Result<SignedOperation, InstrumentationError> {
+        let metadata_for_event = metadata.clone();
+        let event = PipelineLogEvent {
+            event_type: event_type.to_string(),
+            actor: actor.to_string(),
+            scope: subject.to_string(),
+            source: Some(actor.to_string()),
+            target: Some(subject.to_string()),
+            metadata: metadata_for_event,
+            timestamp: current_timestamp_millis(),
+        };
+        let record =
+            OperationRecord::new(OperationKind::Other, actor.to_string(), subject.to_string())
+                .with_context(Some(actor.to_string()), Some(subject.to_string()))
+                .with_metadata(metadata);
+        self.append_entry(PIPELINE_EVENT_LOG, event, record)
     pub fn record_deployment_outcome(
         &self,
         record: DeploymentOutcomeRecord,

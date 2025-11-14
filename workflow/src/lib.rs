@@ -294,7 +294,7 @@ impl WorkflowEngine {
                     completed_at,
                     duration_ms: completed_at.saturating_sub(run_started_at),
                     success: false,
-                    agents: tracker.snapshot(),
+                    agents: tracker.clone().into_snapshot(),
                 };
                 if let Err(metric_err) = self.instrumentation.record_goal_outcome(outcome) {
                     println!("[WORKFLOW] Failed to record goal outcome: {}", metric_err);
@@ -311,7 +311,7 @@ impl WorkflowEngine {
             completed_at,
             duration_ms: completed_at.saturating_sub(run_started_at),
             success: true,
-            agents: tracker.snapshot(),
+            agents: tracker.into_snapshot(),
         };
         if let Err(metric_err) = self.instrumentation.record_goal_outcome(outcome) {
             println!("[WORKFLOW] Failed to record goal outcome: {}", metric_err);

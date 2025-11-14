@@ -4,8 +4,10 @@ use std::str::FromStr;
 
 use anyhow::{Context, Result};
 use clap::{Args, Parser, Subcommand};
+use noa_cicd::CICDSystem;
 use noa_workflow::EvidenceLedgerEntry;
 use relocation_daemon::{ExecutionMode, RelocationDaemon};
+use serde_json::json;
 use tokio::runtime::Runtime;
 use uuid::Uuid;
 
@@ -140,6 +142,39 @@ enum RelocationCmd {
         destination: PathBuf,
         #[arg(long)]
         force: bool,
+    },
+    /// Inspect the evidence ledger for workflow receipts and scan results
+    Evidence {
+        #[arg(long)]
+        workflow: Option<String>,
+        #[arg(long)]
+        limit: Option<usize>,
+    },
+    /// Manage CI/CD pipelines and agent approvals
+    Pipeline {
+        #[command(subcommand)]
+        command: PipelineCommands,
+    },
+}
+
+#[derive(Subcommand)]
+enum PipelineCommands {
+    /// Approve a pipeline using agent trust policies
+    Approve {
+        #[arg(long)]
+        pipeline: String,
+        #[arg(long)]
+        agent: String,
+        #[arg(long)]
+        agent_id: Option<String>,
+        #[arg(long, default_value_t = 0.8)]
+        trust: f32,
+        #[arg(long, value_delimiter = ',')]
+        evidence: Vec<String>,
+        #[arg(long, value_delimiter = ',')]
+        tags: Vec<String>,
+        #[arg(long)]
+        workspace: Option<PathBuf>,
     },
 }
 
@@ -297,6 +332,44 @@ fn main() -> Result<()> {
             Commands::Evidence { workflow, limit } => {
                 show_evidence(workflow, limit)?;
             }
+            Commands::Pipeline { command } => match command {
+                PipelineCommands::Approve {
+                    pipeline,
+                    agent,
+                    agent_id,
+                    trust,
+                    evidence,
+                    tags,
+                    workspace,
+                } => {
+                    let workspace_root = workspace.unwrap_or_else(|| {
+                        std::env::current_dir().expect("unable to determine workspace")
+                    });
+                    std::env::set_var("NOA_WORKFLOW_ROOT", &workspace_root);
+                    let cicd = CICDSystem::new();
+                    cicd.configure_workspace_root(workspace_root.clone());
+                    let agent_identifier = agent_id.unwrap_or_else(|| agent.clone());
+                    let status = cicd
+                        .register_agent_approval(
+                            &pipeline,
+                            &agent,
+                            &agent_identifier,
+                            trust,
+                            tags.clone(),
+                            evidence.clone(),
+                        )
+                        .map_err(anyhow::Error::msg)?;
+                    let payload = json!({
+                        "pipeline_id": pipeline,
+                        "status": format!("{:?}", status),
+                        "agent": agent_identifier,
+                        "trust_score": trust,
+                        "evidence": evidence,
+                        "tags": tags,
+                    });
+                    println!("{}", serde_json::to_string_pretty(&payload)?);
+                }
+            },
         }
 
         Ok(())
