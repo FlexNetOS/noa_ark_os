@@ -1,4 +1,4 @@
-use crate::{Stage, StageType, Task};
+use crate::{Stage, StageType, Task, TaskDispatchReceipt};
 use chrono::Utc;
 use noa_core::security::{self, OperationKind, OperationRecord, SignedOperation};
 use noa_core::utils::{current_timestamp_millis, simple_hash};
@@ -238,7 +238,11 @@ impl GoalAggregate {
             .iter()
             .map(|(agent, aggregate)| aggregate.to_metric(agent))
             .collect();
-        agents.sort_by(|a, b| b.success_rate.partial_cmp(&a.success_rate).unwrap_or(std::cmp::Ordering::Equal));
+        agents.sort_by(|a, b| {
+            b.success_rate
+                .partial_cmp(&a.success_rate)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         GoalMetricSnapshot {
             goal_id: self.goal_id.clone(),
@@ -1010,7 +1014,8 @@ fn load_goal_metrics(path: &PathBuf) -> Result<GoalMetricStore, InstrumentationE
                 let mut aggregate = GoalAggregate::new(&snapshot.goal_id, &snapshot.workflow_id);
                 aggregate.total_runs = snapshot.total_runs;
                 aggregate.successful_runs = snapshot.successful_runs;
-                let duration = (snapshot.average_lead_time_ms * snapshot.total_runs as f64).round() as u128;
+                let duration =
+                    (snapshot.average_lead_time_ms * snapshot.total_runs as f64).round() as u128;
                 aggregate.total_duration_ms = duration;
                 for agent in snapshot.agents {
                     aggregate.agents.insert(
@@ -1067,6 +1072,7 @@ mod tests {
                 agent: "builder".to_string(),
                 action: "compile".to_string(),
                 parameters: HashMap::from([("target".to_string(), json!({"path": "src/main.rs"}))]),
+                tool_requirements: Vec::new(),
             }],
         }
     }

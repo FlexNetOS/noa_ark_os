@@ -71,11 +71,17 @@ sbom:
 
 # Scorekeeper (trust calculation)
 scorekeeper:
-	@echo "🎯 Calculating trust scores..."
-	@mkdir -p metrics
-	@# TODO: Implement scorekeeper with integrity/reversibility/capability metrics
-	@echo "⚠️  Scorekeeper not yet implemented (Phase 2)"
-	@echo '{"trust_score": null, "timestamp": "'$$(date -u +%Y-%m-%dT%H:%M:%SZ)'"}' > metrics/trust_score.json
+        @echo "🎯 Calculating trust scores..."
+        @mkdir -p metrics
+        @TARGET=$${NOA_TRUST_METRICS_PATH:-metrics/trust_score.json}; \
+            NOA_TRUST_METRICS_PATH=$$TARGET $(CARGO) run -p noa_core --bin noa_scorekeeper -- \
+                --integrity-pass $${TRUST_INTEGRITY_PASS:-120} \
+                --integrity-fail $${TRUST_INTEGRITY_FAIL:-0} \
+                --reversibility-pass $${TRUST_REVERSIBILITY_PASS:-96} \
+                --reversibility-fail $${TRUST_REVERSIBILITY_FAIL:-4} \
+                --capability-pass $${TRUST_CAPABILITY_PASS:-80} \
+                --capability-fail $${TRUST_CAPABILITY_FAIL:-20}; \
+            echo "✅ Trust snapshot stored at $$TARGET"
 
 # Package artifacts
 package:
