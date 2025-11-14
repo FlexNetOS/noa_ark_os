@@ -7,7 +7,7 @@ use std::time::Duration;
 use serde::Deserialize;
 use thiserror::Error;
 
-use crate::utils::current_timestamp_millis;
+use crate::time::current_timestamp_millis;
 
 /// Errors that can occur while loading or interpreting a profile manifest.
 #[derive(Debug, Error)]
