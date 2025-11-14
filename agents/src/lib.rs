@@ -18,6 +18,7 @@ pub mod factory;
 pub mod implementations;
 pub mod inference;
 pub mod registry;
+pub mod runtime;
 pub mod unified_types;
 
 // Re-export unified types
@@ -26,6 +27,7 @@ pub use unified_types::*;
 // Re-export key components
 pub use inference::{InferenceConfig, InferenceEngine, LlamaInferenceEngine};
 pub use registry::AgentRegistry;
+pub use runtime::RuntimeManager;
 
 /// Version of the agent system
 pub const VERSION: &str = "0.1.0";

@@ -99,7 +99,15 @@ pub fn info(
     trace_id: Option<&str>,
     details: Option<Value>,
 ) -> String {
-    emit(Level::INFO, component, event_name, message, outcome, trace_id, details)
+    emit(
+        Level::INFO,
+        component,
+        event_name,
+        message,
+        outcome,
+        trace_id,
+        details,
+    )
 }
 
 pub fn warn(
@@ -110,7 +118,15 @@ pub fn warn(
     trace_id: Option<&str>,
     details: Option<Value>,
 ) -> String {
-    emit(Level::WARN, component, event_name, message, outcome, trace_id, details)
+    emit(
+        Level::WARN,
+        component,
+        event_name,
+        message,
+        outcome,
+        trace_id,
+        details,
+    )
 }
 
 pub fn error(
@@ -121,5 +137,13 @@ pub fn error(
     trace_id: Option<&str>,
     details: Option<Value>,
 ) -> String {
-    emit(Level::ERROR, component, event_name, message, outcome, trace_id, details)
+    emit(
+        Level::ERROR,
+        component,
+        event_name,
+        message,
+        outcome,
+        trace_id,
+        details,
+    )
 }

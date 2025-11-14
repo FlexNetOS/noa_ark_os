@@ -94,7 +94,10 @@ Desktop.ini
 
 # Portable Tools (excluded from Git)
 server/tools/cargo-portable/
-server/tools/rustup-portable/
+server/tools/rustup-portable/*
+!server/tools/rustup-portable/
+!server/tools/rustup-portable/README.md
+!server/tools/rustup-portable/settings.toml
 
 # Runtime Data
 server/data/

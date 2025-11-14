@@ -8,6 +8,9 @@
       "windows": {
         "command": ".\\server\\tools\\activate-cargo.ps1"
       },
+      "linux": {
+        "command": "echo 'Using Rust toolchain in devcontainer'; rustc --version || true; cargo --version || true"
+      },
       "presentation": {
         "reveal": "always",
         "panel": "new"
@@ -20,6 +23,9 @@
       "command": ".\\server\\tools\\activate-cargo.ps1; cargo build",
       "windows": {
         "command": ".\\server\\tools\\activate-cargo.ps1; cargo build"
+      },
+      "linux": {
+        "command": "cargo build --workspace"
       },
       "group": {
         "kind": "build",
@@ -37,6 +43,9 @@
       "windows": {
         "command": ".\\server\\tools\\activate-cargo.ps1; cargo run"
       },
+      "linux": {
+        "command": "cargo run --workspace"
+      },
       "presentation": {
         "reveal": "always"
       },
@@ -49,6 +58,9 @@
       "windows": {
         "command": ".\\server\\tools\\activate-cargo.ps1; cargo test"
       },
+      "linux": {
+        "command": "cargo test --workspace"
+      },
       "presentation": {
         "reveal": "always"
       },
@@ -60,6 +72,9 @@
       "command": ".\\server\\tools\\activate-cargo.ps1; cargo check",
       "windows": {
         "command": ".\\server\\tools\\activate-cargo.ps1; cargo check"
+      },
+      "linux": {
+        "command": "cargo check --workspace"
       },
       "presentation": {
         "reveal": "always"

@@ -9,6 +9,8 @@ use noa_agents::implementations::documentation::{
 };
 use uuid::Uuid;
 
+use noa_core::kernel::{self, AiControlLoop};
+
 fn main() {
     if let Err(err) = run() {
         eprintln!("documentation_sync failed: {err}");
@@ -34,6 +36,15 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     let pipeline_path = pipeline_path.ok_or("--pipeline-output is required")?;
     let payload = fs::read_to_string(&pipeline_path)?;
+
+    let directive = kernel::handle()
+        .map(|handle| handle.machine_directive())
+        .unwrap_or_default();
+
+    println!(
+        "[documentation_sync] machine remediation in effect (confidence {:.2}): {}",
+        directive.confidence, directive.rationale
+    );
 
     let output = DocumentationPipelineOutput::from_json_str(&payload)
         .unwrap_or_else(|_| build_output_from_diff(&payload));

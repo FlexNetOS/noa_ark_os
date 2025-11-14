@@ -4,6 +4,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
 import { Readable } from "node:stream";
+import { ReadableStream as WebReadableStream } from "node:stream/web";
 
 import { assertUser } from "@/app/lib/session";
 import { getWorkspace, recordUploadReceipt, recordWorkspaceNotification } from "@/server/workspace-store";
@@ -72,7 +73,7 @@ export async function POST(request: Request) {
   const tempPath = path.join(uploadDir, `${Date.now()}-${safeName}`);
 
   try {
-    const readable = Readable.fromWeb(file.stream());
+    const readable = Readable.fromWeb(file.stream() as unknown as WebReadableStream);
     await pipeline(readable, createWriteStream(tempPath));
   } catch (error) {
     logError({

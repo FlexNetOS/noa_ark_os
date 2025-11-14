@@ -22,10 +22,10 @@ pub mod ir;
 pub mod orchestrator;
 pub mod parallel;
 pub mod processor;
+pub mod telemetry;
 pub mod transform;
 pub mod types;
 pub mod watcher;
-pub mod telemetry;
 
 // Re-export common types
 pub use build::{BuildArtifact, BuildManifest, TargetProfile};
