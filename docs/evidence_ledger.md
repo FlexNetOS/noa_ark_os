@@ -52,3 +52,17 @@ path.
 Use the CLI command `noa-cli evidence show` (see `apps/cli`) or subscribe to the
 workflow event stream (`WorkflowEvent::StageReceiptGenerated`) for streaming
 updates.
+
+## Agent Verifier Metadata
+
+- **Model Lifecycle Entries:** Training orchestrations emit verification records
+  to `storage/db/evidence/ledger.jsonl` through the `FilesystemArtifactStore`
+  implementation. Each entry mirrors the artifact checksum and the metrics
+  published by `ml.lifecycle.controller` agent verifiers so reviewers can track
+  promotion readiness.
+- **Registry Cross-Reference:** The registry gateway appends a companion log at
+  `registry/ml_artifacts.log` capturing lifecycle identifiers, artifact paths,
+  and evaluation metrics for downstream drift detection workflows.
+- **Verifier Responsibilities:** Agent verifiers must ensure metric thresholds
+  provided in the evaluation plan are satisfied before writing ledger entries
+  and must annotate any manual overrides in the `evaluation.notes` payload.

@@ -10,7 +10,6 @@ use wasmtime::ResourceLimiter;
 use wasmtime::{Config, Engine, Linker, Module, Store};
 use wasmtime_wasi::sync::{add_to_linker, WasiCtxBuilder};
 use wasmtime_wasi::{I32Exit, WasiCtx};
-use wasmtime_wasi::WasiCtx;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WasmProbeConfig {
@@ -173,9 +172,6 @@ impl WasmProbeRunner {
         }
 
         for dir in &self.config.allowed_directories {
-            let cap_dir = Dir::open_ambient_dir(dir, ambient_authority())?;
-            builder
-                .preopened_dir(cap_dir, dir)
             // Canonicalize the directory to prevent path traversal and ensure absolute path
             let canonical_dir = std::fs::canonicalize(dir)
                 .map_err(|err| WasmProbeError::Wasi(format!("Failed to canonicalize directory '{}': {}", dir.display(), err)))?;

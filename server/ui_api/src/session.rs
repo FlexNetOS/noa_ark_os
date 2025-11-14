@@ -67,6 +67,20 @@ impl SessionBridge {
                 }),
                 timestamp,
             },
+            WorkflowEvent::StageReceiptGenerated {
+                workflow_id,
+                stage_id,
+                receipt,
+                timestamp,
+            } => RealTimeEvent {
+                event_type: "workflow/stage-receipt".into(),
+                workflow_id,
+                payload: json!({
+                    "stage_id": stage_id,
+                    "receipt": receipt,
+                }),
+                timestamp,
+            },
         }
     }
 }

@@ -594,9 +594,6 @@ mod tests {
                     i32.const 0
                     call $__wasi_proc_exit)
                 (export "_start" (func $_start)))"#,
-                (func $_start
-                    i32.const 0
-                    call $__wasi_proc_exit))"#,
         )
         .unwrap();
         fs::write(&module_path, wasm_bytes).unwrap();

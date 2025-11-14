@@ -2,6 +2,11 @@
   "name": "NOA ARK OS Dev",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
   "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "username": "vscode",
+      "uid": "1000",
+      "installZsh": false
+    },
     "ghcr.io/devcontainers/features/node:1": {
       "version": "lts",
       "pnpm": "true"

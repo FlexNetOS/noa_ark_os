@@ -1,5 +1,23 @@
 ﻿# Development Roadmap
 
+> **📘 See Also:** [Comprehensive Agentic Kernel Roadmap](ROADMAP_AGENTIC_KERNEL.md) – Detailed evolution path from OS foundation to fully autonomous, AI-first, kernel-sovereign system with 13 phases and machine-readable spec.
+
+## Overview
+
+This document outlines the traditional feature-based development roadmap for NOA ARK OS. For the comprehensive agentic kernel transformation roadmap including goals, phases, tasks, and machine-first CI/CD blueprint, see **[ROADMAP_AGENTIC_KERNEL.md](ROADMAP_AGENTIC_KERNEL.md)** and the machine-readable **[roadmap_noa_ark_os.json](roadmap_noa_ark_os.json)**.
+
+## Roadmap Alignment
+
+The phases below align with the agentic kernel roadmap phases:
+
+* **Phase 1-2** → Agentic **P1 (Kernel Baseline)**, **P10 (CI/CD)**
+* **Phase 3-4** → Agentic **P4 (Registry)**, **P5 (Gateway)**, **P8 (SBOM)**
+* **Phase 5-7** → Traditional UI/Storage/Apps (parallel to agentic evolution)
+* **Phase 8-9** → Agentic **P7 (Rewards)**, **P12 (Self-Maintenance)**
+* **Phase 10-16** → Agentic **P0**, **P2**, **P3**, **P6**, **P9**, **P11**, **P13** (interwoven)
+
+---
+
 ## Phase 1: Foundation ✅ (COMPLETED)
 - [x] Initial workspace setup
 - [x] Core OS skeleton (Rust)
@@ -242,3 +260,26 @@ See individual phase documentation for contribution opportunities.
 - **Parallel by Default** - everything should support parallel execution
 - **Multi-Language** - support Rust, Python, Go, C# equally
 - **Full Automation** - manual intervention should be minimal
+
+---
+
+## Related Documentation
+
+### Agentic Kernel Roadmap
+* **[ROADMAP_AGENTIC_KERNEL.md](ROADMAP_AGENTIC_KERNEL.md)** – Comprehensive 13-phase evolution plan
+* **[roadmap_noa_ark_os.json](roadmap_noa_ark_os.json)** – Machine-readable roadmap specification
+* **Phases:** P0-P13 covering foundation → kernel sovereignty → humanless autonomy
+* **Goals:** 17 top-level goals from AI-first to self-operation
+* **CI/CD:** Machine-first pipeline with `make pipeline.local` and thin GitHub wrapper
+
+### Key Differences
+* **Traditional Roadmap** (this file): Feature-based phases, human-readable, UI/storage/apps focus
+* **Agentic Kernel Roadmap**: Goal-driven phases, machine-readable, kernel-sovereign autonomy focus
+* **Relationship**: Both roadmaps progress in parallel, with agentic phases providing foundational capabilities
+
+### Pipeline Documentation
+* **[.github/workflows/pipeline.yml](../../.github/workflows/pipeline.yml)** – Machine-first CI/CD wrapper
+* **[Makefile](../../Makefile)** – Local pipeline targets (pipeline.local, world-verify, kernel, etc.)
+* **[AGENT.md](../../AGENT.md)** – Agent execution policy and guardrails
+
+```
