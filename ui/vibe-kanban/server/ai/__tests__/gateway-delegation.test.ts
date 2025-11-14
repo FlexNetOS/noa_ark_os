@@ -12,7 +12,7 @@ describe("UI gateway delegation", () => {
   });
 
   it("invokes the llama.cpp engine through the shared prompt controller", async () => {
-    const env = { LLAMA_CPP_ENDPOINT: "http://127.0.0.1:8042/v1" } as NodeJS.ProcessEnv;
+    const env = { LLAMA_CPP_ENDPOINT: "http://127.0.0.1:8042/v1", NODE_ENV: "test" } as NodeJS.ProcessEnv;
     const fetchSpy = vi.fn(async () => ({
       ok: true,
       status: 200,

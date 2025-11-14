@@ -347,10 +347,10 @@ export PATH="$PATH:/path/to/merge-polish"
 ```
 
 **Solution:**
-- Review conflicts manually
-- Adjust source files
+- Assign a worker agent to review conflicts
+- Adjust source files based on planner guidance
 - Re-run simulation
-- Or use model A (conservative) for manual resolution
+- Or use model A (conservative) for worker-led resolution
 
 **3. Verify Failed**
 
@@ -361,8 +361,8 @@ export PATH="$PATH:/path/to/merge-polish"
 **Solution:**
 - Check merge output: `cat merged/problematic-file`
 - Review merge-polish logs
-- Report issue to merge-polish maintainer
-- Manual fix if necessary
+- Escalate to the orchestrator agent responsible for merge-polish stewardship
+- Apply worker agent fixes if necessary
 
 **4. Permission Denied**
 

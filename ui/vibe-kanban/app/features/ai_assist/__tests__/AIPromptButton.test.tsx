@@ -13,7 +13,7 @@ const exampleGoal: Goal = {
   createdAt: new Date("2024-05-01T00:00:00Z").toISOString(),
   mood: "focus",
   integrations: [
-    { kind: "gateway", label: "Gateway", status: "healthy" },
+    { kind: "runtime", label: "Gateway", status: "success" },
   ],
 };
 

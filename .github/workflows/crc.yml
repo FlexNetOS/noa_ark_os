@@ -36,6 +36,8 @@ jobs:
         run: cargo test -p noa_crc
       - name: Run Adapter SDK tests
         run: cargo test -p crc_adapter_sdk
+      - name: Prepare ingest artifact directory
+        run: mkdir -p out/ci
       - name: Generate CRC ingest report
         run: cargo run -p noa_crc -- ingest --root . --report out/ci/ingest.json
       - name: Archive artifacts
