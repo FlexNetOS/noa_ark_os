@@ -155,7 +155,8 @@ export async function planGoal(goal: GoalPayload, options: PlannerOptions = {}):
   });
 
   if (!response.ok) {
-    throw new Error(`Planner failed to start workflow: ${response.status}`);
+    const errorBody = await response.text().catch(() => "unknown");
+    throw new Error(`Planner failed to start workflow (${response.status}): ${errorBody}`);
   }
 
   const payload = (await response.json()) as WorkflowStartResponse;
