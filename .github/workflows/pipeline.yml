@@ -1,0 +1,110 @@
+name: pipeline
+on:
+  push:
+    branches: [main, "release/**"]
+  pull_request:
+
+jobs:
+  run-machine-first-pipeline:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        runner: [self-hosted, ubuntu-latest]
+        exclude:
+          # Prefer self-hosted; fallback to ubuntu-latest if unavailable
+          - runner: ubuntu-latest
+      fail-fast: false
+    env:
+      OFFLINE_FIRST: "true"
+      ONLINE_GITHUB_MODE: "false"
+      AI_PROVIDER: "llama.cpp"
+      LLAMA_CPP_ENDPOINT: "http://127.0.0.1:8080/v1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup toolchain (cache-friendly)
+        run: |
+          make setup || echo "Setup target not yet implemented; continuing..."
+
+      - name: Run machine-first pipeline
+        run: |
+          make pipeline.local
+
+      - name: Publish audit bundle
+        if: always()
+        run: |
+          make publish-audit || echo "Publish-audit target not yet implemented; skipping..."
+
+      - name: Upload audit artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-bundle-${{ github.run_id }}
+          path: |
+            audit/*.json
+            audit/*.tar.zst
+            metrics/*.json
+          if-no-files-found: warn
+
+  run-machine-first-pipeline-fallback:
+    # Fallback for hosted runners when self-hosted unavailable
+    runs-on: ubuntu-latest
+    if: ${{ !contains(github.event.repository.topics, 'self-hosted-available') }}
+    container:
+      image: rust:1.70
+    env:
+      OFFLINE_FIRST: "true"
+      ONLINE_GITHUB_MODE: "false"
+      AI_PROVIDER: "llama.cpp"
+      LLAMA_CPP_ENDPOINT: "http://127.0.0.1:8080/v1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install build dependencies
+        run: |
+          apt-get update && apt-get install -y \
+            make \
+            build-essential \
+            pkg-config \
+            libssl-dev \
+            git
+
+      - name: Setup Node.js (for pnpm targets)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8.15.4
+          run_install: false
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile || echo "No pnpm dependencies or error; continuing..."
+
+      - name: Run machine-first pipeline (containerized)
+        run: |
+          make pipeline.local
+
+      - name: Publish audit bundle
+        if: always()
+        run: |
+          make publish-audit || echo "Publish-audit target not yet implemented; skipping..."
+
+      - name: Upload audit artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-bundle-fallback-${{ github.run_id }}
+          path: |
+            audit/*.json
+            audit/*.tar.zst
+            metrics/*.json
+          if-no-files-found: warn
