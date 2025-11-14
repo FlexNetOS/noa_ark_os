@@ -92,7 +92,7 @@ The anchors above confirm that each task link maps to the authoritative roadmap 
 - **Launch:** [Activate Task](task://AK-9)
 
 ## Phase 10 — Machine-First Pipelines
-- **Roadmap Anchor:** PHASE 10 — Tests, CI/CD, and Audit Trail (Machine-First)
+- **Roadmap Anchor:** PHASE 10 — Machine-First Pipelines
 - **Code Touchpoints:** `cicd/pipelines/crc-auto.yaml`, `workflow/templates/merge/README.md`, `Makefile`, `tools/offline_pr_queue/`
 - **Outcome:** Stand up the `make pipeline.local` execution chain with audit bundles, mandatory health gates, and AI-run DevOps rituals.
 - **Launch:** [Activate Task](task://AK-DEVOPS)
