@@ -22,6 +22,7 @@ pub mod security;
 pub mod symbols;
 pub mod time;
 pub mod utils;
+pub mod world;
 
 /// Core OS version
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

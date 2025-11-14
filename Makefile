@@ -46,14 +46,12 @@ pipeline.local: world-verify build sbom test scorekeeper package sign
 
 # World model verification
 world-verify:
-	@echo "🔍 Verifying world model consistency..."
-	@# TODO: Implement world graph validation
-	@echo "⚠️  world-verify not yet implemented (Phase 3)"
+	@echo "🔍 Reconciling world model consistency..."
+	@cargo run -p noa_core --bin noa_world -- verify
 
 world-fix:
-	@echo "🔧 Auto-repairing world model..."
-	@# TODO: Implement world model reconciliation
-	@echo "⚠️  world-fix not yet implemented (Phase 3)"
+	@echo "🛠️ Generating remediation plan for world model drift..."
+	@cargo run -p noa_core --bin noa_world -- fix
 
 # Kernel build
 kernel:
