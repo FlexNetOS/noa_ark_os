@@ -12,6 +12,9 @@ serde_yaml = "0.9"
 serde_json = { workspace = true }
 thiserror = "1.0"
 sysinfo = { version = "0.30", features = ["serde"] }
+walkdir = "2.5"
+syn = { version = "2.0", features = ["full", "visit"] }
+toml = "0.8"
 
 [lib]
 name = "noa_core"

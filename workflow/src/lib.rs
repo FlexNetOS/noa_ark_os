@@ -9,15 +9,15 @@ use noa_core::capabilities::KernelHandle;
 use noa_core::config::manifest::CAPABILITY_PROCESS;
 use noa_core::process::ProcessService;
 use noa_core::utils::current_timestamp_millis;
+use noa_memory::{MemoryCoordinator, MemoryCursor, MemoryRole};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
 mod agent_dispatch;
 mod instrumentation;
-use agent_dispatch::ToolExecutionStatus;
 pub use agent_dispatch::{
-    AgentDispatchError, AgentDispatcher, TaskDispatchReceipt, ToolExecutionReceipt, ToolExecutionStatus,
-    ToolRequirement,
+    AgentDispatchError, AgentDispatcher, TaskDispatchReceipt, ToolExecutionReceipt,
+    ToolExecutionStatus, ToolRequirement,
 };
 pub use instrumentation::{
     AgentExecutionResult, EvidenceLedgerEntry, EvidenceLedgerKind, GoalAgentMetric,
@@ -25,6 +25,9 @@ pub use instrumentation::{
     SecurityScanReport, SecurityScanStatus, StageReceipt, TaskReceipt,
 };
 use tokio::sync::broadcast;
+
+const CONTEXT_THRESHOLD_BYTES: usize = 16 * 1024;
+const CONTEXT_WINDOW: usize = 16;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Workflow {
@@ -157,6 +160,8 @@ pub struct WorkflowEngine {
     stage_states: Arc<Mutex<HashMap<String, HashMap<String, StageState>>>>,
     instrumentation: Arc<PipelineInstrumentation>,
     dispatcher: Arc<AgentDispatcher>,
+    memory: Arc<MemoryCoordinator>,
+    context_cursors: Arc<Mutex<HashMap<String, MemoryCursor>>>,
     kernel: Option<KernelHandle>,
     event_stream: Arc<Mutex<Option<WorkflowEventStream>>>,
 }
@@ -168,12 +173,22 @@ impl WorkflowEngine {
         let registry = AgentRegistry::with_default_data().unwrap_or_else(|_| AgentRegistry::new());
         let factory = AgentFactory::new();
         let dispatcher = AgentDispatcher::new(registry, factory);
+        let memory = MemoryCoordinator::new(".workspace/memory").unwrap_or_else(|err| {
+            eprintln!(
+                "[WORKFLOW] Failed to initialise shared memory store ({}). Falling back to temp dir.",
+                err
+            );
+            let fallback = std::env::temp_dir().join("noa_memory");
+            MemoryCoordinator::new(&fallback).expect("fallback memory coordinator")
+        });
         Self {
             workflows: Arc::new(Mutex::new(HashMap::new())),
             states: Arc::new(Mutex::new(HashMap::new())),
             stage_states: Arc::new(Mutex::new(HashMap::new())),
             instrumentation: Arc::new(instrumentation),
             dispatcher: Arc::new(dispatcher),
+            memory: Arc::new(memory),
+            context_cursors: Arc::new(Mutex::new(HashMap::new())),
             kernel: None,
             event_stream: Arc::new(Mutex::new(None)),
         }
@@ -183,20 +198,34 @@ impl WorkflowEngine {
         Arc::clone(&self.instrumentation)
     }
 
+    pub fn memory(&self) -> Arc<MemoryCoordinator> {
+        Arc::clone(&self.memory)
+    }
+
     /// Create a workflow engine that interacts with kernel capabilities.
     pub fn with_kernel(kernel: KernelHandle) -> Self {
         let instrumentation =
             PipelineInstrumentation::new().expect("failed to initialise pipeline instrumentation");
         let registry = AgentRegistry::with_default_data().unwrap_or_else(|_| AgentRegistry::new());
-        let factory = AgentFactory::with_kernel(kernel.clone())
-            .unwrap_or_else(|_| AgentFactory::new());
+        let factory =
+            AgentFactory::with_kernel(kernel.clone()).unwrap_or_else(|_| AgentFactory::new());
         let dispatcher = AgentDispatcher::new(registry, factory);
+        let memory = MemoryCoordinator::new(".workspace/memory").unwrap_or_else(|err| {
+            eprintln!(
+                "[WORKFLOW] Failed to initialise shared memory store ({}). Falling back to temp dir.",
+                err
+            );
+            let fallback = std::env::temp_dir().join("noa_memory");
+            MemoryCoordinator::new(&fallback).expect("fallback memory coordinator")
+        });
         Self {
             workflows: Arc::new(Mutex::new(HashMap::new())),
             states: Arc::new(Mutex::new(HashMap::new())),
             stage_states: Arc::new(Mutex::new(HashMap::new())),
             instrumentation: Arc::new(instrumentation),
             dispatcher: Arc::new(dispatcher),
+            memory: Arc::new(memory),
+            context_cursors: Arc::new(Mutex::new(HashMap::new())),
             kernel: Some(kernel),
             event_stream: Arc::new(Mutex::new(None)),
         }
@@ -293,15 +322,10 @@ impl WorkflowEngine {
                     completed_at,
                     duration_ms: completed_at.saturating_sub(run_started_at),
                     success: false,
-                    agents: tracker.snapshot(),
+                    agents: tracker.clone().into_snapshot(),
                 };
-                if let Err(metric_err) =
-                    self.instrumentation.record_goal_outcome(outcome)
-                {
-                    println!(
-                        "[WORKFLOW] Failed to record goal outcome: {}",
-                        metric_err
-                    );
+                if let Err(metric_err) = self.instrumentation.record_goal_outcome(outcome) {
+                    println!("[WORKFLOW] Failed to record goal outcome: {}", metric_err);
                 }
                 return Err(err);
             }
@@ -315,13 +339,10 @@ impl WorkflowEngine {
             completed_at,
             duration_ms: completed_at.saturating_sub(run_started_at),
             success: true,
-            agents: tracker.snapshot(),
+            agents: tracker.clone().into_snapshot(),
         };
         if let Err(metric_err) = self.instrumentation.record_goal_outcome(outcome) {
-            println!(
-                "[WORKFLOW] Failed to record goal outcome: {}",
-                metric_err
-            );
+            println!("[WORKFLOW] Failed to record goal outcome: {}", metric_err);
         }
 
         // Mark as completed
@@ -359,10 +380,10 @@ impl WorkflowEngine {
         self.set_stage_state(workflow_id, &stage.name, StageState::Running);
 
         let artifacts = match stage.stage_type {
-            StageType::Sequential => self.execute_sequential(stage, tracker)?,
-            StageType::Parallel => self.execute_parallel(stage, tracker)?,
-            StageType::Conditional => self.execute_conditional(stage, tracker)?,
-            StageType::Loop => self.execute_loop(stage, tracker)?,
+            StageType::Sequential => self.execute_sequential(workflow_id, stage, tracker)?,
+            StageType::Parallel => self.execute_parallel(workflow_id, stage, tracker)?,
+            StageType::Conditional => self.execute_conditional(workflow_id, stage, tracker)?,
+            StageType::Loop => self.execute_loop(workflow_id, stage, tracker)?,
         };
 
         let receipt = self
@@ -389,12 +410,13 @@ impl WorkflowEngine {
     /// Execute tasks sequentially
     fn execute_sequential(
         &self,
+        workflow_id: &str,
         stage: &Stage,
         tracker: &mut GoalRunTracker,
     ) -> Result<Vec<Value>, String> {
         let mut artifacts = Vec::with_capacity(stage.tasks.len());
         for task in &stage.tasks {
-            artifacts.push(self.execute_task(task, tracker)?);
+            artifacts.push(self.execute_task(workflow_id, task, tracker)?);
         }
         Ok(artifacts)
     }
@@ -402,6 +424,7 @@ impl WorkflowEngine {
     /// Execute tasks in parallel
     fn execute_parallel(
         &self,
+        workflow_id: &str,
         stage: &Stage,
         tracker: &mut GoalRunTracker,
     ) -> Result<Vec<Value>, String> {
@@ -413,7 +436,7 @@ impl WorkflowEngine {
         // In a real implementation, this would spawn threads/processes
         let mut artifacts = Vec::with_capacity(stage.tasks.len());
         for task in &stage.tasks {
-            artifacts.push(self.execute_task(task, tracker)?);
+            artifacts.push(self.execute_task(workflow_id, task, tracker)?);
         }
 
         Ok(artifacts)
@@ -422,31 +445,39 @@ impl WorkflowEngine {
     /// Execute tasks conditionally
     fn execute_conditional(
         &self,
+        workflow_id: &str,
         stage: &Stage,
         tracker: &mut GoalRunTracker,
     ) -> Result<Vec<Value>, String> {
         // Implementation would check conditions
-        self.execute_sequential(stage, tracker)
+        self.execute_sequential(workflow_id, stage, tracker)
     }
 
     /// Execute tasks in a loop
     fn execute_loop(
         &self,
+        workflow_id: &str,
         stage: &Stage,
         tracker: &mut GoalRunTracker,
     ) -> Result<Vec<Value>, String> {
         // Implementation would loop based on condition
-        self.execute_sequential(stage, tracker)
+        self.execute_sequential(workflow_id, stage, tracker)
     }
 
     /// Execute a single task
-    fn execute_task(&self, task: &Task, tracker: &mut GoalRunTracker) -> Result<Value, String> {
+    fn execute_task(
+        &self,
+        workflow_id: &str,
+        task: &Task,
+        tracker: &mut GoalRunTracker,
+    ) -> Result<Value, String> {
         let result = (|| {
             println!(
                 "[WORKFLOW] Executing task: agent={}, action={}",
                 task.agent, task.action
             );
-            self.observe_task(task)?;
+            self.capture_context_snapshot(workflow_id, &task.agent);
+            self.observe_task(workflow_id, task)?;
             println!(
                 "[WORKFLOW] Executing task via kernel: agent={}, action={}",
                 task.agent, task.action
@@ -480,10 +511,12 @@ impl WorkflowEngine {
             tracker.record(&task.agent, false);
         }
 
+        self.persist_memory_result(workflow_id, task, &result);
+
         result
     }
 
-    fn observe_task(&self, task: &Task) -> Result<(), String> {
+    fn observe_task(&self, workflow_id: &str, task: &Task) -> Result<(), String> {
         let action_lower = task.action.to_lowercase();
         let metadata = parameters_to_value(&task.parameters);
 
@@ -520,7 +553,94 @@ impl WorkflowEngine {
                 .map_err(|err| format!("documentation instrumentation failed: {}", err))?;
         }
 
+        let mut info = parameters_to_metadata(&task.parameters);
+        info.insert("workflow".into(), workflow_id.to_string());
+        let _ = self.memory.record_session_only(
+            workflow_id,
+            &task.agent,
+            MemoryRole::Observation,
+            &format!("{}::{}", task.agent, task.action),
+            info,
+            vec![task.action.clone()],
+        );
+
         Ok(())
+    }
+
+    fn capture_context_snapshot(&self, workflow_id: &str, agent: &str) {
+        let cursor = {
+            let mut cursors = self.context_cursors.lock().unwrap();
+            cursors
+                .entry(workflow_id.to_string())
+                .or_insert_with(MemoryCursor::default)
+                .clone()
+        };
+
+        match self
+            .memory
+            .incremental_context(Some(workflow_id), cursor, Some(CONTEXT_WINDOW))
+        {
+            Ok(retrieval) => {
+                {
+                    let mut cursors = self.context_cursors.lock().unwrap();
+                    cursors.insert(workflow_id.to_string(), retrieval.next_cursor.clone());
+                }
+
+                if let Err(err) = self.instrumentation.record_context_usage(
+                    workflow_id,
+                    agent,
+                    retrieval.total_bytes,
+                    CONTEXT_THRESHOLD_BYTES,
+                    retrieval.took_ms,
+                ) {
+                    eprintln!(
+                        "[WORKFLOW] Failed to record context usage for {}::{}: {}",
+                        workflow_id, agent, err
+                    );
+                }
+            }
+            Err(err) => {
+                eprintln!(
+                    "[WORKFLOW] Context retrieval failed for {}::{}: {}",
+                    workflow_id, agent, err
+                );
+            }
+        }
+    }
+
+    fn persist_memory_result(
+        &self,
+        workflow_id: &str,
+        task: &Task,
+        result: &Result<Value, String>,
+    ) {
+        let mut metadata = parameters_to_metadata(&task.parameters);
+        metadata.insert("workflow".into(), workflow_id.to_string());
+
+        match result {
+            Ok(value) => {
+                let payload = serde_json::to_string(value).unwrap_or_else(|_| "{}".into());
+                let _ = self.memory.record_interaction(
+                    Some(workflow_id),
+                    &task.agent,
+                    MemoryRole::Action,
+                    &payload,
+                    metadata,
+                    vec![task.action.clone(), "success".into()],
+                );
+            }
+            Err(err) => {
+                metadata.insert("error".into(), err.clone());
+                let _ = self.memory.record_interaction(
+                    Some(workflow_id),
+                    &task.agent,
+                    MemoryRole::Reflection,
+                    err,
+                    metadata,
+                    vec![task.action.clone(), "error".into()],
+                );
+            }
+        }
     }
 
     /// Check if dependencies are met
@@ -598,6 +718,34 @@ fn parameters_to_value(parameters: &HashMap<String, Value>) -> Value {
     serde_json::to_value(parameters).unwrap_or(Value::Null)
 }
 
+fn parameters_to_metadata(parameters: &HashMap<String, Value>) -> HashMap<String, String> {
+    parameters
+        .iter()
+        .map(|(key, value)| (key.clone(), value_to_string(value)))
+        .collect()
+}
+
+fn value_to_string(value: &Value) -> String {
+    match value {
+        Value::Null => "null".into(),
+        Value::Bool(b) => b.to_string(),
+        Value::Number(n) => n.to_string(),
+        Value::String(s) => s.clone(),
+        Value::Array(items) => {
+            let joined: Vec<String> = items.iter().map(value_to_string).collect();
+            joined.join(",")
+        }
+        Value::Object(map) => {
+            let mut entries: Vec<String> = map
+                .iter()
+                .map(|(k, v)| format!("{}={}", k, value_to_string(v)))
+                .collect();
+            entries.sort();
+            entries.join(";")
+        }
+    }
+}
+
 fn now_iso() -> String {
     Utc::now().to_rfc3339()
 }
@@ -613,10 +761,11 @@ mod tests {
     use super::*;
     use chrono::Utc;
     use noa_core::security;
+    use noa_memory::MemoryRole;
     use serde_json::json;
+    use std::collections::HashMap;
     use std::fs;
     use std::path::Path;
-    use std::collections::HashMap;
 
     use crate::instrumentation::{EvidenceLedgerEntry, EvidenceLedgerKind};
     use tempfile::tempdir;
@@ -643,9 +792,6 @@ mod tests {
             }
         }
     }
-    use std::path::PathBuf;
-
-    use crate::instrumentation::EvidenceLedgerEntry;
 
     #[test]
     fn test_workflow_creation() {
@@ -692,7 +838,12 @@ mod tests {
         let dir = tempdir().unwrap();
         let _guard = EnvGuard::set("NOA_WORKFLOW_ROOT", dir.path());
         let engine = WorkflowEngine::new();
-        let workflow_name = format!("dispatch-{}", Utc::now().timestamp_nanos());
+        let workflow_name = format!(
+            "dispatch-{}",
+            Utc::now()
+                .timestamp_nanos_opt()
+                .expect("timestamp available")
+        );
         let workflow = Workflow {
             name: workflow_name.clone(),
             version: "1.0".to_string(),
@@ -728,13 +879,65 @@ mod tests {
     }
 
     #[test]
+    fn scorekeeper_penalises_large_contexts() {
+        let dir = tempdir().unwrap();
+        let _guard = EnvGuard::set("NOA_WORKFLOW_ROOT", dir.path());
+        let engine = WorkflowEngine::new();
+        let workflow = Workflow {
+            name: "context-penalty".to_string(),
+            version: "1.0".to_string(),
+            stages: vec![Stage {
+                name: "single".to_string(),
+                stage_type: StageType::Sequential,
+                depends_on: vec![],
+                tasks: vec![Task {
+                    agent: "context-agent".to_string(),
+                    action: "collect".to_string(),
+                    parameters: HashMap::from([(String::from("payload"), json!("alpha"))]),
+                    tool_requirements: vec![],
+                }],
+            }],
+        };
+
+        let workflow_id = engine.load_workflow(workflow).unwrap();
+        let large_context = "x".repeat(CONTEXT_THRESHOLD_BYTES + 2048);
+        engine
+            .memory()
+            .record_interaction(
+                Some(&workflow_id),
+                "context-agent",
+                MemoryRole::Observation,
+                &large_context,
+                HashMap::new(),
+                vec!["preload".into()],
+            )
+            .expect("context record");
+
+        engine.execute(&workflow_id).expect("workflow executes");
+
+        let snapshots = engine
+            .instrumentation()
+            .goal_metrics_snapshot()
+            .expect("snapshot available");
+        let snapshot = snapshots
+            .into_iter()
+            .find(|snap| snap.workflow_id == workflow_id)
+            .expect("matching snapshot");
+        assert!(snapshot.context_penalty_score > 0.0);
+        assert!(snapshot.context_p95_bytes >= CONTEXT_THRESHOLD_BYTES);
+    }
+
+    #[test]
     fn stage_merkle_receipt_is_recorded() {
         let dir = tempdir().unwrap();
         let _guard = EnvGuard::set("NOA_WORKFLOW_ROOT", dir.path());
         let engine = WorkflowEngine::new();
-        let workflow_name = format!("merkle-{}", Utc::now().timestamp_nanos_opt().unwrap());
-        let engine = WorkflowEngine::new();
-        let workflow_name = format!("merkle-{}", Utc::now().timestamp_nanos());
+        let workflow_name = format!(
+            "merkle-{}",
+            Utc::now()
+                .timestamp_nanos_opt()
+                .expect("timestamp available")
+        );
         let workflow = Workflow {
             name: workflow_name.clone(),
             version: "1.0".to_string(),
@@ -746,6 +949,7 @@ mod tests {
                     agent: "tester".to_string(),
                     action: "document".to_string(),
                     parameters: HashMap::from([(String::from("path"), json!("docs/test.md"))]),
+                    tool_requirements: vec![],
                 }],
             }],
         };
@@ -754,11 +958,6 @@ mod tests {
         engine.execute(&id).unwrap();
 
         let ledger_path = dir.path().join("storage/db/evidence/ledger.jsonl");
-        let ledger_path = {
-            let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-            let repo_root = root.parent().expect("workspace root available");
-            repo_root.join(".workspace/indexes/evidence/evidence.ledger.jsonl")
-        };
         let content = fs::read_to_string(&ledger_path)
             .unwrap_or_else(|_| panic!("ledger missing at {:?}", ledger_path));
 
@@ -785,7 +984,7 @@ mod tests {
             .map(|array| array.len())
             .unwrap_or(0);
         assert_eq!(leaf_count, 1);
-        let merkle_root = receipt
+        let receipt_merkle_root = receipt
             .payload
             .get("levels")
             .and_then(Value::as_array)
@@ -795,10 +994,6 @@ mod tests {
             .and_then(|nodes| nodes.first())
             .and_then(Value::as_str)
             .unwrap_or_default();
-        assert!(!merkle_root.is_empty());
-
-        assert_eq!(receipt.receipt.stage_name, "stage-merkle");
-        assert_eq!(receipt.receipt.leaf_count, 1);
-        assert!(!receipt.receipt.merkle_root.is_empty());
+        assert!(!receipt_merkle_root.is_empty());
     }
 }

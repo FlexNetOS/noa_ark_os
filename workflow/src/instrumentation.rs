@@ -1,4 +1,4 @@
-use crate::{Stage, StageType, Task};
+use crate::{Stage, StageType, Task, TaskDispatchReceipt};
 use chrono::Utc;
 use noa_core::security::{self, OperationKind, OperationRecord, SignedOperation};
 use noa_core::utils::{current_timestamp_millis, simple_hash};
@@ -222,7 +222,7 @@ impl GoalAggregate {
         }
     }
 
-    fn to_snapshot(&self) -> GoalMetricSnapshot {
+    fn to_snapshot(&self, penalty: Option<ContextPenaltySummary>) -> GoalMetricSnapshot {
         let average_lead_time_ms = if self.total_runs == 0 {
             0.0
         } else {
@@ -238,9 +238,13 @@ impl GoalAggregate {
             .iter()
             .map(|(agent, aggregate)| aggregate.to_metric(agent))
             .collect();
-        agents.sort_by(|a, b| b.success_rate.partial_cmp(&a.success_rate).unwrap_or(std::cmp::Ordering::Equal));
+        agents.sort_by(|a, b| {
+            b.success_rate
+                .partial_cmp(&a.success_rate)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
-        GoalMetricSnapshot {
+        let mut snapshot = GoalMetricSnapshot {
             goal_id: self.goal_id.clone(),
             workflow_id: self.workflow_id.clone(),
             total_runs: self.total_runs,
@@ -249,13 +253,142 @@ impl GoalAggregate {
             success_rate,
             agents,
             updated_at: Utc::now().to_rfc3339(),
+            context_penalty_score: 0.0,
+            context_p95_bytes: 0,
+            context_p95_latency_ms: 0,
+        };
+
+        if let Some(penalty) = penalty {
+            snapshot.context_penalty_score = penalty.penalty_score;
+            snapshot.context_p95_bytes = penalty.p95_bytes;
+            snapshot.context_p95_latency_ms = penalty.p95_latency_ms;
+        }
+
+        snapshot
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct ContextUsageSample {
+    agent: String,
+    context_bytes: usize,
+    penalty: f64,
+    retrieval_ms: u128,
+    timestamp: u128,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+struct ContextPenaltyAggregate {
+    workflow_id: String,
+    samples: Vec<ContextUsageSample>,
+}
+
+impl ContextPenaltyAggregate {
+    fn new(workflow_id: &str) -> Self {
+        Self {
+            workflow_id: workflow_id.to_string(),
+            samples: Vec::new(),
         }
     }
+
+    fn record(&mut self, agent: &str, context_bytes: usize, threshold: usize, retrieval_ms: u128) {
+        let penalty = if context_bytes > threshold {
+            (context_bytes.saturating_sub(threshold)) as f64 / threshold as f64
+        } else {
+            0.0
+        };
+
+        self.samples.push(ContextUsageSample {
+            agent: agent.to_string(),
+            context_bytes,
+            penalty,
+            retrieval_ms,
+            timestamp: current_timestamp_millis(),
+        });
+
+        self.trim();
+    }
+
+    fn push_summary(&mut self, penalty_score: f64, context_bytes: usize, retrieval_ms: u64) {
+        self.samples.push(ContextUsageSample {
+            agent: "scorekeeper/restore".into(),
+            context_bytes,
+            penalty: penalty_score,
+            retrieval_ms: retrieval_ms as u128,
+            timestamp: current_timestamp_millis(),
+        });
+        self.trim();
+    }
+
+    fn trim(&mut self) {
+        if self.samples.len() > 256 {
+            let overflow = self.samples.len() - 256;
+            self.samples.drain(0..overflow);
+        }
+    }
+
+    fn summary(&self) -> ContextPenaltySummary {
+        if self.samples.is_empty() {
+            return ContextPenaltySummary {
+                workflow_id: self.workflow_id.clone(),
+                penalty_score: 0.0,
+                p95_bytes: 0,
+                p95_latency_ms: 0,
+            };
+        }
+
+        let mut bytes: Vec<usize> = self
+            .samples
+            .iter()
+            .map(|sample| sample.context_bytes)
+            .collect();
+        bytes.sort_unstable();
+        let mut latency: Vec<u128> = self
+            .samples
+            .iter()
+            .map(|sample| sample.retrieval_ms)
+            .collect();
+        latency.sort_unstable();
+
+        let percentile_index = |len: usize| -> usize {
+            if len == 0 {
+                return 0;
+            }
+            let raw = ((len as f64) * 0.95).ceil() as usize;
+            raw.saturating_sub(1).min(len - 1)
+        };
+
+        let idx_bytes = percentile_index(bytes.len());
+        let idx_latency = percentile_index(latency.len());
+        let avg_penalty = self
+            .samples
+            .iter()
+            .map(|sample| sample.penalty)
+            .sum::<f64>()
+            / (self.samples.len() as f64);
+
+        ContextPenaltySummary {
+            workflow_id: self.workflow_id.clone(),
+            penalty_score: avg_penalty,
+            p95_bytes: bytes[idx_bytes],
+            p95_latency_ms: latency[idx_latency] as u64,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct ContextPenaltySummary {
+    workflow_id: String,
+    penalty_score: f64,
+    p95_bytes: usize,
+    p95_latency_ms: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 struct GoalMetricStore {
     goals: HashMap<String, GoalAggregate>,
+    #[serde(default)]
+    context: HashMap<String, ContextPenaltyAggregate>,
 }
 
 impl GoalMetricStore {
@@ -266,11 +399,31 @@ impl GoalMetricStore {
             .record(outcome);
     }
 
+    fn penalize_context(
+        &mut self,
+        workflow_id: &str,
+        agent: &str,
+        context_bytes: usize,
+        threshold: usize,
+        retrieval_ms: u128,
+    ) {
+        self.context
+            .entry(workflow_id.to_string())
+            .or_insert_with(|| ContextPenaltyAggregate::new(workflow_id))
+            .record(agent, context_bytes, threshold, retrieval_ms);
+    }
+
     fn snapshots(&self) -> Vec<GoalMetricSnapshot> {
         let mut entries: Vec<GoalMetricSnapshot> = self
             .goals
             .values()
-            .map(GoalAggregate::to_snapshot)
+            .map(|aggregate| {
+                let penalty = self
+                    .context
+                    .get(&aggregate.workflow_id)
+                    .map(ContextPenaltyAggregate::summary);
+                aggregate.to_snapshot(penalty)
+            })
             .collect();
         entries.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
         entries
@@ -295,6 +448,12 @@ pub struct GoalMetricSnapshot {
     pub success_rate: f64,
     pub agents: Vec<GoalAgentMetric>,
     pub updated_at: String,
+    #[serde(default)]
+    pub context_penalty_score: f64,
+    #[serde(default)]
+    pub context_p95_bytes: usize,
+    #[serde(default)]
+    pub context_p95_latency_ms: u64,
 }
 
 impl StageReceipt {
@@ -765,6 +924,21 @@ impl PipelineInstrumentation {
         self.persist_goal_metrics()
     }
 
+    pub fn record_context_usage(
+        &self,
+        workflow_id: &str,
+        agent: &str,
+        context_bytes: usize,
+        threshold: usize,
+        retrieval_ms: u128,
+    ) -> Result<(), InstrumentationError> {
+        {
+            let mut store = self.goal_metrics.lock().unwrap();
+            store.penalize_context(workflow_id, agent, context_bytes, threshold, retrieval_ms);
+        }
+        self.persist_goal_metrics()
+    }
+
     pub fn goal_metrics_snapshot(&self) -> Result<Vec<GoalMetricSnapshot>, InstrumentationError> {
         let store = self.goal_metrics.lock().unwrap();
         Ok(store.snapshots())
@@ -1010,7 +1184,8 @@ fn load_goal_metrics(path: &PathBuf) -> Result<GoalMetricStore, InstrumentationE
                 let mut aggregate = GoalAggregate::new(&snapshot.goal_id, &snapshot.workflow_id);
                 aggregate.total_runs = snapshot.total_runs;
                 aggregate.successful_runs = snapshot.successful_runs;
-                let duration = (snapshot.average_lead_time_ms * snapshot.total_runs as f64).round() as u128;
+                let duration =
+                    (snapshot.average_lead_time_ms * snapshot.total_runs as f64).round() as u128;
                 aggregate.total_duration_ms = duration;
                 for agent in snapshot.agents {
                     aggregate.agents.insert(
@@ -1022,6 +1197,18 @@ fn load_goal_metrics(path: &PathBuf) -> Result<GoalMetricStore, InstrumentationE
                     );
                 }
                 store.goals.insert(snapshot.goal_id.clone(), aggregate);
+                if snapshot.context_penalty_score > 0.0
+                    || snapshot.context_p95_bytes > 0
+                    || snapshot.context_p95_latency_ms > 0
+                {
+                    let mut context = ContextPenaltyAggregate::new(&snapshot.workflow_id);
+                    context.push_summary(
+                        snapshot.context_penalty_score,
+                        snapshot.context_p95_bytes,
+                        snapshot.context_p95_latency_ms,
+                    );
+                    store.context.insert(snapshot.workflow_id.clone(), context);
+                }
             }
             Ok(store)
         }
@@ -1067,6 +1254,7 @@ mod tests {
                 agent: "builder".to_string(),
                 action: "compile".to_string(),
                 parameters: HashMap::from([("target".to_string(), json!({"path": "src/main.rs"}))]),
+                tool_requirements: vec![],
             }],
         }
     }

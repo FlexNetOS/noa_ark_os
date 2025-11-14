@@ -12,6 +12,7 @@ pub mod config;
 pub mod fs;
 pub mod gateway;
 pub mod hardware;
+pub mod indexer;
 pub mod ipc;
 pub mod kernel;
 pub mod memory;
@@ -42,6 +43,10 @@ pub fn init() -> Result<capabilities::KernelHandle, kernel::KernelError> {
     security::init().map_err(|e| kernel::KernelError::Init(e.to_string()))?;
     gateway::init()
         .map_err(|_| kernel::KernelError::Init("gateway initialization failed".to_string()))?;
+
+    if let Err(err) = indexer::IndexerService::for_workspace().refresh() {
+        eprintln!("[CORE] workspace indexing failed: {}", err);
+    }
 
     println!("Core OS initialized successfully");
     Ok(handle)
