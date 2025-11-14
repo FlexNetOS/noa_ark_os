@@ -142,9 +142,17 @@ async function readStore(): Promise<WorkspaceStore> {
 async function writeStore(store: WorkspaceStore): Promise<void> {
   await ensureDataFile();
   await fs.writeFile(DATA_FILE, JSON.stringify(store, null, 2), "utf-8");
-  for (const workspace of store.workspaces) {
-    await recordWorkspaceSnapshot(workspace);
-  }
+  const snapshotResults = await Promise.allSettled(
+    store.workspaces.map((workspace) => recordWorkspaceSnapshot(workspace))
+  );
+  snapshotResults.forEach((result, idx) => {
+    if (result.status === "rejected") {
+      console.error(
+        `Failed to record snapshot for workspace "${store.workspaces[idx]?.id ?? idx}":`,
+        result.reason
+      );
+    }
+  });
 }
 
 function getInMemoryStore(): { data: WorkspaceStore } {
