@@ -8,6 +8,7 @@ use crate::capabilities::{CapabilityError, CapabilityRegistry, KernelHandle};
 use crate::config::manifest::{KernelManifest, ManifestError};
 use crate::metrics::{self, AggregatedTelemetry, LoadLevel};
 use crate::security::{self, OperationKind, SignedOperation};
+use crate::token;
 
 static KERNEL_RUNNING: AtomicBool = AtomicBool::new(false);
 
@@ -194,6 +195,7 @@ pub fn init_with_manifest(manifest: KernelManifest) -> Result<KernelHandle, Kern
     manifest.validate()?;
 
     let manifest = Arc::new(manifest);
+    token::configure_from_manifest(&manifest);
     let registry = Arc::new(CapabilityRegistry::new());
 
     register_default_capabilities(&registry)?;
