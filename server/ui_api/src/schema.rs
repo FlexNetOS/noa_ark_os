@@ -127,13 +127,13 @@ impl PageEnvelope {
                 kind: "workspace".into(),
                 metadata: PageMetadata {
                     title: "Vibe Kanban Control Hub".into(),
-                    description: Some("Server-driven schema delivered by noa_ui_api".into()),
+                    description: Some("Server-driven schema delivered by noa_ui_api with goal-centric kanban planning".into()),
                     tokens_version: "0.1.0".into(),
                     created_at: "2024-05-01T00:00:00.000Z".into(),
                     updated_at: "2024-05-15T00:00:00.000Z".into(),
                     accessibility_notes: vec![
                         "ARIA labels provided for all actionable widgets".into(),
-                        "Color contrast adheres to WCAG AA".into(),
+                        "Goal metrics and controls meet WCAG AA contrast guidelines".into(),
                     ],
                 },
                 regions: vec![

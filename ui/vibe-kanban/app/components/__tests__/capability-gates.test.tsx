@@ -20,8 +20,8 @@ describe("capability-gated UI", () => {
         canAddColumn={false}
         addColumnDisabledReason="Enable capability"
         columnCount={3}
-        totalCardCount={9}
-        completedCount={2}
+        totalGoalCount={9}
+        completedGoalCount={2}
         showMetrics={false}
         capabilitySummary={[
           {

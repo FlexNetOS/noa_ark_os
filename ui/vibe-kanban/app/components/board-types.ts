@@ -50,7 +50,7 @@ export type VibeColumn = {
   id: string;
   title: string;
   accent: string;
-  cards: VibeCard[];
+  goals: Goal[];
 };
 
 export type BoardMoodSample = {
@@ -62,9 +62,9 @@ export type BoardMoodSample = {
 };
 
 export type BoardMetrics = {
-  completedCards: number;
-  activeCards: number;
-  vibeMomentum: number;
+  completedGoals: number;
+  activeGoals: number;
+  goalMomentum: number;
   cycleTimeDays?: number;
   flowEfficiency?: number;
 };

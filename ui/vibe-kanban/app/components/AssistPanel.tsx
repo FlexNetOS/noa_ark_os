@@ -2,7 +2,7 @@
 
 import type { CapabilityFeatureGateStatus } from "@/shared/capabilities";
 
-import type { VibeCard } from "./board-types";
+import type { Goal } from "./board-types";
 import type { BoardState } from "./useBoardState";
 
 type AssistPanelProps = {
@@ -63,8 +63,8 @@ export function AssistPanel({ assist, onRequest, capability, loading = false }: 
       </p>
       {assist ? (
         <div className="mt-4 space-y-4">
-          {assist.focusCard && (
-            <FocusCardCard focusCard={assist.focusCard} />
+          {assist.focusGoal && (
+            <FocusGoalCard focusGoal={assist.focusGoal} />
           )}
           <ul className="space-y-3">
             {assist.suggestions.map((suggestion, index) => (
@@ -87,12 +87,12 @@ export function AssistPanel({ assist, onRequest, capability, loading = false }: 
   );
 }
 
-function FocusCardCard({ focusCard }: { focusCard: VibeCard }) {
+function FocusGoalCard({ focusGoal }: { focusGoal: Goal }) {
   return (
     <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 p-4 text-amber-100">
-      <div className="text-xs uppercase tracking-[0.3em] text-amber-200">Spotlight card</div>
-      <div className="mt-1 text-sm font-semibold text-amber-50">{focusCard.title}</div>
-      <p className="mt-1 text-xs text-amber-100/70">{focusCard.notes || "No notes yet"}</p>
+      <div className="text-xs uppercase tracking-[0.3em] text-amber-200">Spotlight goal</div>
+      <div className="mt-1 text-sm font-semibold text-amber-50">{focusGoal.title}</div>
+      <p className="mt-1 text-xs text-amber-100/70">{focusGoal.notes || "No notes yet"}</p>
     </div>
   );
 }

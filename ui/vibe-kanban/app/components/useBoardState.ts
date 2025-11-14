@@ -4,10 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type {
   ActivityEvent,
+  Goal,
   NotificationEvent,
   PresenceUser,
   UploadReceiptSummary,
-  VibeCard,
   VibeColumn,
   Workspace,
   WorkspaceBoard,
@@ -34,7 +34,7 @@ const accentPalette = [
 
 type AssistState = {
   suggestions: { title: string; detail: string }[];
-  focusCard: VibeCard | null;
+  focusGoal: Goal | null;
   updatedAt: string;
 } | null;
 
@@ -70,11 +70,11 @@ type WorkspaceHookState = {
   addColumn: (title: string) => void;
   removeColumn: (columnId: string) => void;
   renameColumn: (columnId: string, title: string) => void;
-  addCard: (columnId: string, title: string, notes?: string) => void;
-  updateCard: (columnId: string, cardId: string, patch: Partial<VibeCard>) => void;
-  removeCard: (columnId: string, cardId: string) => void;
-  moveCardWithinColumn: (columnId: string, activeId: string, overId: string) => void;
-  moveCardToColumn: (activeColumnId: string, overColumnId: string, activeCardId: string, overCardId?: string) => void;
+  addGoal: (columnId: string, title: string, notes?: string) => void;
+  updateGoal: (columnId: string, goalId: string, patch: Partial<Goal>) => void;
+  removeGoal: (columnId: string, goalId: string) => void;
+  moveGoalWithinColumn: (columnId: string, activeId: string, overId: string) => void;
+  moveGoalToColumn: (activeColumnId: string, overColumnId: string, activeGoalId: string, overGoalId?: string) => void;
   moveColumn: (activeId: string, overId: string) => void;
   setProjectName: (name: string) => void;
   retryAutomation: (cardId: string) => Promise<void>;
@@ -390,7 +390,7 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
           id: `column-${Date.now()}`,
           title: title.trim() || "Untitled",
           accent: accentPalette[columns.length % accentPalette.length],
-          cards: [],
+          goals: [],
         },
       ]);
     },
@@ -437,34 +437,34 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     []
   );
 
-  const addCard = useCallback(
+  const addGoal = useCallback(
     (columnId: string, title: string, notes?: string) => {
       updateColumns((columns) =>
         columns.map((column) =>
           column.id === columnId
-            ? { ...column, cards: [...column.cards, createCard({ title, notes })] }
+            ? { ...column, goals: [...column.goals, createGoal({ title, notes })] }
             : column
         )
       );
     },
-    [updateColumns, createCard]
+    [updateColumns, createGoal]
   );
 
-  const updateCard = useCallback(
-    (columnId: string, cardId: string, patch: Partial<VibeCard>) => {
+  const updateGoal = useCallback(
+    (columnId: string, goalId: string, patch: Partial<Goal>) => {
       updateColumns((columns) =>
         columns.map((column) =>
           column.id === columnId
             ? {
                 ...column,
-                cards: column.cards.map((card) =>
-                  card.id === cardId
+                goals: column.goals.map((goal) =>
+                  goal.id === goalId
                     ? {
-                        ...card,
+                        ...goal,
                         ...patch,
-                        title: patch.title ? patch.title.trim() || card.title : card.title,
+                        title: patch.title ? patch.title.trim() || goal.title : goal.title,
                       }
-                    : card
+                    : goal
                 ),
               }
             : column
@@ -474,12 +474,12 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     [updateColumns]
   );
 
-  const removeCard = useCallback(
-    (columnId: string, cardId: string) => {
+  const removeGoal = useCallback(
+    (columnId: string, goalId: string) => {
       updateColumns((columns) =>
         columns.map((column) =>
           column.id === columnId
-            ? { ...column, cards: column.cards.filter((card) => card.id !== cardId) }
+            ? { ...column, goals: column.goals.filter((goal) => goal.id !== goalId) }
             : column
         )
       );
@@ -495,23 +495,23 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     return next;
   }, []);
 
-  const moveCardWithinColumn = useCallback(
+  const moveGoalWithinColumn = useCallback(
     (columnId: string, activeId: string, overId: string) => {
       updateColumns((columns) =>
         columns.map((column) => {
           if (column.id !== columnId) return column;
-          const oldIndex = column.cards.findIndex((card) => card.id === activeId);
-          const newIndex = column.cards.findIndex((card) => card.id === overId);
+          const oldIndex = column.goals.findIndex((goal) => goal.id === activeId);
+          const newIndex = column.goals.findIndex((goal) => goal.id === overId);
           if (oldIndex === -1 || newIndex === -1) return column;
-          return { ...column, cards: arrayMove(column.cards, oldIndex, newIndex) };
+          return { ...column, goals: arrayMove(column.goals, oldIndex, newIndex) };
         })
       );
     },
     [updateColumns, arrayMove]
   );
 
-  const moveCardToColumn = useCallback(
-    (activeColumnId: string, overColumnId: string, activeCardId: string, overCardId?: string) => {
+  const moveGoalToColumn = useCallback(
+    (activeColumnId: string, overColumnId: string, activeGoalId: string, overGoalId?: string) => {
       if (activeColumnId === overColumnId) return;
       updateColumns((columns) => {
         const sourceIndex = columns.findIndex((column) => column.id === activeColumnId);
@@ -519,20 +519,22 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
         if (sourceIndex === -1 || targetIndex === -1) return columns;
         const sourceColumn = columns[sourceIndex];
         const targetColumn = columns[targetIndex];
-        const activeCardIndex = sourceColumn.cards.findIndex((card) => card.id === activeCardId);
-        if (activeCardIndex === -1) return columns;
+        const activeGoalIndex = sourceColumn.goals.findIndex((goal) => goal.id === activeGoalId);
+        if (activeGoalIndex === -1) return columns;
 
-        const updatedSourceCards = [...sourceColumn.cards];
-        const [movedCard] = updatedSourceCards.splice(activeCardIndex, 1);
+        const updatedSourceGoals = [...sourceColumn.goals];
+        const [movedGoal] = updatedSourceGoals.splice(activeGoalIndex, 1);
 
-        const updatedTargetCards = [...targetColumn.cards];
-        const insertAt = overCardId ? updatedTargetCards.findIndex((card) => card.id === overCardId) : updatedTargetCards.length;
-        const nextCards = [...updatedTargetCards];
-        nextCards.splice(insertAt === -1 ? nextCards.length : insertAt, 0, movedCard);
+        const updatedTargetGoals = [...targetColumn.goals];
+        const insertAt = overGoalId
+          ? updatedTargetGoals.findIndex((goal) => goal.id === overGoalId)
+          : updatedTargetGoals.length;
+        const nextGoals = [...updatedTargetGoals];
+        nextGoals.splice(insertAt === -1 ? nextGoals.length : insertAt, 0, movedGoal);
 
         const nextColumns = [...columns];
-        nextColumns[sourceIndex] = { ...sourceColumn, cards: updatedSourceCards };
-        nextColumns[targetIndex] = { ...targetColumn, cards: nextCards };
+        nextColumns[sourceIndex] = { ...sourceColumn, goals: updatedSourceGoals };
+        nextColumns[targetIndex] = { ...targetColumn, goals: nextGoals };
         return nextColumns;
       });
     },
@@ -673,7 +675,7 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     const response = await fetch(`/api/workspaces/${workspaceId}/boards/${boardId}/assist`, { method: "POST" });
     if (!response.ok) return;
     const payload = await response.json();
-    setAssist({ suggestions: payload.suggestions ?? [], focusCard: payload.focusCard ?? null, updatedAt: new Date().toISOString() });
+    setAssist({ suggestions: payload.suggestions ?? [], focusGoal: payload.focusGoal ?? null, updatedAt: new Date().toISOString() });
   }, [workspaceId, boardId]);
 
   const refreshWorkspace = useCallback(async () => {
@@ -717,11 +719,11 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     addColumn,
     removeColumn,
     renameColumn,
-    addCard,
-    updateCard,
-    removeCard,
-    moveCardWithinColumn,
-    moveCardToColumn,
+    addGoal,
+    updateGoal,
+    removeGoal,
+    moveGoalWithinColumn,
+    moveGoalToColumn,
     moveColumn,
     setProjectName,
   };

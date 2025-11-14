@@ -11,14 +11,14 @@ function computeFlow(board: WorkspaceBoard | null) {
     return {
       throughput: 0,
       workInProgress: 0,
-      vibeMomentum: 0,
+      goalMomentum: 0,
     };
   }
   const doneColumn = board.columns.find((column) => /done|complete/i.test(column.title));
-  const throughput = doneColumn?.cards.length ?? 0;
-  const workInProgress = board.columns.reduce((count, column) => count + column.cards.length, 0) - throughput;
-  const vibeMomentum = board.metrics?.vibeMomentum ?? Math.min(100, 40 + workInProgress * 5 - throughput * 3);
-  return { throughput, workInProgress, vibeMomentum };
+  const throughput = doneColumn?.goals.length ?? 0;
+  const workInProgress = board.columns.reduce((count, column) => count + column.goals.length, 0) - throughput;
+  const goalMomentum = board.metrics?.goalMomentum ?? Math.min(100, 40 + workInProgress * 5 - throughput * 3);
+  return { throughput, workInProgress, goalMomentum };
 }
 
 export function AnalyticsPanel({ board }: AnalyticsPanelProps) {
@@ -33,12 +33,12 @@ export function AnalyticsPanel({ board }: AnalyticsPanelProps) {
           <div className="mt-2 text-2xl font-semibold text-white">{analytics.throughput}</div>
         </div>
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-          <div className="text-xs uppercase tracking-[0.3em] text-white/40">Work in play</div>
+          <div className="text-xs uppercase tracking-[0.3em] text-white/40">Goals in play</div>
           <div className="mt-2 text-2xl font-semibold text-white">{analytics.workInProgress}</div>
         </div>
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
           <div className="text-xs uppercase tracking-[0.3em] text-white/40">Momentum</div>
-          <div className="mt-2 text-2xl font-semibold text-white">{analytics.vibeMomentum}%</div>
+          <div className="mt-2 text-2xl font-semibold text-white">{analytics.goalMomentum}%</div>
         </div>
       </div>
       <p className="mt-3 text-xs text-white/40">

@@ -8,6 +8,7 @@ import type {
   NotificationEvent,
   ToolExecutionTelemetry,
   UploadReceiptSummary,
+  VibeColumn,
   Workspace,
   WorkspaceBoard,
   WorkspaceMember,
@@ -92,9 +93,9 @@ async function ensureDataFile(): Promise<void> {
               id: "todo",
               title: "To Do",
               accent: "from-indigo-500 via-purple-500 to-blue-500",
-              cards: [
+              goals: [
                 {
-                  id: "card-1",
+                  id: "goal-1",
                   title: "Ideate hero motion",
                   notes: "Sketch the flowing hero animation that loops smoothly across the dashboard.",
                   createdAt: now,
@@ -102,7 +103,7 @@ async function ensureDataFile(): Promise<void> {
                   automation: ensureAutomationState("card-1", null, now),
                 },
                 {
-                  id: "card-2",
+                  id: "goal-2",
                   title: "Sound-reactive palette",
                   notes: "Research how to tie track BPM to gradient shifts on the home screen.",
                   createdAt: now,
@@ -115,9 +116,9 @@ async function ensureDataFile(): Promise<void> {
               id: "in-progress",
               title: "In Progress",
               accent: "from-sky-500 via-cyan-400 to-emerald-400",
-              cards: [
+              goals: [
                 {
-                  id: "card-3",
+                  id: "goal-3",
                   title: "Prototype kanban drag",
                   notes: "Polish easing curve + inertia for drag transitions.",
                   createdAt: now,
@@ -130,9 +131,9 @@ async function ensureDataFile(): Promise<void> {
               id: "done",
               title: "Completed",
               accent: "from-violet-500 via-indigo-400 to-fuchsia-500",
-              cards: [
+              goals: [
                 {
-                  id: "card-4",
+                  id: "goal-4",
                   title: "Mood-driven theme",
                   notes: "Shipped gradient system that syncs with vibes.",
                   createdAt: now,
@@ -143,9 +144,9 @@ async function ensureDataFile(): Promise<void> {
             }
           ],
           metrics: {
-            completedCards: 1,
-            activeCards: 3,
-            vibeMomentum: 72
+            completedGoals: 1,
+            activeGoals: 3,
+            goalMomentum: 72
           },
           archived: false,
           moodSamples: [
@@ -177,12 +178,42 @@ async function readStore(): Promise<WorkspaceStore> {
   await ensureDataFile();
   const raw = await fs.readFile(DATA_FILE, "utf-8");
   const parsed = JSON.parse(raw) as WorkspaceStore;
+  const migrateBoard = (board: WorkspaceBoard): WorkspaceBoard => {
+    const migratedColumns = board.columns.map((column) => {
+      const goals = Array.isArray((column as unknown as { goals?: Goal[] }).goals)
+        ? (column as unknown as { goals: Goal[] }).goals
+        : Array.isArray((column as unknown as { cards?: Goal[] }).cards)
+          ? (column as unknown as { cards: Goal[] }).cards
+          : [];
+      return {
+        ...column,
+        goals,
+      } satisfies VibeColumn;
+    });
+
+    const baseMetrics = board.metrics ?? computeBoardMetrics({ columns: migratedColumns });
+    const normalizedMetrics = {
+      completedGoals: baseMetrics.completedGoals ?? (baseMetrics as { completedCards?: number }).completedCards ?? 0,
+      activeGoals: baseMetrics.activeGoals ?? (baseMetrics as { activeCards?: number }).activeCards ?? 0,
+      goalMomentum: baseMetrics.goalMomentum ?? (baseMetrics as { vibeMomentum?: number }).vibeMomentum ?? 0,
+      cycleTimeDays: baseMetrics.cycleTimeDays,
+      flowEfficiency: baseMetrics.flowEfficiency,
+    } satisfies BoardMetrics;
+
+    return {
+      ...board,
+      columns: migratedColumns,
+      metrics: normalizedMetrics,
+    };
+  };
+
   return {
     workspaces: parsed.workspaces.map((workspace) => ({
       ...workspace,
       boards: workspace.boards.map((board) => normaliseBoard(board as WorkspaceBoard)),
       notifications: workspace.notifications ?? [],
       uploadReceipts: workspace.uploadReceipts ?? [],
+      boards: workspace.boards.map(migrateBoard),
     })),
   };
 }
@@ -450,13 +481,13 @@ export async function removeBoard(workspaceId: string, boardId: string, actor: W
   await upsertWorkspace(workspace);
 }
 
-function computeBoardMetrics(board: Pick<WorkspaceBoard, "columns">): WorkspaceBoard["metrics"] {
-  const completed = board.columns.find((col) => col.title.toLowerCase().includes("done"))?.cards.length ?? 0;
-  const active = board.columns.reduce((count, column) => count + column.cards.length, 0) - completed;
-  const vibeMomentum = Math.min(100, Math.max(0, 40 + active * 5 - completed * 3));
+function computeBoardMetrics(board: Pick<WorkspaceBoard, "columns">): BoardMetrics {
+  const completed = board.columns.find((col) => col.title.toLowerCase().includes("done"))?.goals.length ?? 0;
+  const active = board.columns.reduce((count, column) => count + column.goals.length, 0) - completed;
+  const goalMomentum = Math.min(100, Math.max(0, 40 + active * 5 - completed * 3));
   return {
-    completedCards: completed,
-    activeCards: active,
-    vibeMomentum,
+    completedGoals: completed,
+    activeGoals: active,
+    goalMomentum,
   };
 }
