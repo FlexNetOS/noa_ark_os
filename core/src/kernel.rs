@@ -151,7 +151,8 @@ mod tests {
     use crate::config::profile::{EgressMode, StorageMode};
 
     fn profile_path(name: &str) -> PathBuf {
-        Path::new("../server/profiles")
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../server/profiles")
             .join(name)
             .join("profile.toml")
     }
