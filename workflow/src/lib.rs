@@ -796,8 +796,6 @@ mod tests {
             .and_then(Value::as_str)
             .unwrap_or_default();
         assert!(!merkle_root.is_empty());
-            .find(|entry| entry.receipt.workflow_id == workflow_name)
-            .expect("stage receipt recorded");
 
         assert_eq!(receipt.receipt.stage_name, "stage-merkle");
         assert_eq!(receipt.receipt.leaf_count, 1);

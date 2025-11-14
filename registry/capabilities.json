@@ -55,6 +55,13 @@
       "semver": "0.1.0",
       "requires": ["ui.kanban.assist"],
       "provides": ["kanban.autonomousRetry", "kanban.agentEscalation"]
+    },
+    {
+      "id": "ml.lifecycle.controller",
+      "type": "ml",
+      "semver": "0.1.0",
+      "requires": ["storage.artifacts"],
+      "provides": ["ml.training", "ml.evaluation", "ml.registry"]
     }
   ]
 }

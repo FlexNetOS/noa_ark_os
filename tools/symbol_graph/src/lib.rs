@@ -332,6 +332,27 @@ fn collect_typescript_symbol(
     Ok(())
 }
 
+fn find_enclosing_function(node: Node, source: &str, _language: &str) -> Option<(String, String, String)> {
+    let mut current = node;
+    loop {
+        if let Some(parent) = current.parent() {
+            match parent.kind() {
+                "function_definition" | "function_declaration" | "method_definition" | "arrow_function" => {
+                    if let Some(name) = extract_identifier("rust", parent, source) {
+                        let signature = normalise_signature("rust", parent, source);
+                        let kind = parent.kind().to_string();
+                        return Some((name, kind, signature));
+                    }
+                }
+                _ => {}
+            }
+            current = parent;
+        } else {
+            return None;
+        }
+    }
+}
+
 fn extract_identifier(language: &str, node: Node, source: &str) -> Option<String> {
     match language {
         "rust" => {

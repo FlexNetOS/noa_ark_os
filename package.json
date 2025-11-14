@@ -4,6 +4,9 @@
   "type": "module",
   "packageManager": "pnpm@8.15.4",
   "scripts": {
+    "orchestrate": "tsx scripts/orchestrator.ts",
+    "guardrails:local": "bash scripts/guardrails-local.sh",
+    "smoke:local": "bash scripts/smoke-local.sh",
     "export:roadmap": "tsx scripts/export_roadmap.ts",
     "lint": "pnpm --filter vibe-kanban lint && pnpm --filter vibe-kanban lint:eslint",
     "typecheck": "pnpm --filter vibe-kanban typecheck",
