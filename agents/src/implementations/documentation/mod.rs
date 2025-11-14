@@ -42,7 +42,7 @@ pub struct AgentApprovalRecord {
     pub evidence_tags: Vec<String>,
     #[serde(default)]
     pub evidence_references: Vec<String>,
-    pub recorded_at: DateTime<Utc>,
+    pub recorded_at: u64,
 }
 /// Structured output emitted by the documentation pipelines.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
