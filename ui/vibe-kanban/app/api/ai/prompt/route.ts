@@ -110,7 +110,7 @@ export async function POST(request: Request) {
           outcome: status,
           traceId,
           context: {
-            goalId: goalId ?? cardId,
+            goalId: goalId,
             provider: providerName,
             latencyMs,
           },
