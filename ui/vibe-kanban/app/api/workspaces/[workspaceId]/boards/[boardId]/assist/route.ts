@@ -85,7 +85,8 @@ function buildGoalPayload(
         payload.focusCardId = rawGoal.focusCardId;
       }
       if (rawGoal.context && typeof rawGoal.context === "object") {
-        payload.context = { ...baseContext, ...rawGoal.context };
+        // Ensure critical baseContext fields are not overridden by user input
+        payload.context = { ...rawGoal.context, ...baseContext };
       }
     }
   }
