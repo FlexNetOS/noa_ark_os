@@ -182,6 +182,15 @@ const widgetRegistry = {
       </WidgetSurface>
     );
   },
+  "workspace.automation": ({ context }: ComponentRenderProps) => {
+    const { boardState } = context.data as SchemaDrivenRendererProps["context"]["data"];
+    const cards = boardState.snapshot?.columns.flatMap((column) => column.cards) ?? [];
+    return (
+      <WidgetSurface>
+        <AutomationPanel cards={cards} onRetry={boardState.retryAutomation} />
+      </WidgetSurface>
+    );
+  },
 };
 
 const renderer = createWebRenderer({ registry: widgetRegistry });

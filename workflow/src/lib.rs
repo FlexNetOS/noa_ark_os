@@ -4,14 +4,20 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use chrono::{Duration, Utc};
-use noa_agents::{AgentFactory, AGENT_FACTORY_CAPABILITY};
+use noa_agents::{AgentFactory, AgentRegistry, AGENT_FACTORY_CAPABILITY};
 use noa_core::capabilities::KernelHandle;
 use noa_core::config::manifest::CAPABILITY_PROCESS;
 use noa_core::process::ProcessService;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
+mod agent_dispatch;
 mod instrumentation;
+use agent_dispatch::ToolExecutionStatus;
+pub use agent_dispatch::{
+    AgentDispatchError, AgentDispatcher, TaskDispatchReceipt, ToolExecutionReceipt, ToolExecutionStatus,
+    ToolRequirement,
+};
 pub use instrumentation::{
     EvidenceLedgerEntry, EvidenceLedgerKind, MerkleLeaf, MerkleLevel, PipelineInstrumentation,
     SecurityScanReport, SecurityScanStatus, StageReceipt, TaskReceipt,
@@ -48,6 +54,8 @@ pub struct Task {
     pub agent: String,
     pub action: String,
     pub parameters: HashMap<String, serde_json::Value>,
+    #[serde(default)]
+    pub tool_requirements: Vec<ToolRequirement>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -129,6 +137,7 @@ pub struct WorkflowEngine {
     states: Arc<Mutex<HashMap<String, WorkflowState>>>,
     stage_states: Arc<Mutex<HashMap<String, HashMap<String, StageState>>>>,
     instrumentation: Arc<PipelineInstrumentation>,
+    dispatcher: Arc<AgentDispatcher>,
     kernel: Option<KernelHandle>,
     event_stream: Arc<Mutex<Option<WorkflowEventStream>>>,
 }
@@ -137,11 +146,15 @@ impl WorkflowEngine {
     pub fn new() -> Self {
         let instrumentation =
             PipelineInstrumentation::new().expect("failed to initialise pipeline instrumentation");
+        let registry = AgentRegistry::with_default_data().unwrap_or_else(|_| AgentRegistry::new());
+        let factory = AgentFactory::new();
+        let dispatcher = AgentDispatcher::new(registry, factory);
         Self {
             workflows: Arc::new(Mutex::new(HashMap::new())),
             states: Arc::new(Mutex::new(HashMap::new())),
             stage_states: Arc::new(Mutex::new(HashMap::new())),
             instrumentation: Arc::new(instrumentation),
+            dispatcher: Arc::new(dispatcher),
             kernel: None,
             event_stream: Arc::new(Mutex::new(None)),
         }
@@ -155,11 +168,16 @@ impl WorkflowEngine {
     pub fn with_kernel(kernel: KernelHandle) -> Self {
         let instrumentation =
             PipelineInstrumentation::new().expect("failed to initialise pipeline instrumentation");
+        let registry = AgentRegistry::with_default_data().unwrap_or_else(|_| AgentRegistry::new());
+        let factory = AgentFactory::with_kernel(kernel.clone())
+            .unwrap_or_else(|_| AgentFactory::new());
+        let dispatcher = AgentDispatcher::new(registry, factory);
         Self {
             workflows: Arc::new(Mutex::new(HashMap::new())),
             states: Arc::new(Mutex::new(HashMap::new())),
             stage_states: Arc::new(Mutex::new(HashMap::new())),
             instrumentation: Arc::new(instrumentation),
+            dispatcher: Arc::new(dispatcher),
             kernel: Some(kernel),
             event_stream: Arc::new(Mutex::new(None)),
         }
@@ -263,10 +281,10 @@ impl WorkflowEngine {
         self.set_stage_state(workflow_id, &stage.name, StageState::Running);
 
         let artifacts = match stage.stage_type {
-            StageType::Sequential => self.execute_sequential(stage)?,
-            StageType::Parallel => self.execute_parallel(stage)?,
-            StageType::Conditional => self.execute_conditional(stage)?,
-            StageType::Loop => self.execute_loop(stage)?,
+            StageType::Sequential => self.execute_sequential(workflow_id, stage)?,
+            StageType::Parallel => self.execute_parallel(workflow_id, stage)?,
+            StageType::Conditional => self.execute_conditional(workflow_id, stage)?,
+            StageType::Loop => self.execute_loop(workflow_id, stage)?,
         };
 
         let receipt = self
@@ -285,19 +303,6 @@ impl WorkflowEngine {
             receipt,
             timestamp: now_iso(),
         });
-        if let Err(err) = self.instrumentation.log_stage_receipt(
-            workflow_id,
-            &stage.name,
-            &stage.stage_type,
-            &artifacts,
-        ) {
-            return Err(format!("stage receipt failed: {}", err));
-        }
-
-        println!(
-            "[WORKFLOW] Stage receipt generated for {}::{}",
-            workflow_id, stage.name
-        );
 
         // Mark stage as completed
         self.set_stage_state(workflow_id, &stage.name, StageState::Completed);
@@ -305,16 +310,16 @@ impl WorkflowEngine {
     }
 
     /// Execute tasks sequentially
-    fn execute_sequential(&self, stage: &Stage) -> Result<Vec<Value>, String> {
+    fn execute_sequential(&self, workflow_id: &str, stage: &Stage) -> Result<Vec<Value>, String> {
         let mut artifacts = Vec::with_capacity(stage.tasks.len());
-        for task in &stage.tasks {
-            artifacts.push(self.execute_task(task)?);
+        for (index, task) in stage.tasks.iter().enumerate() {
+            artifacts.push(self.execute_task(workflow_id, stage, index, task)?);
         }
         Ok(artifacts)
     }
 
     /// Execute tasks in parallel
-    fn execute_parallel(&self, stage: &Stage) -> Result<Vec<Value>, String> {
+    fn execute_parallel(&self, workflow_id: &str, stage: &Stage) -> Result<Vec<Value>, String> {
         println!(
             "[WORKFLOW] Executing {} tasks in parallel",
             stage.tasks.len()
@@ -322,27 +327,33 @@ impl WorkflowEngine {
 
         // In a real implementation, this would spawn threads/processes
         let mut artifacts = Vec::with_capacity(stage.tasks.len());
-        for task in &stage.tasks {
-            artifacts.push(self.execute_task(task)?);
+        for (index, task) in stage.tasks.iter().enumerate() {
+            artifacts.push(self.execute_task(workflow_id, stage, index, task)?);
         }
 
         Ok(artifacts)
     }
 
     /// Execute tasks conditionally
-    fn execute_conditional(&self, stage: &Stage) -> Result<Vec<Value>, String> {
+    fn execute_conditional(&self, workflow_id: &str, stage: &Stage) -> Result<Vec<Value>, String> {
         // Implementation would check conditions
-        self.execute_sequential(stage)
+        self.execute_sequential(workflow_id, stage)
     }
 
     /// Execute tasks in a loop
-    fn execute_loop(&self, stage: &Stage) -> Result<Vec<Value>, String> {
+    fn execute_loop(&self, workflow_id: &str, stage: &Stage) -> Result<Vec<Value>, String> {
         // Implementation would loop based on condition
-        self.execute_sequential(stage)
+        self.execute_sequential(workflow_id, stage)
     }
 
     /// Execute a single task
-    fn execute_task(&self, task: &Task) -> Result<Value, String> {
+    fn execute_task(
+        &self,
+        workflow_id: &str,
+        stage: &Stage,
+        index: usize,
+        task: &Task,
+    ) -> Result<Value, String> {
         println!(
             "[WORKFLOW] Executing task: agent={}, action={}",
             task.agent, task.action
@@ -365,12 +376,30 @@ impl WorkflowEngine {
                 );
             }
         }
+        let dispatch = self
+            .dispatcher
+            .dispatch(task)
+            .map_err(|err| format!("agent dispatch failed: {}", err))?;
+        self.instrumentation
+            .log_task_dispatch(workflow_id, &stage.name, &dispatch)
+            .map_err(|err| format!("task dispatch instrumentation failed: {}", err))?;
+
+        let all_tools_ok = dispatch
+            .tool_receipts
+            .iter()
+            .all(|receipt| matches!(receipt.status, ToolExecutionStatus::Succeeded | ToolExecutionStatus::Skipped));
+        let status = if all_tools_ok { "completed" } else { "failed" };
+
         Ok(json!({
-            "agent": task.agent,
+            "agent": dispatch.agent_metadata.agent_id,
+            "agent_instance_id": dispatch.agent_instance_id,
             "action": task.action,
             "parameters": parameters_to_value(&task.parameters),
-            "status": "completed",
+            "tool_receipts": dispatch.tool_receipts,
+            "status": status,
             "timestamp": now_iso(),
+            "output": dispatch.output,
+            "task_index": index,
         }))
     }
 
@@ -507,6 +536,7 @@ mod tests {
     use serde_json::json;
     use std::fs;
     use std::path::Path;
+    use std::collections::HashMap;
 
     use crate::instrumentation::{EvidenceLedgerEntry, EvidenceLedgerKind};
     use tempfile::tempdir;
@@ -575,6 +605,46 @@ mod tests {
             )
             .expect("documentation log should succeed");
         assert!(security::verify_signed_operation(&documentation));
+    }
+
+    #[test]
+    fn task_dispatch_events_logged_with_tool_requirements() {
+        let dir = tempdir().unwrap();
+        let _guard = EnvGuard::set("NOA_WORKFLOW_ROOT", dir.path());
+        let engine = WorkflowEngine::new();
+        let workflow_name = format!("dispatch-{}", Utc::now().timestamp_nanos());
+        let workflow = Workflow {
+            name: workflow_name.clone(),
+            version: "1.0".to_string(),
+            stages: vec![Stage {
+                name: "dispatch-stage".to_string(),
+                stage_type: StageType::Sequential,
+                depends_on: vec![],
+                tasks: vec![Task {
+                    agent: "ModelSelectorAgent".to_string(),
+                    action: "evaluate_tools".to_string(),
+                    parameters: HashMap::from([(String::from("scope"), json!("tests"))]),
+                    tool_requirements: vec![ToolRequirement {
+                        name: "Analysis pass".to_string(),
+                        capability: "workflow.taskDispatch".to_string(),
+                        optional: false,
+                        parameters: json!({"depth": 1}),
+                    }],
+                }],
+            }],
+        };
+
+        let id = engine.load_workflow(workflow).unwrap();
+        engine.execute(&id).unwrap();
+
+        let log_path = dir
+            .path()
+            .join(".workspace")
+            .join("indexes")
+            .join("task_dispatches.log");
+        let content = fs::read_to_string(&log_path).expect("dispatch log present");
+        assert!(content.contains("\"tool_receipts\""));
+        assert!(content.contains("workflow::dispatch-stage"));
     }
 
     #[test]

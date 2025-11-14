@@ -9,7 +9,34 @@ export type CardIntegrationSnapshot = {
   details?: string;
 };
 
-export type Goal = {
+export type ToolExecutionTelemetry = {
+  name: string;
+  capability: string;
+  status: "pending" | "running" | "succeeded" | "failed" | "skipped";
+  output?: string;
+  error?: string;
+  occurredAt?: string;
+};
+
+export type AgentAutomationRun = {
+  agentId: string;
+  agentName: string;
+  status: "queued" | "running" | "completed" | "failed";
+  attempt: number;
+  startedAt: string;
+  finishedAt?: string;
+  notes?: string;
+  toolResults: ToolExecutionTelemetry[];
+};
+
+export type GoalAutomationState = {
+  goalId: string;
+  history: AgentAutomationRun[];
+  lastUpdated: string;
+  retryAvailable: boolean;
+};
+
+export type VibeCard = {
   id: string;
   title: string;
   notes: string;
@@ -18,6 +45,7 @@ export type Goal = {
   assigneeId?: string;
   dueDate?: string;
   integrations?: CardIntegrationSnapshot[];
+  automation?: GoalAutomationState | null;
 };
 
 export type VibeColumn = {

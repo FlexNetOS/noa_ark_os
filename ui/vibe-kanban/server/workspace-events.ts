@@ -1,9 +1,14 @@
 import { EventEmitter } from "events";
 
-import type { ActivityEvent, NotificationEvent, WorkspacePresenceState } from "../app/components/board-types";
+import type {
+  ActivityEvent,
+  GoalAutomationState,
+  NotificationEvent,
+  WorkspacePresenceState,
+} from "../app/components/board-types";
 
 type WorkspaceEventPayload = {
-  type: "board-updated" | "activity" | "presence" | "notification";
+  type: "board-updated" | "activity" | "presence" | "notification" | "automation";
   workspaceId: string;
   boardId?: string;
   data: unknown;
@@ -42,6 +47,20 @@ class WorkspaceEventHub {
 
   publishNotification(workspaceId: string, notification: NotificationEvent) {
     this.broadcast({ type: "notification", workspaceId, data: notification });
+  }
+
+  publishAutomation(
+    workspaceId: string,
+    boardId: string,
+    cardId: string,
+    automation: GoalAutomationState
+  ) {
+    this.broadcast({
+      type: "automation",
+      workspaceId,
+      boardId,
+      data: { boardId, cardId, automation },
+    });
   }
 
   heartbeat(workspaceId: string, boardId: string | undefined, userId: string, userName: string) {
