@@ -6,6 +6,7 @@ export type WidgetKind =
   | "workspace.analytics"
   | "workspace.activity"
   | "workspace.assist"
+  | "workspace.planner"
   | "workspace.integrations"
   | "workspace.presence"
   | "layout.region"

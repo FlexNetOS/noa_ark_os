@@ -86,6 +86,7 @@ export async function POST(request: Request) {
       loadTemplate,
       provider,
       logRequest: async ({
+        goalId,
         cardId,
         title,
         provider: providerName,
@@ -95,6 +96,7 @@ export async function POST(request: Request) {
       }: AiRequestLogEntry) => {
         aiDatabase.logRequest({
           source: "kanban",
+          goalId,
           cardId,
           title,
           provider: providerName,
@@ -109,7 +111,7 @@ export async function POST(request: Request) {
           outcome: status,
           traceId,
           context: {
-            cardId,
+            goalId: goalId,
             provider: providerName,
             latencyMs,
           },
