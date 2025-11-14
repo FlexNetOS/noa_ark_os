@@ -1,4 +1,5 @@
-use std::sync::Arc;
+use std::collections::HashMap;
+use std::sync::{Arc, OnceLock};
 
 use noa_agents::registry::AgentRegistry;
 use noa_agents::unified_types::AgentMetadata;
@@ -15,6 +16,25 @@ pub enum AgentDispatchError {
     AgentNotFound(String),
     #[error("failed to instantiate agent: {0}")]
     AgentFactory(String),
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct RoleMapping {
+    agent_id: String,
+    #[serde(default)]
+    description: Option<String>,
+}
+
+fn role_directory() -> &'static HashMap<String, RoleMapping> {
+    static ROLE_DIRECTORY: OnceLock<HashMap<String, RoleMapping>> = OnceLock::new();
+    ROLE_DIRECTORY.get_or_init(|| {
+        let raw = include_str!("../../agents/data/agent_roles.json");
+        let parsed: HashMap<String, RoleMapping> = serde_json::from_str(raw).unwrap_or_default();
+        parsed
+            .into_iter()
+            .map(|(role, mapping)| (role.to_lowercase(), mapping))
+            .collect()
+    })
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -83,11 +103,7 @@ impl AgentDispatcher {
     }
 
     pub fn dispatch(&self, task: &Task) -> Result<TaskDispatchReceipt, AgentDispatchError> {
-        let metadata = self
-            .registry
-            .get(&task.agent)
-            .or_else(|| self.registry.all().into_iter().find(|agent| agent.name == task.agent))
-            .ok_or_else(|| AgentDispatchError::AgentNotFound(task.agent.clone()))?;
+        let metadata = self.resolve_agent_metadata(task)?;
 
         let instance_id = self
             .factory
@@ -147,6 +163,55 @@ impl AgentDispatcher {
             task: task.clone(),
             output: overall_output,
             tool_receipts,
+        })
+    }
+}
+
+impl AgentDispatcher {
+    fn resolve_agent_metadata(&self, task: &Task) -> Result<AgentMetadata, AgentDispatchError> {
+        if let Some(role) = task
+            .agent_role
+            .as_ref()
+            .filter(|value| !value.trim().is_empty())
+        {
+            return self.resolve_agent_by_role(task, role);
+        }
+
+        if let Some(role) = task
+            .agent
+            .strip_prefix("role::")
+            .or_else(|| task.agent.strip_prefix("role:"))
+        {
+            return self.resolve_agent_by_role(task, role.trim());
+        }
+
+        self.find_agent(&task.agent)
+            .ok_or_else(|| AgentDispatchError::AgentNotFound(task.agent.clone()))
+    }
+
+    fn resolve_agent_by_role(
+        &self,
+        task: &Task,
+        role: &str,
+    ) -> Result<AgentMetadata, AgentDispatchError> {
+        let role_key = role.to_lowercase();
+        let mapping = role_directory()
+            .get(&role_key)
+            .ok_or_else(|| AgentDispatchError::AgentNotFound(format!("role::{role}")))?;
+
+        let mut metadata = self
+            .find_agent(&mapping.agent_id)
+            .ok_or_else(|| AgentDispatchError::AgentNotFound(mapping.agent_id.clone()))?;
+        metadata.role = task.agent_role.clone().unwrap_or_else(|| role.to_string());
+        Ok(metadata)
+    }
+
+    fn find_agent(&self, identifier: &str) -> Option<AgentMetadata> {
+        self.registry.get(identifier).or_else(|| {
+            let name = identifier.to_lowercase();
+            self.registry.all().into_iter().find(|agent| {
+                agent.agent_id.eq_ignore_ascii_case(identifier) || agent.name.to_lowercase() == name
+            })
         })
     }
 }
