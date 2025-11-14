@@ -17,6 +17,7 @@ const DOCUMENT_LOG: &str = "documentation";
 const STAGE_RECEIPT_LOG: &str = "stage_receipts";
 const SECURITY_SCAN_LOG: &str = "security_scans";
 const TASK_DISPATCH_LOG: &str = "task_dispatches";
+const INFERENCE_LOG: &str = "inference_metrics";
 const EVIDENCE_LEDGER_DIR: &str = "storage/db/evidence";
 const EVIDENCE_LEDGER_FILE: &str = "ledger.jsonl";
 const GOAL_ANALYTICS_DIR: &str = "storage/db/analytics";
@@ -238,7 +239,11 @@ impl GoalAggregate {
             .iter()
             .map(|(agent, aggregate)| aggregate.to_metric(agent))
             .collect();
-        agents.sort_by(|a, b| b.success_rate.partial_cmp(&a.success_rate).unwrap_or(std::cmp::Ordering::Equal));
+        agents.sort_by(|a, b| {
+            b.success_rate
+                .partial_cmp(&a.success_rate)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         GoalMetricSnapshot {
             goal_id: self.goal_id.clone(),
@@ -295,6 +300,18 @@ pub struct GoalMetricSnapshot {
     pub success_rate: f64,
     pub agents: Vec<GoalAgentMetric>,
     pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InferenceMetric {
+    pub provider: String,
+    pub model: String,
+    pub status: String,
+    pub latency_ms: u128,
+    pub tokens_prompt: usize,
+    pub tokens_completion: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
 }
 
 impl StageReceipt {
@@ -491,6 +508,7 @@ impl PipelineInstrumentation {
         instrumentation.ensure_genesis(STAGE_RECEIPT_LOG, OperationKind::StageReceipt)?;
         instrumentation.ensure_genesis(TASK_DISPATCH_LOG, OperationKind::Other)?;
         instrumentation.ensure_genesis(SECURITY_SCAN_LOG, OperationKind::SecurityScan)?;
+        instrumentation.ensure_genesis(INFERENCE_LOG, OperationKind::Other)?;
         instrumentation.ensure_evidence_ledger()?;
         instrumentation.ensure_goal_metrics()?;
 
@@ -770,6 +788,42 @@ impl PipelineInstrumentation {
         Ok(store.snapshots())
     }
 
+    pub fn log_inference_metric(
+        &self,
+        metric: InferenceMetric,
+    ) -> Result<(), InstrumentationError> {
+        let provider = metric.provider;
+        let model = metric.model;
+        let status = metric.status;
+        let latency_ms = metric.latency_ms;
+        let tokens_prompt = metric.tokens_prompt;
+        let tokens_completion = metric.tokens_completion;
+        let error = metric.error;
+        let metadata = json!({
+            "provider": provider,
+            "model": model,
+            "status": status,
+            "latency_ms": latency_ms,
+            "tokens_prompt": tokens_prompt,
+            "tokens_completion": tokens_completion,
+            "error": error,
+        });
+        let event = PipelineLogEvent {
+            event_type: "inference.metric".to_string(),
+            actor: provider.clone(),
+            scope: model.clone(),
+            source: None,
+            target: None,
+            metadata: metadata.clone(),
+            timestamp: current_timestamp_millis(),
+        };
+        let record =
+            OperationRecord::new(OperationKind::Other, provider, model).with_metadata(metadata);
+
+        self.append_entry(INFERENCE_LOG, event, record)?;
+        Ok(())
+    }
+
     fn append_entry(
         &self,
         log_name: &str,
@@ -1010,7 +1064,8 @@ fn load_goal_metrics(path: &PathBuf) -> Result<GoalMetricStore, InstrumentationE
                 let mut aggregate = GoalAggregate::new(&snapshot.goal_id, &snapshot.workflow_id);
                 aggregate.total_runs = snapshot.total_runs;
                 aggregate.successful_runs = snapshot.successful_runs;
-                let duration = (snapshot.average_lead_time_ms * snapshot.total_runs as f64).round() as u128;
+                let duration =
+                    (snapshot.average_lead_time_ms * snapshot.total_runs as f64).round() as u128;
                 aggregate.total_duration_ms = duration;
                 for agent in snapshot.agents {
                     aggregate.agents.insert(

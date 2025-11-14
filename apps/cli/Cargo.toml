@@ -14,3 +14,5 @@ tokio = { workspace = true }
 relocation-daemon = { path = "../../services/relocation-daemon" }
 uuid = { version = "1.6", features = ["v4"] }
 noa_workflow = { path = "../../workflow" }
+noa_inference = { path = "../../server/ai/inference" }
+futures = "0.3"

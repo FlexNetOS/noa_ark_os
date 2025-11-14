@@ -16,13 +16,13 @@ mod agent_dispatch;
 mod instrumentation;
 use agent_dispatch::ToolExecutionStatus;
 pub use agent_dispatch::{
-    AgentDispatchError, AgentDispatcher, TaskDispatchReceipt, ToolExecutionReceipt, ToolExecutionStatus,
-    ToolRequirement,
+    AgentDispatchError, AgentDispatcher, TaskDispatchReceipt, ToolExecutionReceipt,
+    ToolExecutionStatus, ToolRequirement,
 };
 pub use instrumentation::{
     AgentExecutionResult, EvidenceLedgerEntry, EvidenceLedgerKind, GoalAgentMetric,
-    GoalMetricSnapshot, GoalOutcomeRecord, MerkleLeaf, MerkleLevel, PipelineInstrumentation,
-    SecurityScanReport, SecurityScanStatus, StageReceipt, TaskReceipt,
+    GoalMetricSnapshot, GoalOutcomeRecord, InferenceMetric, MerkleLeaf, MerkleLevel,
+    PipelineInstrumentation, SecurityScanReport, SecurityScanStatus, StageReceipt, TaskReceipt,
 };
 use tokio::sync::broadcast;
 
@@ -188,8 +188,8 @@ impl WorkflowEngine {
         let instrumentation =
             PipelineInstrumentation::new().expect("failed to initialise pipeline instrumentation");
         let registry = AgentRegistry::with_default_data().unwrap_or_else(|_| AgentRegistry::new());
-        let factory = AgentFactory::with_kernel(kernel.clone())
-            .unwrap_or_else(|_| AgentFactory::new());
+        let factory =
+            AgentFactory::with_kernel(kernel.clone()).unwrap_or_else(|_| AgentFactory::new());
         let dispatcher = AgentDispatcher::new(registry, factory);
         Self {
             workflows: Arc::new(Mutex::new(HashMap::new())),
@@ -295,13 +295,8 @@ impl WorkflowEngine {
                     success: false,
                     agents: tracker.snapshot(),
                 };
-                if let Err(metric_err) =
-                    self.instrumentation.record_goal_outcome(outcome)
-                {
-                    println!(
-                        "[WORKFLOW] Failed to record goal outcome: {}",
-                        metric_err
-                    );
+                if let Err(metric_err) = self.instrumentation.record_goal_outcome(outcome) {
+                    println!("[WORKFLOW] Failed to record goal outcome: {}", metric_err);
                 }
                 return Err(err);
             }
@@ -318,10 +313,7 @@ impl WorkflowEngine {
             agents: tracker.snapshot(),
         };
         if let Err(metric_err) = self.instrumentation.record_goal_outcome(outcome) {
-            println!(
-                "[WORKFLOW] Failed to record goal outcome: {}",
-                metric_err
-            );
+            println!("[WORKFLOW] Failed to record goal outcome: {}", metric_err);
         }
 
         // Mark as completed
@@ -614,9 +606,9 @@ mod tests {
     use chrono::Utc;
     use noa_core::security;
     use serde_json::json;
+    use std::collections::HashMap;
     use std::fs;
     use std::path::Path;
-    use std::collections::HashMap;
 
     use crate::instrumentation::{EvidenceLedgerEntry, EvidenceLedgerKind};
     use tempfile::tempdir;
