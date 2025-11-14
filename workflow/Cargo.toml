@@ -17,3 +17,7 @@ tokio-stream = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
 tempfile = "3"
 thiserror = "1"
+
+[[bin]]
+name = "reward_report"
+path = "src/bin/reward_report.rs"

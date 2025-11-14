@@ -1,4 +1,7 @@
-use crate::{Stage, StageType, Task};
+use crate::reward::{
+    AgentApprovalStatus, AgentStandingSummary, RewardAgentSnapshot, RewardInputs, RewardScorekeeper,
+};
+use crate::{reward::RewardError, Stage, StageType, Task, TaskDispatchReceipt};
 use chrono::Utc;
 use noa_core::security::{self, OperationKind, OperationRecord, SignedOperation};
 use noa_core::utils::{current_timestamp_millis, simple_hash};
@@ -21,12 +24,15 @@ const EVIDENCE_LEDGER_DIR: &str = "storage/db/evidence";
 const EVIDENCE_LEDGER_FILE: &str = "ledger.jsonl";
 const GOAL_ANALYTICS_DIR: &str = "storage/db/analytics";
 const GOAL_ANALYTICS_FILE: &str = "goal_kpis.json";
+const METRICS_DIR: &str = "metrics";
+const REWARD_HISTORY_FILE: &str = "reward_history.json";
 
 #[derive(Debug)]
 pub enum InstrumentationError {
     Io(std::io::Error),
     Serialization(serde_json::Error),
     Security(security::PolicyError),
+    Reward(RewardError),
 }
 
 impl std::fmt::Display for InstrumentationError {
@@ -35,6 +41,7 @@ impl std::fmt::Display for InstrumentationError {
             InstrumentationError::Io(err) => write!(f, "io error: {}", err),
             InstrumentationError::Serialization(err) => write!(f, "serialization error: {}", err),
             InstrumentationError::Security(err) => write!(f, "policy error: {}", err),
+            InstrumentationError::Reward(err) => write!(f, "reward error: {}", err),
         }
     }
 }
@@ -56,6 +63,12 @@ impl From<serde_json::Error> for InstrumentationError {
 impl From<security::PolicyError> for InstrumentationError {
     fn from(err: security::PolicyError) -> Self {
         Self::Security(err)
+    }
+}
+
+impl From<RewardError> for InstrumentationError {
+    fn from(err: RewardError) -> Self {
+        Self::Reward(err)
     }
 }
 
@@ -149,6 +162,8 @@ pub struct GoalOutcomeRecord {
     pub success: bool,
     #[serde(default)]
     pub agents: Vec<AgentExecutionResult>,
+    #[serde(default)]
+    pub reward_inputs: Option<RewardInputs>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -238,7 +253,11 @@ impl GoalAggregate {
             .iter()
             .map(|(agent, aggregate)| aggregate.to_metric(agent))
             .collect();
-        agents.sort_by(|a, b| b.success_rate.partial_cmp(&a.success_rate).unwrap_or(std::cmp::Ordering::Equal));
+        agents.sort_by(|a, b| {
+            b.success_rate
+                .partial_cmp(&a.success_rate)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         GoalMetricSnapshot {
             goal_id: self.goal_id.clone(),
@@ -460,6 +479,9 @@ pub struct PipelineInstrumentation {
     evidence_ledger_path: PathBuf,
     goal_metrics_path: PathBuf,
     goal_metrics: Mutex<GoalMetricStore>,
+    metrics_dir: PathBuf,
+    reward_history_path: PathBuf,
+    reward_scorekeeper: Mutex<RewardScorekeeper>,
 }
 
 impl PipelineInstrumentation {
@@ -468,14 +490,18 @@ impl PipelineInstrumentation {
         let mirror_dir = resolve_path(STORAGE_MIRROR_DIR);
         let evidence_dir = resolve_path(EVIDENCE_LEDGER_DIR);
         let analytics_dir = resolve_path(GOAL_ANALYTICS_DIR);
+        let metrics_dir = resolve_path(METRICS_DIR);
         fs::create_dir_all(&index_dir)?;
         fs::create_dir_all(&mirror_dir)?;
         fs::create_dir_all(&evidence_dir)?;
         fs::create_dir_all(&analytics_dir)?;
+        fs::create_dir_all(&metrics_dir)?;
 
         let evidence_ledger_path = evidence_dir.join(EVIDENCE_LEDGER_FILE);
         let goal_metrics_path = analytics_dir.join(GOAL_ANALYTICS_FILE);
         let goal_metrics = Mutex::new(load_goal_metrics(&goal_metrics_path)?);
+        let reward_history_path = metrics_dir.join(REWARD_HISTORY_FILE);
+        let reward_scorekeeper = Mutex::new(RewardScorekeeper::new(reward_history_path.clone())?);
 
         let instrumentation = Self {
             index_dir,
@@ -484,6 +510,9 @@ impl PipelineInstrumentation {
             evidence_ledger_path,
             goal_metrics_path,
             goal_metrics,
+            metrics_dir,
+            reward_history_path,
+            reward_scorekeeper,
         };
 
         instrumentation.ensure_genesis(RELOCATION_LOG, OperationKind::FileMove)?;
@@ -493,6 +522,7 @@ impl PipelineInstrumentation {
         instrumentation.ensure_genesis(SECURITY_SCAN_LOG, OperationKind::SecurityScan)?;
         instrumentation.ensure_evidence_ledger()?;
         instrumentation.ensure_goal_metrics()?;
+        instrumentation.ensure_reward_history()?;
 
         Ok(instrumentation)
     }
@@ -762,12 +792,51 @@ impl PipelineInstrumentation {
             let mut store = self.goal_metrics.lock().unwrap();
             store.record(&outcome);
         }
+        if let Some(inputs) = outcome.reward_inputs.clone() {
+            let agent_snapshots: Vec<RewardAgentSnapshot> = outcome
+                .agents
+                .iter()
+                .map(|agent| RewardAgentSnapshot {
+                    agent: agent.agent.clone(),
+                    success: agent.success,
+                })
+                .collect();
+            let mut keeper = self.reward_scorekeeper.lock().unwrap();
+            let delta = keeper.record(
+                &outcome.goal_id,
+                &outcome.workflow_id,
+                inputs,
+                &agent_snapshots,
+            );
+            self.persist_reward_history(&*keeper)?;
+            drop(keeper);
+            println!(
+                "[REWARD] {}::{} delta={:.2} coverage={:.2} flake={:.2} tokens={:.2} rollback={:.2}",
+                outcome.goal_id,
+                outcome.workflow_id,
+                delta.total_reward,
+                delta.coverage_delta,
+                delta.flake_delta,
+                delta.token_delta,
+                delta.rollback_delta
+            );
+        }
         self.persist_goal_metrics()
     }
 
     pub fn goal_metrics_snapshot(&self) -> Result<Vec<GoalMetricSnapshot>, InstrumentationError> {
         let store = self.goal_metrics.lock().unwrap();
         Ok(store.snapshots())
+    }
+
+    pub fn evaluate_agent_for_execution(&self, agent: &str) -> AgentApprovalStatus {
+        let keeper = self.reward_scorekeeper.lock().unwrap();
+        keeper.approval_status(agent)
+    }
+
+    pub fn flagged_agents(&self) -> Vec<AgentStandingSummary> {
+        let keeper = self.reward_scorekeeper.lock().unwrap();
+        keeper.flagged_agents()
     }
 
     fn append_entry(
@@ -827,6 +896,17 @@ impl PipelineInstrumentation {
         })
     }
 
+    fn ensure_reward_history(&self) -> Result<(), InstrumentationError> {
+        with_log_lock(|| {
+            if self.reward_history_path.exists() {
+                return Ok(());
+            }
+            let keeper = self.reward_scorekeeper.lock().unwrap();
+            keeper.save()?;
+            Ok(())
+        })
+    }
+
     fn persist_goal_metrics(&self) -> Result<(), InstrumentationError> {
         let store = self.goal_metrics.lock().unwrap();
         let snapshots = store.snapshots();
@@ -838,6 +918,24 @@ impl PipelineInstrumentation {
                 .write(true)
                 .truncate(true)
                 .open(&self.goal_metrics_path)?;
+            file.write_all(payload.as_bytes())?;
+            file.flush()?;
+            file.sync_all()?;
+            Ok(())
+        })
+    }
+
+    fn persist_reward_history(
+        &self,
+        keeper: &RewardScorekeeper,
+    ) -> Result<(), InstrumentationError> {
+        let payload = serde_json::to_string_pretty(keeper.history())?;
+        with_log_lock(|| {
+            let mut file = OpenOptions::new()
+                .create(true)
+                .write(true)
+                .truncate(true)
+                .open(&self.reward_history_path)?;
             file.write_all(payload.as_bytes())?;
             file.flush()?;
             file.sync_all()?;
@@ -971,6 +1069,7 @@ fn build_merkle_tree(
 impl Clone for PipelineInstrumentation {
     fn clone(&self) -> Self {
         let metrics = self.goal_metrics.lock().unwrap().clone();
+        let reward = self.reward_scorekeeper.lock().unwrap().clone();
         Self {
             index_dir: self.index_dir.clone(),
             mirror_dir: self.mirror_dir.clone(),
@@ -978,6 +1077,9 @@ impl Clone for PipelineInstrumentation {
             evidence_ledger_path: self.evidence_ledger_path.clone(),
             goal_metrics_path: self.goal_metrics_path.clone(),
             goal_metrics: Mutex::new(metrics),
+            metrics_dir: self.metrics_dir.clone(),
+            reward_history_path: self.reward_history_path.clone(),
+            reward_scorekeeper: Mutex::new(reward),
         }
     }
 }
@@ -1010,7 +1112,8 @@ fn load_goal_metrics(path: &PathBuf) -> Result<GoalMetricStore, InstrumentationE
                 let mut aggregate = GoalAggregate::new(&snapshot.goal_id, &snapshot.workflow_id);
                 aggregate.total_runs = snapshot.total_runs;
                 aggregate.successful_runs = snapshot.successful_runs;
-                let duration = (snapshot.average_lead_time_ms * snapshot.total_runs as f64).round() as u128;
+                let duration =
+                    (snapshot.average_lead_time_ms * snapshot.total_runs as f64).round() as u128;
                 aggregate.total_duration_ms = duration;
                 for agent in snapshot.agents {
                     aggregate.agents.insert(
@@ -1033,18 +1136,30 @@ mod tests {
     use super::*;
     use serde_json::json;
     use std::collections::HashMap;
+    use std::sync::{Mutex, OnceLock};
     use tempfile::tempdir;
+
+    fn env_lock() -> &'static Mutex<()> {
+        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        LOCK.get_or_init(|| Mutex::new(()))
+    }
 
     struct EnvGuard {
         key: &'static str,
         prev: Option<std::ffi::OsString>,
+        lock: Option<std::sync::MutexGuard<'static, ()>>,
     }
 
     impl EnvGuard {
         fn set(key: &'static str, value: &PathBuf) -> Self {
+            let guard = env_lock().lock().expect("workflow env lock poisoned");
             let prev = std::env::var_os(key);
             std::env::set_var(key, value);
-            Self { key, prev }
+            Self {
+                key,
+                prev,
+                lock: Some(guard),
+            }
         }
     }
 
@@ -1055,6 +1170,7 @@ mod tests {
             } else {
                 std::env::remove_var(self.key);
             }
+            self.lock.take();
         }
     }
 
@@ -1067,6 +1183,7 @@ mod tests {
                 agent: "builder".to_string(),
                 action: "compile".to_string(),
                 parameters: HashMap::from([("target".to_string(), json!({"path": "src/main.rs"}))]),
+                tool_requirements: vec![],
             }],
         }
     }

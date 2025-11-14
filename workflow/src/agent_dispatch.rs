@@ -86,7 +86,12 @@ impl AgentDispatcher {
         let metadata = self
             .registry
             .get(&task.agent)
-            .or_else(|| self.registry.all().into_iter().find(|agent| agent.name == task.agent))
+            .or_else(|| {
+                self.registry
+                    .all()
+                    .into_iter()
+                    .find(|agent| agent.name == task.agent)
+            })
             .ok_or_else(|| AgentDispatchError::AgentNotFound(task.agent.clone()))?;
 
         let instance_id = self

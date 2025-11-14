@@ -71,11 +71,11 @@ sbom:
 
 # Scorekeeper (trust calculation)
 scorekeeper:
-	@echo "🎯 Calculating trust scores..."
-	@mkdir -p metrics
-	@# TODO: Implement scorekeeper with integrity/reversibility/capability metrics
-	@echo "⚠️  Scorekeeper not yet implemented (Phase 2)"
-	@echo '{"trust_score": null, "timestamp": "'$$(date -u +%Y-%m-%dT%H:%M:%SZ)'"}' > metrics/trust_score.json
+        @echo "🎯 Calculating trust scores..."
+        @mkdir -p metrics
+        @cargo run -p noa_workflow --bin reward_report -- --json > metrics/reward_summary.json
+        @cargo run -p noa_workflow --bin reward_report -- > metrics/reward_summary.txt
+        @echo "✅ Scorekeeper report generated at metrics/reward_summary.json"
 
 # Package artifacts
 package:
