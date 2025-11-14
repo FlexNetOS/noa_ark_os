@@ -107,6 +107,10 @@ crc/sandboxes/*/active/
 crc/drop-in/incoming/stale/
 crc/drop-in/incoming/forks/*/
 
+# Devshell state snapshots
+tools/devshell/state/*
+!tools/devshell/state/.gitkeep
+
 # Models & Large Files
 *.bin
 *.gguf

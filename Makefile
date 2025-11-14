@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 
 PNPM ?= pnpm
-CARGO ?= cargo
+CARGO ?= ./tools/devshell/portable-cargo.sh
 PYTHON ?= python3
 
 SNAPSHOT_ARCHIVE_ROOT ?= archive
@@ -59,12 +59,12 @@ pipeline.local: world-verify build sbom test package sign verify scorekeeper pub
 
 # World model verification
 world-verify:
-	@echo "🔍 Reconciling world model consistency..."
-	@cargo run -p noa_core --bin noa_world -- verify
+        @echo "🔍 Reconciling world model consistency..."
+        @$(CARGO) run -p noa_core --bin noa_world -- verify
 
 world-fix:
-	@echo "🛠️ Generating remediation plan for world model drift..."
-	@cargo run -p noa_core --bin noa_world -- fix
+        @echo "🛠️ Generating remediation plan for world model drift..."
+        @$(CARGO) run -p noa_core --bin noa_world -- fix
 
 # Kernel build
 kernel:
@@ -152,9 +152,11 @@ publish-audit:
 
 # Setup toolchain
 setup:
-	@echo "🔧 Setting up build environment..."
-	@# Install Rust if needed
-	@command -v rustc >/dev/null 2>&1 || curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-	@# Install pnpm if needed
-	@command -v pnpm >/dev/null 2>&1 || npm install -g pnpm
-	@echo "✅ Setup complete"
+        @echo "🔧 Setting up build environment..."
+        @# Install Rust if needed
+        @command -v rustc >/dev/null 2>&1 || curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        @# Install pnpm if needed
+        @command -v pnpm >/dev/null 2>&1 || npm install -g pnpm
+        @echo "🔍 Capturing Cargo environment snapshot..."
+        @$(CARGO) --version
+        @echo "✅ Setup complete"

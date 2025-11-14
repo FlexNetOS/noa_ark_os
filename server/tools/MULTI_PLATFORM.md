@@ -8,6 +8,26 @@ This workspace supports development on **three platforms**:
 2. **WSL (Windows Subsystem for Linux)** - Can use native Linux Rust or Windows portable
 3. **Ubuntu/Linux** - Uses system Rust installation
 
+All platforms now share a unified command entrypoint via `tools/devshell/portable-cargo.{sh,ps1}`. The wrapper sources the appropriate activator, sets `CARGO_HOME`/`RUSTUP_HOME`, and records the environment status in `tools/devshell/state/cargo-env.{json,yaml}` so other tooling can reuse the configuration without re-running detection.
+
+---
+
+## 🚀 Unified CLI Usage
+
+Use the devshell wrapper instead of invoking `cargo` directly:
+
+```bash
+# Linux / WSL
+./tools/devshell/portable-cargo.sh <cargo-args>
+```
+
+```powershell
+# Windows PowerShell
+./tools/devshell/portable-cargo.ps1 <cargo-args>
+```
+
+The wrapper auto-detects whether the portable toolchain is installed or if the system Rustup should be used, ensuring a consistent experience between terminal sessions and automation (Makefile, CI emulation, etc.).
+
 ---
 
 ## 🪟 Windows (PowerShell) Setup
@@ -16,17 +36,19 @@ This workspace supports development on **three platforms**:
 
 ```powershell
 # Run setup script (one-time)
-.\server\tools\setup-portable-cargo.ps1
+./server/tools/setup-portable-cargo.ps1
 ```
 
 ### Every Session
 
 ```powershell
-# Activate portable Cargo
-.\server\tools\activate-cargo.ps1
+# Activate portable Cargo interactively when needed
+./server/tools/activate-cargo.ps1
 
-# Verify
-cargo --version
+# Preferred: run commands through the wrapper
+./tools/devshell/portable-cargo.ps1 --version
+./tools/devshell/portable-cargo.ps1 build
+./tools/devshell/portable-cargo.ps1 test
 ```
 
 ### Location
@@ -48,20 +70,21 @@ You have **two options** for using Rust in WSL:
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 # Activate for current session
-source $HOME/.cargo/env
+source "$HOME/.cargo/env"
 
-# Verify
-cargo --version
+# Verify through the wrapper
+./tools/devshell/portable-cargo.sh --version
 ```
 
 **Every Session:**
 
 ```bash
-# Activate Cargo
+# Optional interactive activation
 source ./server/tools/activate-cargo.sh
 
-# Or add to ~/.bashrc for automatic loading:
-echo 'source $HOME/.cargo/env' >> ~/.bashrc
+# Preferred: run commands through the wrapper
+./tools/devshell/portable-cargo.sh build
+./tools/devshell/portable-cargo.sh run
 ```
 
 ### Option 2: Use Windows Portable Cargo from WSL
@@ -74,8 +97,8 @@ export CARGO_HOME="/mnt/d/dev/workspaces/noa_ark_os/server/tools/cargo-portable"
 export RUSTUP_HOME="/mnt/d/dev/workspaces/noa_ark_os/server/tools/rustup-portable"
 export PATH="/mnt/d/dev/workspaces/noa_ark_os/server/tools/cargo-portable/bin:$PATH"
 
-# Use .exe extension
-cargo.exe --version
+# Use the wrapper so commands forward to cargo.exe automatically
+./tools/devshell/portable-cargo.sh --version
 ```
 
 **Note**: This option is **slower** because it runs Windows executables through WSL interop.
@@ -103,39 +126,23 @@ The workspace is configured with multiple terminal profiles:
 
 ### PowerShell (Windows)
 ```powershell
-# Activate
-.\server\tools\activate-cargo.ps1
-
-# Build
-cargo build
-
-# Run
-cargo run
+# Quick wrapper usage
+./tools/devshell/portable-cargo.ps1 build
+./tools/devshell/portable-cargo.ps1 run
 ```
 
 ### Bash (WSL/Ubuntu with native Rust)
 ```bash
-# Activate
-source ./server/tools/activate-cargo.sh
-
-# Build
-cargo build
-
-# Run
-cargo run
+# Quick wrapper usage
+./tools/devshell/portable-cargo.sh build
+./tools/devshell/portable-cargo.sh run
 ```
 
 ### Bash (WSL using Windows Cargo)
 ```bash
-# Activate
-source ./server/tools/activate-cargo.sh
-# (Choose option to use Windows Cargo)
-
-# Build (use .exe)
-cargo.exe build
-
-# Run (use .exe)
-cargo.exe run
+# Wrapper forwards to cargo.exe automatically
+./tools/devshell/portable-cargo.sh build
+./tools/devshell/portable-cargo.sh run
 ```
 
 ---
@@ -145,12 +152,13 @@ cargo.exe run
 Pre-configured tasks work with **PowerShell** (portable Cargo):
 
 Press `Ctrl+Shift+P` → `Tasks: Run Task`:
+- **Activate Portable Cargo** - Sets up environment
 - **Cargo Build (Portable)** - Builds in PowerShell
 - **Cargo Run (Portable)** - Runs in PowerShell
 - **Cargo Test (Portable)** - Tests in PowerShell
 - **Cargo Check (Portable)** - Checks in PowerShell
 
-For WSL/Linux, use the terminal directly.
+For WSL/Linux, use the devshell wrapper directly from your terminal.
 
 ---
 
@@ -161,7 +169,7 @@ For WSL/Linux, use the terminal directly.
 | **Speed** | ⚡ Fast | ⚡ Fast | 🐌 Slower |
 | **Setup** | Run setup script | Install Rust | Use Windows install |
 | **Isolation** | ✅ Workspace-local | ❌ System-wide | ✅ Workspace-local |
-| **Command** | `cargo` | `cargo` | `cargo.exe` |
+| **Command** | `./tools/devshell/portable-cargo.ps1` | `./tools/devshell/portable-cargo.sh` | `./tools/devshell/portable-cargo.sh` |
 | **Best For** | Windows dev | Linux-native dev | Quick testing |
 
 ---
@@ -195,18 +203,14 @@ For WSL/Linux, use the terminal directly.
 
 **PowerShell:**
 ```powershell
-$env:CARGO_HOME
-$env:RUSTUP_HOME
-where.exe cargo
-cargo --version
+./tools/devshell/portable-cargo.ps1 --version
+Get-Content tools/devshell/state/cargo-env.json
 ```
 
 **Bash (WSL/Ubuntu):**
 ```bash
-echo $CARGO_HOME
-echo $RUSTUP_HOME
-which cargo
-cargo --version
+./tools/devshell/portable-cargo.sh --version
+cat tools/devshell/state/cargo-env.yaml
 ```
 
 ### Expected Output
@@ -230,24 +234,25 @@ cargo 1.90.0 (...)
 ## 🆘 Troubleshooting
 
 ### "Command not found" in PowerShell
-- **Solution**: Run `.\server\tools\activate-cargo.ps1`
+- **Solution**: Run `./tools/devshell/portable-cargo.ps1 --version`
+- If the portable toolchain is missing, install via `./server/tools/setup-portable-cargo.ps1`
 
 ### "Command not found" in WSL
-- **Solution**: Run `source ./server/tools/activate-cargo.sh`
+- **Solution**: Run `./tools/devshell/portable-cargo.sh --version`
 - Or install Rust: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
 
 ### Rust-analyzer not working
-- **Windows**: Check `.vscode/settings.json` has correct paths
+- **Windows**: Check `.vscode/settings.json` has correct paths (until IDE settings are migrated to the wrapper flow)
 - **WSL**: Ensure native Rust is installed
 - **Reload**: `Ctrl+Shift+P` → "Developer: Reload Window"
 
 ### Wrong Cargo version
-- **Check**: Run `where.exe cargo` (Windows) or `which cargo` (Linux)
-- **Fix**: Ensure activation script ran successfully
+- **Check**: Inspect `tools/devshell/state/cargo-env.json`
+- **Fix**: Ensure the wrapper ran successfully (`./tools/devshell/portable-cargo.* --version`)
 
 ### Mixing Windows and WSL
 - **Issue**: Using Windows paths in WSL or vice versa
-- **Fix**: Use appropriate activation script for your terminal
+- **Fix**: Use appropriate activation script or wrapper for your terminal
 - **Tip**: Check prompt - `PS D:\...` = PowerShell, `deflex@...` = WSL
 
 ---
@@ -256,14 +261,20 @@ cargo 1.90.0 (...)
 
 ```
 server/tools/
-├── cargo-portable/         # Windows portable Cargo (gitignored)
-├── rustup-portable/        # Windows Rustup data (gitignored)
-├── setup-portable-cargo.ps1   # Windows setup (committed)
-├── activate-cargo.ps1      # Windows activation (committed)
-├── activate-cargo.sh       # Linux/WSL activation (committed)
-├── README.md              # Detailed documentation
-├── QUICK_START.md         # Quick reference
-└── MULTI_PLATFORM.md      # This file
+├── cargo-portable/             # Windows portable Cargo (gitignored)
+├── rustup-portable/            # Windows Rustup data (gitignored)
+├── setup-portable-cargo.ps1    # Windows setup (committed)
+├── activate-cargo.ps1          # Windows activation (committed)
+├── activate-cargo.sh           # Linux/WSL activation (committed)
+├── README.md                   # Detailed documentation
+├── QUICK_START.md              # Quick reference
+└── MULTI_PLATFORM.md           # This file
+
+tools/devshell/
+├── portable-cargo.sh           # Unified CLI wrapper (bash)
+├── portable-cargo.ps1          # Unified CLI wrapper (PowerShell)
+└── state/
+    └── cargo-env.{json,yaml}   # Auto-generated status snapshots
 ```
 
 **WSL/Linux Rust** (if installed):
@@ -281,15 +292,15 @@ server/tools/
 **Windows Developer:**
 ```powershell
 # PowerShell
-.\server\tools\setup-portable-cargo.ps1
-.\server\tools\activate-cargo.ps1
+./server/tools/setup-portable-cargo.ps1
+./tools/devshell/portable-cargo.ps1 --version
 ```
 
 **Linux/WSL Developer:**
 ```bash
 # WSL/Ubuntu
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-source $HOME/.cargo/env
+./tools/devshell/portable-cargo.sh --version
 ```
 
 **Multi-Platform Developer:**
@@ -301,13 +312,11 @@ source $HOME/.cargo/env
 
 ## 💡 Tips
 
-1. **VS Code will auto-detect** your active terminal and use appropriate commands
-2. **Rust-analyzer** is configured for Windows portable by default
-3. **Tasks** use PowerShell, run them from PowerShell terminal
-4. **Add to shell profile** for automatic activation:
-   - PowerShell: Add to `$PROFILE`
-   - Bash: Add to `~/.bashrc`
-
----
+1. **Prefer the CLI wrapper** (`tools/devshell/portable-cargo.*`) to keep environment state and automation aligned.
+2. **Rust-analyzer and VS Code tasks** still target the portable toolchain today, but IDE-specific settings will be phased out in favour of the unified wrapper flow.
+3. **Tasks** use PowerShell today—run them from PowerShell or update them to call the wrapper for parity.
+4. **Add to shell profile** for automatic activation if you prefer interactive usage:
+   - PowerShell: Add `./server/tools/activate-cargo.ps1`
+   - Bash: Add `source ./server/tools/activate-cargo.sh`
 
 **Choose the setup that fits your workflow best!** 🎯
