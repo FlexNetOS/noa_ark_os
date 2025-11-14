@@ -122,6 +122,7 @@ models/
 .env.local
 .env.*.local
 *.key
+!audit/offline-dev-hmac.key
 *.pem
 *.crt
 secrets/

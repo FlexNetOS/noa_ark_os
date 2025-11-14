@@ -2,6 +2,7 @@ SHELL := /bin/bash
 
 PNPM ?= pnpm
 CARGO ?= cargo
+PYTHON ?= python3
 
 .PHONY: build test digest run ci:local lint typecheck format
 .PHONY: pipeline.local world-verify world-fix kernel snapshot rollback verify publish-audit setup
@@ -41,8 +42,8 @@ run:
 	wait $$UI_PID $$API_PID
 
 # Machine-First Pipeline (authoritative local pipeline)
-pipeline.local: world-verify build sbom test scorekeeper package sign
-	@echo "✅ Pipeline complete"
+pipeline.local: world-verify build sbom test package sign verify scorekeeper publish-audit
+@echo "✅ Pipeline complete"
 
 # World model verification
 world-verify:
@@ -63,32 +64,23 @@ kernel:
 
 # SBOM generation
 sbom:
-	@echo "📋 Generating SBOM..."
-	@mkdir -p audit
-	@# TODO: Implement SBOM generation with cargo-sbom or similar
-	@echo "⚠️  SBOM generation not yet implemented (Phase 8)"
-	@echo '{"placeholder": true, "timestamp": "'$$(date -u +%Y-%m-%dT%H:%M:%SZ)'"}' > audit/SBOM.manifest.json
+@echo "📋 Generating SBOM..."
+@$(PYTHON) -m tools.repro.audit_pipeline sbom
 
 # Scorekeeper (trust calculation)
 scorekeeper:
-	@echo "🎯 Calculating trust scores..."
-	@mkdir -p metrics
-	@# TODO: Implement scorekeeper with integrity/reversibility/capability metrics
-	@echo "⚠️  Scorekeeper not yet implemented (Phase 2)"
-	@echo '{"trust_score": null, "timestamp": "'$$(date -u +%Y-%m-%dT%H:%M:%SZ)'"}' > metrics/trust_score.json
+@echo "🎯 Calculating trust scores..."
+@$(PYTHON) -m tools.repro.audit_pipeline score
 
 # Package artifacts
 package:
-	@echo "📦 Packaging artifacts..."
-	@mkdir -p dist
-	@# TODO: Implement artifact packaging
-	@echo "⚠️  Packaging not yet implemented (Phase 10)"
+@echo "📦 Packaging artifacts..."
+@$(PYTHON) -m tools.repro.audit_pipeline package
 
 # Sign artifacts
 sign:
-	@echo "✍️  Signing artifacts..."
-	@# TODO: Implement artifact signing with GPG or similar
-	@echo "⚠️  Signing not yet implemented (Phase 8)"
+@echo "✍️  Signing artifacts..."
+@$(PYTHON) -m tools.repro.audit_pipeline sign
 
 # Snapshot creation
 snapshot:
@@ -105,17 +97,13 @@ rollback:
 
 # Verify build reproducibility
 verify:
-	@echo "🔐 Verifying build reproducibility..."
-	@# TODO: Implement reproducibility verification
-	@echo "⚠️  Verify not yet implemented (Phase 8)"
+@echo "🔐 Verifying build reproducibility..."
+@$(PYTHON) -m tools.repro.audit_pipeline verify
 
 # Publish audit bundle
 publish-audit:
-	@echo "📤 Publishing audit bundle..."
-	@mkdir -p audit
-	@# TODO: Package and publish audit artifacts
-	@echo "⚠️  Publish-audit not yet implemented (Phase 10)"
-	@echo '{"audit_bundle": "placeholder", "timestamp": "'$$(date -u +%Y-%m-%dT%H:%M:%SZ)'"}' > audit/bundle_metadata.json
+@echo "📤 Publishing audit bundle..."
+@$(PYTHON) -m tools.repro.audit_pipeline publish
 
 # Setup toolchain
 setup:
