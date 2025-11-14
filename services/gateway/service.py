@@ -7,6 +7,11 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from core.kernel.manifest import KernelManifest, load_manifest
+from core.kernel.security import (
+    CapabilityTokenError,
+    KernelTokenClaims,
+    verify_capability_token,
+)
 
 
 @dataclass(frozen=True)
@@ -32,6 +37,8 @@ class PolicyRule:
     allowed_paths: List[str]
     requires_authentication: bool = True
     rate_limit_per_minute: int = 60
+    fs_scope: Optional[str] = None
+    network_scope: Optional[str] = None
 
     def allows(self, method: str, path: str) -> bool:
         method_allowed = method.upper() in {m.upper() for m in self.allowed_methods}
@@ -110,15 +117,41 @@ class Gateway:
             self.telemetry.rejected_policy += 1
             return GatewayResponse(status=403, upstream=None, message="no policy rule configured")
 
-        if rule.requires_authentication and not request.token:
-            self.telemetry.rejected_auth += 1
-            return GatewayResponse(status=401, upstream=None, message="authentication required")
+        token_claims: Optional[KernelTokenClaims] = None
+        effective_rate_limit = rule.rate_limit_per_minute
+        if rule.requires_authentication:
+            if not request.token:
+                self.telemetry.rejected_auth += 1
+                return GatewayResponse(status=401, upstream=None, message="authentication required")
+            try:
+                token_claims = verify_capability_token(request.token)
+            except CapabilityTokenError as exc:
+                self.telemetry.rejected_auth += 1
+                return GatewayResponse(status=401, upstream=None, message=f"invalid capability token: {exc}")
+
+            if token_claims.client_id != request.client_id:
+                self.telemetry.rejected_auth += 1
+                return GatewayResponse(status=403, upstream=None, message="token client mismatch")
+
+            if not token_claims.allows_scope("fs", rule.fs_scope):
+                self.telemetry.rejected_auth += 1
+                return GatewayResponse(status=403, upstream=None, message="missing fs scope")
+
+            if not token_claims.allows_scope("network", rule.network_scope):
+                self.telemetry.rejected_auth += 1
+                return GatewayResponse(status=403, upstream=None, message="missing network scope")
+
+            if not token_claims.allows_rate(rule.rate_limit_per_minute):
+                self.telemetry.rejected_auth += 1
+                return GatewayResponse(status=403, upstream=None, message="rate scope below requirement")
+
+            effective_rate_limit = min(rule.rate_limit_per_minute, token_claims.rate_limit_per_minute)
 
         if not rule.allows(request.method, request.path):
             self.telemetry.rejected_policy += 1
             return GatewayResponse(status=403, upstream=None, message="policy violation")
 
-        if not self.rate_limiter.allow(f"{request.client_id}:{request.service}", rule.rate_limit_per_minute):
+        if not self.rate_limiter.allow(f"{request.client_id}:{request.service}", effective_rate_limit):
             self.telemetry.rejected_rate += 1
             return GatewayResponse(status=429, upstream=None, message="rate limit exceeded")
 
@@ -133,6 +166,9 @@ class Gateway:
                 "method": request.method,
                 "latency_ms": latency,
                 "timestamp": time.time(),
+                "fs_scope": rule.fs_scope,
+                "network_scope": rule.network_scope,
+                "token_rate_limit": token_claims.rate_limit_per_minute if token_claims else None,
             }
         )
         return GatewayResponse(status=200, upstream=request.service, message="forwarded")
@@ -155,6 +191,8 @@ def build_default_config(manifest_path: Optional[Path] = None) -> GatewayConfig:
             allowed_paths=["/v1/policy", "/v1/metrics"],
             requires_authentication=True,
             rate_limit_per_minute=120,
+            fs_scope="fs.policy.read",
+            network_scope="net.gateway",
         ),
         "runtime-manager": PolicyRule(
             service_id="runtime-manager",
@@ -162,6 +200,8 @@ def build_default_config(manifest_path: Optional[Path] = None) -> GatewayConfig:
             allowed_paths=["/v1/schedule"],
             requires_authentication=True,
             rate_limit_per_minute=60,
+            fs_scope="fs.runtime.control",
+            network_scope="net.runtime",
         ),
     }
     return GatewayConfig(manifest=manifest, policy_rules=policy_rules)
