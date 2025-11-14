@@ -1,5 +1,6 @@
 //! CI/CD System - Continuous Delivery focused with CRC integration
 
+pub mod ledger;
 pub mod trigger;
 pub mod validation;
 

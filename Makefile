@@ -4,7 +4,7 @@ PNPM ?= pnpm
 CARGO ?= cargo
 
 .PHONY: build test digest run ci:local lint typecheck format
-.PHONY: pipeline.local world-verify world-fix kernel snapshot rollback verify publish-audit setup
+.PHONY: pipeline.local world-verify world-fix kernel snapshot rollback verify publish-audit rollback-sim setup
 
 build:
 	$(PNPM) build
@@ -111,11 +111,21 @@ verify:
 
 # Publish audit bundle
 publish-audit:
-	@echo "📤 Publishing audit bundle..."
-	@mkdir -p audit
-	@# TODO: Package and publish audit artifacts
-	@echo "⚠️  Publish-audit not yet implemented (Phase 10)"
-	@echo '{"audit_bundle": "placeholder", "timestamp": "'$$(date -u +%Y-%m-%dT%H:%M:%SZ)'"}' > audit/bundle_metadata.json
+        @echo "📤 Publishing audit bundle..."
+        @mkdir -p audit
+        @cargo run --manifest-path cicd/Cargo.toml --bin publish_audit -- --repo . --output audit --ledger audit/ledger.jsonl
+        @latest=$$(ls -d audit/bundle-* 2>/dev/null | tail -n 1); \
+        if [ -n "$$latest" ]; then \
+                echo "🔍 Verifying $$latest"; \
+                audit/verify.sh "$$latest"; \
+        else \
+                echo "⚠️  No bundle produced"; \
+        fi
+
+# Run rollback simulation locally
+rollback-sim:
+        @echo "⏱️  Running rollback simulation..."
+        @cargo run --manifest-path cicd/Cargo.toml --bin rollback_simulation -- --repo . --ledger audit/ledger.jsonl --output audit/rollbacks
 
 # Setup toolchain
 setup:

@@ -6,6 +6,17 @@ Maximum focus on Continuous Delivery (CD) for NOA ARK OS.
 
 **Continuous Delivery First**: Every commit is potentially deployable. CI validates, CD delivers.
 
+## Autonomous Release Controls
+
+- **Trust-gated auto merges** – `cicd/src/trigger.rs` now evaluates historical trust metrics from
+  `audit/ledger.jsonl` before executing a git merge preview. Passing merges archive their diff under
+  `audit/merges/` and append an approval entry to the ledger.
+- **Scheduled rollback drills** – `cargo run --manifest-path cicd/Cargo.toml --bin rollback_simulation`
+  exercises git worktree rollbacks and records the outcome in both `audit/rollbacks/` and the ledger.
+- **Signed audit bundles** – `make publish-audit` captures an SBOM, trust summary, and release
+  metadata into `audit/bundle-*` directories and validates the output through
+  `audit/verify.sh` / `audit/verify.py`.
+
 ## Architecture
 
 ```
