@@ -98,6 +98,7 @@ server/tools/rustup-portable/*
 !server/tools/rustup-portable/
 !server/tools/rustup-portable/README.md
 !server/tools/rustup-portable/settings.toml
+server/tools/node-portable/
 
 # Runtime Data
 server/data/
@@ -122,6 +123,7 @@ models/
 .env.local
 .env.*.local
 *.key
+!audit/offline-dev-hmac.key
 *.pem
 *.crt
 secrets/
