@@ -19,6 +19,8 @@ pub use agent_dispatch::{
     ToolExecutionStatus, ToolRequirement,
 };
 pub use instrumentation::{
+    AgentExecutionResult, EvidenceLedgerEntry, EvidenceLedgerKind, GoalAgentMetric,
+    GoalMetricSnapshot, GoalOutcomeRecord, InferenceMetric, MerkleLeaf, MerkleLevel,
     AgentExecutionResult, DeploymentOutcomeRecord, EvidenceLedgerEntry, EvidenceLedgerKind,
     GoalAgentMetric, GoalMetricSnapshot, GoalOutcomeRecord, MerkleLeaf, MerkleLevel,
     PipelineInstrumentation, SecurityScanReport, SecurityScanStatus, StageReceipt, TaskReceipt,
