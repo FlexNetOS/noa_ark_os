@@ -130,19 +130,19 @@ class Gateway:
                 return GatewayResponse(status=401, upstream=None, message=f"invalid capability token: {exc}")
 
             if token_claims.client_id != request.client_id:
-                self.telemetry.rejected_auth += 1
+                self.telemetry.rejected_policy += 1
                 return GatewayResponse(status=403, upstream=None, message="token client mismatch")
 
             if not token_claims.allows_scope("fs", rule.fs_scope):
-                self.telemetry.rejected_auth += 1
+                self.telemetry.rejected_policy += 1
                 return GatewayResponse(status=403, upstream=None, message="missing fs scope")
 
             if not token_claims.allows_scope("network", rule.network_scope):
-                self.telemetry.rejected_auth += 1
+                self.telemetry.rejected_policy += 1
                 return GatewayResponse(status=403, upstream=None, message="missing network scope")
 
             if not token_claims.allows_rate(rule.rate_limit_per_minute):
-                self.telemetry.rejected_auth += 1
+                self.telemetry.rejected_policy += 1
                 return GatewayResponse(status=403, upstream=None, message="rate scope below requirement")
 
             effective_rate_limit = min(rule.rate_limit_per_minute, token_claims.rate_limit_per_minute)
