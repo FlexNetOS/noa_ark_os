@@ -18,6 +18,25 @@ importers:
         specifier: 5.4.5
         version: 5.4.5
 
+  ui/research-notebook:
+    dependencies:
+      '@noa-ark/shared-ui':
+        specifier: workspace:*
+        version: link:../shared
+      react:
+        specifier: '>=18'
+        version: 18.2.0
+    devDependencies:
+      '@types/react':
+        specifier: 18.2.73
+        version: 18.2.73
+      tsx:
+        specifier: 4.7.1
+        version: 4.7.1
+      typescript:
+        specifier: 5.4.5
+        version: 5.4.5
+
   ui/shared:
     dependencies:
       react:

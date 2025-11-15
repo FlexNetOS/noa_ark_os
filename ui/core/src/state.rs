@@ -13,6 +13,7 @@ pub enum WorkspacePersona {
     Operator,
     Developer,
     Executive,
+    Researcher,
 }
 
 impl Default for WorkspacePersona {

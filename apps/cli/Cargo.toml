@@ -24,3 +24,4 @@ noa-plugin-sdk = { path = "../../plugins/sdk" }
 noa_inference = { path = "../../server/ai/inference" }
 futures = "0.3"
 noa_cicd = { path = "../../cicd" }
+walkdir = "2"
