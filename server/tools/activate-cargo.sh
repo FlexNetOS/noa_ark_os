@@ -129,6 +129,12 @@ with open(yaml_path, "w", encoding="utf-8") as fh:
         fh.write(f"{key}: {yaml_value(status[key])}\n")
 PY
 
+# Check for python3 before running the embedded script
+if ! command -v python3 >/dev/null 2>&1; then
+    echo "Error: python3 is required but was not found in your PATH." >&2
+    echo "Please install Python 3 and ensure it is available as 'python3'." >&2
+    exit 1
+fi
 if [[ "$SILENT_MODE" != "1" ]]; then
     log "\n✅ Cargo environment ready (${MODE})"
     log "\nEnvironment:"
