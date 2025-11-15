@@ -362,6 +362,9 @@ jupyter nbconvert --clear-output --inplace notebooks/**/*.ipynb
 detect-secrets scan notebooks/
 ```
 
+## Notebook sync automation
+
+Run `make notebooks-sync` after modifying source code so the symbol graph watcher can emit new metadata diffs and the automation agent can refresh headers, citations, and analytics. This mirrors the capability-enabled pipeline registered with the gateway, keeping local notebooks aligned with the autonomous runtime.
 ## Contribution Workflow
 
 - Use the unified CLI to manage templates and hygiene:
