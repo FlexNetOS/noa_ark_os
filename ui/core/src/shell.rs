@@ -261,12 +261,29 @@ impl UnifiedShell {
             },
         ];
 
+        let researcher_articles = vec![
+            KnowledgeArticle {
+                id: "research-notebook-onboarding".into(),
+                title: "Activate the research notebook suite".into(),
+                summary: "Walkthrough for enabling the marketplace bundle and workspace toggles.".into(),
+                link: "docs/ui/research_notebook_onboarding.md".into(),
+            },
+            KnowledgeArticle {
+                id: "research-notebook-citations".into(),
+                title: "Curate trustworthy citations".into(),
+                summary: "Document how notebook exports bundle evidence, media, and provenance metadata.".into(),
+                link: "apps/marketplace/catalog/research-notebook-suite.json".into(),
+            },
+        ];
+
         self.store
             .set_knowledge_base(WorkspacePersona::Developer, developer_articles);
         self.store
             .set_knowledge_base(WorkspacePersona::Operator, operator_articles);
         self.store
             .set_knowledge_base(WorkspacePersona::Executive, executive_articles);
+        self.store
+            .set_knowledge_base(WorkspacePersona::Researcher, researcher_articles);
     }
 
     pub fn builder(platform: Platform) -> ShellBuilder {

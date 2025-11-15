@@ -1,0 +1,32 @@
+{
+  "bundle_family": "research-notebook",
+  "version": "2024.06",
+  "channels": {
+    "repos": [
+      {
+        "name": "research-notebook-bundle",
+        "version": "2024.06.12",
+        "manifests": [
+          "repos/research-notebook-bundle/manifest.json"
+        ],
+        "datasets": [
+          "repos/research-notebook-bundle/datasets/workspace_metrics_daily.csv"
+        ],
+        "installation": [
+          "python -m venv .venv",
+          "source .venv/bin/activate",
+          "pip install -r notebooks/requirements.txt"
+        ],
+        "tests": [
+          {
+            "name": "crc digest smoke",
+            "command": "cargo test -p noa_crc --test digest_smoke -- --nocapture"
+          }
+        ]
+      }
+    ],
+    "forks": [],
+    "mirrors": [],
+    "stale": []
+  }
+}

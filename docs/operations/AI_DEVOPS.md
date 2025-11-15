@@ -40,6 +40,23 @@ checkpoint is missing or if the relevant artefact has not been generated.
 
 ## Telemetry and Evidence
 
+
+### Instrumentation Artefact Checklist
+
+Before the pipelines execute, automation must confirm that the mirrored schema
+assets are present:
+
+- [Auto-fix action snapshots](../../storage/db/auto_fix/README.md) for repair
+  plans authorised by policy.
+- [Budget guardian manifests](../../storage/db/budget_guardian/README.md) for
+  token and latency enforcement context.
+- [Pipeline log mirror schema](../../storage/db/pipelines/README.md) so agents
+  can stream signed ledger updates into evidence reviews.
+
+These mirrors originate from `.workspace/indexes/` as described in
+[`storage/db/README.md`](../../storage/db/README.md) and are mandatory inputs for
+policy verification and downstream DevOps analytics.
+
 - Gateway telemetry is exported automatically to `build_output/telemetry/self-heal-metrics.json` alongside
   the self-heal summary so verification agents can review it without mutating tracked service folders.
 - Deployment evidence is appended to `docs/reports/AGENT_DEPLOYMENT_OUTCOMES.md`.

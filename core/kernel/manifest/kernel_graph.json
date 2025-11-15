@@ -270,6 +270,32 @@
       },
       "boot": {"order": 7, "role": "value"},
       "resources": {"cpu": 1, "memoryMb": 512}
+    },
+    {
+      "id": "notebook-sync",
+      "name": "Notebook Sync Automation",
+      "category": "automation",
+      "version": "0.1.0",
+      "interfaces": [
+        {"name": "notebook-sync-api", "version": "0.1.0"}
+      ],
+      "dependencies": ["gateway"],
+      "optionalDependencies": ["observability"],
+      "artifacts": {
+        "container": {"image": "registry.local/agentos/notebook-sync:0.1.0", "digest": "sha256:notebook-sync"},
+        "tarball": {"file": "notebook-sync-0.1.0.tar.gz"},
+        "ociLayout": {"path": "oci/notebook-sync/0.1.0"}
+      },
+      "healthChecks": [
+        {"type": "state-file", "path": "state/notebook-sync.ready"}
+      ],
+      "compatibility": {
+        "linux": {"status": "supported"},
+        "macos": {"status": "supported"},
+        "container": {"status": "supported"}
+      },
+      "boot": {"order": 8, "role": "automation"},
+      "resources": {"cpu": 1, "memoryMb": 256}
     }
   ],
   "profiles": {
@@ -282,7 +308,8 @@
         "gateway",
         "observability",
         "ui-shell",
-        "ecosystem"
+        "ecosystem",
+        "notebook-sync"
       ],
       "health": {
         "timeoutSeconds": 30,

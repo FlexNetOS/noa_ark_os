@@ -12,7 +12,11 @@ export type WidgetKind =
   | "layout.region"
   | "layout.section"
   | "cta.primary"
-  | "form.signin";
+  | "form.signin"
+  | "research.notebook.summary"
+  | "research.notebook.section"
+  | "research.notebook.citations"
+  | "research.notebook.media";
 
 export interface EventBinding {
   widgetId: string;

@@ -20,3 +20,16 @@ for node in graph.nodes.values() {
 The store automatically performs incremental updates: existing entries are
 merged with new scans and edges are de-duplicated. Tests cover stable IDs across
 file moves to guarantee consistent references for refactoring tools.
+
+## Notebook metadata watcher
+
+Run the notebook-aware watcher to stream symbol changes into
+`.workspace/notebook_sync/diffs/`:
+
+```bash
+cargo run -p noa_symbol_graph --bin notebook_watcher -- --once .
+```
+
+Omit `--once` to keep the watcher running. Each diff file is a JSON payload the
+notebook automation agent consumes to refresh headers, strip outputs, and emit
+analytics.

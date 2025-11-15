@@ -16,6 +16,12 @@ tree-sitter-rust = "0.20"
 tree-sitter-typescript = "0.20"
 noa_core = { path = "../../core" }
 thiserror = "1.0"
+notify = { version = "6.1", default-features = false, features = ["macos_fsevent", "serde"] }
+time = { version = "0.3", features = ["formatting", "macros"] }
+
+[[bin]]
+name = "notebook_watcher"
+path = "src/notebook_watcher.rs"
 
 [dev-dependencies]
 tempfile = "3"
