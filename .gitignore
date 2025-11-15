@@ -39,6 +39,8 @@ dist/
 !.workspace/registry/*.json
 !.workspace/sop/
 !.workspace/sop/*.md
+!.workspace/metrics/
+!.workspace/metrics/**/*
 # .graphs/ handled by explicit allow-list below
 !.graphs/workflows/
 !.graphs/workflows/**
@@ -68,6 +70,8 @@ eggs/
 lib/
 !tools/offline_pr_queue/lib/
 !tools/offline_pr_queue/lib/**
+!notebooks/lib/
+!notebooks/lib/**
 lib64/
 parts/
 sdist/
