@@ -4,28 +4,29 @@
     {
       "label": "Activate Portable Cargo",
       "type": "shell",
-      "command": ".\\server\\tools\\activate-cargo.ps1",
+      "command": "echo 'Deprecated: run make cargo-build/check/test/run instead.'",
       "windows": {
-        "command": ".\\server\\tools\\activate-cargo.ps1"
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Write-Host 'Deprecated: use make cargo-build/check/test/run.'\""
       },
       "linux": {
-        "command": "echo 'Using Rust toolchain in devcontainer'; rustc --version || true; cargo --version || true"
+        "command": "echo 'Deprecated: run make cargo-build/check/test/run instead.'"
       },
       "presentation": {
         "reveal": "always",
         "panel": "new"
       },
-      "problemMatcher": []
+      "problemMatcher": [],
+      "detail": "Deprecated: use make cargo-* targets or tools/devshell shims directly."
     },
     {
-      "label": "Cargo Build (Portable)",
+      "label": "[Deprecated] Cargo Build (Portable)",
       "type": "shell",
-      "command": ".\\server\\tools\\activate-cargo.ps1; cargo build",
+      "command": "make cargo-build",
       "windows": {
-        "command": ".\\server\\tools\\activate-cargo.ps1; cargo build"
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\tools\\devshell\\cargo-build.ps1"
       },
       "linux": {
-        "command": "cargo build --workspace"
+        "command": "make cargo-build"
       },
       "group": {
         "kind": "build",
@@ -34,52 +35,64 @@
       "presentation": {
         "reveal": "always"
       },
-      "problemMatcher": ["$rustc"]
+      "problemMatcher": [
+        "$rustc"
+      ],
+      "detail": "Use make cargo-build or tools/devshell/cargo-build.* directly."
     },
     {
-      "label": "Cargo Run (Portable)",
+      "label": "[Deprecated] Cargo Run (Portable)",
       "type": "shell",
-      "command": ".\\server\\tools\\activate-cargo.ps1; cargo run",
+      "command": "make cargo-run",
       "windows": {
-        "command": ".\\server\\tools\\activate-cargo.ps1; cargo run"
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\tools\\devshell\\cargo-run.ps1"
       },
       "linux": {
-        "command": "cargo run --workspace"
+        "command": "make cargo-run"
       },
       "presentation": {
         "reveal": "always"
       },
-      "problemMatcher": ["$rustc"]
+      "problemMatcher": [
+        "$rustc"
+      ],
+      "detail": "Use make cargo-run or tools/devshell/cargo-run.* directly."
     },
     {
-      "label": "Cargo Test (Portable)",
+      "label": "[Deprecated] Cargo Test (Portable)",
       "type": "shell",
-      "command": ".\\server\\tools\\activate-cargo.ps1; cargo test",
+      "command": "make cargo-test",
       "windows": {
-        "command": ".\\server\\tools\\activate-cargo.ps1; cargo test"
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\tools\\devshell\\cargo-test.ps1"
       },
       "linux": {
-        "command": "cargo test --workspace"
+        "command": "make cargo-test"
       },
       "presentation": {
         "reveal": "always"
       },
-      "problemMatcher": ["$rustc"]
+      "problemMatcher": [
+        "$rustc"
+      ],
+      "detail": "Use make cargo-test or tools/devshell/cargo-test.* directly."
     },
     {
-      "label": "Cargo Check (Portable)",
+      "label": "[Deprecated] Cargo Check (Portable)",
       "type": "shell",
-      "command": ".\\server\\tools\\activate-cargo.ps1; cargo check",
+      "command": "make cargo-check",
       "windows": {
-        "command": ".\\server\\tools\\activate-cargo.ps1; cargo check"
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\tools\\devshell\\cargo-check.ps1"
       },
       "linux": {
-        "command": "cargo check --workspace"
+        "command": "make cargo-check"
       },
       "presentation": {
         "reveal": "always"
       },
-      "problemMatcher": ["$rustc"]
+      "problemMatcher": [
+        "$rustc"
+      ],
+      "detail": "Use make cargo-check or tools/devshell/cargo-check.* directly."
     }
   ]
 }
