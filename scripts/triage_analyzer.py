@@ -313,7 +313,13 @@ class TriageService:
         incident_dir = self.store.store(event, classification, policy)
 
         result = self.trigger.trigger(classification, incident_dir, event, dry_run=self.dry_run)
-        command_display = result.args if isinstance(result.args, str) else ' '.join(result.args)
+        command_display = (
+            result.args
+            if isinstance(result.args, str)
+            else ' '.join(result.args)
+            if isinstance(result.args, (list, tuple))
+            else str(result.args)
+        )
         (incident_dir / "remediation.log").write_text(
             textwrap.dedent(
                 f"""
