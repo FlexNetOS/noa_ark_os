@@ -26,7 +26,9 @@ pub use instrumentation::{
 };
 use tokio::sync::broadcast;
 
+/// The context size budget (in bytes) before penalties apply.
 const CONTEXT_THRESHOLD_BYTES: usize = 16 * 1024;
+/// The number of records to fetch per incremental retrieval.
 const CONTEXT_WINDOW: usize = 16;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
