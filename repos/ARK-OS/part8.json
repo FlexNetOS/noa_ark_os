@@ -1,0 +1,35 @@
+{
+  "bundle": {
+    "name": "noa-cecca-stemcell-bundle-part8",
+    "version": "0.5.1-part8",
+    "created": "2025-09-16T00:00:00Z",
+    "style": "kernel-first • message-passing • async-only • no-globals • zero-bloat",
+    "entry": "kernel/bootstrap",
+    "sbom": {
+      "policy": {
+        "failOnMissingModules": false,
+        "failOnMissingEnv": false
+      },
+      "expectedEnv": ["NOA_PORT", "OFFLINE_MODE", "BASE_URL"],
+      "autoFix": true
+    },
+    "modules": {
+      "docs/All_Inclusive_Agent_Directory_v2.csv": {
+        "language": "csv",
+        "code": "[Placeholder for All_Inclusive_Agent_Directory_v2.csv]"
+      },
+      "docs/3e8a0a84-5b5e-41a9-9eca-b06e7f49850e.png": {
+        "language": "binary",
+        "code": "[Placeholder for 3e8a0a84-5b5e-41a9-9eca-b06e7f49850e.png]"
+      },
+      "docs/final_bundle.json": {
+        "language": "json",
+        "code": "[Placeholder for final_bundle.json]"
+      },
+      "docs/placeholder_light_gray_block.png": {
+        "language": "binary",
+        "code": "[Placeholder for placeholder_light_gray_block.png]"
+      }
+    }
+  }
+}

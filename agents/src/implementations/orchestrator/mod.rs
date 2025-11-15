@@ -8,6 +8,23 @@ use tokio::sync::RwLock;
 use uuid::Uuid;
 
 use crate::AgentRegistry;
+use noa_core::kernel::{self, AiControlLoop, MachineRemediationDirective};
+
+/// Preferred execution route for orchestrated work items.
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub enum ExecutionRoute {
+    Machine,
+    Human,
+}
+
+impl ExecutionRoute {
+    fn as_str(&self) -> &'static str {
+        match self {
+            ExecutionRoute::Machine => "machine",
+            ExecutionRoute::Human => "human",
+        }
+    }
+}
 
 /// Represents a task that can be executed by an agent.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -18,6 +35,8 @@ pub struct AgentTask {
     pub priority: TaskPriority,
     pub status: TaskStatus,
     pub assigned_agent: Option<String>,
+    pub execution_route: ExecutionRoute,
+    pub machine_rationale: String,
     pub created_at: DateTime<Utc>,
     pub completed_at: Option<DateTime<Utc>>,
     pub result: Option<TaskResult>,
@@ -60,6 +79,7 @@ pub struct TaskResult {
     pub success: bool,
     pub data: serde_json::Value,
     pub error_message: Option<String>,
+    pub execution_route: ExecutionRoute,
 }
 
 /// Errors produced by the orchestrator.
@@ -81,6 +101,7 @@ pub enum OrchestratorError {
 pub struct AgentOrchestrator {
     registry: Arc<RwLock<AgentRegistry>>,
     tasks: Arc<RwLock<HashMap<Uuid, AgentTask>>>,
+    machine_directive: Arc<RwLock<MachineRemediationDirective>>,
 }
 
 impl AgentOrchestrator {
@@ -94,7 +115,23 @@ impl AgentOrchestrator {
         Self {
             registry,
             tasks: Arc::new(RwLock::new(HashMap::new())),
+            machine_directive: Arc::new(RwLock::new(Self::pull_machine_directive())),
         }
+    }
+
+    fn pull_machine_directive() -> MachineRemediationDirective {
+        kernel::handle()
+            .map(|handle| handle.machine_directive())
+            .unwrap_or_default()
+    }
+
+    async fn refresh_machine_directive(&self) -> MachineRemediationDirective {
+        let directive = Self::pull_machine_directive();
+        {
+            let mut guard = self.machine_directive.write().await;
+            *guard = directive.clone();
+        }
+        directive
     }
 
     /// Submit a new task for execution.
@@ -111,6 +148,8 @@ impl AgentOrchestrator {
             priority,
             status: TaskStatus::Pending,
             assigned_agent: None,
+            execution_route: ExecutionRoute::Machine,
+            machine_rationale: String::new(),
             created_at: Utc::now(),
             completed_at: None,
             result: None,
@@ -139,21 +178,35 @@ impl AgentOrchestrator {
     }
 
     async fn assign_task(&self, task_id: Uuid) -> Result<(), OrchestratorError> {
+        let directive = self.refresh_machine_directive().await;
+        let route = if directive.prefer_machine() {
+            ExecutionRoute::Machine
+        } else {
+            ExecutionRoute::Human
+        };
+
         {
             let mut tasks = self.tasks.write().await;
             let task = tasks
                 .get_mut(&task_id)
                 .ok_or(OrchestratorError::TaskNotFound(task_id))?;
 
-            let agent_id = Self::default_agent_for(task.task_type);
+            let agent_id = Self::default_agent_for(task.task_type, route);
             task.assigned_agent = Some(agent_id.to_string());
             task.status = TaskStatus::Assigned;
+            task.execution_route = route;
+            task.machine_rationale = directive.rationale.clone();
         }
 
-        self.execute_task(task_id).await
+        self.execute_task(task_id, route, directive).await
     }
 
-    async fn execute_task(&self, task_id: Uuid) -> Result<(), OrchestratorError> {
+    async fn execute_task(
+        &self,
+        task_id: Uuid,
+        route: ExecutionRoute,
+        directive: MachineRemediationDirective,
+    ) -> Result<(), OrchestratorError> {
         let mut tasks = self.tasks.write().await;
         let task = tasks
             .get_mut(&task_id)
@@ -163,7 +216,12 @@ impl AgentOrchestrator {
 
         // Simulate execution. In a later integration phase this will delegate to
         // specialised agents/services imported from the AgentAsKit drop.
-        let execution = Self::simulate_execution(task.task_type, &task.description);
+        let execution = Self::simulate_execution(
+            task.task_type,
+            &task.description,
+            route,
+            &directive.rationale,
+        );
 
         match execution {
             Ok(result) => {
@@ -178,27 +236,33 @@ impl AgentOrchestrator {
                     success: false,
                     data: json!({ "task_id": task.id }),
                     error_message: Some(err.clone()),
+                    execution_route: route,
                 });
                 Err(OrchestratorError::ExecutionFailed(err))
             }
         }
     }
 
-    fn default_agent_for(task_type: AgentTaskType) -> &'static str {
-        match task_type {
-            AgentTaskType::Conversation => "agent.conversation.coordinator",
-            AgentTaskType::TaskManagement => "agent.personal.assistant",
-            AgentTaskType::CodeGeneration => "agent.dev.codegen",
-            AgentTaskType::CodeAnalysis => "agent.dev.analysis",
-            AgentTaskType::Scheduling => "agent.personal.scheduler",
-            AgentTaskType::Learning => "agent.learning.curator",
-            AgentTaskType::Monitoring => "agent.observability.monitor",
+    fn default_agent_for(task_type: AgentTaskType, route: ExecutionRoute) -> &'static str {
+        match (task_type, route) {
+            (_, ExecutionRoute::Machine) => match task_type {
+                AgentTaskType::Conversation => "agent.conversation.coordinator",
+                AgentTaskType::TaskManagement => "agent.personal.assistant",
+                AgentTaskType::CodeGeneration => "agent.dev.codegen",
+                AgentTaskType::CodeAnalysis => "agent.dev.analysis",
+                AgentTaskType::Scheduling => "agent.personal.scheduler",
+                AgentTaskType::Learning => "agent.learning.curator",
+                AgentTaskType::Monitoring => "agent.observability.monitor",
+            },
+            (_, ExecutionRoute::Human) => "agent.human.supervisor",
         }
     }
 
     fn simulate_execution(
         task_type: AgentTaskType,
         description: &str,
+        route: ExecutionRoute,
+        rationale: &str,
     ) -> Result<TaskResult, String> {
         match task_type {
             AgentTaskType::Conversation => Ok(TaskResult {
@@ -207,8 +271,11 @@ impl AgentOrchestrator {
                     "summary": "Conversation completed",
                     "transcript_id": Uuid::new_v4(),
                     "notes": description,
+                    "execution_route": route.as_str(),
+                    "machine_rationale": rationale,
                 }),
                 error_message: None,
+                execution_route: route,
             }),
             AgentTaskType::TaskManagement | AgentTaskType::Scheduling => Ok(TaskResult {
                 success: true,
@@ -216,8 +283,11 @@ impl AgentOrchestrator {
                     "schedule_id": Uuid::new_v4(),
                     "actions": ["review", "notify"],
                     "notes": description,
+                    "execution_route": route.as_str(),
+                    "machine_rationale": rationale,
                 }),
                 error_message: None,
+                execution_route: route,
             }),
             AgentTaskType::CodeGeneration | AgentTaskType::CodeAnalysis => Ok(TaskResult {
                 success: true,
@@ -225,24 +295,33 @@ impl AgentOrchestrator {
                     "analysis": "Code task completed",
                     "diff_id": Uuid::new_v4(),
                     "summary": description,
+                    "execution_route": route.as_str(),
+                    "machine_rationale": rationale,
                 }),
                 error_message: None,
+                execution_route: route,
             }),
             AgentTaskType::Learning => Ok(TaskResult {
                 success: true,
                 data: json!({
                     "curriculum_id": Uuid::new_v4(),
                     "outcome": "Learning module executed",
+                    "execution_route": route.as_str(),
+                    "machine_rationale": rationale,
                 }),
                 error_message: None,
+                execution_route: route,
             }),
             AgentTaskType::Monitoring => Ok(TaskResult {
                 success: true,
                 data: json!({
                     "incident_report": false,
                     "telemetry_id": Uuid::new_v4(),
+                    "execution_route": route.as_str(),
+                    "machine_rationale": rationale,
                 }),
                 error_message: None,
+                execution_route: route,
             }),
         }
     }
@@ -275,6 +354,12 @@ mod tests {
         assert_eq!(task.status, TaskStatus::Completed);
         assert!(task.result.as_ref().unwrap().success);
         assert!(task.assigned_agent.is_some());
+        assert_eq!(task.execution_route, ExecutionRoute::Machine);
+        assert!(!task.machine_rationale.is_empty());
+        assert_eq!(
+            task.result.as_ref().unwrap().execution_route,
+            ExecutionRoute::Machine
+        );
     }
 
     #[tokio::test]
@@ -301,5 +386,8 @@ mod tests {
 
         let tasks = orchestrator.list_tasks().await;
         assert_eq!(tasks.len(), 2);
+        for task in tasks {
+            assert_eq!(task.execution_route, ExecutionRoute::Machine);
+        }
     }
 }

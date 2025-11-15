@@ -8,6 +8,7 @@
 * ⭐ Added Goal 18: CLI-First Interface
 * ⭐ Added Phase 0.5: CLI-First Foundation (CRITICAL PATH)
 * ⭐ Expanded Phase 4: CLI Expansion & Registry Completion (40+ commands)
+* ⭐ Routed inference provider failover + telemetry into `noa agent` / `noa query`
 * ⭐ Documented IDE extension deprecation strategy
 * ⭐ CLI-First Philosophy section added
 
@@ -37,6 +38,10 @@
 ---
 
 ## CLI-First Philosophy ⭐
+
+### Hermetic Execution Targets (NEW)
+
+To keep the CLI transformation self-contained, the dedicated checklist in [`docs/projects/HERMETIC_TARGETS.md`](HERMETIC_TARGETS.md) tracks the required portable toolchains, offline pipeline guarantees, gateway/profile enforcement, and Truth Gate evidence artifacts. Phase owners should update that catalog whenever Phase 0.5–P10 work lands so hermetic behavior stays measurable.
 
 **Core Principle:** The `noa` CLI is the **primary interface** for all system operations, designed for both human operators and AI agents.
 
@@ -79,7 +84,7 @@
 
 * **JSON by Default** – All output structured for parsing
 * **Human-Friendly Fallback** – Add `--tui` for interactive mode
-* **Streaming Support** – Real-time updates with `--watch`
+* **Streaming Support** – Real-time updates with `--watch` and inference router streaming
 * **Composability** – Commands pipe together (Unix philosophy)
 * **Self-Documenting** – `--help` and `--explain` on everything
 * **Token-Efficient** – Minimal output with `--minimal` flag
@@ -90,7 +95,7 @@
 
 **Serves Goals:** 1, 5, 7, 9, 10, 11, 16  
 **Objective:** Zero zombie code; instant reversibility.  
-**Status:** 📋 Planned
+**Status:** ✅ Complete (accepted)
 
 ### Tasks
 
@@ -102,11 +107,11 @@
 
 ### Acceptance Criteria
 
-- [ ] Quarantine directory structure exists with documented format
-- [ ] CI enforces no-reference policy for quarantined code
-- [ ] Auto-archive automation runs successfully on schedule
-- [ ] Snapshot/rollback commands work end-to-end
-- [ ] AGENT.md updated with quarantine procedures
+- [x] Quarantine directory structure exists with documented format
+- [x] CI enforces no-reference policy for quarantined code
+- [x] Auto-archive automation runs successfully on schedule
+- [x] Snapshot/rollback commands work end-to-end
+- [x] AGENT.md updated with quarantine procedures
 
 ---
 
@@ -149,6 +154,8 @@
 
 * **P0.5-T3:** Add streaming and interactive capabilities
   * `noa agent spawn --watch` – Stream agent output live
+  * `noa agent invoke --stream` – Stream LLM completions via ProviderRouter
+  * `noa query --stream` – Stream NL query answers with telemetry to Evidence Ledger
   * `noa pipeline run --interactive` – Prompt for confirmations
   * `noa trust score --explain` – Show reasoning
   * `noa world graph --interactive` – Navigate graph in TUI
@@ -276,10 +283,11 @@
 
 ### Acceptance Criteria
 
-- [ ] World graph schema validated against repository state
-- [ ] Reconciler detects and reports drift accurately
-- [ ] Contract tests exist for all major integrations
-- [ ] Make targets pass in CI
+- [ ] `kernel/world/world.graph.schema.json` and seed graph validate against repository state
+- [ ] Reconciler detects and reports drift accurately with remediation plans
+- [ ] Contract tests cover clean + drift scenarios using fixtures in `tests/world_model/`
+- [ ] `make world-verify` / `make world-fix` wrap the reconciler and fail CI on drift
+- [ ] CLI `noa world verify` / `noa world fix` documented for Phase 0.5 rollout
 
 ---
 

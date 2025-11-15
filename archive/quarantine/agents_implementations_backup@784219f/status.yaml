@@ -1,0 +1,10 @@
+component: agents-implementations-backup
+archived_commit: 784219f
+archived_on: 2025-11-15
+owners:
+  - Agent Platform Team
+reason: "Legacy board/executive agent code was generating unused warnings and is not wired into the runtime."
+reintegration_criteria:
+  - Reactivate only when lifecycle plan and tests exist
+  - Ensure `cargo test -p noa_agents` passes with warnings treated as errors
+  - Update roadmap + README when restored
