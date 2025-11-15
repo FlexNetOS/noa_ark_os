@@ -4,28 +4,28 @@
 
 ```powershell
 # Activate Cargo
+python server/tools/dev_env_cli.py activate --platform windows
 .\server\tools\activate-cargo.ps1
 
 # Verify
 cargo --version
 ```
 
-## 🔧 VS Code Settings Updated
+## 🧭 CLI Helpers
 
-The workspace now has:
-- ✅ PowerShell as default terminal
-- ✅ Portable Cargo environment variables
-- ✅ Rust-analyzer configured for portable installation
-- ✅ Tasks for common Cargo commands
+Use the workspace CLI to inspect and validate your environment before running commands:
 
-## 📋 Available VS Code Tasks
+- `python server/tools/dev_env_cli.py summary` – Show portable toolchain locations.
+- `python server/tools/dev_env_cli.py activate --platform windows` – Review activation steps.
+- `python server/tools/dev_env_cli.py doctor` – Confirm activation scripts and directories exist.
+- `python server/tools/dev_env_cli.py diagnostics` – Rust-analyzer guidance without opening an IDE.
 
-Press `Ctrl+Shift+P` → `Tasks: Run Task`:
-- **Activate Portable Cargo** - Sets up environment
-- **Cargo Build (Portable)** - Builds the project
-- **Cargo Run (Portable)** - Runs the project
-- **Cargo Test (Portable)** - Runs tests
-- **Cargo Check (Portable)** - Checks for errors
+## 🧪 Common CLI Commands
+
+- `cargo build` – Compile the current project after activation.
+- `cargo test` – Run the full test suite.
+- `cargo run --bin <name>` – Execute a binary target.
+- `cargo check` – Fast verification without producing binaries.
 
 ## ⚠️ Important Notes
 
@@ -95,27 +95,11 @@ cargo check
 cargo clippy
 ```
 
-## 🔄 Terminal Setup
+## 🔄 Terminal Check
 
-### If You See WSL/bash Prompt
-
-If you see:
-```
-deflex@FlexNetOS-1001:/mnt/d/...
-```
-
-You're in WSL. You need PowerShell instead:
-
-1. In VS Code: Click the terminal dropdown (v icon) → Select "PowerShell"
-2. Or press `Ctrl+Shift+P` → "Terminal: Select Default Profile" → Choose "PowerShell"
-3. Open new terminal: `Ctrl+Shift+`` (backtick)
-
-### Correct PowerShell Prompt
-
-You should see:
-```
-PS D:\dev\workspaces\noa_ark_os>
-```
+- Run `python server/tools/dev_env_cli.py doctor` to confirm the activation scripts are present.
+- Ensure your prompt begins with `PS` (PowerShell) before invoking `.\server\tools\activate-cargo.ps1`.
+- If you see a WSL prompt such as `deflex@FlexNetOS-1001:/mnt/d/...`, switch to Windows PowerShell first.
 
 ## 📁 Installation Locations
 
@@ -137,14 +121,15 @@ server/tools/
 **Cause**: Cargo not activated or using wrong shell
 
 **Solution**:
-1. Make sure you're in PowerShell (not WSL)
-2. Run activation script: `.\server\tools\activate-cargo.ps1`
+1. Run `python server/tools/dev_env_cli.py doctor` to confirm scripts are present.
+2. Make sure you're in PowerShell (not WSL).
+3. Run activation script: `.\server\tools\activate-cargo.ps1`.
 
 ### "Cannot find path" errors
 
 **Cause**: Using WSL/bash instead of PowerShell
 
-**Solution**: Switch to PowerShell terminal
+**Solution**: Switch to PowerShell terminal and re-run `python server/tools/dev_env_cli.py activate --platform windows` for guidance.
 
 ### Need to reinstall
 
@@ -155,21 +140,17 @@ Remove-Item -Recurse -Force server\tools\rustup-portable
 
 # Reinstall
 .\server\tools\setup-portable-cargo.ps1
+
+# Verify
+python server/tools/dev_env_cli.py doctor
 ```
 
-## 💾 VS Code Configuration
+## 🗂️ CLI Assets
 
-The workspace now includes:
-
-### `.vscode/settings.json`
-- Sets PowerShell as default terminal
-- Configures Rust-analyzer for portable Cargo
-- Sets environment variables automatically
-
-### `.vscode/tasks.json`
-- Pre-configured build tasks
-- Activates Cargo automatically
-- Run with `Ctrl+Shift+P` → "Tasks: Run Task"
+- `server/tools/dev_env_cli.py` – Workspace configuration helper.
+- `server/tools/activate-cargo.ps1` – Windows activation script.
+- `server/tools/activate-cargo.sh` – WSL/Linux activation script.
+- `server/tools/setup-portable-cargo.ps1` – One-time bootstrapper.
 
 ## 📚 Additional Resources
 

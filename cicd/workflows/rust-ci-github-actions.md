@@ -166,6 +166,42 @@ cargo check --all-targets --workspace --quiet
 
 ---
 
+#### 4. Quarantine Guard & Rotation (New)
+
+**Objective**: Block builds that reference `archive/quarantine/` bundles and relocate aged bundles on a 90-day cadence.
+
+**Implementation**:
+- Guard execution: `cargo run -p quarantine_guard --bin quarantine_guard -- $(git diff --name-only origin/main...)`
+- Scheduled rotation: `cargo run -p quarantine_guard --bin quarantine_rotate`
+- Workflow excerpt:
+
+```yaml
+jobs:
+  quarantine-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Quarantine guard
+        run: |
+          cargo run -p quarantine_guard --bin quarantine_guard -- $(git diff --name-only origin/main...)
+
+  quarantine-rotation:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Rotate quarantine bundles
+        run: cargo run -p quarantine_guard --bin quarantine_rotate
+```
+
+**Notes**:
+- Guard can be bypassed line-by-line with `QUARANTINE_GUARD_ALLOW` for documentation snippets only.
+- Rotation workflow appends to `archive/YYYY/MM/ledger.json` and emits `.tar.zst` bundles under `archive/YYYY/MM/quarantine/` for audit.
+
+---
+
 #### 4. Metadata Generation
 **Pattern**: `cargo metadata --no-deps --format-version 1`
 

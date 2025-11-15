@@ -4,8 +4,12 @@
 
 set -euo pipefail
 
-echo -e "\n🔧 Activating Portable Cargo..."
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+NOA_ACTIVATE_SILENT="${NOA_ACTIVATE_SILENT:-0}"
+
+if [[ "$NOA_ACTIVATE_SILENT" != "1" ]]; then
+    echo -e "\n🔧 Activating Portable Cargo..."
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
@@ -29,19 +33,23 @@ if [[ ":$PATH:" != *":$CARGO_HOME/bin:"* ]]; then
     export PATH="$CARGO_HOME/bin:$PATH"
 fi
 
-echo -e "\n✅ Portable Cargo Activated Successfully!"
-echo -e "\nEnvironment:"
-echo "  CARGO_HOME   = $CARGO_HOME"
-echo "  RUSTUP_HOME  = $RUSTUP_HOME"
-echo "  PATH         = [cargo-portable/bin prepended]"
+export NOA_CARGO_ENV=1
 
-echo -e "\nVersions:"
-cargo --version
-rustc --version
+if [[ "$NOA_ACTIVATE_SILENT" != "1" ]]; then
+    echo -e "\n✅ Portable Cargo Activated Successfully!"
+    echo -e "\nEnvironment:"
+    echo "  CARGO_HOME   = $CARGO_HOME"
+    echo "  RUSTUP_HOME  = $RUSTUP_HOME"
+    echo "  PATH         = [cargo-portable/bin prepended]"
 
-echo -e "\n💡 Tips:"
-echo "  • Run 'cargo build' to build projects"
-echo "  • Run 'cargo run' to run projects"
-echo "  • Run 'cargo test' to run tests"
-echo "  • This activation is for the current shell session only"
-echo
+    echo -e "\nVersions:"
+    cargo --version
+    rustc --version
+
+    echo -e "\n💡 Tips:"
+    echo "  • Run 'cargo build' to build projects"
+    echo "  • Run 'cargo run' to run projects"
+    echo "  • Run 'cargo test' to run tests"
+    echo "  • This activation is for the current shell session only"
+    echo
+fi
