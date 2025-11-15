@@ -58,5 +58,5 @@ asyncio.run(planner.run_once())
 3. **Gateway metrics** – Exported from `storage/telemetry/gateway_metrics.json`
    by the gateway telemetry sink.
 
-These artefacts already exist in the repository and the aggregator only reads
+These artifacts already exist in the repository and the aggregator only reads
 them, keeping the new surfaces offline-first and auditable.
