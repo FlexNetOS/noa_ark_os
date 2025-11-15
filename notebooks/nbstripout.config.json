@@ -1,0 +1,8 @@
+{
+  "description": "nbstripout filter configuration for NOA Ark OS notebooks",
+  "attributes_file": "notebooks/.gitattributes",
+  "commands": [
+    "nbstripout --install --attributes notebooks/.gitattributes"
+  ],
+  "notes": "Install nbstripout locally and run `noa notebook clean` before committing notebooks."
+}
