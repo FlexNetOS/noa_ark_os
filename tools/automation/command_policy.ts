@@ -123,7 +123,10 @@ function matches(rule: CompiledRule, commandLine: string, tokens: string[]): boo
     return commandLine === rule.value || commandLine.startsWith(`${rule.value} `);
   }
   const target = rule.scope === "command" ? tokens[0] ?? "" : commandLine;
-  return rule.regex!.test(target);
+  if (!rule.regex) {
+    throw new Error(`Internal error: regex rule ${rule.id} has no compiled regex`);
+  }
+  return rule.regex.test(target);
 }
 
 export function evaluateCommand(
