@@ -12,6 +12,7 @@ serde_yaml = "0.9"
 serde_json = { workspace = true }
 thiserror = "1.0"
 sysinfo = { version = "0.30", features = ["serde"] }
+toml = "0.8"
 
 [lib]
 name = "noa_core"
@@ -20,6 +21,10 @@ path = "src/lib.rs"
 [[bin]]
 name = "noa_kernel"
 path = "src/bin/kernel.rs"
+
+[[bin]]
+name = "noa_world"
+path = "src/bin/world.rs"
 
 [dev-dependencies]
 tempfile = "3.8"
