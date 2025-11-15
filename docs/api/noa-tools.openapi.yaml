@@ -1,0 +1,190 @@
+openapi: 3.1.0
+info:
+  title: NOA Tools API
+  version: 0.1.0
+  description: >-
+    Mirror of the noa CLI tool surfaces for observability, automation, analysis,
+    collaboration, and plugin catalog operations. Generated from
+    registry/tools.registry.json.
+servers:
+  - url: https://localhost
+    description: Local gateway (proxied through NOA gateway policy)
+  - url: https://noa-tools.internal
+    description: Internal cluster router
+components:
+  schemas:
+    TelemetrySnapshot:
+      type: object
+      additionalProperties:
+        type: object
+        properties:
+          unit:
+            type: string
+          value:
+            type: number
+          window_seconds:
+            type: integer
+    AutomationReceipt:
+      type: object
+      properties:
+        planId:
+          type: string
+          format: uuid
+        dryRun:
+          type: boolean
+        approvals:
+          type: array
+          items:
+            type: string
+        actions:
+          type: array
+          items:
+            type: object
+    SecurityReport:
+      type: object
+      properties:
+        scope:
+          type: string
+        generatedAt:
+          type: string
+          format: date-time
+        findings:
+          type: array
+          items:
+            type: object
+            properties:
+              severity:
+                type: string
+              component:
+                type: string
+              evidence:
+                type: string
+    CollaborationPacket:
+      type: object
+      properties:
+        workflowId:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        artifactPath:
+          type: string
+    PluginDescriptor:
+      type: object
+      properties:
+        surface:
+          type: string
+        cliCommands:
+          type: array
+          items:
+            type: string
+        apiMethods:
+          type: array
+          items:
+            type: string
+paths:
+  /api/tools/v1/observability/metrics:collect:
+    post:
+      operationId: ObservabilityMetricsCollect
+      summary: Collect kernel metrics snapshot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                target:
+                  type: string
+                window:
+                  type: integer
+      responses:
+        '200':
+          description: Telemetry snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelemetrySnapshot'
+  /api/tools/v1/automation/plans:execute:
+    post:
+      operationId: AutomationExecutePlan
+      summary: Execute automation plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                planId:
+                  type: string
+                  format: uuid
+                dryRun:
+                  type: boolean
+      responses:
+        '200':
+          description: Automation execution receipt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomationReceipt'
+  /api/tools/v1/analysis/security:scan:
+    post:
+      operationId: AnalysisSecurityScan
+      summary: Run security posture scan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                scope:
+                  type: string
+                since:
+                  type: string
+      responses:
+        '200':
+          description: Security scan report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecurityReport'
+  /api/tools/v1/collaboration/reviews:prepare:
+    post:
+      operationId: CollaborationPrepareReview
+      summary: Prepare collaboration review package
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                workflowId:
+                  type: string
+                includeLogs:
+                  type: boolean
+      responses:
+        '200':
+          description: Collaboration package metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollaborationPacket'
+  /api/tools/v1/plugins:describe:
+    get:
+      operationId: PluginDescribe
+      summary: Describe plugin scaffolding
+      parameters:
+        - in: query
+          name: surface
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Plugin scaffolding descriptor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PluginDescriptor'

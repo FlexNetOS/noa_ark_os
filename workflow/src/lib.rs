@@ -24,8 +24,10 @@ pub use agent_dispatch::{
 };
 pub use instrumentation::{
     AgentExecutionResult, EvidenceLedgerEntry, EvidenceLedgerKind, GoalAgentMetric,
-    GoalMetricSnapshot, GoalOutcomeRecord, MerkleLeaf, MerkleLevel, PipelineInstrumentation,
-    SecurityScanReport, SecurityScanStatus, StageReceipt, TaskReceipt,
+    GoalMetricSnapshot, GoalOutcomeRecord, InferenceMetric, MerkleLeaf, MerkleLevel,
+    AgentExecutionResult, DeploymentOutcomeRecord, EvidenceLedgerEntry, EvidenceLedgerKind,
+    GoalAgentMetric, GoalMetricSnapshot, GoalOutcomeRecord, MerkleLeaf, MerkleLevel,
+    PipelineInstrumentation, SecurityScanReport, SecurityScanStatus, StageReceipt, TaskReceipt,
 };
 pub use reward::{
     AgentApprovalStatus, AgentStanding, AgentStandingSummary, RewardAgentSnapshot, RewardDelta,
@@ -62,6 +64,8 @@ pub struct Task {
     pub agent: String,
     pub action: String,
     pub parameters: HashMap<String, serde_json::Value>,
+    #[serde(default)]
+    pub agent_role: Option<String>,
     #[serde(default)]
     pub tool_requirements: Vec<ToolRequirement>,
 }
@@ -161,6 +165,10 @@ impl GoalRunTracker {
         if rollback {
             self.rollback_count = self.rollback_count.saturating_add(1);
         }
+    }
+
+    fn snapshot(&self) -> Vec<AgentExecutionResult> {
+        self.agents.clone()
     }
 
     fn snapshot(&self) -> Vec<AgentExecutionResult> {
@@ -354,6 +362,7 @@ impl WorkflowEngine {
                     success: false,
                     agents: tracker.snapshot(),
                     reward_inputs: Some(tracker.reward_inputs()),
+                    agents: tracker.clone().into_snapshot(),
                 };
                 if let Err(metric_err) = self.instrumentation.record_goal_outcome(outcome) {
                     println!("[WORKFLOW] Failed to record goal outcome: {}", metric_err);
@@ -372,6 +381,7 @@ impl WorkflowEngine {
             success: true,
             agents: tracker.snapshot(),
             reward_inputs: Some(tracker.reward_inputs()),
+            agents: tracker.into_snapshot(),
         };
         if let Err(metric_err) = self.instrumentation.record_goal_outcome(outcome) {
             println!("[WORKFLOW] Failed to record goal outcome: {}", metric_err);
@@ -500,6 +510,7 @@ impl WorkflowEngine {
     fn execute_task(
         &self,
         workflow_id: &str,
+        stage_name: &str,
         stage_id: &str,
         task: &Task,
         tracker: &mut GoalRunTracker,
@@ -520,21 +531,47 @@ impl WorkflowEngine {
 
         let token_ratio = extract_token_ratio(&task.parameters);
         let rollback_flag = task_requests_rollback(task);
+        let dispatch_receipt = self
+            .dispatcher
+            .dispatch(task)
+            .map_err(|err| {
+                println!(
+                    "[WORKFLOW] Dispatcher failed for agent {}: {}",
+                    task.agent, err
+                );
+                err
+            })
+            .ok();
+            .map_err(|err| format!("agent dispatch failed: {}", err))?;
+        self.instrumentation
+            .log_task_dispatch(workflow_id, stage_id, &dispatch_receipt)
+            .map_err(|err| format!("task dispatch instrumentation failed: {}", err))?;
+
+        let resolved_agent = dispatch_receipt.agent_metadata.agent_id.clone();
+        let resolved_role = task
+            .agent_role
+            .clone()
+            .unwrap_or_else(|| dispatch_receipt.agent_metadata.role.clone());
+        let mut observed_task = task.clone();
+        observed_task.agent = resolved_agent.clone();
+        if observed_task.agent_role.is_none() {
+            observed_task.agent_role = Some(resolved_role.clone());
+        }
 
         let result = (|| {
             println!(
                 "[WORKFLOW] Executing task: agent={}, action={}",
-                task.agent, task.action
+                resolved_agent, task.action
             );
-            self.observe_task(task)?;
+            self.observe_task(&observed_task)?;
             println!(
                 "[WORKFLOW] Executing task via kernel: agent={}, action={}",
-                task.agent, task.action
+                resolved_agent, task.action
             );
 
             if let Some(kernel) = &self.kernel {
                 if let Ok(process_service) = kernel.request::<ProcessService>(CAPABILITY_PROCESS) {
-                    let _ = process_service.create_process(format!("workflow::{}", task.agent));
+                    let _ = process_service.create_process(format!("workflow::{}", resolved_agent));
                 }
 
                 if let Ok(factory) = kernel.request::<AgentFactory>(AGENT_FACTORY_CAPABILITY) {
@@ -546,7 +583,8 @@ impl WorkflowEngine {
             }
 
             Ok(json!({
-                "agent": task.agent,
+                "agent": resolved_agent,
+                "agent_role": resolved_role,
                 "action": task.action,
                 "parameters": parameters_to_value(&task.parameters),
                 "status": "completed",
@@ -556,8 +594,62 @@ impl WorkflowEngine {
 
         tracker.record(&task.agent, result.is_ok(), token_ratio, rollback_flag);
         self.log_task_dispatch(workflow_id, stage_id, task, &result);
+        if let Some(receipt) = dispatch_receipt.as_ref() {
+            if let Err(err) =
+                self.instrumentation
+                    .log_task_dispatch(workflow_id, stage_name, receipt)
+            {
+                println!("[WORKFLOW] Task dispatch instrumentation failed: {}", err);
+            }
+        }
 
-        result
+        let mut final_result = result;
+        if let (Some(receipt), Ok(_)) = (dispatch_receipt.as_ref(), &final_result) {
+            if receipt.output != Value::Null {
+                final_result = Ok(receipt.output.clone());
+            }
+        }
+
+        if final_result.is_ok() {
+            tracker.record(&task.agent, true);
+        } else {
+            tracker.record(&task.agent, false);
+        let action_lower = task.action.to_lowercase();
+        let success = result.is_ok();
+        tracker.record(&resolved_agent, success);
+
+        if action_lower.contains("deploy") {
+            let mut notes = json!({
+                "parameters": parameters_to_value(&task.parameters),
+                "tool_receipts": dispatch_receipt.tool_receipts,
+                "output": dispatch_receipt.output,
+            });
+            if let Err(err) = &result {
+                notes["error"] = json!(err);
+            }
+            let record = DeploymentOutcomeRecord {
+                workflow_id: workflow_id.to_string(),
+                stage_id: stage_id.to_string(),
+                agent_role: resolved_role.clone(),
+                agent_id: resolved_agent.clone(),
+                action: task.action.clone(),
+                status: if success {
+                    "succeeded".to_string()
+                } else {
+                    "failed".to_string()
+                },
+                notes,
+                recorded_at: now_iso(),
+            };
+            if let Err(err) = self.instrumentation.record_deployment_outcome(record) {
+                println!(
+                    "[WORKFLOW] Failed to record deployment outcome for {}::{}: {}",
+                    workflow_id, stage_id, err
+                );
+            }
+        }
+
+        final_result
     }
 
     fn log_task_dispatch(
@@ -854,6 +946,16 @@ mod tests {
         let workflow_name = format!(
             "dispatch-{}",
             Utc::now().timestamp_nanos_opt().unwrap_or_default()
+        let now = Utc::now();
+        let fallback_nanos = now.timestamp_micros() * 1_000;
+        let workflow_name = format!(
+            "dispatch-{}",
+            now.timestamp_nanos_opt().unwrap_or(fallback_nanos)
+        let workflow_name = format!(
+            "dispatch-{}",
+            Utc::now()
+                .timestamp_nanos_opt()
+                .unwrap_or_else(|| Utc::now().timestamp_micros() * 1_000)
         );
         let workflow = Workflow {
             name: workflow_name.clone(),
@@ -866,6 +968,7 @@ mod tests {
                     agent: "ModelSelectorAgent".to_string(),
                     action: "evaluate_tools".to_string(),
                     parameters: HashMap::from([(String::from("scope"), json!("tests"))]),
+                    agent_role: None,
                     tool_requirements: vec![ToolRequirement {
                         name: "Analysis pass".to_string(),
                         capability: "workflow.taskDispatch".to_string(),
@@ -887,6 +990,56 @@ mod tests {
         let content = fs::read_to_string(&log_path).expect("dispatch log present");
         assert!(content.contains("\"tool_receipts\""));
         assert!(content.contains(&format!("{}::dispatch-stage", workflow_name)));
+        let mut entries = content
+            .lines()
+            .filter_map(|line| serde_json::from_str::<serde_json::Value>(line).ok());
+        let dispatch_entry = entries
+            .find(|entry| {
+                entry.get("event").and_then(|e| e.get("event_type"))
+                    == Some(&json!("task.dispatch"))
+            })
+            .expect("task dispatch entry present");
+        let entries: Vec<Value> = content
+            .lines()
+            .filter(|line| !line.trim().is_empty())
+            .map(|line| serde_json::from_str(line).expect("log entry should parse"))
+            .collect();
+        assert!(entries.len() >= 2, "expected genesis and dispatch entries");
+        let dispatch_entry = entries.last().expect("dispatch entry present in log");
+        let scope = dispatch_entry
+            .get("event")
+            .and_then(|event| event.get("scope"))
+            .and_then(Value::as_str)
+            .unwrap_or_default();
+        assert_eq!(scope, format!("{}::dispatch-stage", workflow_name));
+        let receipts = dispatch_entry
+            .get("event")
+            .and_then(|event| event.get("metadata"))
+            .and_then(|meta| meta.get("tool_receipts"))
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        assert_eq!(receipts.len(), 1);
+            .expect("scope string available");
+        assert_eq!(scope, format!("{}::dispatch-stage", workflow_name));
+        let metadata = dispatch_entry
+            .get("event")
+            .and_then(|event| event.get("metadata"))
+            .expect("metadata present on dispatch event");
+        assert_eq!(
+            metadata
+                .get("agent")
+                .and_then(Value::as_str)
+                .unwrap_or_default(),
+            "ModelSelectorAgent"
+        );
+        assert!(
+            metadata
+                .get("tool_receipts")
+                .map(Value::is_array)
+                .unwrap_or(false),
+            "tool receipts recorded in metadata"
+        );
     }
 
     #[test]
@@ -897,6 +1050,12 @@ mod tests {
         let workflow_name = format!(
             "merkle-{}",
             Utc::now().timestamp_nanos_opt().unwrap_or_default()
+        let workflow_name = format!("merkle-{}", Utc::now().timestamp_nanos_opt().unwrap());
+        let workflow_name = format!(
+            "merkle-{}",
+            Utc::now()
+                .timestamp_nanos_opt()
+                .unwrap_or_else(|| Utc::now().timestamp_micros() * 1_000)
         );
         let workflow = Workflow {
             name: workflow_name.clone(),
@@ -906,9 +1065,11 @@ mod tests {
                 stage_type: StageType::Sequential,
                 depends_on: vec![],
                 tasks: vec![Task {
-                    agent: "tester".to_string(),
+                    agent: "role::planner".to_string(),
                     action: "document".to_string(),
                     parameters: HashMap::from([(String::from("path"), json!("docs/test.md"))]),
+                    tool_requirements: Vec::new(),
+                    agent_role: Some("planner".to_string()),
                     tool_requirements: vec![],
                 }],
             }],
@@ -918,6 +1079,12 @@ mod tests {
         engine.execute(&id).unwrap();
 
         let ledger_path = dir.path().join("storage/db/evidence/ledger.jsonl");
+        let ledger_path = dir
+            .path()
+            .join("storage")
+            .join("db")
+            .join("evidence")
+            .join("ledger.jsonl");
         let content = fs::read_to_string(&ledger_path)
             .unwrap_or_else(|_| panic!("ledger missing at {:?}", ledger_path));
 
