@@ -5,6 +5,12 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+PORTABLE_GH_CONFIG_DIR="${GH_PORTABLE_CONFIG_DIR:-$REPO_ROOT/server/tools/gh-portable/config}"
+mkdir -p "$PORTABLE_GH_CONFIG_DIR"
+export GH_CONFIG_DIR="${GH_CONFIG_DIR:-$PORTABLE_GH_CONFIG_DIR}"
+
 GH_HOST="${GH_HOST:-github.com}"
 GH_SCOPES="${GH_SCOPES:-repo,workflow}"
 GH_GIT_PROTOCOL="${GH_GIT_PROTOCOL:-ssh}"
