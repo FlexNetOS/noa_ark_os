@@ -77,7 +77,7 @@ impl LongTermMemory {
     pub fn open(root: impl AsRef<Path>) -> Result<Self, MemoryError> {
         let path = root.as_ref().join(LONG_TERM_FILE);
         let records = PersistedStore::load(&path)?;
-        let next_id = records.last().map(|record| record.id + 1).unwrap_or(1);
+        let next_id = records.iter().map(|record| record.id).max().map(|max_id| max_id + 1).unwrap_or(1);
         Ok(Self {
             path,
             entries: RwLock::new(records),
