@@ -5,29 +5,29 @@
     {
       "id": "deny-subshell-parentheses",
       "type": "regex",
-      "value": "\\(.+\\)",
+      "value": "\\$\\([^)]*\\)",
       "flags": "s",
       "scope": "line",
       "action": "deny",
-      "description": "Block command grouping via parentheses"
+      "description": "Block command substitution via $(...) (known limitation: does not match nested or multiline subshells)"
     },
     {
       "id": "deny-subshell-braces",
       "type": "regex",
-      "value": "\\{.+\\}",
+      "value": "\\{[^}]*;\\s*\\}",
       "flags": "s",
       "scope": "line",
       "action": "deny",
-      "description": "Block brace-based command grouping"
+      "description": "Block shell command grouping with braces (e.g., { ...; }) (known limitation: does not match nested or multiline groups)"
     },
     {
       "id": "deny-subshell-backticks",
       "type": "regex",
-      "value": "`.+`",
+      "value": "`[^`]+`",
       "flags": "s",
       "scope": "line",
       "action": "deny",
-      "description": "Block legacy subshell execution"
+      "description": "Block legacy shell command substitution using backticks (known limitation: does not detect escaped or quoted backticks)"
     },
     {
       "id": "deny-git-branch-destructive",
