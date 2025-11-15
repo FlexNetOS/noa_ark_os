@@ -1,0 +1,2 @@
+-- Placeholder model defining CRC throughput aggregations.
+-- Replace with dbt or SQL logic that computes daily throughput per blueprint.

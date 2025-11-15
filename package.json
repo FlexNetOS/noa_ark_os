@@ -10,12 +10,13 @@
     "export:roadmap": "tsx scripts/export_roadmap.ts",
     "lint": "pnpm --filter vibe-kanban lint && pnpm --filter vibe-kanban lint:eslint",
     "typecheck": "pnpm --filter vibe-kanban typecheck",
-    "test": "pnpm --filter vibe-kanban test && pnpm exec tsx --test tools/offline_pr_queue/tests/**/*.test.ts",
+    "test": "pnpm --filter vibe-kanban test && pnpm exec tsx --test tools/offline_pr_queue/tests/**/*.test.ts && pnpm exec tsx --test tools/notebook_sync/tests/**/*.test.ts",
     "build": "pnpm --filter vibe-kanban build",
     "format": "pnpm --filter vibe-kanban format",
     "docs:lint": "pnpm exec markdownlint-cli2 \"CHANGELOG.md\" \"docs/guides/AGENTIC_OS_GUIDE.md\"",
     "offline:queue": "pnpm exec tsx tools/offline_pr_queue/cli.ts",
-    "commit:copilot": "pnpm exec tsx tools/commit_copilot/cli.ts"
+    "commit:copilot": "pnpm exec tsx tools/commit_copilot/cli.ts",
+    "notebooks:sync": "pnpm exec tsx tools/notebook_sync/cli.ts"
   },
   "devDependencies": {
     "markdownlint-cli2": "0.14.0",
