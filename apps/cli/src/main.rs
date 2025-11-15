@@ -4,6 +4,12 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::Arc;
 
+use anyhow::{bail, ensure, Context, Result};
+use clap::{Args, Parser, Subcommand, ValueEnum};
+use futures::StreamExt;
+use noa_cicd::CICDSystem;
+use noa_core::security::verify_signed_operation;
+use noa_core::utils::simple_hash;
 use anyhow::{bail, Context, Result};
 use clap::{Args, Parser, Subcommand};
 use futures::StreamExt;
@@ -13,6 +19,8 @@ use noa_inference::{
     TelemetryStatus,
 };
 use noa_plugin_sdk::{ToolDescriptor, ToolRegistry};
+use noa_workflow::{EvidenceLedgerEntry, EvidenceLedgerKind};
+use noa_workflow::{InferenceMetric, PipelineInstrumentation};
 use noa_workflow::EvidenceLedgerEntry;
 use noa_workflow::{run_storage_doctor, InferenceMetric, PipelineInstrumentation, StorageDoctorStatus};
 use relocation_daemon::{ExecutionMode, RelocationDaemon};
@@ -76,6 +84,51 @@ struct RegistryArgs {
     tool: Option<String>,
 }
 
+#[derive(Args, Clone)]
+struct EvidenceArgs {
+    /// Optional workflow identifier to filter by (matches payload.workflow_id)
+    #[arg(long)]
+    workflow: Option<String>,
+    /// Filter by ledger entry kind (comma separated or repeated)
+    #[arg(long = "kind", value_enum, value_delimiter = ',', num_args = 0..)]
+    kinds: Vec<EvidenceKindArg>,
+    /// Only include entries generated at or after this timestamp (milliseconds)
+    #[arg(long)]
+    since: Option<u128>,
+    /// Only include entries generated at or before this timestamp (milliseconds)
+    #[arg(long)]
+    until: Option<u128>,
+    /// Limit number of displayed entries (most recent first)
+    #[arg(long)]
+    limit: Option<usize>,
+    /// Recompute hashes, signatures, and chain integrity for displayed entries
+    #[arg(long = "verify-signatures")]
+    verify_signatures: bool,
+}
+
+#[derive(Clone, Debug, ValueEnum)]
+enum EvidenceKindArg {
+    Genesis,
+    StageReceipt,
+    SecurityScan,
+    TaskDispatch,
+    AutoFixAction,
+    BudgetDecision,
+}
+
+impl EvidenceKindArg {
+    fn into_kind(self) -> EvidenceLedgerKind {
+        match self {
+            EvidenceKindArg::Genesis => EvidenceLedgerKind::Genesis,
+            EvidenceKindArg::StageReceipt => EvidenceLedgerKind::StageReceipt,
+            EvidenceKindArg::SecurityScan => EvidenceLedgerKind::SecurityScan,
+            EvidenceKindArg::TaskDispatch => EvidenceLedgerKind::TaskDispatch,
+            EvidenceKindArg::AutoFixAction => EvidenceLedgerKind::AutoFixAction,
+            EvidenceKindArg::BudgetDecision => EvidenceLedgerKind::BudgetDecision,
+        }
+    }
+}
+
 #[derive(Subcommand)]
 enum Commands {
     /// Kernel operations
@@ -127,10 +180,8 @@ enum Commands {
 
     /// Inspect the evidence ledger
     Evidence {
-        #[arg(long)]
-        workflow: Option<String>,
-        #[arg(long)]
-        limit: Option<usize>,
+        #[command(flatten)]
+        filters: EvidenceArgs,
     },
     /// Surface observability tooling from the shared registry
     Observability {
@@ -688,8 +739,8 @@ fn main() -> Result<()> {
                     }
                 }
             }
-            Commands::Evidence { workflow, limit } => {
-                show_evidence(workflow, limit)?;
+            Commands::Evidence { filters } => {
+                show_evidence(filters)?;
             }
             Commands::Observability { query } => {
                 handle_registry_category("observability", query)?;
@@ -827,41 +878,168 @@ fn handle_registry_category(category: &str, query: RegistryArgs) -> Result<()> {
     Ok(())
 }
 
-fn show_evidence(workflow_filter: Option<String>, limit: Option<usize>) -> Result<()> {
+#[derive(Clone, Debug)]
+struct SignatureVerification {
+    hash_valid: bool,
+    signature_valid: bool,
+    chain_valid: bool,
+}
+
+fn show_evidence(filters: EvidenceArgs) -> Result<()> {
     let path = PathBuf::from("storage/db/evidence/ledger.jsonl");
     if !path.exists() {
         anyhow::bail!("evidence ledger not found at {}", path.display());
     }
     let file = std::fs::File::open(&path)?;
     let reader = std::io::BufReader::new(file);
-    let mut entries = Vec::new();
+    if let (Some(since), Some(until)) = (filters.since, filters.until) {
+        ensure!(
+            since <= until,
+            "`--since` must be less than or equal to `--until` ({} > {})",
+            since,
+            until
+        );
+    }
+
+    let kind_filters: Vec<EvidenceLedgerKind> = filters
+        .kinds
+        .clone()
+        .into_iter()
+        .map(EvidenceKindArg::into_kind)
+        .collect();
+
+    let mut all_entries = Vec::new();
     for line in reader.lines() {
         let line = line?;
         if line.trim().is_empty() {
             continue;
         }
         let entry: EvidenceLedgerEntry = serde_json::from_str(&line)?;
-        if let Some(workflow) = &workflow_filter {
-            let payload_workflow = entry
-                .payload
-                .get("workflow_id")
-                .and_then(|value| value.as_str());
-            if payload_workflow != Some(workflow.as_str()) {
-                continue;
-            }
-        }
-        entries.push(entry);
+        all_entries.push(entry);
     }
 
-    let to_print = limit.unwrap_or(entries.len());
-    for entry in entries.into_iter().rev().take(to_print) {
-        println!(
-            "{} | kind={:?} | reference={}",
-            entry.timestamp, entry.kind, entry.reference
-        );
+    let verifications_all = if filters.verify_signatures {
+        Some(verify_entries(&all_entries))
+    } else {
+        None
+    };
+
+    let mut display_rows: Vec<(EvidenceLedgerEntry, Option<SignatureVerification>)> = all_entries
+        .into_iter()
+        .enumerate()
+        .filter_map(|(idx, entry)| {
+            if let Some(workflow) = &filters.workflow {
+                let payload_workflow = entry
+                    .payload
+                    .get("workflow_id")
+                    .and_then(|value| value.as_str());
+                if payload_workflow != Some(workflow.as_str()) {
+                    return None;
+                }
+            }
+            if !kind_filters.is_empty() && !kind_filters.contains(&entry.kind) {
+                return None;
+            }
+            if let Some(since) = filters.since {
+                if entry.timestamp < since {
+                    return None;
+                }
+            }
+            if let Some(until) = filters.until {
+                if entry.timestamp > until {
+                    return None;
+                }
+            }
+            let verification = verifications_all
+                .as_ref()
+                .and_then(|statuses| statuses.get(idx).cloned());
+            Some((entry, verification))
+        })
+        .collect();
+
+    let to_print = filters.limit.unwrap_or(display_rows.len());
+
+    display_rows.reverse();
+    display_rows.truncate(to_print);
+
+    let mut invalid_verifications = 0usize;
+
+    for (entry, verification) in display_rows.iter() {
+        if let Some(status) = verification {
+            if !(status.hash_valid && status.signature_valid && status.chain_valid) {
+                invalid_verifications += 1;
+            }
+            println!(
+                "{} | kind={:?} | reference={} | {}",
+                entry.timestamp,
+                entry.kind,
+                entry.reference,
+                format_signature_status(status)
+            );
+        } else {
+            println!(
+                "{} | kind={:?} | reference={}",
+                entry.timestamp, entry.kind, entry.reference
+            );
+        }
         println!("{}", serde_json::to_string_pretty(&entry.payload)?);
     }
+
+    if filters.verify_signatures && invalid_verifications > 0 {
+        eprintln!(
+            "{} ledger entr{} failed signature verification",
+            invalid_verifications,
+            if invalid_verifications == 1 {
+                "y"
+            } else {
+                "ies"
+            }
+        );
+    }
     Ok(())
+}
+
+fn verify_entries(entries: &[EvidenceLedgerEntry]) -> Vec<SignatureVerification> {
+    let mut last_signature = String::from("GENESIS");
+    entries
+        .iter()
+        .map(|entry| {
+            let serialised = serde_json::to_string(&entry.signed_operation.record)
+                .unwrap_or_else(|_| String::new());
+            let expected_hash = if serialised.is_empty() {
+                String::new()
+            } else {
+                simple_hash(&serialised)
+            };
+            let hash_valid = !serialised.is_empty() && expected_hash == entry.signed_operation.hash;
+            let signature_valid = verify_signed_operation(&entry.signed_operation);
+            let chain_valid = entry.signed_operation.previous_signature == last_signature;
+            last_signature = entry.signed_operation.signature.clone();
+            SignatureVerification {
+                hash_valid,
+                signature_valid,
+                chain_valid,
+            }
+        })
+        .collect()
+}
+
+fn format_signature_status(status: &SignatureVerification) -> String {
+    if status.hash_valid && status.signature_valid && status.chain_valid {
+        "signature=verified".to_string()
+    } else {
+        let mut issues = Vec::new();
+        if !status.hash_valid {
+            issues.push("hash");
+        }
+        if !status.signature_valid {
+            issues.push("signature");
+        }
+        if !status.chain_valid {
+            issues.push("chain");
+        }
+        format!("signature=INVALID({})", issues.join(","))
+    }
 }
 
 async fn build_daemon(config: DaemonArgs) -> Result<RelocationDaemon> {
