@@ -37,11 +37,10 @@ invalid config values:
 /diagnostics/warningsAsInfo: invalid type: boolean `true`, expected a string;
 ```
 
-Update your VS Code `settings.json` (user or workspace) to use arrays of warning names instead of booleans, e.g.
+Use the CLI diagnostics helper instead of editing IDE settings directly:
 
-```json
-"rust-analyzer.diagnostics.warningsAsHint": ["unused-imports"],
-"rust-analyzer.diagnostics.warningsAsInfo": ["dead-code"]
+```bash
+python server/tools/dev_env_cli.py diagnostics
 ```
 
-Leaving them unset means default diagnostic levels are used.
+If you still need custom overrides, add them to `settings.toml` under `[diagnostics]`.

@@ -23,6 +23,7 @@ This workspace supports development on **three platforms**:
 
 ```powershell
 # Activate portable Cargo
+python server/tools/dev_env_cli.py activate --platform windows
 .\server\tools\activate-cargo.ps1
 
 # Verify
@@ -58,6 +59,7 @@ cargo --version
 
 ```bash
 # Activate Cargo
+python server/tools/dev_env_cli.py activate --platform linux
 source ./server/tools/activate-cargo.sh
 
 # Or add to ~/.bashrc for automatic loading:
@@ -70,6 +72,7 @@ echo 'source $HOME/.cargo/env' >> ~/.bashrc
 
 ```bash
 # Set environment variables
+python server/tools/dev_env_cli.py activate --platform wsl
 export CARGO_HOME="/mnt/d/dev/workspaces/noa_ark_os/server/tools/cargo-portable"
 export RUSTUP_HOME="/mnt/d/dev/workspaces/noa_ark_os/server/tools/rustup-portable"
 export PATH="/mnt/d/dev/workspaces/noa_ark_os/server/tools/cargo-portable/bin:$PATH"
@@ -82,20 +85,12 @@ cargo.exe --version
 
 ---
 
-## 🎯 VS Code Terminal Profiles
+## 🧭 CLI Reference
 
-The workspace is configured with multiple terminal profiles:
-
-### Windows Terminals:
-- **PowerShell** (Default for Windows) - Use for portable Cargo
-- **Command Prompt** - Available if needed
-- **WSL** - Ubuntu subsystem
-- **Git Bash** - If installed
-
-### Switch Terminals:
-1. Click the dropdown arrow (v) in terminal panel
-2. Select desired profile
-3. Or press `Ctrl+Shift+P` → "Terminal: Select Default Profile"
+- `python server/tools/dev_env_cli.py summary` – Display workspace paths and profiles.
+- `python server/tools/dev_env_cli.py activate --platform <windows|wsl|linux>` – Print activation steps.
+- `python server/tools/dev_env_cli.py doctor` – Check required scripts and directories.
+- `python server/tools/dev_env_cli.py diagnostics` – Rust-analyzer troubleshooting guidance.
 
 ---
 
@@ -140,17 +135,13 @@ cargo.exe run
 
 ---
 
-## 🔧 VS Code Tasks
+## 🧪 CLI Workflows
 
-Pre-configured tasks work with **PowerShell** (portable Cargo):
-
-Press `Ctrl+Shift+P` → `Tasks: Run Task`:
-- **Cargo Build (Portable)** - Builds in PowerShell
-- **Cargo Run (Portable)** - Runs in PowerShell
-- **Cargo Test (Portable)** - Tests in PowerShell
-- **Cargo Check (Portable)** - Checks in PowerShell
-
-For WSL/Linux, use the terminal directly.
+- `cargo build` / `cargo build --release` – Compile projects after activation.
+- `cargo test` – Run the test suite.
+- `cargo run --bin <target>` – Execute binaries.
+- `cargo check` – Fast validation without producing binaries.
+- `python server/tools/dev_env_cli.py doctor` – Confirm scripts before running automation or CI jobs.
 
 ---
 
@@ -237,9 +228,9 @@ cargo 1.90.0 (...)
 - Or install Rust: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
 
 ### Rust-analyzer not working
-- **Windows**: Check `.vscode/settings.json` has correct paths
-- **WSL**: Ensure native Rust is installed
-- **Reload**: `Ctrl+Shift+P` → "Developer: Reload Window"
+- **Run**: `python server/tools/dev_env_cli.py diagnostics`
+- **Windows**: Ensure `.\server\tools\activate-cargo.ps1` was executed in the current session
+- **WSL**: Ensure native Rust is installed or select the portable toolchain during activation
 
 ### Wrong Cargo version
 - **Check**: Run `where.exe cargo` (Windows) or `which cargo` (Linux)
@@ -301,12 +292,12 @@ source $HOME/.cargo/env
 
 ## 💡 Tips
 
-1. **VS Code will auto-detect** your active terminal and use appropriate commands
-2. **Rust-analyzer** is configured for Windows portable by default
-3. **Tasks** use PowerShell, run them from PowerShell terminal
+1. **Run the CLI summary** before switching platforms to confirm paths.
+2. **Use `python server/tools/dev_env_cli.py doctor`** after upgrades or reinstalls.
+3. **Keep Windows and WSL toolchains separate** to avoid path collisions.
 4. **Add to shell profile** for automatic activation:
-   - PowerShell: Add to `$PROFILE`
-   - Bash: Add to `~/.bashrc`
+   - PowerShell: Add `.\server\tools\activate-cargo.ps1` to `$PROFILE`
+   - Bash: Add `source ./server/tools/activate-cargo.sh` to `~/.bashrc`
 
 ---
 
