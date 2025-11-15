@@ -152,6 +152,10 @@ impl GoalRunTracker {
     fn snapshot(&self) -> Vec<AgentExecutionResult> {
         self.agents.clone()
     }
+
+    fn into_snapshot(self) -> Vec<AgentExecutionResult> {
+        self.agents
+    }
 }
 
 pub struct WorkflowEngine {

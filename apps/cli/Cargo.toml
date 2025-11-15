@@ -20,6 +20,8 @@ tokio = { workspace = true }
 relocation-daemon = { path = "../../services/relocation-daemon" }
 uuid = { version = "1.6", features = ["v4"] }
 noa_workflow = { path = "../../workflow" }
+serde = { workspace = true }
+noa-plugin-sdk = { path = "../../plugins/sdk" }
 noa_inference = { path = "../../server/ai/inference" }
 futures = "0.3"
 noa_cicd = { path = "../../cicd" }

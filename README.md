@@ -158,6 +158,28 @@ cargo test --workspace
 
 See [Getting Started Guide](docs/GETTING_STARTED.md) for detailed instructions.
 
+## Tool Registry & CLI Extensions
+
+- Discover cross-cutting tooling via `registry/tools.registry.json`, which
+  enumerates observability, automation, analysis, collaboration, and plugin
+  capabilities together with budgets, parameters, side effects, and CLI
+  mappings.
+- The `noa` CLI now surfaces structured output for these categories, for
+  example:
+
+  ```bash
+  noa observability metrics --target kernel --window 120
+  noa automation run --plan-id <uuid>
+  noa analysis security --scope services --since HEAD~3
+  noa collaboration review --workflow-id <id>
+  noa plugin describe --surface cli
+  ```
+
+- Plugin developers can import `noa-plugin-sdk` (see `plugins/sdk/`) to parse
+  the registry and bootstrap integrations.
+- REST and gRPC consumers can target `docs/api/noa-tools.openapi.yaml` and
+  `server/protos/noa_tools.proto`, which mirror the CLI signatures for remote
+  orchestration.
 ## Local-First Merge Gate
 
 - Activate the portable toolchains each session (`source server/tools/activate-cargo.sh` and `source server/tools/activate-node.sh`).

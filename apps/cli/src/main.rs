@@ -3,8 +3,9 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use clap::{Args, Parser, Subcommand};
+use noa_plugin_sdk::{ToolDescriptor, ToolRegistry};
 use futures::StreamExt;
 use noa_inference::{
     CompletionRequest, ProviderRouter, TelemetryEvent, TelemetryHandle, TelemetrySink,
@@ -14,6 +15,7 @@ use noa_cicd::CICDSystem;
 use noa_workflow::EvidenceLedgerEntry;
 use noa_workflow::{InferenceMetric, PipelineInstrumentation};
 use relocation_daemon::{ExecutionMode, RelocationDaemon};
+use serde::Serialize;
 use serde_json::json;
 use tokio::runtime::Runtime;
 use uuid::Uuid;
@@ -27,6 +29,7 @@ enum OutputMode {
 #[derive(Parser)]
 #[command(
     name = "noa",
+    about = "NOA Ark OS relocation daemon tooling",
     about = "NOA Ark OS unified CLI (kernel, world, registry, trust, snapshot, agent, policy, sbom, pipeline, profile)",
     version
 )]
@@ -56,6 +59,15 @@ struct DaemonArgs {
     registry: PathBuf,
     #[arg(long, default_value = ".workspace/backups")]
     backups: PathBuf,
+}
+
+#[derive(Args, Clone)]
+struct RegistryArgs {
+    #[arg(long, default_value = "registry/tools.registry.json")]
+    registry: PathBuf,
+    /// Optional tool identifier, alias, or CLI command string to filter on.
+    #[arg(long)]
+    tool: Option<String>,
 }
 
 #[derive(Subcommand)]
@@ -157,6 +169,40 @@ enum RelocationCmd {
         #[arg(long)]
         limit: Option<usize>,
     },
+    /// Surface observability tooling from the shared registry
+    Observability {
+        #[command(flatten)]
+        query: RegistryArgs,
+    },
+    /// Surface automation tooling from the shared registry
+    Automation {
+        #[command(flatten)]
+        query: RegistryArgs,
+    },
+    /// Surface analysis tooling from the shared registry
+    Analysis {
+        #[command(flatten)]
+        query: RegistryArgs,
+    },
+    /// Surface collaboration tooling from the shared registry
+    Collaboration {
+        #[command(flatten)]
+        query: RegistryArgs,
+    },
+    /// Surface plugin tooling from the shared registry
+    Plugin {
+        #[command(flatten)]
+        query: RegistryArgs,
+    },
+}
+
+#[derive(Serialize)]
+struct ToolCategoryResponse {
+    schema_version: String,
+    generated_at: String,
+    category: String,
+    total: usize,
+    tools: Vec<ToolDescriptor>,
     /// Interact with agents using configured inference providers
     Agent {
         #[command(subcommand)]
@@ -357,6 +403,21 @@ fn main() -> Result<()> {
             Commands::Evidence { workflow, limit } => {
                 show_evidence(workflow, limit)?;
             }
+            Commands::Observability { query } => {
+                handle_registry_category("observability", query)?;
+            }
+            Commands::Automation { query } => {
+                handle_registry_category("automation", query)?;
+            }
+            Commands::Analysis { query } => {
+                handle_registry_category("analysis", query)?;
+            }
+            Commands::Collaboration { query } => {
+                handle_registry_category("collaboration", query)?;
+            }
+            Commands::Plugin { query } => {
+                handle_registry_category("plugin", query)?;
+            }
             Commands::Agent { command } => {
                 let instrumentation = Arc::new(
                     PipelineInstrumentation::new()
@@ -419,6 +480,49 @@ fn main() -> Result<()> {
 
         Ok(())
     })
+}
+
+fn handle_registry_category(category: &str, query: RegistryArgs) -> Result<()> {
+    let RegistryArgs { registry, tool } = query;
+    let registry = ToolRegistry::from_path(&registry)
+        .with_context(|| format!("failed to load tool registry from {}", registry.display()))?;
+
+    let mut selected: Vec<ToolDescriptor> = registry
+        .tools_for_category(category)
+        .into_iter()
+        .cloned()
+        .collect();
+
+    if let Some(reference) = tool {
+        if let Some(tool) = registry.find_tool(&reference) {
+            if !tool.is_category(category) {
+                bail!(
+                    "tool '{}' belongs to '{}' not '{}'",
+                    reference,
+                    tool.category,
+                    category
+                );
+            }
+            selected = vec![tool.clone()];
+        } else {
+            bail!("no tool matched reference '{}'", reference);
+        }
+    }
+
+    if selected.is_empty() {
+        bail!("no tools registered for category '{}'", category);
+    }
+
+    let response = ToolCategoryResponse {
+        schema_version: registry.schema_version.clone(),
+        generated_at: registry.generated_at.clone(),
+        category: category.to_string(),
+        total: selected.len(),
+        tools: selected,
+    };
+
+    println!("{}", serde_json::to_string_pretty(&response)?);
+    Ok(())
 }
 
 fn show_evidence(workflow_filter: Option<String>, limit: Option<usize>) -> Result<()> {
