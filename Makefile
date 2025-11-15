@@ -129,6 +129,9 @@ sbom:
 scorekeeper:
         @echo "🎯 Calculating trust scores..."
         @mkdir -p metrics
+        @cargo run -p noa_workflow --bin reward_report -- --json > metrics/reward_summary.json
+        @cargo run -p noa_workflow --bin reward_report -- > metrics/reward_summary.txt
+        @echo "✅ Scorekeeper report generated at metrics/reward_summary.json"
         @TARGET=$${NOA_TRUST_METRICS_PATH:-metrics/trust_score.json}; \
             NOA_TRUST_METRICS_PATH=$$TARGET $(CARGO) run -p noa_core --bin noa_scorekeeper -- \
                 --integrity-pass $${TRUST_INTEGRITY_PASS:-120} \
