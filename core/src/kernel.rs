@@ -8,6 +8,9 @@ use std::time::Duration;
 use crate::capabilities::builtin::register_default_capabilities;
 use crate::capabilities::{CapabilityError, CapabilityRegistry, KernelHandle};
 use crate::config::manifest::{KernelManifest, ManifestError};
+use crate::metrics::{self, AggregatedTelemetry, LoadLevel};
+use crate::security::{self, OperationKind, SignedOperation};
+use crate::token;
 use crate::config::profile::{CapabilityToken, ProfileDocument, ProfileError};
 
 static KERNEL_RUNNING: AtomicBool = AtomicBool::new(false);
@@ -26,7 +29,7 @@ fn active_profile_slot() -> &'static Mutex<Option<ActiveProfile>> {
 struct ActiveProfile {
     name: String,
     token: CapabilityToken,
-    source: PathBuf,
+    _source: PathBuf,
 }
 
 const DEFAULT_PROFILE_TOKEN_TTL_HOURS: u64 = 6;
@@ -211,6 +214,7 @@ pub fn init_with_manifest(manifest: KernelManifest) -> Result<KernelHandle, Kern
     manifest.validate()?;
 
     let manifest = Arc::new(manifest);
+    token::configure_from_manifest(&manifest);
     let registry = Arc::new(CapabilityRegistry::new());
 
     register_default_capabilities(&registry)?;
@@ -265,7 +269,7 @@ pub fn load_profile(path: impl AsRef<Path>) -> Result<CapabilityToken, KernelErr
         *slot = Some(ActiveProfile {
             name: token.profile_name.clone(),
             token: token.clone(),
-            source: path_ref.to_path_buf(),
+            _source: path_ref.to_path_buf(),
         });
     }
 

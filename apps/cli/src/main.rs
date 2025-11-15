@@ -82,14 +82,10 @@ enum Commands {
     Trust { #[command(subcommand)] cmd: TrustCmd },
     /// Snapshot operations
     Snapshot { #[command(subcommand)] cmd: SnapshotCmd },
-    /// Agent operations
-    Agent { #[command(subcommand)] cmd: AgentCmd },
     /// Policy operations
     Policy { #[command(subcommand)] cmd: PolicyCmd },
     /// SBOM operations
     Sbom { #[command(subcommand)] cmd: SbomCmd },
-    /// Pipeline operations
-    Pipeline { #[command(subcommand)] cmd: PipelineCmd },
     /// Profile operations
     Profile { #[command(subcommand)] cmd: ProfileCmd },
 
@@ -103,6 +99,27 @@ enum Commands {
         #[arg(long)]
         limit: Option<usize>,
     },
+    /// Surface observability tooling from the shared registry
+    Observability { #[command(flatten)] query: RegistryArgs },
+    /// Surface automation tooling from the shared registry
+    Automation { #[command(flatten)] query: RegistryArgs },
+    /// Surface analysis tooling from the shared registry
+    Analysis { #[command(flatten)] query: RegistryArgs },
+    /// Surface collaboration tooling from the shared registry
+    Collaboration { #[command(flatten)] query: RegistryArgs },
+    /// Surface plugin tooling from the shared registry
+    Plugin { #[command(flatten)] query: RegistryArgs },
+    /// Interact with agents using configured inference providers
+    Agent { #[command(subcommand)] command: AgentCommands },
+    /// Run a natural language query through the inference router
+    Query {
+        #[arg(value_name = "PROMPT")]
+        prompt: String,
+        #[arg(long)]
+        stream: bool,
+    },
+    /// Manage CI/CD pipelines and agent approvals
+    Pipeline { #[command(subcommand)] command: PipelineCommands },
 }
 
 #[derive(Subcommand)]
@@ -121,16 +138,10 @@ enum TrustCmd { Score, Audit { #[arg(long)] history: bool }, Thresholds { #[arg(
 enum SnapshotCmd { Create { name: String }, List, Rollback { id: String }, Verify { id: String } }
 
 #[derive(Subcommand)]
-enum AgentCmd { Spawn { r#type: String }, List, Kill { id: String }, Logs { id: String }, Metrics { id: String } }
-
-#[derive(Subcommand)]
 enum PolicyCmd { Validate { file: PathBuf }, Apply { file: PathBuf }, Test { file: PathBuf }, DryRun { file: PathBuf } }
 
 #[derive(Subcommand)]
 enum SbomCmd { Generate, Verify, Sign, Audit }
-
-#[derive(Subcommand)]
-enum PipelineCmd { Run, Status, Logs, Artifacts }
 
 #[derive(Subcommand)]
 enum ProfileCmd { Switch { name: String }, List, Validate { name: String }, Diff { a: String, b: String } }
@@ -162,38 +173,6 @@ enum RelocationCmd {
         #[arg(long)]
         force: bool,
     },
-    /// Inspect the evidence ledger for workflow receipts and scan results
-    Evidence {
-        #[arg(long)]
-        workflow: Option<String>,
-        #[arg(long)]
-        limit: Option<usize>,
-    },
-    /// Surface observability tooling from the shared registry
-    Observability {
-        #[command(flatten)]
-        query: RegistryArgs,
-    },
-    /// Surface automation tooling from the shared registry
-    Automation {
-        #[command(flatten)]
-        query: RegistryArgs,
-    },
-    /// Surface analysis tooling from the shared registry
-    Analysis {
-        #[command(flatten)]
-        query: RegistryArgs,
-    },
-    /// Surface collaboration tooling from the shared registry
-    Collaboration {
-        #[command(flatten)]
-        query: RegistryArgs,
-    },
-    /// Surface plugin tooling from the shared registry
-    Plugin {
-        #[command(flatten)]
-        query: RegistryArgs,
-    },
 }
 
 #[derive(Serialize)]
@@ -203,22 +182,6 @@ struct ToolCategoryResponse {
     category: String,
     total: usize,
     tools: Vec<ToolDescriptor>,
-    /// Interact with agents using configured inference providers
-    Agent {
-        #[command(subcommand)]
-        command: AgentCommands,
-    },
-    /// Run a natural language query through the inference router
-    Query {
-        #[arg(value_name = "PROMPT")]
-        prompt: String,
-        #[arg(long)]
-        stream: bool,
-    /// Manage CI/CD pipelines and agent approvals
-    Pipeline {
-        #[command(subcommand)]
-        command: PipelineCommands,
-    },
 }
 
 #[derive(Subcommand)]
@@ -229,6 +192,10 @@ enum AgentCommands {
         prompt: String,
         #[arg(long)]
         stream: bool,
+    },
+}
+
+#[derive(Subcommand)]
 enum PipelineCommands {
     /// Approve a pipeline using agent trust policies
     Approve {
@@ -316,16 +283,6 @@ fn main() -> Result<()> {
                 };
                 print_obj(out_mode, &v)?;
             }
-            Commands::Agent { cmd } => {
-                let v = match cmd {
-                    AgentCmd::Spawn { r#type } => json!({"component":"agent","action":"spawn","type": r#type, "status":"not_implemented"}),
-                    AgentCmd::List => json!({"component":"agent","action":"list","status":"not_implemented"}),
-                    AgentCmd::Kill { id } => json!({"component":"agent","action":"kill","id": id, "status":"not_implemented"}),
-                    AgentCmd::Logs { id } => json!({"component":"agent","action":"logs","id": id, "status":"not_implemented"}),
-                    AgentCmd::Metrics { id } => json!({"component":"agent","action":"metrics","id": id, "status":"not_implemented"}),
-                };
-                print_obj(out_mode, &v)?;
-            }
             Commands::Policy { cmd } => {
                 let v = match cmd {
                     PolicyCmd::Validate { file } => json!({"component":"policy","action":"validate","file": file, "status":"not_implemented"}),
@@ -341,15 +298,6 @@ fn main() -> Result<()> {
                     SbomCmd::Verify => json!({"component":"sbom","action":"verify","status":"not_implemented"}),
                     SbomCmd::Sign => json!({"component":"sbom","action":"sign","status":"not_implemented"}),
                     SbomCmd::Audit => json!({"component":"sbom","action":"audit","status":"not_implemented"}),
-                };
-                print_obj(out_mode, &v)?;
-            }
-            Commands::Pipeline { cmd } => {
-                let v = match cmd {
-                    PipelineCmd::Run => json!({"component":"pipeline","action":"run","status":"not_implemented"}),
-                    PipelineCmd::Status => json!({"component":"pipeline","action":"status","status":"not_implemented"}),
-                    PipelineCmd::Logs => json!({"component":"pipeline","action":"logs","status":"not_implemented"}),
-                    PipelineCmd::Artifacts => json!({"component":"pipeline","action":"artifacts","status":"not_implemented"}),
                 };
                 print_obj(out_mode, &v)?;
             }

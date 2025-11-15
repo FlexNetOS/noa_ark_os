@@ -54,6 +54,9 @@ __pycache__/
 *.so
 .Python
 env/
+!tools/devshell/env/
+!tools/devshell/env/*.sh
+!tools/devshell/env/*.ps1
 venv/
 ENV/
 build/
@@ -109,6 +112,10 @@ crc/archive/
 crc/sandboxes/*/active/
 crc/drop-in/incoming/stale/
 crc/drop-in/incoming/forks/*/
+
+# Devshell state snapshots
+tools/devshell/state/*
+!tools/devshell/state/.gitkeep
 
 # Models & Large Files
 *.bin

@@ -140,24 +140,34 @@ External Code → CRC Drop-In → AI Analysis → Auto-Adapt -->
 ## Quick Start
 
 ```bash
-# Build the workspace
-cargo build --release
+# Build the workspace with the portable-aware shim
+make cargo-build ARGS="--release"
 
-# Run CRC/CI/CD demo
-cargo run --example crc_cicd_demo
+# Run CRC/CI/CD demo through the shim
+make cargo-run ARGS="--example crc_cicd_demo"
 
 # Run full system demo
-cargo run --example full_system_demo
+make cargo-run ARGS="--example full_system_demo"
 
 # Run the kernel
-cargo run --bin noa_kernel
+make cargo-run ARGS="--bin noa_kernel"
 
-# Run tests
-cargo test --workspace
+# Run tests (workspace-wide)
+make cargo-test ARGS="--workspace"
+
+# Build the primary web client
+make ui-build
 ```
+
+All `make cargo-*` targets wrap the portable Cargo activator when available and fall back to the host toolchain otherwise. The `make ui-*` helpers surface the most common `pnpm` flows without requiring VS Code task bindings.
 
 See [Getting Started Guide](docs/GETTING_STARTED.md) for detailed instructions.
 
+## Developer Environment (CLI-first)
+
+- Build and run the development container with the cross-platform scripts in [`scripts/dev-env.sh`](scripts/dev-env.sh) or [`scripts/dev-env.ps1`](scripts/dev-env.ps1).
+- Configuration details (base image, language runtimes, editor extensions) live in [`tools/devshell/dev-env.manifest.toml`](tools/devshell/dev-env.manifest.toml).
+- Usage guides, Visual Studio replacement workflow, and environment smoke tests are documented in [`docs/guides/dev-environment-cli.md`](docs/guides/dev-environment-cli.md).
 ## Tool Registry & CLI Extensions
 
 - Discover cross-cutting tooling via `registry/tools.registry.json`, which
