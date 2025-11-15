@@ -118,7 +118,7 @@ When reviving:
 
 ## rust-analyzer Diagnostics Mapping
 
-In `.vscode/settings.json` or user settings, configure more granular hints instead of global suppression:
+In `tools/devshell/config.json` (mirrored automatically to IDEs when you source `tools/devshell/env/pnpm.*`), configure more granular hints instead of global suppression:
 
 ```json
 "rust-analyzer.diagnostics.warningsAsHint": ["unused-imports"],

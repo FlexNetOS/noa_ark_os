@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 
 import { assertUser } from "@/app/lib/session";
 import type { VibeCard, WorkspaceBoard } from "@/app/components/board-types";

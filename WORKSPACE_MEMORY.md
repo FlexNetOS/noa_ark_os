@@ -138,6 +138,15 @@ cargo run
 
 ---
 
+## 🧠 Memory Indexes & Retrieval Performance
+
+- **Hierarchical Stores:** Long-term context is persisted to `.workspace/memory/long_term.cbor` while active sessions stream to `session_<id>.cbor` using compact CBOR encoding.
+- **Indexer Output:** Every core bootstrap now regenerates `ast_graph.json`, `ownership_graph.json`, and `config_graph.json` under `.workspace/indexes/`, keeping dependency views fresh for planners.
+- **Retrieval SLA:** Incremental fetch APIs guarantee <100 ms p95 retrieval across combined session + long-term windows (validated in automated tests).
+- **Scorekeeper Hooks:** Workflow instrumentation records context byte usage and retrieval latency, penalising workflows that exceed the 16 KiB default budget. Penalty and p95 stats surface in goal metric snapshots for downstream automation.
+
+---
+
 ## 🏗️ Architecture Components
 
 ### 1. CRC - Continuous ReCode
