@@ -109,10 +109,10 @@
   // Additional Editor Settings
   // ============================================
 
-  // Format on save for Rust files
+  // Disable editor formatters to enforce CLI-only workflows
+  "editor.formatOnSave": false,
   "[rust]": {
-    "editor.formatOnSave": true,
-    "editor.defaultFormatter": "rust-lang.rust-analyzer"
+    "editor.formatOnSave": false
   },
 
   // Git configuration
@@ -271,5 +271,8 @@
   },
   "githubIssues.alwaysPromptForNewIssueRepo": true,
   "githubPullRequests.experimental.useQuickChat": true,
-  "githubPullRequests.notifications": "pullRequests"
+  "githubPullRequests.notifications": "pullRequests",
+
+  // PHP validation uses installed CLI binary
+  "php.validate.executablePath": "/usr/bin/php"
 }
