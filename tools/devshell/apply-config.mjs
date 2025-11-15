@@ -12,7 +12,12 @@ function loadConfig() {
   if (!fs.existsSync(configPath)) {
     return {};
   }
-  return JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  try {
+    return JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  } catch (err) {
+    console.error(`Error: Failed to parse config file at "${configPath}":\n${err.message}`);
+    process.exit(1);
+  }
 }
 
 function resolveValue(value) {
