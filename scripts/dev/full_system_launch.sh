@@ -33,10 +33,9 @@ detect_pnpm_version() {
 
 PNPM_REQUIRED_VERSION="$(detect_pnpm_version)"
 PNPM_AGENT="pnpm/${PNPM_REQUIRED_VERSION}"
-PNPM_ENV=(npm_config_user_agent="$PNPM_AGENT")
 PNPM_BIN=(corepack pnpm)
 
-MODE="launch"
+LAUNCH_MODE="launch"
 SKIP_TESTS=0
 SKIP_BUILD=0
 DRY_RUN=0
@@ -67,7 +66,7 @@ EOF
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --verify)
-      MODE="verify"
+      LAUNCH_MODE="verify"
       shift
       ;;
     --dry-run)
@@ -129,7 +128,7 @@ activate_toolchains() {
 }
 
 pnpm_cmd() {
-  "${PNPM_ENV[@]}" "${PNPM_BIN[@]}" "$@"
+  env npm_config_user_agent="$PNPM_AGENT" "${PNPM_BIN[@]}" "$@"
 }
 
 prepare_env() {
@@ -211,7 +210,7 @@ start_services() {
   log "▶ Launching Vibe Kanban UI on http://$UI_HOST:$UI_PORT"
   (
     set -euo pipefail
-    HOST="$UI_HOST" PORT="$UI_PORT" "${PNPM_ENV[@]}" "${PNPM_BIN[@]}" --filter vibe-kanban dev
+    HOST="$UI_HOST" PORT="$UI_PORT" env npm_config_user_agent="$PNPM_AGENT" "${PNPM_BIN[@]}" --filter vibe-kanban dev
   ) |& tee "$UI_LOG" &
   UI_PID=$!
 
@@ -239,7 +238,11 @@ install_deps
 build_workspace
 run_tests
 
-if [[ "$MODE" == "verify" ]]; then
+if [[ -n "${DEBUG_FULL_SYSTEM_LAUNCH:-}" ]]; then
+  log "Mode resolved to $LAUNCH_MODE"
+fi
+
+if [[ "$LAUNCH_MODE" == "verify" ]]; then
   log "Verification complete."
   exit 0
 fi

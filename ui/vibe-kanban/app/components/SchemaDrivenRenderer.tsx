@@ -17,6 +17,7 @@ import { UploadPanel } from "./UploadPanel";
 import { AnalyticsPanel } from "./AnalyticsPanel";
 import { ActivityTimeline } from "./ActivityTimeline";
 import { AutomationPanel } from "./AutomationPanel";
+import { AgentFactoryPanel } from "./AgentFactoryPanel";
 import { isFeatureEnabled } from "./featureFlags";
 import type { BoardState } from "./useBoardState";
 import type { SessionState } from "./useSession";
@@ -187,6 +188,14 @@ const widgetRegistry = {
     return (
       <WidgetSurface>
         <AutomationPanel cards={cards} onRetry={boardState.retryAutomation} />
+      </WidgetSurface>
+    );
+  },
+  "workspace.agentFactory": ({ context }: ComponentRenderProps) => {
+    const { boardState } = context.data as SchemaDrivenRendererProps["context"]["data"];
+    return (
+      <WidgetSurface>
+        <AgentFactoryPanel state={boardState} />
       </WidgetSurface>
     );
   },

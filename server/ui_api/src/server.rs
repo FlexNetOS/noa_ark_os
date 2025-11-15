@@ -958,6 +958,12 @@ mod tests {
         assert_eq!(parsed.drop_id, "drop-123");
         assert_eq!(parsed.status, "incoming");
         assert!(!parsed.cas_keys.is_empty());
+        let expected_url = format!("file://{}", parsed.receipt_path);
+        assert_eq!(
+            parsed.receipt_url.as_deref(),
+            Some(expected_url.as_str()),
+            "receipt_url should point to the generated receipt"
+        );
 
         let receipt_path = PathBuf::from(&parsed.receipt_path);
         assert!(receipt_path.exists());

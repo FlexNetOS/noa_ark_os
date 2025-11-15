@@ -9,16 +9,28 @@ fn registry_parses_and_contains_expected_categories() -> anyhow::Result<()> {
         .parent()
         .and_then(|dir| dir.parent())
         .expect("workspace root");
-    let registry_path = workspace_root
-        .join("registry")
-        .join("tools.registry.json");
+    let registry_path = workspace_root.join("registry").join("tools.registry.json");
 
     let registry = ToolRegistry::from_path(&registry_path)?;
-    registry.ensure_categories(&["observability", "automation", "analysis", "collaboration", "plugin"])?;
+    registry.ensure_categories(&[
+        "observability",
+        "automation",
+        "analysis",
+        "collaboration",
+        "plugin",
+    ])?;
 
     for tool in registry.tools {
-        assert!(tool.budgets.cpu_millis > 0, "tool {} missing cpu budget", tool.id);
-        assert!(tool.budgets.max_duration_seconds > 0, "tool {} missing duration budget", tool.id);
+        assert!(
+            tool.budgets.cpu_millis > 0,
+            "tool {} missing cpu budget",
+            tool.id
+        );
+        assert!(
+            tool.budgets.max_duration_seconds > 0,
+            "tool {} missing duration budget",
+            tool.id
+        );
         assert!(
             !tool.cli_mappings.is_empty(),
             "tool {} must declare at least one CLI mapping",

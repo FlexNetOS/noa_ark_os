@@ -9,6 +9,8 @@ export type WidgetKind =
   | "workspace.planner"
   | "workspace.integrations"
   | "workspace.presence"
+  | "workspace.automation"
+  | "workspace.agentFactory"
   | "layout.region"
   | "layout.section"
   | "cta.primary"

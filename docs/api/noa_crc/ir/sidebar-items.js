@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["FacetKind","Lane"],"struct":["ArtifactRef","DataHandle","Facet","NodeId","NodeIo","NodeState","Provenance","Snapshot"]};

@@ -565,7 +565,10 @@ impl ResearchNotebookModule {
                 "Research Notebook",
                 "book-open",
                 WorkspacePersona::Researcher,
-                vec!["/research/notebooks".into(), "/research/notebooks/citations".into()],
+                vec![
+                    "/research/notebooks".into(),
+                    "/research/notebooks/citations".into(),
+                ],
                 vec![ModuleCapability::Analytics, ModuleCapability::Storage],
                 ModuleMount::InternalComponent {
                     name: "ResearchNotebook".into(),

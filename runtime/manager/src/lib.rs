@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 use noa_core::hardware::{AcceleratorKind, HardwareProfile};
@@ -139,6 +139,119 @@ impl KernelRuntimeGraph {
     pub fn service(&self, id: &str) -> Option<&KernelRuntimeService> {
         self.services.iter().find(|service| service.id == id)
     }
+
+    /// Validate the runtime graph to ensure dependencies are resolvable and acyclic.
+    pub fn validate(&self) -> std::result::Result<(), GraphValidationError> {
+        let mut known = HashSet::new();
+        for service in &self.services {
+            if !known.insert(service.id.clone()) {
+                return Err(GraphValidationError::DuplicateService {
+                    id: service.id.clone(),
+                });
+            }
+        }
+
+        for id in &self.boot_order {
+            if !known.contains(id) {
+                return Err(GraphValidationError::UnknownBootService { id: id.clone() });
+            }
+        }
+
+        for id in &known {
+            if !self.boot_order.iter().any(|entry| entry == id) {
+                return Err(GraphValidationError::ServiceMissingFromBootOrder { id: id.clone() });
+            }
+        }
+
+        for service in &self.services {
+            for dependency in service.requires.iter().chain(service.optional.iter()) {
+                if !known.contains(dependency) {
+                    return Err(GraphValidationError::UnknownDependency {
+                        service: service.id.clone(),
+                        dependency: dependency.clone(),
+                    });
+                }
+            }
+        }
+
+        self.detect_cycles()
+    }
+
+    fn detect_cycles(&self) -> std::result::Result<(), GraphValidationError> {
+        let adjacency: HashMap<&str, Vec<&str>> = self
+            .services
+            .iter()
+            .map(|service| {
+                (
+                    service.id.as_str(),
+                    service.requires.iter().map(|dep| dep.as_str()).collect(),
+                )
+            })
+            .collect();
+
+        let mut visited = HashSet::new();
+        let mut visiting = HashSet::new();
+        let mut stack = Vec::new();
+
+        for node in adjacency.keys() {
+            if !visited.contains(*node) {
+                dfs(node, &adjacency, &mut visited, &mut visiting, &mut stack)?;
+            }
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Debug, Error)]
+pub enum GraphValidationError {
+    #[error("duplicate service id '{id}' in kernel runtime graph")]
+    DuplicateService { id: String },
+    #[error("service '{service}' references unknown dependency '{dependency}'")]
+    UnknownDependency { service: String, dependency: String },
+    #[error("service '{id}' missing from boot order")]
+    ServiceMissingFromBootOrder { id: String },
+    #[error("boot order references unknown service '{id}'")]
+    UnknownBootService { id: String },
+    #[error("cyclic dependency detected: {cycle:?}")]
+    CyclicDependency { cycle: Vec<String> },
+}
+
+fn dfs<'a>(
+    node: &'a str,
+    adjacency: &HashMap<&'a str, Vec<&'a str>>,
+    visited: &mut HashSet<&'a str>,
+    visiting: &mut HashSet<&'a str>,
+    stack: &mut Vec<&'a str>,
+) -> std::result::Result<(), GraphValidationError> {
+    visiting.insert(node);
+    stack.push(node);
+
+    if let Some(children) = adjacency.get(node) {
+        for child in children {
+            if visiting.contains(child) {
+                let start = stack
+                    .iter()
+                    .rposition(|candidate| candidate == child)
+                    .unwrap_or(0);
+                let mut cycle: Vec<String> = stack[start..]
+                    .iter()
+                    .map(|value| (*value).to_string())
+                    .collect();
+                cycle.push((*child).to_string());
+                return Err(GraphValidationError::CyclicDependency { cycle });
+            }
+
+            if !visited.contains(child) {
+                dfs(child, adjacency, visited, visiting, stack)?;
+            }
+        }
+    }
+
+    visiting.remove(node);
+    visited.insert(node);
+    stack.pop();
+    Ok(())
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -508,8 +621,28 @@ mod tests {
 
     fn runtime_graph() -> KernelRuntimeGraph {
         KernelRuntimeGraph {
-            boot_order: vec!["runtime-manager".into(), "gateway".into()],
+            boot_order: vec!["kernel".into(), "runtime-manager".into(), "gateway".into()],
             services: vec![
+                KernelRuntimeService {
+                    id: "kernel".into(),
+                    requires: vec![],
+                    optional: vec![],
+                    supported_classes: vec![
+                        HostClassification::Minimal,
+                        HostClassification::Standard,
+                        HostClassification::Accelerated,
+                    ],
+                },
+                KernelRuntimeService {
+                    id: "observability".into(),
+                    requires: vec!["kernel".into()],
+                    optional: vec![],
+                    supported_classes: vec![
+                        HostClassification::Minimal,
+                        HostClassification::Standard,
+                        HostClassification::Accelerated,
+                    ],
+                },
                 KernelRuntimeService {
                     id: "runtime-manager".into(),
                     requires: vec!["kernel".into()],
@@ -531,6 +664,35 @@ mod tests {
                 },
             ],
         }
+    }
+
+    #[test]
+    fn validates_kernel_graph_fixture() {
+        runtime_graph().validate().unwrap();
+    }
+
+    #[test]
+    fn detects_cycles_in_graph() {
+        let graph = KernelRuntimeGraph {
+            boot_order: vec!["a".into(), "b".into()],
+            services: vec![
+                KernelRuntimeService {
+                    id: "a".into(),
+                    requires: vec!["b".into()],
+                    optional: vec![],
+                    supported_classes: vec![HostClassification::Standard],
+                },
+                KernelRuntimeService {
+                    id: "b".into(),
+                    requires: vec!["a".into()],
+                    optional: vec![],
+                    supported_classes: vec![HostClassification::Standard],
+                },
+            ],
+        };
+
+        let err = graph.validate().unwrap_err();
+        assert!(matches!(err, GraphValidationError::CyclicDependency { .. }));
     }
 
     #[test]

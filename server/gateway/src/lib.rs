@@ -11,13 +11,15 @@
 //! so it can run in CI without external infrastructure.
 
 mod auth;
+mod partner;
 mod policy;
 mod rate_limit;
 mod router;
 mod telemetry;
 
 pub use auth::{AuthCredentials, UnifiedAuthenticator};
-pub use policy::{GatewayPolicy, PolicyEnforcer};
+pub use partner::{GatewaySdk, OnboardingRequest, OnboardingResponse, PartnerApi};
+pub use policy::{EnforcementContext, GatewayPolicy, PolicyEnforcer};
 pub use rate_limit::{RateLimiter, RateLimiterConfig};
 pub use router::{ProgrammableRouter, Protocol, RoutePlan};
 pub use telemetry::{GatewayMetrics, TelemetryEvent, TelemetrySink};
@@ -95,8 +97,14 @@ impl Gateway {
             .context("authentication failed")?;
 
         // Step 2 - authorise via core security policies
+        let enforcement_context =
+            EnforcementContext::from_payload(&request.protocol, &request.payload);
         self.policy
-            .enforce(request.user_id, request.required_permission)
+            .enforce(
+                request.user_id,
+                request.required_permission.clone(),
+                &enforcement_context,
+            )
             .context("policy enforcement failure")?;
 
         // Step 3 - enforce rate limits for the linked agent/service
@@ -140,7 +148,12 @@ pub fn bootstrap_gateway() -> Result<Gateway> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::auth::{
+        DEV_AGENT_SAN_PREFIX, DEV_ALLOWED_FINGERPRINT, DEV_CONTROL_PLANE_SAN, DEV_OIDC_AUDIENCE,
+        DEV_OIDC_ISSUER, DEV_OIDC_SECRET,
+    };
     use crate::rate_limit::RateLimitError;
+    use jsonwebtoken::{encode, EncodingKey, Header};
     use serde_json::json;
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -165,11 +178,7 @@ mod tests {
             request_id: "req-graphql".into(),
             user_id: 0,
             agent_id: Some("fixed_agent_gateway".into()),
-            credentials: AuthCredentials {
-                mtls: Some("agent-cert".into()),
-                oidc: Some("id-token-verified".into()),
-                api_key: Some("key-123".into()),
-            },
+            credentials: test_credentials("fixed_agent_gateway"),
             protocol: Protocol::GraphQl,
             payload: json!({
                 "query": "{ serviceA { id name } }",
@@ -232,5 +241,41 @@ mod tests {
             .check(&agent_id)
             .expect_err("second call should exceed configured limit");
         assert!(matches!(err, RateLimitError::LimitExceeded(_)));
+    }
+
+    fn test_credentials(agent_id: &str) -> AuthCredentials {
+        AuthCredentials {
+            mtls: Some(crate::auth::MtlsCertificate {
+                fingerprint: DEV_ALLOWED_FINGERPRINT.into(),
+                subject_alt_names: vec![
+                    format!("{}{}", DEV_AGENT_SAN_PREFIX, agent_id),
+                    DEV_CONTROL_PLANE_SAN.into(),
+                ],
+            }),
+            oidc: Some(test_token()),
+            api_key: Some("key-123".into()),
+        }
+    }
+
+    fn test_token() -> String {
+        let claims = serde_json::json!({
+            "iss": DEV_OIDC_ISSUER,
+            "aud": DEV_OIDC_AUDIENCE,
+            "exp": current_epoch() + 3600,
+            "sub": "gateway-test",
+        });
+        encode(
+            &Header::default(),
+            &claims,
+            &EncodingKey::from_secret(DEV_OIDC_SECRET.as_bytes()),
+        )
+        .expect("token")
+    }
+
+    fn current_epoch() -> u64 {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
     }
 }

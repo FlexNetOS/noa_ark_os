@@ -25,9 +25,9 @@ noa_inference = { path = "../../server/ai/inference" }
 futures = "0.3"
 noa_cicd = { path = "../../cicd" }
 noa_core = { path = "../../core" }
+walkdir = "2"
 
 [dev-dependencies]
 assert_cmd = "2.0"
 predicates = "3.1"
 tempfile = "3.10"
-walkdir = "2"

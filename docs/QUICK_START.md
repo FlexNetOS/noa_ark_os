@@ -46,7 +46,40 @@ curl http://127.0.0.1:8080/completion -X POST `
 
 ---
 
-### **Step 3: Use NOA CLI**
+### **Step 3: Start Gateway System**
+
+```powershell
+# Start the NOA Gateway (after AI server is running)
+cargo run --bin gateway
+```
+
+**What you'll see**:
+```
+NOA Gateway starting...
+Loading symbol routing tables...
+Policy engine initialized...
+QoS tiers configured...
+Hardware acceleration enabled...
+Gateway ready on port 3000
+```
+
+---
+
+### **Step 4: Test Gateway**
+
+```powershell
+# Test gateway health
+curl http://127.0.0.1:3000/health
+
+# Test symbol routing
+curl http://127.0.0.1:3000/route -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"symbol":"test","tier":"premium"}'
+```
+
+---
+
+### **Step 5: Use NOA CLI**
 
 ```powershell
 cargo run --example noa_cli
@@ -63,6 +96,7 @@ Then type any prompt!
 | **Launch script** | 1 second | Opens window |
 | **Model loading** | 30-60 seconds | 9.65 GB → GPU VRAM |
 | **First ready** | ~60 seconds | Server accepting requests |
+| **Gateway start** | 5-10 seconds | Symbol tables, policies, QoS |
 | **First inference** | 10-20 seconds | Generate first response |
 | **Subsequent** | 5-10 seconds | Much faster! |
 

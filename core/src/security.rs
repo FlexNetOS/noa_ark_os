@@ -35,6 +35,7 @@ pub enum OperationKind {
     DocumentUpdate,
     StageReceipt,
     SecurityScan,
+    GatewayPolicy,
     #[serde(other)]
     Other,
 }

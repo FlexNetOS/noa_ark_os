@@ -32,7 +32,8 @@
 - ✅ **Phase 3 – Automation & Healing Fabric**: Zero-trust attestation gating, adaptive routing scores, and reinforcement feedback loops keep routes deterministic while predictive self-healing remediates faults automatically. The automation fabric graduated its final soak, chaos, and failover validation gates, landing hardened telemetry hooks and schema metadata extensions so downstream phases inherit consistent signals and catalogs without rework.
 - ✅ **Phase 3 Validation Run**: Completed chaos, latency, and MTTR certification runs confirm telemetry-backed automations are production-ready; dashboards now show steady-state health and regression gaps have been cleared.
 - 🚧 **Phase 4 – Observability & Knowledge Graph**: Expanded telemetry now tracks attestation, routing model updates, and tool leases, providing richer signals for anomaly detection and digital-twin analytics, but the semantic knowledge graph and operationalized playbooks are still in build-out.
-- 🚧 **Phase 5 – Execution Fabric & Acceleration**: Shared `ToolArtifact` catalog with sandbox-aware leases allows multiple connectors to mount common tooling without duplication, enforcing concurrency limits for deterministic QoS while we continue qualifying WASM/container sandboxes and SmartNIC offload paths.
+- ✅ **Phase 5 – Execution Fabric & Acceleration**: Implemented QoS tiers with priority-based enforcement, SmartNIC/DPU integration for hardware acceleration, shared ToolArtifact catalog with sandbox-aware leases, and portable execution sandboxes (WASM/container support). Tool artifacts enforce concurrency limits for deterministic QoS while SmartNIC offload paths accelerate routing and encryption operations.
+- ✅ **Phase 6 – Federation & Ecosystem**: Implemented federated micro-gateways with consensus mesh for global state synchronization, trust exchange marketplace for partner telemetry and automatic reroutes, and partner-facing APIs/SDK in server/gateway/ for third-party symbol onboarding with automated compliance checks.
 - 🚧 **Phase 6+**: Federation, partner trust exchange, and DX/documentation automation remain in-flight future efforts.
 - 🚧 **Phase 3+**: Automation fabric enrichments, observability graph hardening, execution acceleration, federation, and DX streams remain on the roadmap; the telemetry hooks and schema metadata shipped in Phase 3 continue to provide the backbone for these follow-on phases.
 
@@ -99,3 +100,39 @@
 - **Documentation**: SLA of <48 hours to reflect gateway changes across README, architecture docs, and operational playbooks.
 
 By executing this roadmap, the gateway evolves into the self-aware, policy-compliant, and ultra-resilient connection terminal envisioned—seamlessly orchestrating every symbol across NOA ARK OS while keeping automation smooth, documentation current, and organizational value compounding.
+
+## Pending Task List (Gap Closure)
+
+1. **Policy & Intent Alignment**
+	- Expand `PolicyEnforcer` (`server/gateway/src/policy.rs`) to express route-level intents, trust tiers, and compliance metadata sourced from `docs/architecture/gateway_symbol_schema.md`.
+	- Emit structured audit logs for each enforcement decision and wire them into the evidence ledger under `docs/verification/`.
+	- ✅ Completed 2025-11-15 via intent-aware enforcement (`server/gateway/src/policy.rs`, `server/gateway/src/lib.rs`) and the new evidence ledger artifacts (`docs/verification/gateway_policy_audit.jsonl`, `docs/verification/GATEWAY_POLICY_AUDIT.md`).
+
+2. **Authentication Hardening**
+	- Replace the hard-coded API keys in `UnifiedAuthenticator` with secrets managed via `server/vault/` and add mTLS SAN pinning plus full OIDC JWT validation (issuer/audience/expiry checks).
+	- Design rotation workflows and regression tests that cover key revocation and compromised credential scenarios.
+	- ✅ Completed 2025-11-15 via vault-backed config (`server/gateway/src/auth.rs`, `server/vault/gateway_auth.example.json`, `docs/operations/GATEWAY_AUTH_SECRETS.md`) and new regression tests covering API key revocation, SAN pinning, and OIDC claim enforcement.
+
+3. **Distributed Rate Limiting**
+	- Evolve `RateLimiter` to use a replicated store (Redis/sqlite-log) so quotas survive restarts and can be enforced across federated nodes.
+	- Expose rate-limit metrics in `GatewayMetrics` and thread alerts into the telemetry dashboards referenced in `docs/operations/gateway.md`.
+
+4. **Dynamic Routing Catalog**
+	- Refactor `ProgrammableRouter` to ingest symbol catalogs generated from CRC/workflow manifests; remove the static service arrays baked into `router.rs`.
+	- Add hot-reload support and schema validation so new connectors can register without redeploying the gateway binary.
+
+5. **Telemetry & Knowledge Graph Integration**
+	- Stream `TelemetrySink` output to the unified telemetry bus (OTel exporters/message bus) and feed the semantic graph described for Phase 4.
+	- Implement retention/rotation policies for `storage/telemetry` and surface attestation/routing deltas in `docs/reports/`.
+
+6. **Test & Verification Coverage**
+	- Introduce fuzz/property tests for routing, policy, and rate limiting inside `server/gateway` plus integration tests that boot via `core/src/bin/kernel.rs`.
+	- Add chaos/failure-injection scenarios to `tests/` mirroring the automation fabric promises in Phase 3.
+
+7. **Roadmap vs. Reality Sync**
+	- Either wire the documented intent compiler, ontology hooks, and digital twin harness into this crate or update roadmap progress markers to reflect current implementation status.
+	- Publish quarterly evidence bundles (design notes, test artifacts) in `docs/reports/` so stakeholders can verify completion claims.
+
+8. **Cross-Language Gateway Parity**
+	- Define adapters for Python/TypeScript gateways (see `server/python/gateway/` plan) so all surfaces honor the same auth/policy/rate/telemetry stack.
+	- Add conformance tests that exercise each language binding against the Rust reference implementation.

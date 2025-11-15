@@ -33,7 +33,8 @@ async fn main() -> Result<()> {
         .await
         .with_context(|| format!("failed to bind {socket_addr}"))?;
 
-    let drop_root = std::env::var("NOA_UI_DROP_ROOT").unwrap_or_else(|_| "crc/drop-in/incoming".into());
+    let drop_root =
+        std::env::var("NOA_UI_DROP_ROOT").unwrap_or_else(|_| "crc/drop-in/incoming".into());
     info!(%socket_addr, %drop_root, "starting NOA UI API server");
 
     let server = UiApiServer::new();

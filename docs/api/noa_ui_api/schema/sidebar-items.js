@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["LayoutSlot","WidgetKind"],"struct":["LayoutRegion","PageEnvelope","PageMetadata","PageSchema","RealTimeEvent","ResumeToken","WidgetSchema"]};

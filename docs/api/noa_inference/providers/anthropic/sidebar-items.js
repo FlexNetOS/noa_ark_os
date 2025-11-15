@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["default_base_url","default_timeout","default_version","parse_anthropic_stream_chunk"],"struct":["AnthropicConfig","AnthropicContentBlock","AnthropicContentDelta","AnthropicMessage","AnthropicProvider","AnthropicRequest","AnthropicResponse","AnthropicStreamEvent","AnthropicUsage"]};

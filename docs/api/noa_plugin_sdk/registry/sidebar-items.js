@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["NetworkClass"],"struct":["ApiSurface","AutomationSurface","BudgetSpec","CliMapping","OutputSpec","ParameterSpec","RestSurface","SideEffectSpec","ToolDescriptor","ToolRegistry"]};

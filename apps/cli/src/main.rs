@@ -10,19 +10,15 @@ use futures::StreamExt;
 use noa_cicd::CICDSystem;
 use noa_core::security::verify_signed_operation;
 use noa_core::utils::simple_hash;
-use anyhow::{bail, Context, Result};
-use clap::{Args, Parser, Subcommand};
-use futures::StreamExt;
-use noa_cicd::CICDSystem;
 use noa_inference::{
     CompletionRequest, ProviderRouter, TelemetryEvent, TelemetryHandle, TelemetrySink,
     TelemetryStatus,
 };
 use noa_plugin_sdk::{ToolDescriptor, ToolRegistry};
-use noa_workflow::{EvidenceLedgerEntry, EvidenceLedgerKind};
-use noa_workflow::{InferenceMetric, PipelineInstrumentation};
-use noa_workflow::EvidenceLedgerEntry;
-use noa_workflow::{run_storage_doctor, InferenceMetric, PipelineInstrumentation, StorageDoctorStatus};
+use noa_workflow::{
+    run_storage_doctor, EvidenceLedgerEntry, EvidenceLedgerKind, InferenceMetric,
+    PipelineInstrumentation, StorageDoctorStatus,
+};
 use relocation_daemon::{ExecutionMode, RelocationDaemon};
 use serde::Serialize;
 use serde_json::json;
@@ -39,7 +35,6 @@ enum OutputMode {
 #[derive(Parser)]
 #[command(
     name = "noa",
-    about = "NOA Ark OS relocation daemon tooling",
     about = "NOA Ark OS unified CLI (kernel, world, registry, trust, snapshot, agent, policy, sbom, pipeline, profile)",
     version
 )]
@@ -204,12 +199,14 @@ enum Commands {
         query: RegistryArgs,
     },
     /// Surface plugin tooling from the shared registry
-    Plugin { #[command(flatten)] query: RegistryArgs },
-    /// Storage utilities for instrumentation mirrors
-    Storage { #[command(subcommand)] command: StorageCommands },
     Plugin {
         #[command(flatten)]
         query: RegistryArgs,
+    },
+    /// Storage utilities for instrumentation mirrors
+    Storage {
+        #[command(subcommand)]
+        command: StorageCommands,
     },
     /// Interact with agents using configured inference providers
     Agent {

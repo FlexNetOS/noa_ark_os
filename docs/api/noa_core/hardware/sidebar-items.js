@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["AcceleratorKind","GpuBackend"],"fn":["detect_accelerators","detect_gpus","detect_hardware_profile","query_nvidia_smi"],"struct":["AcceleratorProfile","CpuProfile","GpuProfile","HardwareProfile","MemoryProfile"]};

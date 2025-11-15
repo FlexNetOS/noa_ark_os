@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["DEFAULT_FILE_MODE"],"enum":["FsError"],"fn":["create_file","create_file_inner","delete_file","file_table","get_file","get_file_inner","init","list_files","move_file","sync_registry_metadata","to_component_metadata"],"struct":["ComponentMetadata","FileDescriptor","FileMetadata","FileSystemService"]};

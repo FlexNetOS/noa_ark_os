@@ -48,11 +48,13 @@ impl ToolRegistry {
         let reference_lower = reference.to_ascii_lowercase();
         self.tools.iter().find(|tool| {
             tool.id.to_ascii_lowercase() == reference_lower
-                || tool.aliases.iter().any(|alias| alias.to_ascii_lowercase() == reference_lower)
                 || tool
-                    .cli_mappings
+                    .aliases
                     .iter()
-                    .any(|mapping| mapping.command.join(" ").to_ascii_lowercase() == reference_lower)
+                    .any(|alias| alias.to_ascii_lowercase() == reference_lower)
+                || tool.cli_mappings.iter().any(|mapping| {
+                    mapping.command.join(" ").to_ascii_lowercase() == reference_lower
+                })
         })
     }
 

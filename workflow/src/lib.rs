@@ -23,11 +23,10 @@ pub use agent_dispatch::{
     ToolExecutionStatus, ToolRequirement,
 };
 pub use instrumentation::{
-    AgentExecutionResult, DeploymentOutcomeRecord, EvidenceLedgerEntry, EvidenceLedgerKind,
-    GoalAgentMetric, GoalMetricSnapshot, GoalOutcomeRecord, InferenceMetric, MerkleLeaf,
-    MerkleLevel, PipelineInstrumentation, PipelineStorageLayout, SecurityScanReport,
+    run_storage_doctor, AgentExecutionResult, DeploymentOutcomeRecord, EvidenceLedgerEntry,
+    EvidenceLedgerKind, GoalAgentMetric, GoalMetricSnapshot, GoalOutcomeRecord, InferenceMetric,
+    MerkleLeaf, MerkleLevel, PipelineInstrumentation, PipelineStorageLayout, SecurityScanReport,
     SecurityScanStatus, StageReceipt, StorageDoctorReport, StorageDoctorStatus, TaskReceipt,
-    run_storage_doctor,
 };
 pub use reward::{
     AgentApprovalStatus, AgentStanding, AgentStandingSummary, RewardAgentSnapshot, RewardDelta,
@@ -182,7 +181,9 @@ impl GoalRunTracker {
         // Flake rate: proportion of agents that have both successes and failures (i.e., are flaky)
         let mut agent_outcomes: HashMap<&str, (usize, usize)> = HashMap::new();
         for result in &self.agents {
-            let entry = agent_outcomes.entry(result.agent.as_str()).or_insert((0, 0));
+            let entry = agent_outcomes
+                .entry(result.agent.as_str())
+                .or_insert((0, 0));
             if result.success {
                 entry.0 += 1;
             } else {
@@ -190,7 +191,10 @@ impl GoalRunTracker {
             }
         }
         let total_agents = agent_outcomes.len() as f64;
-        let flaky_agents = agent_outcomes.values().filter(|(succ, fail)| *succ > 0 && *fail > 0).count() as f64;
+        let flaky_agents = agent_outcomes
+            .values()
+            .filter(|(succ, fail)| *succ > 0 && *fail > 0)
+            .count() as f64;
         let flake_rate = if total_agents.abs() < f64::EPSILON {
             0.0
         } else {
@@ -520,16 +524,13 @@ impl WorkflowEngine {
 
         let token_ratio = extract_token_ratio(&task.parameters);
         let rollback_flag = task_requests_rollback(task);
-        let dispatch_receipt = self
-            .dispatcher
-            .dispatch(task)
-            .map_err(|err| {
-                println!(
-                    "[WORKFLOW] Dispatcher failed for agent {}: {}",
-                    task.agent, err
-                );
-                format!("agent dispatch failed: {}", err)
-            })?;
+        let dispatch_receipt = self.dispatcher.dispatch(task).map_err(|err| {
+            println!(
+                "[WORKFLOW] Dispatcher failed for agent {}: {}",
+                task.agent, err
+            );
+            format!("agent dispatch failed: {}", err)
+        })?;
         self.instrumentation
             .log_task_dispatch(workflow_id, stage_id, &dispatch_receipt)
             .map_err(|err| format!("task dispatch instrumentation failed: {}", err))?;
@@ -862,33 +863,33 @@ mod tests {
         }
     }
 
-impl Drop for EnvGuard {
-    fn drop(&mut self) {
-        if let Some(ref previous) = self.previous {
-            std::env::set_var(self.key, previous);
-        } else {
-            std::env::remove_var(self.key);
+    impl Drop for EnvGuard {
+        fn drop(&mut self) {
+            if let Some(ref previous) = self.previous {
+                std::env::set_var(self.key, previous);
+            } else {
+                std::env::remove_var(self.key);
+            }
         }
     }
-}
 
-fn register_workflow_verifier(engine: &WorkflowEngine) {
-    let registry = engine.dispatcher.registry();
-    if registry.get("WorkflowVerifier").is_some() {
-        return;
+    fn register_workflow_verifier(engine: &WorkflowEngine) {
+        let registry = engine.dispatcher.registry();
+        if registry.get("WorkflowVerifier").is_some() {
+            return;
+        }
+        let mut metadata = AgentMetadata::minimal(
+            "WorkflowVerifier".to_string(),
+            "Workflow Verifier".to_string(),
+            AgentCategory::Other,
+        );
+        metadata
+            .capabilities
+            .push("workflow.taskDispatch".to_string());
+        registry
+            .upsert_metadata(metadata)
+            .expect("register workflow verifier agent");
     }
-    let mut metadata = AgentMetadata::minimal(
-        "WorkflowVerifier".to_string(),
-        "Workflow Verifier".to_string(),
-        AgentCategory::Other,
-    );
-    metadata
-        .capabilities
-        .push("workflow.taskDispatch".to_string());
-    registry
-        .upsert_metadata(metadata)
-        .expect("register workflow verifier agent");
-}
     #[test]
     fn test_workflow_creation() {
         let dir = tempdir().unwrap();
@@ -1012,9 +1013,7 @@ fn register_workflow_verifier(engine: &WorkflowEngine) {
             .iter()
             .rev()
             .find(|entry| {
-                entry
-                    .get("event")
-                    .and_then(|e| e.get("event_type"))
+                entry.get("event").and_then(|e| e.get("event_type"))
                     == Some(&json!("task.dispatch"))
             })
             .expect("task dispatch entry present");

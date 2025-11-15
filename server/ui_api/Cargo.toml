@@ -28,7 +28,7 @@ futures = "0.3"
 chrono = { version = "0.4", features = ["serde"] }
 noa_crc = { path = "../../crc" }
 anyhow = "1"
-clap = { version = "4.5", features = ["derive"] }
+clap = { version = "4.5", features = ["derive", "env"] }
 flate2 = "1"
 tar = "0.4"
 zip = { version = "0.6", default-features = false, features = ["deflate"] }

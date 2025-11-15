@@ -12,8 +12,8 @@ pub mod config;
 pub mod fs;
 pub mod gateway;
 pub mod hardware;
-pub mod indexer;
 pub mod host_control;
+pub mod indexer;
 pub mod ipc;
 pub mod kernel;
 pub mod memory;
@@ -38,8 +38,7 @@ pub fn init() -> Result<capabilities::KernelHandle, kernel::KernelError> {
     let handle = kernel::init()?;
     println!("Initializing core services...");
 
-    // Initialize subsystems
-    kernel::init()?;
+    // Initialize subsystems (kernel already initialized above)
     memory::init().map_err(|e| kernel::KernelError::Init(e.to_string()))?;
     process::init().map_err(|e| kernel::KernelError::Init(e.to_string()))?;
     ipc::init().map_err(|e| kernel::KernelError::Init(e.to_string()))?;
