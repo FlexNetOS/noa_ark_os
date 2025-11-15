@@ -1,0 +1,12 @@
+name: Bootstrap Python tool for local/dev
+on:
+  workflow_dispatch:
+jobs:
+  info:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Print instructions
+        run: |
+          echo "Install Python 3.10+ locally to run repo tooling: https://www.python.org/downloads/"
+          echo "Or rely on CI which already runs these tools."

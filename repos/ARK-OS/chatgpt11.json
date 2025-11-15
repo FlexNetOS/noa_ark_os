@@ -1,0 +1,419 @@
+{
+  "bundle_version": "10.7.0-healed",
+  "source_ref": "all_in_one_map_v10_7.mmd",
+  "style": {
+    "paradigm": "kernel-first",
+    "agents": "message-passing",
+    "execution": "async-first",
+    "globals": "none",
+    "bloat": "zero",
+    "offline": true
+  },
+
+  "kernel": {
+    "id": "CECCA",
+    "aliases": ["ChiefExecutiveChiefCommanderAgent", "CEO", "NOA"],
+    "role": "root-stem",
+    "boot": {
+      "phases": [
+        "truth_gate_enforce",
+        "kit_verify_install",
+        "yaml_compile_lint",
+        "dir_import_normalize",
+        "policy_keyring_load",
+        "schema_bank_load",
+        "compose_wire",
+        "sanity_gates",
+        "emit_release"
+      ],
+      "on_failure": ["quarantine_capsule", "rollback_blue_green", "emit_forensics"]
+    },
+    "sbom": {
+      "scan_on_boot": true,
+      "env_required": [
+        "CECCA_NAMESPACE",
+        "CECCA_EPOCH",
+        "CECCA_KEYS_DIR",
+        "PYTHONHASHSEED"
+      ],
+      "modules_required": [
+        "json",
+        "yaml_compiler_lite",
+        "sha256",
+        "zip_archive",
+        "sqlite3_kv"
+      ],
+      "auto_fixups": [
+        {
+          "check": "env_missing",
+          "target": "PYTHONHASHSEED",
+          "fix": { "set_default": "0" },
+          "note": "stabilize deterministic hashing"
+        },
+        {
+          "check": "module_missing",
+          "target": "sqlite3_kv",
+          "fix": {
+            "shim": "kvstore-fallback",
+            "impl": "append_only_jsonl + segment_index",
+            "limits": { "max_segment_mb": 32 }
+          }
+        },
+        {
+          "check": "module_missing",
+          "target": "yaml_compiler_lite",
+          "fix": {
+            "shim": "yaml-min",
+            "impl": "strict subset: scalars/maps/seq; anchors disabled",
+            "policy": "forbid_urls_endpoints"
+          }
+        }
+      ]
+    },
+    "capabilities": [
+      "sign_policies",
+      "verify_signatures",
+      "stem_replicate",
+      "stem_differentiate",
+      "compose_capsules",
+      "promotion_arbitrate",
+      "global_audit",
+      "bundle_build_pack",
+      "delta_patch"
+    ],
+    "cells": [
+      { "id": "CC_CONST", "role": "constitution_signer", "inbox": ["policy.update"], "outbox": ["policy.applied"] },
+      { "id": "CC_QUORUM", "role": "virtual_board", "inbox": ["risk.report", "release.proposal"], "outbox": ["board.decision"] },
+      { "id": "CC_TRUTH", "role": "truth_gate", "policy": "TRUTH_GATE_AND_DECEPTION_POLICY.md", "inbox": ["graph.ingest", "release.note"], "outbox": ["truth.ok", "truth.block"] },
+      { "id": "CC_STEM_REPL", "role": "stem_replicator", "inbox": ["replicate.request"], "outbox": ["replicate.plan"] },
+      { "id": "CC_STEM_DIFF", "role": "stem_differentiator", "inbox": ["differentiate.request"], "outbox": ["emit.stack", "emit.capsule", "emit.cell"] },
+      { "id": "CC_CHOP", "role": "capsule_surgeon", "inbox": ["capsule.slice"], "outbox": ["capsule.parts"] },
+      { "id": "CC_ARBITER", "role": "promotion_arbiter", "inbox": ["gate.results"], "outbox": ["promotion.decision"] },
+      { "id": "CC_AUDIT", "role": "global_auditor", "inbox": ["event.*"], "outbox": ["audit.record"] },
+      { "id": "CC_YAML", "role": "yaml_to_json_compiler", "inbox": ["yaml.input"], "outbox": ["json.output", "lint.error"] },
+      { "id": "CC_KIT_INST", "role": "kit_installer", "inbox": ["kit.bundle"], "outbox": ["kit.registered", "license.check"] },
+      { "id": "CC_LICENSE", "role": "license_gate", "inbox": ["license.check"], "outbox": ["license.ok", "license.block"] },
+      { "id": "CC_CONFLICT", "role": "conflict_resolver", "inbox": ["schema.conflict", "version.skew"], "outbox": ["conflict.resolved"] },
+      { "id": "CC_DIR_IMP", "role": "directory_importer", "inbox": ["csv.input", "yaml.dir"], "outbox": ["dir.rows"] },
+      { "id": "CC_DIR_MAP", "role": "role_layer_mapper", "inbox": ["dir.rows"], "outbox": ["dir.mapped"] },
+      { "id": "CC_ESC_SYN", "role": "escalation_synthesizer", "inbox": ["dir.mapped"], "outbox": ["dir.with_escalation"] },
+      { "id": "CC_DIR_VAL", "role": "directory_validator", "inbox": ["dir.with_escalation"], "outbox": ["dir.valid", "dir.errors"] },
+      { "id": "CC_DIR_CAN", "role": "canonicalizer", "inbox": ["dir.valid"], "outbox": ["agent_registry.canonical.jsonl"] },
+      { "id": "CC_PREF", "role": "config_precedence", "inbox": ["config.operator", "config.kit", "config.tenant"], "outbox": ["config.final"] },
+      { "id": "CC_BUILD", "role": "build_kit_orchestrator", "inbox": ["build.prompt", "compose.ready"], "outbox": ["bundle.ready"] },
+      { "id": "CC_ENFORCE", "role": "promotion_enforcer", "inbox": ["promotion.decision"], "outbox": ["release.execute"] },
+      { "id": "CC_PACK", "role": "packager", "inbox": ["bundle.ready"], "outbox": ["exports.manifest.sha256", "FINAL_REPORT.md"] }
+    ]
+  },
+
+  "buses": {
+    "system": { "type": "dir-queue", "topics": ["policy.*", "release.*", "dir.*", "kit.*", "compose.*"] },
+    "telemetry": { "type": "append-only-jsonl", "topics": ["event.*", "score.*", "audit.*"] },
+    "control": { "type": "dir-queue", "topics": ["gate.*", "replicate.*", "differentiate.*"] }
+  },
+
+  "frameworks": {
+    "capsule": {
+      "manifest": "cap/capsule.json",
+      "dag": "DAG.json",
+      "policy": ["policy.lock", "policy.sig"],
+      "tests": "tests/",
+      "evidence": "evidence/*.jsonl",
+      "lifecycle": ["create", "compress", "ship", "upgrade", "flow", "integrate", "map"],
+      "invariants": ["cas_hash", "reproducible", "blue_green", "additive_only"]
+    },
+    "cell": {
+      "schema": "cell.schema.json",
+      "contract_fields": ["id", "role", "inputs", "outputs", "timeout_ms", "retry", "escalation_to", "tests"],
+      "discipline": ["stateless", "idempotent", "deterministic", "bounded_time"],
+      "states": ["idle", "scheduled", "running", "success", "fail", "retry", "quarantine"]
+    },
+    "compose": {
+      "binder": "cells→dag.nodes",
+      "tests_attached": true
+    }
+  },
+
+  "planes": {
+    "control": {
+      "directory": "registry(local/region)",
+      "namespace_manager": true,
+      "policy_lock": true,
+      "epoch_manager": true,
+      "revocation_list": true,
+      "scheduler": { "modes": ["canary", "waves"], "promotion_gates": true },
+      "release_switcher": "blue_green",
+      "release_notes": true,
+      "audit": "signed"
+    },
+    "execution": {
+      "dag_runner": { "deterministic": true, "checkpoints": true },
+      "seeds": "deterministic",
+      "deadline_scheduler": true,
+      "fair_share": true,
+      "queue": { "file_backed": true, "retries": "exponential_backoff" },
+      "runtime_sandbox": { "isolation": "subprocess", "timeouts": true },
+      "fs_guard": { "denylist_syscalls": true, "deny_paths": true },
+      "rlimit": { "cpu_time": true, "memory": true },
+      "checkpoint_store": true,
+      "sealed_secrets": ".sec",
+      "workspace": { "temp_per_call": true, "token_bucket": true, "scrub_on_exit": true }
+    },
+    "knowledge": {
+      "capsules": [
+        { "id": "KIDX_CAP", "role": "cas_index", "store": "index.db" },
+        { "id": "KSCHEMA_CAP", "role": "schema_registry" },
+        { "id": "KMETRICS_CAP", "role": "metrics_events", "db": "metrics.db" },
+        { "id": "KDIR_CAP", "role": "agent_directory", "db": "agent_registry.db" },
+        { "id": "KRET_CAP", "role": "data_catalog_retention" },
+        { "id": "KSNAP_CAP", "role": "snapshot_restore" },
+        { "id": "KCRASH_CAP", "role": "crash_forensics" },
+        { "id": "KREG_CAP", "role": "kit_registry" },
+        { "id": "KPARITY_CAP", "role": "parity_coverage_proofs" }
+      ],
+      "wiring": [
+        ["CC_DIR_CAN", "KDIR_CAP"],
+        ["CC_AUDIT", "KMETRICS_CAP"],
+        ["CC_KIT_INST", "KREG_CAP"],
+        ["KREG_CAP", "scheduler.release_switcher"],
+        ["KIDX_CAP", "S17.bundle_builder"],
+        ["KSCHEMA_CAP", "S4.differentiator"],
+        ["KMETRICS_CAP", "S8.score_engine"],
+        ["KDIR_CAP", "S4.differentiator"],
+        ["KRET_CAP", "KMETRICS_CAP"],
+        ["KSNAP_CAP", "execution.checkpoint_store"],
+        ["KCRASH_CAP", "S11.incident_brain"],
+        ["KPARITY_CAP", "S7.test_gates"]
+      ]
+    }
+  },
+
+  "stem": {
+    "signals": ["load", "failure", "policy", "drift", "resources"],
+    "components": {
+      "S1": "signal_bus",
+      "S2": "policy_forge",
+      "S3": "schema_bank",
+      "S4": "differentiator",
+      "S5": "replicator",
+      "S6": "niche_controller",
+      "S6A": "energy_thermal_ledger",
+      "S6P": "priority_classes",
+      "S6E": "error_budget_ledger",
+      "S7": "test_gates",
+      "S8": "score_engine",
+      "S9": "telemetry_vault",
+      "S10": "autophagy_dr",
+      "S11": "incident_brain",
+      "S17": "bundle_builder",
+      "S18": "delta_patcher"
+    },
+    "flows": [
+      ["S1", "S4"], ["S1", "S5"], ["S1", "S6"],
+      ["S2", "S4"], ["S2", "S5"], ["S2", "S7"],
+      ["S6A", "S6"], ["S6P", "S6"], ["S6E", "S6"],
+      ["S8", "S7"], ["S9", "S8"],
+      ["S17", "S4"], ["S18", "S4"]
+    ]
+  },
+
+  "replication": {
+    "clones": [
+      { "id": "ST1", "scope": "region", "region": "ERCOT-HOU" },
+      { "id": "ST2", "scope": "edge", "tenant": "customer_cell" }
+    ],
+    "directories": [
+      { "clone": "ST1", "dir_scope": "region" },
+      { "clone": "ST2", "dir_scope": "tenant" }
+    ]
+  },
+
+  "stacks": [
+    {
+      "id": "P1",
+      "name": "VPP/DER Ops",
+      "capsules": [
+        {
+          "id": "X1",
+          "name": "Bidding & Scheduling",
+          "modules": ["Market IO", "Strategy", "Risk & Limits", "Rollout"],
+          "cells": [
+            { "id": "C11", "role": "sensor_collector", "input": "AQ_file" },
+            { "id": "C12", "role": "parser_normalizer" },
+            { "id": "C13", "role": "router_scenario_select" },
+            { "id": "C14", "role": "reasoner_planner_offline" },
+            { "id": "C15", "role": "toolcaller_qse_stub" },
+            { "id": "C16", "role": "validator_iso_policy" },
+            { "id": "C17", "role": "auditor_signer" },
+            { "id": "C18", "role": "actuator_setpoint" },
+            { "id": "C19", "role": "watchdog_p95_retry" },
+            { "id": "C1m", "role": "memory_io_state_cache" },
+            { "id": "C1g", "role": "guardrail_invariant" }
+          ]
+        },
+        { "id": "X2", "name": "Ancillary Services" },
+        { "id": "X3", "name": "Forecast & Dispatch" },
+        { "id": "X4", "name": "Compliance & Audit" },
+        { "id": "X5", "name": "Telemetry & Scoring" }
+      ]
+    },
+    {
+      "id": "P4",
+      "name": "NOA Runtime",
+      "capsules": [
+        {
+          "id": "N1",
+          "name": "SDK/Runtime",
+          "modules": ["Loader/Verifier", "DAG Runner", "Queue/Retry"],
+          "cells": [
+            { "id": "CN11", "role": "signature_verify" },
+            { "id": "CN12", "role": "schema_migrator" },
+            { "id": "CN13", "role": "determinism_check" },
+            { "id": "CN14", "role": "backoff_controller" }
+          ]
+        },
+        {
+          "id": "N2",
+          "name": "Tool Graph & Permissions",
+          "modules": ["Capability Router", "Permission Gate", "Red-Team Sim"],
+          "cells": [
+            { "id": "CP1", "role": "capability_router" },
+            { "id": "CP2", "role": "permission_check" },
+            { "id": "CP3", "role": "attack_surface_sim" }
+          ]
+        },
+        {
+          "id": "N3",
+          "name": "Local Knowledge Index",
+          "modules": ["Embed", "Index", "Retrieve"],
+          "cells": [
+            { "id": "CK1", "role": "embedder_local" },
+            { "id": "CK2", "role": "indexer_sqlite_fts_or_scan" },
+            { "id": "CK3", "role": "retriever" }
+          ]
+        },
+        { "id": "N4", "name": "UI/Voice/AR Shell" },
+        {
+          "id": "N5",
+          "name": "Safety/Guardrails",
+          "modules": ["Invariants", "PII/Policy"]
+        }
+      ]
+    },
+    { "id": "P2", "name": "Insurance / iGuard" },
+    { "id": "P3", "name": "EPC / ArkForge" },
+    { "id": "P5", "name": "Manufacturing / ArkFab" },
+    { "id": "P6", "name": "QSE / FlexNetOS" }
+  ],
+
+  "autonomy_loop": {
+    "sense": ["load", "failure", "policy", "drift", "resources"],
+    "decide": { "scoring": "multi_objective_with_policy", "violations_penalty": "infinite" },
+    "actions": [
+      { "type": "replicate_stem", "gate": "S7" },
+      { "type": "differentiate", "gate": "S7" },
+      { "type": "quiesce", "mode": "AMPK" }
+    ],
+    "run": { "waves": true, "blue_green": true },
+    "observe": "append_only_telemetry",
+    "score": ["success", "latency_p95", "violations", "cpu_time"],
+    "variants": { "manager": "sequential_halving + A/B", "promotion": "gate_pass", "rollback": "incident_brain" }
+  },
+
+  "niche": {
+    "budgets": ["cpu", "mem", "io", "energy"],
+    "quotas": "per cell/capsule/stack/tenant",
+    "placement": ["node", "region", "tenant", "offline_only"],
+    "priority_classes": ["high", "normal", "low"],
+    "error_budget_ledger": true,
+    "actions": ["scale", "throttle", "quiesce", "quarantine", "preempt"]
+  },
+
+  "kits_and_inputs": {
+    "bundles": [
+      "capsule_model_starter_FINAL_20250905-154407.zip",
+      "NOA_Deployment_Kit_v3_1.zip"
+    ],
+    "csv_inputs": ["All_Inclusive_Agent_Directory_v6_plus_copy.csv"],
+    "exports_dir": "exports/"
+  },
+
+  "connectors": {
+    "local_fs": { "cas_store": true, "watchers": true },
+    "inbox": { "type": "jsonl_queue" },
+    "outbox": { "type": "jsonl_queue" },
+    "serial_embedded_optional": true,
+    "local_bus": "dir_queue"
+  },
+
+  "files": {
+    "types": [
+      ".yaml (operator configs → compiled JSON)",
+      ".json (schemas/manifests)",
+      ".jsonl (telemetry/evidence)",
+      ".lock (policy.lock/version.lock)",
+      ".sig (signatures)",
+      ".mmd (mermaid maps)",
+      ".md (release notes)",
+      ".db (sqlite when available, else shim)",
+      ".tar.zst (bundles)",
+      ".delta (patches)",
+      "revocations.json (keys/policies)",
+      ".key/.csr (local key material)",
+      ".sec (sealed secrets)",
+      ".cur (release pointer)"
+    ]
+  },
+
+  "policies": {
+    "invariants": [
+      "offline_first_no_net",
+      "signed_policies_only",
+      "blue_green_every_level",
+      "shared_nothing_cells_capsules_stacks",
+      "promotion_score_gated_violations_zero",
+      "AMPK_on_scarcity",
+      "additive_only_heal_dont_break",
+      "every_cell_declares_escalation_to"
+    ]
+  },
+
+  "secondary_layer": {
+    "enabled": false,
+    "adapters": ["docker", "github", "minio"],
+    "note": "no-op offline; toggleable via CECCA"
+  },
+
+  "messages": {
+    "schema": {
+      "Signal": { "fields": ["id", "ts", "topic", "payload"], "topic": "signal.*" },
+      "GateResult": { "fields": ["artifact", "hash", "tests_pass", "score", "violations"], "topic": "gate.results" },
+      "PromotionDecision": { "fields": ["artifact", "action", "reason"], "topic": "promotion.decision" },
+      "TelemetryEvent": { "fields": ["ts", "actor", "event", "kv"], "topic": "event.*" }
+    },
+    "transport": "dir_queue_async",
+    "ordering": "best_effort",
+    "retries": "exponential_backoff"
+  },
+
+  "shims": {
+    "kvstore_fallback": {
+      "type": "append_only",
+      "segments": "jsonl",
+      "index": "sparse_fts_if_available",
+      "fsync": "batched"
+    },
+    "yaml_min": {
+      "features": ["scalars", "maps", "sequences"],
+      "disabled": ["anchors", "aliases", "tags"],
+      "security": ["forbid_urls_endpoints"]
+    }
+  },
+
+  "auditability": {
+    "provenance": "signed",
+    "final_report": "FINAL_REPORT.md",
+    "manifest": "exports.manifest.sha256",
+    "parity_proofs": true
+  }
+}
