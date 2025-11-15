@@ -306,7 +306,14 @@ impl Scorekeeper {
 
     /// Load the cached snapshot from disk if present.
     pub fn load_snapshot(&self) -> Result<Option<TrustSnapshot>, ScorekeeperError> {
+        // First, try to get from cache under read lock
         if let Some(snapshot) = self.cache.read().unwrap().clone() {
+            return Ok(Some(snapshot));
+        }
+        // Upgrade to write lock to ensure only one thread loads from disk
+        let mut cache_guard = self.cache.write().unwrap();
+        // Double-check if another thread has already populated the cache
+        if let Some(snapshot) = cache_guard.clone() {
             return Ok(Some(snapshot));
         }
         if !self.storage_path.exists() {
@@ -314,7 +321,7 @@ impl Scorekeeper {
         }
         let data = fs::read_to_string(&self.storage_path)?;
         let snapshot: TrustSnapshot = serde_json::from_str(&data)?;
-        *self.cache.write().unwrap() = Some(snapshot.clone());
+        *cache_guard = Some(snapshot.clone());
         Ok(Some(snapshot))
     }
 
