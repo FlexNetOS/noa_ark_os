@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Restore archived assets from text-armored snapshots.
 
-The loader understands the JSON snapshot created for `scripts/triage_analyzer.py`.
+The loader understands the JSON snapshot created for ``scripts/triage_analyzer.py``.
 It keeps the workflow offline-friendly by avoiding binary blobs in git history
 while still letting developers reconstruct the original artifact on demand.
 """
