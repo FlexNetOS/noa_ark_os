@@ -44,9 +44,9 @@ pub fn init() -> Result<capabilities::KernelHandle, kernel::KernelError> {
     gateway::init()
         .map_err(|_| kernel::KernelError::Init("gateway initialization failed".to_string()))?;
 
-    if let Err(err) = indexer::IndexerService::for_workspace().refresh() {
-        eprintln!("[CORE] workspace indexing failed: {}", err);
-    }
+    indexer::IndexerService::for_workspace()
+        .refresh()
+        .map_err(|e| kernel::KernelError::Init(format!("workspace indexing failed: {}", e)))?;
 
     println!("Core OS initialized successfully");
     Ok(handle)
