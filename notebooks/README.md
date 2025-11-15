@@ -110,6 +110,50 @@ jupyter notebook
 jupyter lab --port 8888
 ```
 
+## Digest Research Quickstart
+
+### Authenticate with the gateway
+
+1. Export `NOA_CAPABILITY_TOKEN_SECRET` if you changed the kernel default.
+2. Launch the policy gateway and digest agent services (`make run-gateway` or the appropriate profile).
+3. Inside a notebook, instantiate the bridge. Tokens are issued automatically for the `research-notebook` client id.
+
+```python
+from notebooks.lib.research_bridge import ResearchBridge
+
+bridge = ResearchBridge()
+bridge.list_sample_datasets()
+```
+
+### Submit research or knowledge calls
+
+```python
+from notebooks.lib.research_bridge import GatewayRequestError
+
+try:
+    response = bridge.research_query(
+        query="Sanitised recap of digest experiments",
+        data_sources=["research_notes_sample.csv"],
+    )
+    print(response)
+except GatewayRequestError as exc:
+    print(f"Gateway offline: {exc}")
+```
+
+### Persist analytics artefacts
+
+All summaries and metrics should land in `storage/analytics/pipelines/` so they are reproducible in CI and reviews.
+
+```python
+metrics_path = bridge.push_metrics(
+    pipeline_name="digest-agent-metrics",
+    metrics={"status": "draft", "source": "research_summary_template"},
+)
+print(f"Metrics persisted at {metrics_path}")
+```
+
+Sanitised starter datasets live in `.workspace/metrics/`. The bridge exposes `sample_dataset_path()` to locate them without hardcoding filesystem logic.
+
 ## Notebook Templates
 
 ### Development Notebook Template
@@ -257,6 +301,7 @@ seaborn>=0.12.0
 plotly>=5.14.0
 scikit-learn>=1.2.0
 prometheus-api-client>=0.5.0
+requests>=2.31.0
 ```
 
 ## Examples
@@ -316,3 +361,26 @@ jupyter nbconvert --clear-output --inplace notebooks/**/*.ipynb
 # Check for secrets
 detect-secrets scan notebooks/
 ```
+
+## Contribution Workflow
+
+- Use the unified CLI to manage templates and hygiene:
+
+  ```bash
+  # Scaffold (or refresh) the full directory tree and placeholder notebooks
+  cargo run -p noa-cli -- notebook init
+
+  # Strip outputs locally
+  cargo run -p noa-cli -- notebook clean
+
+  # Validate that no execution counts or outputs remain
+  cargo run -p noa-cli -- notebook lint
+  ```
+
+- Install [`nbstripout`](https://github.com/kynan/nbstripout) with the repository-provided configuration:
+
+  ```bash
+  nbstripout --install --attributes notebooks/.gitattributes
+  ```
+
+- Always commit notebooks without outputs. CI runs `noa notebook lint` on every change, so clean locally before pushing.

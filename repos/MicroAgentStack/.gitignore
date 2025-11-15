@@ -1,0 +1,158 @@
+# === Python basics ===
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.eggs/
+dist/
+build/
+eggs/
+*.egg-info/
+
+# === Virtual environments ===
+env/
+venv/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+
+# === OS system files ===
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# === VS Code/IDE settings ===
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# === Docker & Compose files ===
+*.log
+*.pid
+docker-compose.override.yml
+docker-compose*.bak.yml
+
+# === Config, secrets, and environment ===
+.env
+.env.*
+secrets/
+config.yaml
+config.yml
+config.json
+config.ini
+
+# === Database/model/dataset files ===
+*.sqlite3
+*.db
+*.bak
+*.h5
+*.ckpt
+*.onnx
+*.pt
+*.pth
+*.weights
+*.tflite
+*.sav
+*.joblib
+*.npz
+*.csv
+*.tsv
+*.parquet
+
+# === Jupyter notebook checkpoints ===
+.ipynb_checkpoints/
+
+# === Node/NPM/JavaScript ===
+node_modules/
+npm-debug.log
+yarn-error.log
+.pnpm-debug.log
+package-lock.json
+yarn.lock
+
+# === Go (Golang) ===
+*.exe
+*.test
+*.out
+go.sum
+go.work
+/vendor/
+/bin/
+/pkg/
+
+# === Rust ===
+/target/
+/Cargo.lock
+
+# === Java ===
+*.class
+*.jar
+*.war
+*.ear
+*.iml
+*.ipr
+*.iws
+/out/
+/*.log
+
+# === C/C++ ===
+*.o
+*.obj
+*.so
+*.dll
+*.lib
+*.exe
+*.out
+
+# === C# / .NET ===
+[Bb]in/
+[Oo]bj/
+*.dll
+*.exe
+*.pdb
+
+# === Custom agent outputs & logs ===
+output/
+outputs/
+logs/
+tmp/
+temp/
+cache/
+data/
+datasets/
+*.tmp
+
+# === Auto-generated agent files, docs, and OpenAPI ===
+agents/*/generated_*
+agents/*/docs/
+agents/*/openapi_*.json
+docs/
+openapi/
+swagger/
+site/
+
+# === Git metadata backups ===
+*.orig
+*.rej
+
+# === Test/coverage reports ===
+.coverage
+.tox/
+nosetests.xml
+coverage.xml
+*.cover
+*.pyc
+.pytest_cache/
+junit-*.xml
+
+# === Miscellaneous ===
+*.swp
+*~
+*.bak
+*.tmp
+*.log

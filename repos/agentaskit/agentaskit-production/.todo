@@ -1,0 +1,143 @@
+﻿# ─────────────────────────────────────────────────────────────────────────────
+#  AgentAskit • Production TODO
+#  Date: 2025-10-05
+#  Legend:
+#    ☐ = open, ☑ = done
+#    Priority: [91m(A)[0m = Critical, [93m(B)[0m = High, (C) = Medium
+#    Tags: [96m+Tag[0m  Context: [95m@context[0m  Metrics: [1mbold[0m
+#  Note: ANSI color codes included. If your viewer lacks ANSI support, remove [...m codes.
+# ─────────────────────────────────────────────────────────────────────────────
+
+[1;96m== Performance & SLA ==[0m
+- [ ] [91m(A)[0m 2025-10-05 Implement performance optimization system [1mtput_tasks:10000_per_sec[0m [1mtput_msgs:100000_per_sec[0m [96m+AgentAskit +Performance +Scalability +Throughput +Latency +Reliability[0m [95m@prod[0m [REF: PERF-001] owner:@perf-oncall deps:[OBS-001, PERF-BENCH, PERF-RATE, PERF-BACKPRESSURE, PERF-QUOTAS] acc:"Sustain ≥10k tasks/s and ≥100k msgs/s for 30m; p99 pipeline ≤50ms; error ≤0.1%; zero data loss on failover" evid:"tests/performance/, dashboards/perf/*.json, TEST/perf/*.log, operational_hash/HASHES.txt"
+- [ ] [91m(A)[0m 2025-10-05 Achieve SLA targets [1mstartup_lt_ms:100[0m [1mresponse_lt_ms:50[0m [96m+Performance +SLA +ErrorBudget[0m [95m@prod[0m [REF: SLA-001] owner:@sre deps:[PERF-001, OBS-001, SLO-POLICY, OBS-DASH-ALERTS] acc:"Cold start p95 <100ms; response p95 <50ms at 2× peak; weekly burn-rate <1.0; redlines & paging policy documented" evid:"slo/policies.yaml, dashboards/sla.json, .github/workflows/slo-check.yml, TEST/slo/*.log"
+- [ ] [93m(B)[0m 2025-10-06 Rate-limiting and throttling strategy [96m+Performance +Resilience +APIs[0m [95m@prod[0m [REF: PERF-RATE] owner:@perf-oncall deps:[] acc:"Global+per-tenant limits defined; backoff headers; load tests confirm no SLO breach at limit" evid:"configs/rate_limits.yaml, tests/performance/rate_limit/, TEST/perf/rate/*.log"
+- [ ] [93m(B)[0m 2025-10-06 Backpressure & queueing controls [96m+Performance +Resilience[0m [95m@prod[0m [REF: PERF-BACKPRESSURE] owner:@perf-oncall deps:[] acc:"Backpressure kicks-in <70% saturation; queue depth alarms; controlled drop policy documented" evid:"docs/perf/backpressure.md, alerts/backpressure.yaml, tests/performance/queueing/"
+- [ ] [93m(B)[0m 2025-10-06 Resource limits & quotas [96m+Performance +Capacity[0m [95m@prod[0m [REF: PERF-QUOTAS] owner:@platform deps:[] acc:"CPU/mem quotas per component; overload tests pass; OOM zero at p99" evid:"deploy/k8s/limits.yaml, TEST/perf/overload/*.log"
+- [ ] [93m(B)[0m 2025-10-06 Capacity plan & scaling policy [96m+Capacity +Autoscale[0m [95m@prod[0m [REF: PERF-CAPACITY] owner:@sre deps:[PERF-001] acc:"Autoscale rules defined; headroom ≥30%; forecast 90d; runbook updated" evid:"docs/ops/capacity_plan.md, dashboards/capacity/*.json"
+
+[1;96m== Security ==[0m
+- [ ] [91m(A)[0m 2025-10-05 Capability token management & AuthZ [96m+Security +AuthZ +Tokens +ZeroTrust +RBAC[0m [95m@prod[0m [REF: SEC-001] owner:@sec-oncall deps:[SEC-POLICY, SEC-CI, DOC-001, AUDIT-RETENTION] acc:"Token schema versioned; rotation ≤24h; least-privilege; audit logs retained 30d; 0 critical/high in CodeQL/SCA" evid:"security/policies/, security/token-schema.json, security/reports/, operational_audit/"
+- [ ] [93m(B)[0m 2025-10-05 Security policies & rotation plan [96m+Security +Policy +Tokens[0m [95m@prod[0m [REF: SEC-POLICY] owner:@sec-oncall deps:[DOC-001] acc:"Policy docs published; rotation schedule; access review cadence; incident playbooks" evid:"security/policies/*.md, docs/runbooks/security/*.md"
+- [ ] [93m(B)[0m 2025-10-05 CodeQL/SCA integration & baselines [96m+Security +CI +CodeQL +SCA[0m [95m@prod[0m [REF: SEC-CI] owner:@sec-oncall deps:[] acc:"CodeQL+SCA pass; 0 critical/high; baselines stored; alerts flow to issues" evid:".github/workflows/codeql.yml, security/reports/"
+- [ ] [93m(B)[0m 2025-10-06 Secrets management & key rotation [96m+Security +Secrets +KMS[0m [95m@prod[0m [REF: SEC-SECRETS] owner:@sec-oncall deps:[SEC-POLICY] acc:"External secrets (Vault/KMS) integrated; rotation docs; zero secrets in repo" evid:"configs/secrets/, docs/security/secrets.md"
+- [ ] [93m(B)[0m 2025-10-06 Periodic access reviews [96m+Security +Governance[0m [95m@prod[0m [REF: SEC-ACCESS-REVIEW] owner:@sec-oncall deps:[SEC-POLICY] acc:"Quarterly RBAC reviews logged; variances closed within 7d" evid:"operational_audit/access_reviews/"
+
+[1;96m== Workflow & Orchestration ==[0m
+- [ ] [93m(B)[0m 2025-10-05 Execute 7-phase workflow with 928-agent orchestration [96m+Workflow +Orchestration +Agents +Runbook +Canary[0m [95m@prod[0m [REF: WF-001] owner:@orchestration deps:[PERF-001, SEC-001, OPS-RUNBOOK, DEP-CANARY] acc:"7 phases complete across 928 agents; success ≥99.9%; canary pass; rollback <5m; runbook updated" evid:"core/src/orchestration/, docs/runbooks/wf-001.md, tests/integration/workflows/"
+- [ ] [93m(B)[0m 2025-10-05 Triple verification: Model D merge [96m+Verification +ModelD +CI +CD[0m [95m@prod[0m [REF: VER-001] owner:@verification-lead deps:[WF-001, TRI-SANDBOX-SETUP] acc:"Gates A/B/C live; Model-D acceptance ≥99.99%; failures block release; logs persisted" evid:"sandbox/tri/, sandbox/unifier/, tests/verification/"
+- [ ] [93m(B)[0m 2025-10-06 Comprehensive 7-phase program epic [96m+Program +Epic +Orchestration[0m [95m@staging[0m [REF: COMPREHENSIVE-7PHASE-001] owner:@program deps:[WF-001, VER-001, PERF-001, SEC-001, OBS-001, DOC-001] acc:"All 7-phase deliverables present with evidence and tests; PIR criteria met" evid:"agentaskit-production/docs/comprehensive-implementation/, core/src/workflows/seven_phase/"
+
+[1;96m== Observability ==[0m
+- [ ] [93m(B)[0m 2025-10-05 Real-time health & capability matching [96m+Observability +Health +Matching +Dashboards +Alerts[0m [95m@prod[0m [REF: OBS-001] owner:@observability deps:[OBS-DASH-ALERTS] acc:"Golden-signal dashboards live; alert FPR ≤2%; health→capability p95 <20ms" evid:"dashboards/*.json, alerts/*.yaml, services/health/, tests/observability/"
+- [ ] [93m(B)[0m 2025-10-05 Dashboards & alert policies [96m+Observability +Dashboards +Alerts +SLO[0m [95m@prod[0m [REF: OBS-DASH-ALERTS] owner:@observability deps:[SLO-POLICY] acc:"Dash JSON committed; Alertmanager/OnCall rules; links in SoT" evid:"dashboards/*.json, alerts/*.yaml, core/src/orchestration/sot.md"
+- [ ] [93m(B)[0m 2025-10-06 Centralized logging pipeline [96m+Observability +Logging +ELK/OTLP[0m [95m@prod[0m [REF: OBS-LOGGING] owner:@platform deps:[] acc:"Structured logs; retention defined; query examples; error budget metrics emitted" evid:"configs/logging.yaml, docs/observability/logging.md"
+- [ ] [93m(B)[0m 2025-10-06 Distributed tracing [96m+Observability +Tracing +OTel[0m [95m@prod[0m [REF: OBS-TRACING] owner:@platform deps:[] acc:"OTel spans for critical paths; trace sampling; exemplars in dashboards" evid:"configs/tracing.yaml, tests/observability/tracing/"
+- [ ] [93m(B)[0m 2025-10-05 SLOs & burn-rate policy [96m+SLA +SLO +ErrorBudget[0m [95m@prod[0m [REF: SLO-POLICY] owner:@sre deps:[] acc:"SLOs documented; multi-window burn-rate rules; CI gate verifies adherence" evid:"slo/policies.yaml, .github/workflows/slo-check.yml"
+
+[1;96m== Documentation & Compliance ==[0m
+- [ ] [93m(B)[0m 2025-10-05 Evidence trails & SHA-256 manifests [96m+Docs +Compliance +Integrity +Audit[0m [95m@prod[0m [REF: DOC-001] owner:@docs deps:[EVID-HASH] acc:"Every REF links evidence; SHA-256 manifests present; checklists signed" evid:"docs/, operational_hash/HASHES.txt, TEST/*"
+- [ ] [93m(B)[0m 2025-10-05 Evidence & hash structure [96m+Integrity +Audit +Compliance[0m [95m@prod[0m [REF: EVID-HASH] owner:@program deps:[] acc:"Hash manifests present; transcripts under TEST/; deterministic repro commands" evid:"operational_hash/HASHES.txt, TEST/*, docs/repro/commands.txt"
+- [ ] [93m(B)[0m 2025-10-06 API docs & schema refs [96m+Docs +API[0m [95m@prod[0m [REF: DOC-API] owner:@docs deps:[] acc:"Public API documented; schemas versioned; examples validated by tests" evid:"docs/api/*.md, core/api/schemas/, tests/api/"
+- [ ] [93m(B)[0m 2025-10-06 Architecture diagrams [96m+Docs +Architecture[0m [95m@prod[0m [REF: DOC-DIAGRAMS] owner:@docs deps:[] acc:"C4 views; dataflow; ADR links; diagrams reproducible" evid:"docs/architecture/*.md, scripts/docs/generate-diagrams.sh"
+- [ ] [93m(B)[0m 2025-10-06 Data retention & privacy [96m+Compliance +Privacy +Retention[0m [95m@prod[0m [REF: COMPL-DATARET] owner:@program deps:[DOC-001] acc:"Retention policy; PII handling; delete workflows; legal review notes" evid:"docs/compliance/data_retention.md"
+
+[1;96m== CI/CD & Automation ==[0m
+- [ ] [93m(B)[0m 2025-10-05 Validate .todo schema on PRs [96m+Automation +CI +QualityGate[0m [95m@prod[0m [REF: OPS-TODO-VALIDATE] owner:@platform deps:[] acc:"Fail PR when owner/deps/acc/evid/REF missing; lint report posted" evid:".github/workflows/todo-validate.yml, lint/todo.schema.md"
+- [ ] [93m(B)[0m 2025-10-05 Sync .todo ↔ GitHub Issues [96m+Automation +CI +Issues[0m [95m@prod[0m [REF: OPS-ISSUE-SYNC] owner:@platform deps:[OPS-TODO-VALIDATE] acc:"Issues keyed by [REF]; labels from +tags/@contexts; owners assigned; idempotent" evid:".github/workflows/todo-sync.yml, logs/gha/"
+- [ ] [93m(B)[0m 2025-10-05 Pre-push hook for SoT/HASHES [96m+Automation +Hooks +QualityGate[0m [95m@prod[0m [REF: OPS-HOOKS] owner:@platform deps:[EVID-HASH, GOV-SOT-EXEC] acc:"Blocks push if SoT not updated or hashes missing for modified artifacts" evid:"hooks/pre-push, scripts/validate_sot.sh"
+- [ ] [93m(B)[0m 2025-10-06 Build & test pipeline [96m+CI +Build +Test[0m [95m@prod[0m [REF: CI-BUILD] owner:@platform deps:[] acc:"Matrix build; unit/integration/perf test jobs; artifacts archived" evid:".github/workflows/ci.yml"
+- [ ] [93m(B)[0m 2025-10-06 Release pipeline & gates [96m+CD +Release +Gates[0m [95m@prod[0m [REF: CD-GATES] owner:@platform deps:[VER-001, DEP-CANARY, SUPPLY-VERIFY] acc:"Only release when verification green; canary metrics pass; rollback automated" evid:".github/workflows/release.yml, TEST/release/*.log"
+
+[1;96m== Supply Chain & Releases ==[0m
+- [ ] [93m(B)[0m 2025-10-05 SBOM generation [96m+SupplyChain +SBOM[0m [95m@prod[0m [REF: SUPPLY-SBOM] owner:@platform deps:[] acc:"CycloneDX SBOM produced for all components; stored in sbom/; linked in SoT" evid:"sbom/*.json, .github/workflows/sbom.yml"
+- [ ] [93m(B)[0m 2025-10-05 Artifact signing [96m+SupplyChain +Signing[0m [95m@prod[0m [REF: SUPPLY-SIGN] owner:@platform deps:[SUPPLY-SBOM] acc:"SHA256+minisign/GPG signatures generated; keys stored securely" evid:"artifacts/*.sig, operational_hash/HASHES.txt"
+- [ ] [93m(B)[0m 2025-10-05 Signature verification [96m+SupplyChain +Verify[0m [95m@prod[0m [REF: SUPPLY-VERIFY] owner:@platform deps:[SUPPLY-SIGN] acc:"CI verifies signatures/hashes for all releases" evid:".github/workflows/verify.yml, TEST/verify/*.log"
+- [ ] [93m(B)[0m 2025-10-06 SLSA provenance/attestations [96m+SupplyChain +Provenance +SLSA[0m [95m@prod[0m [REF: SUPPLY-SLSA] owner:@platform deps:[CI-BUILD, SUPPLY-SBOM] acc:"Provenance generated; attestation attached to releases" evid:"artifacts/provenance/*.json"
+- [ ] [93m(B)[0m 2025-10-06 Merkle anchor & receipts [96m+SupplyChain +Anchors[0m [95m@prod[0m [REF: SUPPLY-ANCHOR] owner:@platform deps:[SUPPLY-VERIFY] acc:"Anchors generated per release; receipts stored" evid:"anchors/*.txt"
+- [ ] [93m(B)[0m 2025-10-06 Versioning & release notes [96m+Release +Semver +Notes[0m [95m@prod[0m [REF: REL-VERSIONING] owner:@program deps:[CD-GATES] acc:"SemVer policy; changelog auto-gen; tags signed; GitHub Release" evid:"CHANGELOG.md, .github/release.yml"
+- [ ] [93m(B)[0m 2025-10-06 Promote releases [96m+Release +Promotion[0m [95m@prod[0m [REF: RELEASE-PROMOTE] owner:@platform deps:[SUPPLY-ANCHOR, REL-VERSIONING] acc:"Promotion documented; rollback path; evidence in SoT" evid:"docs/release/promotion.md"
+
+[1;96m== Deployment & Ops ==[0m
+- [ ] [93m(B)[0m 2025-10-05 Runbooks & rollback plans [96m+Operations +Runbook +Rollback[0m [95m@prod[0m [REF: OPS-RUNBOOK] owner:@orchestration deps:[WF-001, VER-001] acc:"Runbooks per service; tested rollback ≤5m; links in tasks & SoT" evid:"docs/runbooks/*.md, TEST/rollback/*.log"
+- [ ] [93m(B)[0m 2025-10-05 Canary release plan [96m+Deployment +Canary +Release[0m [95m@prod[0m [REF: DEP-CANARY] owner:@platform deps:[OPS-RUNBOOK] acc:"Canary metrics/gates/abort defined; scripted promote/rollback" evid:"deploy/canary/*.md, scripts/canary/*.sh"
+- [ ] [93m(B)[0m 2025-10-06 K8s manifests & Helm charts [96m+Deployment +K8s +Helm[0m [95m@prod[0m [REF: DEP-K8S] owner:@platform deps:[PERF-QUOTAS] acc:"Manifests & charts published; resources/limits set; health probes pass" evid:"deploy/k8s/*.yaml, deploy/helm/*"
+- [ ] [93m(B)[0m 2025-10-06 Container build & registry [96m+Deployment +Containers[0m [95m@prod[0m [REF: CONTAINER-BUILD] owner:@platform deps:[CI-BUILD, SUPPLY-SIGN] acc:"Images built, scanned, signed; pushed to registry" evid:".github/workflows/container.yml, artifacts/images/*"
+- [ ] [93m(B)[0m 2025-10-06 DR & backups [96m+Ops +DR +Backup[0m [95m@prod[0m [REF: OPS-DR] owner:@sre deps:[] acc:"RPO/RTO defined; backup/restore tested; multi-region plan" evid:"docs/ops/dr.md, TEST/dr/*.log"
+- [ ] [93m(B)[0m 2025-10-06 Incident mgmt & PIR [96m+Ops +Incident +PIR[0m [95m@prod[0m [REF: OPS-INCIDENTS] owner:@sre deps:[SLO-POLICY] acc:"Severity matrix; on-call; PIR template; follow-ups auto-created" evid:"docs/ops/incident_management.md, docs/ops/pir_template.md"
+- [ ] [93m(B)[0m 2025-10-06 On-call rotation [96m+Ops +Oncall[0m [95m@prod[0m [REF: OPS-ONCALL] owner:@sre deps:[OPS-INCIDENTS] acc:"Rotation defined; escalation policy; paging tested" evid:"docs/ops/oncall.md"
+
+[1;96m== Governance & SoT ==[0m
+- [ ] [93m(B)[0m 2025-10-05 Populate SoT with executed tasks [96m+Governance +SoT +Audit[0m [95m@prod[0m [REF: GOV-SOT-EXEC] owner:@program deps:[DOC-001] acc:"≥3 executed entries with artifacts, transcripts, hashes; decisions/risks captured" evid:"core/src/orchestration/sot.md, operational_hash/HASHES.txt"
+- [ ] [93m(B)[0m 2025-10-06 Decision records (ADR) & risk register [96m+Governance +ADR +Risk[0m [95m@prod[0m [REF: GOV-ADR] owner:@program deps:[] acc:"ADRs published; risks tracked with owner/mitigation" evid:"docs/decisions/adr/, docs/risks/register.md"
+- [ ] [93m(B)[0m 2025-10-06 CODEOWNERS & CONTRIBUTING [96m+Governance +Standards[0m [95m@prod[0m [REF: GOV-CODEOWNERS] owner:@program deps:[] acc:"CODEOWNERS routes reviews; CONTRIBUTING describes standards & SoT" evid:"CODEOWNERS, CONTRIBUTING.md"
+- [ ] [93m(B)[0m 2025-10-05 Deduplicate TODO sources (single SoT) [96m+Operations +Hygiene +Docs[0m [95m@prod[0m [REF: OPS-DEDUP-TODO] owner:@program deps:[DOC-001] acc:"Keep this .todo as source; archive agentask.subject.todo; link in docs" evid:"docs/decisions/ops-dedup-todo.md"
+
+[1;96m== Program Backlog (from core/src/orchestration/tasks.todo) ==[0m
+- [ ] [93m(B)[0m 2025-10-05 Enhanced Chat Request Processing [96m+Workflow +Processor +SOP +TripleVerification[0m [95m@staging[0m [REF: WORKFLOW-001] owner:@orchestration deps:[OBS-001, VER-001] acc:"Processor integrated; SOP read/validate; triple verification enforced; tests green" evid:"core/src/workflows/mod.rs, tests/workflows/, docs/ENHANCED_WORKFLOW_IMPLEMENTATION.md"
+- [ ] [93m(B)[0m 2025-10-05 AI Model SOP Reading Integration [96m+SOP +NLP +Validation[0m [95m@staging[0m [REF: WORKFLOW-002] owner:@ml deps:[WORKFLOW-001] acc:"SOP parsing accuracy ≥99%; p95 parse <10ms; SOP-use audit trail" evid:"core/src/workflows/sop_parser.rs, core/src/ai/sop_analyzer.rs, tests/workflows/sop_integration/"
+- [ ] [93m(B)[0m 2025-10-05 4D Method Implementation Enhancement [96m+Methodology +QualityGates +Scoring[0m [95m@staging[0m [REF: WORKFLOW-003] owner:@process deps:[WORKFLOW-001] acc:"Automated 4D with gates; scoring visible; failure halts promotion; docs complete" evid:"core/src/workflows/methodology_engine.rs, docs/4D_METHOD_ENHANCEMENT.md, tests/workflows/methodology/"
+- [ ] [93m(B)[0m 2025-10-05 Deliverable & Target Location Mgmt [96m+DevOps +Deliverables +Locations +Backup[0m [95m@staging[0m [REF: WORKFLOW-004] owner:@devops deps:[DOC-001] acc:"Spec engine generates locations; backups configured; validations pass" evid:"core/src/workflows/{deliverable_manager.rs,location_manager.rs}, scripts/deliverable_automation.sh, docs/DELIVERABLE_MANAGEMENT.md"
+- [ ] [91m(A)[0m 2025-10-05 Integration Testing & Validation [96m+QA +Performance +Security +Readiness[0m [95m@staging[0m [REF: WORKFLOW-005] owner:@qa deps:[WORKFLOW-001, WORKFLOW-002, WORKFLOW-003, WORKFLOW-004, PERF-BENCH, SEC-CI] acc:"E2E pass; perf within targets; security pass; readiness certified" evid:"tests/integration/enhanced_workflow/, tests/performance/workflow_benchmarks/, tests/security/workflow_validation/, docs/PRODUCTION_READINESS_CERTIFICATION.md"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# References
+#   PERF-001: Performance optimization system — deps: OBS-001, PERF-BENCH, PERF-RATE, PERF-BACKPRESSURE, PERF-QUOTAS.
+#   SLA-001 : Startup/response latency SLOs — deps: PERF-001, OBS-001, SLO-POLICY, OBS-DASH-ALERTS.
+#   SEC-001 : Capability tokens/AuthZ — deps: SEC-POLICY, SEC-CI, DOC-001, AUDIT-RETENTION.
+#   WF-001  : 7-phase/928-agent orchestration — deps: PERF-001, SEC-001, OPS-RUNBOOK, DEP-CANARY.
+#   VER-001 : Triple verification / Model-D — deps: WF-001, TRI-SANDBOX-SETUP.
+#   OBS-001 : Real-time health/metrics/matching — deps: OBS-DASH-ALERTS.
+#   DOC-001 : Docs & evidence trails with SHA-256 — deps: EVID-HASH.
+#   EVID-HASH: Evidence & hash manifests structure.
+#   DOC-API : Public API & schemas documentation.
+#   DOC-DIAGRAMS: Architecture diagrams & reproducible generation.
+#   COMPL-DATARET: Data retention & privacy policy.
+#   OPS-TODO-VALIDATE: .todo schema validation in CI.
+#   OPS-ISSUE-SYNC: Sync .todo with Issues (labels/owners) — deps: OPS-TODO-VALIDATE.
+#   OPS-HOOKS: Pre-push quality gate for SoT/HASHES — deps: EVID-HASH, GOV-SOT-EXEC.
+#   CI-BUILD: Build/test workflow; artifacts archived.
+#   CD-GATES: Release gating based on verification/canary — deps: VER-001, DEP-CANARY, SUPPLY-VERIFY.
+#   SUPPLY-SBOM: CycloneDX SBOM generation.
+#   SUPPLY-SIGN: Artifact signing (SHA256+minisign/GPG) — deps: SUPPLY-SBOM.
+#   SUPPLY-VERIFY: Signature/hash verification — deps: SUPPLY-SIGN.
+#   SUPPLY-SLSA: Provenance/attestations — deps: CI-BUILD, SUPPLY-SBOM.
+#   SUPPLY-ANCHOR: Merkle anchors & receipts — deps: SUPPLY-VERIFY.
+#   REL-VERSIONING: SemVer, changelog, signed tags — deps: CD-GATES.
+#   RELEASE-PROMOTE: Promotion process — deps: SUPPLY-ANCHOR, REL-VERSIONING.
+#   DEP-CANARY: Canary plan/scripts — deps: OPS-RUNBOOK.
+#   DEP-K8S: K8s manifests/Helm charts — deps: PERF-QUOTAS.
+#   CONTAINER-BUILD: Container builds/scans/sign — deps: CI-BUILD, SUPPLY-SIGN.
+#   OPS-DR: Disaster recovery & backups testing.
+#   OPS-INCIDENTS: Incident mgmt, PIR templates — deps: SLO-POLICY.
+#   OPS-ONCALL: On-call rotation & escalation — deps: OPS-INCIDENTS.
+#   GOV-SOT-EXEC: SoT executed entries & risks — deps: DOC-001.
+#   GOV-ADR: ADRs & risk register.
+#   GOV-CODEOWNERS: CODEOWNERS & CONTRIBUTING standards.
+#   OPS-DEDUP-TODO: Single-source .todo; archive agentask.subject.todo.
+#   OBS-DASH-ALERTS: Dashboards & alert rules — deps: SLO-POLICY.
+#   OBS-LOGGING: Centralized logging pipeline.
+#   OBS-TRACING: Distributed tracing (OTel).
+#   PERF-BENCH: Benchmarks & load tests.
+#   PERF-RATE: Global/tenant rate limits.
+#   PERF-BACKPRESSURE: Backpressure/queueing controls.
+#   PERF-QUOTAS: CPU/memory quotas & limits.
+#   PERF-CAPACITY: Capacity planning & scaling policy.
+#   WORKFLOW-001..005: Program backlog tasks; see core/src/orchestration/tasks.todo.
+#   COMPREHENSIVE-7PHASE-001: Program epic; multi-ref dependency closure across PERF/SEC/OBS/VER/WF/DOC.
+#   SEC-SECRETS: Secrets mgmt & key rotation — deps: SEC-POLICY.
+#   SEC-ACCESS-REVIEW: Periodic RBAC access reviews — deps: SEC-POLICY.
+#   AUDIT-RETENTION: Audit retention (≥30d) policy & storage.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Execution Workflow (Granular)
+# 1) Author/triage: add tasks with owner/deps/acc/evid/tags/context → PR.
+# 2) CI [95m@PR[0m: OPS-TODO-VALIDATE lints .todo; CI-BUILD runs tests; SEC-CI scans.
+# 3) Merge → OPS-ISSUE-SYNC opens/updates Issues keyed by [REF]; labels from +tags/@contexts; assigns owner.
+# 4) Build/bench: PERF-BENCH executes; artifacts & TEST logs hashed via EVID-HASH.
+# 5) OBS-DASH-ALERTS commits dashboards/alerts; SLO-POLICY enforces burn-rate via slo-check workflow.
+# 6) Security: SEC-POLICY/SEC-SECRETS in effect; SEC-ACCESS-REVIEW scheduled; SEC-CI gate blocks on high/critical.
+# 7) Verification: TRI-SANDBOX-SETUP runs A/B/C; VER-001 merges → Model D; failures block CD-GATES.
+# 8) Canary: DEP-CANARY scripts deploy canary; metrics gates; auto-rollback on breach; OPS-RUNBOOK followed.
+# 9) Release: SUPPLY-SBOM → SUPPLY-SIGN → SUPPLY-VERIFY → SUPPLY-SLSA → SUPPLY-ANCHOR → REL-VERSIONING → RELEASE-PROMOTE.
+# 10) SoT: GOV-SOT-EXEC appends executed entries with artifacts + hashes; ADR/Risk updates; evidence paths stable.

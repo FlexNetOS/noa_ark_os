@@ -1,0 +1,3 @@
+NOOP: TASK-001 in Queue A — Workspace Bootstrapping at 20251001_220602Z
+Dry run: true
+Task layer: foundation

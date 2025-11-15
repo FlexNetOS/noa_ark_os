@@ -1,0 +1,124 @@
+{
+  "meta": {
+    "name": "NOA Johnson Bundle",
+    "version": "0.2.0",
+    "purpose": "Kernel-first, async, message-passing agent OS bundle (no globals, zero-bloat). Converts prior kit pieces to clean JS and unifies them.",
+    "proven": {
+      "csv_expected_rows": 862,
+      "csv_expected_cols": 81
+    }
+  },
+
+  "sbom": {
+    "scan_on_boot": true,
+    "required_env": ["NOA_MANIFEST"],
+    "required_platform": ["MessageChannel", "TextEncoder", "crypto.subtle"],
+    "modules": [
+      {"id":"utils","lang":"js"},
+      {"id":"shims","lang":"js"},
+      {"id":"ipc","lang":"js"},
+      {"id":"scheduler","lang":"js"},
+      {"id":"agent_factory","lang":"js"},
+      {"id":"csv","lang":"js"},
+      {"id":"normalizer_v2","lang":"js"},
+      {"id":"manifest_v2","lang":"js"},
+      {"id":"kernel","lang":"js"},
+      {"id":"bootstrap","lang":"js"},
+      {"id":"inventory","lang":"js"},
+      {"id":"docs","lang":"js"}
+    ]
+  },
+
+  "inventory": {
+    "files_detected": [
+      {"path":"updated_kit/tools/normalize_csv_v2.py","lang":"python"},
+      {"path":"updated_kit/schema/CSV_SCHEMA_v2.md","lang":"markdown"},
+      {"path":"updated_kit/schema/capsule.schema.v2.json","lang":"json"},
+      {"path":"updated_kit/HOW-TO-USE_v3_1_extended.md","lang":"markdown"},
+      {"path":"updated_kit/README_extended.md","lang":"markdown"},
+      {"path":"updated_kit/stack.manifest.v2.json","lang":"json"},
+      {"path":"updated_kit/All_Inclusive_Agent_Directory_v6_plus.normalized.full.csv","lang":"csv"}
+    ]
+  },
+
+  "modules": {
+    "utils": {
+      "js": "export const now=()=>{try{return (globalThis.performance&&performance.now())||Date.now()}catch{return Date.now()}};export const uid=(p='id')=>p+'-'+Math.random().toString(36).slice(2,10);export const freeze=o=>Object.freeze(o);export const clone=o=>JSON.parse(JSON.stringify(o));export const crc=s=>{let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0}return 'crc32:'+((h>>>0).toString(16))};export const splitList=v=>{if(v==null)return[];return String(v).split(/[|,;]\\s*/).map(x=>x.trim()).filter(Boolean)};export const has=x=>typeof x!=='undefined';"
+    },
+
+    "shims": {
+      "js": "import {has} from './utils.js';export const detectHoles=()=>{const holes=[],fixes=[],polyfills={};if(!has(globalThis.MessageChannel)){holes.push('MessageChannel');polyfills.MessageChannel=class{constructor(){this.port1={onmessage:null,postMessage:m=>setTimeout(()=>this.port2.onmessage&&this.port2.onmessage({data:m}),0)};this.port2={onmessage:null,postMessage:m=>setTimeout(()=>this.port1.onmessage&&this.port1.onmessage({data:m}),0)}}};fixes.push('polyfill:MessageChannel')}if(!has(globalThis.TextEncoder)){holes.push('TextEncoder');polyfills.TextEncoder=class{encode(s){return new Uint8Array([...unescape(encodeURIComponent(s))].map(c=>c.charCodeAt(0)))}};fixes.push('polyfill:TextEncoder')}if(!has(globalThis.crypto)||!globalThis.crypto.subtle){holes.push('crypto.subtle');polyfills.crypto={getRandomValues:a=>{for(let i=0;i<a.length;i++)a[i]=Math.floor(Math.random()*256);return a},subtle:null};fixes.push('polyfill:crypto-basic')}const env=(has(globalThis.process)&&process.env)?process.env:{};const missingEnv=[];return {holes,fixes,polyfills,missingEnv,env}};export const applyPolyfills=(pf)=>{for(const k of Object.keys(pf)){if(!globalThis[k])globalThis[k]=pf[k]}return true};"
+    },
+
+    "ipc": {
+      "js": "import {freeze} from './utils.js';export const createBus=()=>{const channels=new Map();const ensure=n=>{if(!channels.has(n))channels.set(n,{subs:new Set()});return channels.get(n)};const subscribe=(n,fn)=>{ensure(n).subs.add(fn);return()=>ensure(n).subs.delete(fn)};const publish=(n,msg)=>{const ch=ensure(n);for(const fn of ch.subs){Promise.resolve().then(()=>fn(msg))}};return freeze({subscribe,publish})};"
+    },
+
+    "scheduler": {
+      "js": "import {now,uid,freeze} from './utils.js';export const createScheduler=()=>{let q=[];const push=(at,fn)=>{q.push({at,fn,id:uid('job')});q.sort((a,b)=>a.at-b.at)};const tick=()=>{const t=now();const ready=[];q=q.filter(j=>{if(j.at<=t){ready.push(j);return false}return true});for(const j of ready){Promise.resolve().then(j.fn)}setTimeout(tick,0)};setTimeout(tick,0);const defer=fn=>push(now(),fn);const delay=(ms,fn)=>push(now()+ms,fn);return freeze({defer,delay})};"
+    },
+
+    "agent_factory": {
+      "js": "import {uid,freeze,clone} from './utils.js';export const createAgentFactory=({bus,scheduler})=>{const agents=new Map();const post=(to,body,from='kernel')=>bus.publish('msg',{to,from,body});const mk=(spec)=>{const id=spec.id||uid('agent');let alive=true;const api=freeze({id,name:spec.name||id,layer:spec.layer||'micro',send:(to,body)=>post(to,body,id),die:()=>{alive=false;agents.delete(id)}});const handler=async ({from,body})=>{if(!alive)return;try{if(spec.behavior)await spec.behavior({api,from,body,post,scheduler})}catch(e){post('CECCA',{type:'AGENT_ERROR',id,err:String(e)})}};agents.set(id,{onMessage:handler,api,spec});return api};const route=(msg)=>{const dst=agents.get(msg.to);if(dst)dst.onMessage({from:msg.from,body:msg.body})};bus.subscribe('msg',route);return freeze({spawn:(spec)=>mk(clone(spec)),agents})};"
+    },
+
+    "csv": {
+      "js": "export const parseCSV=(text)=>{const rows=[];let i=0,cell='',row=[],q=false;const pushCell=()=>{row.push(cell);cell=''};const pushRow=()=>{rows.push(row);row=[]};while(i<text.length){const c=text[i++];if(q){if(c==='\"'){if(text[i]==='\"'){cell+='\"';i++}else{q=false}}else{cell+=c}}else{if(c==='\"'){q=true}else if(c===','){pushCell()}else if(c==='\\n'){pushCell();pushRow()}else if(c==='\\r'){/* skip */}else{cell+=c}}}if(cell.length||row.length){pushCell();pushRow()}if(!rows.length)return {headers:[],rows:[]};const headers=rows.shift().map(h=>h.trim());const out=rows.filter(r=>r.length===headers.length).map(r=>{const o={};for(let j=0;j<headers.length;j++){o[headers[j]]=r[j]}return o});return {headers,rows:out}};"
+    },
+
+    "normalizer_v2": {
+      "js": "import {splitList} from './utils.js';export const REQUIRED=['agent_name','role','layer','scope','tools','inputs','outputs','guardrails','escalation_to','stack'];const LAYER_MAP={cecca:['cecca','central','noa'],board:['board','governance','policy','trustees'],executive:['executive','exec','chief','vp','director','leadership'],stack_chief:['stack_chief','stack-chief','chief_commander','stack_commander','stack chief commander','stackchief','orchestrator','subject_orchestrator'],specialist:['specialist','sme','subject_matter_expert','special','lead'],micro:['micro','micro_agent','worker','agent','unit']};const normLayer=(layer='',role='')=>{const l=String(layer||'').toLowerCase().trim();const r=String(role||'').toLowerCase().trim();for(const [canon,vars] of Object.entries(LAYER_MAP)){if(vars.includes(l))return canon}if(l.includes('orchestrator')||r.includes('orchestrator'))return 'stack_chief';if(/vp|director|executive|cxo|officer/.test(r))return 'executive';if(/special|sme|lead/.test(r))return 'specialist';if(!l)return 'micro';return ['cecca','board','executive','stack_chief','specialist','micro'].includes(l)?l:'micro'};const ensure=(row)=>{const out={...row};for(const k of REQUIRED){if(!(k in out))out[k]=''}out.layer=normLayer(out.layer,out.role);if(!out.role){out.role={cecca:'Chief Executive Commander',board:'Board Policy',executive:'Executive',stack_chief:'Stack Chief Commander',specialist:'Specialist',micro:'Micro Agent'}[out.layer]}if((out.layer==='specialist'||out.layer==='micro')&&!out.escalation_to)out.escalation_to='Stack-Chief';if(!out.stack){const sc=splitList(out.scope);out.stack=sc[0]||'Subject-001'}return out};export const normalizeCsvFull=(parsed)=>{const rows=parsed.rows.map(ensure).map(r=>{const out={...r};const listCols=['triggers','inputs','outputs','artifacts','actions','tools_stack','models','embedding_models','memory_scope','state_store','cache','scheduling','sla','metrics','telemetry','dependencies','depends_on_agents','provides_capabilities','spawn_policy','efg_requirements'];for(const c of listCols){if(c in out)out[c]=splitList(out[c])}if((!out.agent_name||out.agent_name==='')&&(out.agent_id&&String(out.agent_id).trim()))out.agent_name=String(out.agent_id).trim();if(!out.agent_name)out.agent_name='agent_'+Math.random().toString(36).slice(2,10);return out});const headers=[...new Set(parsed.headers.concat(Object.keys(rows[0]||{})))];return {headers,rows,shape:[rows.length,headers.length]}};"
+    },
+
+    "manifest_v2": {
+      "js": "import {clone} from './utils.js';export const buildManifest=(norm)=>{const rows=norm.rows||[];const byLayer={cecca:[],board:[],executive:[],stack_chief:[],specialist:[],micro:[]};for(const r of rows){byLayer[r.layer]?.push(r)}const mkCapsule=(r)=>({id:String(r.agent_id||r.agent_name||'id').trim(),name:String(r.agent_name||r.agent_id||'name').trim(),layer:r.layer,scope:(Array.isArray(r.scope)?r.scope:(r.scope?[r.scope]:[])),inputs:Array.isArray(r.inputs)?r.inputs:(r.inputs?[r.inputs]:[]),outputs:Array.isArray(r.outputs)?r.outputs:(r.outputs?[r.outputs]:[]),tools:Array.isArray(r.tools)?r.tools:(r.tools?[r.tools]:[]),guardrails:Array.isArray(r.guardrails)?r.guardrails:(r.guardrails?[r.guardrails]:[]),escalation_to:r.escalation_to||null,metadata:{category:r.category||null,type:r.type||null,owner_role:r.owner_role||null,purpose:r.purpose||null,capability_pack:r.capability_pack||null,models:r.models||[],embedding_models:r.embedding_models||[],memory_scope:r.memory_scope||[],state_store:r.state_store||[],cache:r.cache||[],scheduling:r.scheduling||[],sla:r.sla||[],metrics:r.metrics||[],telemetry:r.telemetry||null,dependencies:r.dependencies||[],provides_capabilities:r.provides_capabilities||[],failure_modes:r.failure_modes||null,auto_remediation:r.auto_remediation||null,audit_logging:r.audit_logging||null,pii_handling:r.pii_handling||null,security_level:r.security_level||null,export_control:r.export_control||null,license_category:r.license_category||null,maturity_level:r.maturity_level||null,autonomy_level:r.autonomy_level||null,operational_readiness_score:r.operational_readiness_score||null,cost_center:r.cost_center||null,budget_cap:r.budget_cap||null,version:r.version||null,created_at:r.created_at||null,last_updated:r.last_updated||null}});const cecca=byLayer.cecca.map(mkCapsule);const board=byLayer.board.map(mkCapsule);const executives=byLayer.executive.map(mkCapsule);const stackName=rows[0]?.stack||'Subject-001';const micros=byLayer.micro.map(mkCapsule);const specialists=byLayer.specialist.map(mkCapsule);const chief=(byLayer.stack_chief[0]?mkCapsule(byLayer.stack_chief[0]):null);return {meta:{generated_by:'johnson.bundle',shape:norm.shape},cecca,board,executives,stacks:[{stack_name:stackName,chief,specialists,micros}],policy:{}}};"
+    },
+
+    "kernel": {
+      "js": "import {createBus} from './ipc.js';import {createScheduler} from './scheduler.js';import {createAgentFactory} from './agent_factory.js';import {detectHoles,applyPolyfills} from './shims.js';import {crc,freeze} from './utils.js';export const createKernel=(bundle)=>{const bus=createBus();const scheduler=createScheduler();const {holes,fixes,polyfills,missingEnv,env}=detectHoles();if(Object.keys(polyfills).length)applyPolyfills(polyfills);const factory=createAgentFactory({bus,scheduler});const codes=Object.entries(bundle.modules||{});const sbom=()=>codes.map(([id,mod])=>({id,crc:mod&&mod.js?crc(mod.js):'n/a'}));const register=(spec)=>factory.spawn(spec);const send=(to,body)=>bus.publish('msg',{to,from:'kernel',body});const bootReport={holes,fixes,missingEnv,env,sbom:sbom()};return freeze({bus,scheduler,factory,register,send,bootReport})};"
+    },
+
+    "bootstrap": {
+      "js": "import {createKernel} from './kernel.js';import {parseCSV} from './csv.js';import {normalizeCsvFull} from './normalizer_v2.js';import {buildManifest} from './manifest_v2.js';export const boot=async (bundle,opts={})=>{const k=createKernel(bundle);const res=bundle.resources||{};let manifest=bundle.manifest||null;if(!manifest){const csvText=res.csv||'';if(csvText){const parsed=parseCSV(csvText);const norm=normalizeCsvFull(parsed);manifest=buildManifest(norm)}else{manifest=bundle.manifest_sample||{meta:{},cecca:[],board:[],executives:[],stacks:[]}}}const reg=k.register;const send=k.send;const cecca=(manifest.cecca&&manifest.cecca[0])||{id:'CECCA',name:'ChiefExecutiveChiefCommanderAgent',layer:'cecca'};reg({id:cecca.id,name:cecca.name,layer:'cecca',behavior:async({body,post})=>{if(body?.type==='AGENT_ERROR'){post('Board',{type:'ESCALATE',error:body})}if(body?.type==='START_TASK'){post('TaskRunner',{type:'EXECUTE',task:body.task,opts:body.opts||{}})}}});reg({id:'Board',name:'Board',layer:'board',behavior:async({body,post})=>{if(body?.type==='ESCALATE'){post('CECCA',{type:'ACK_ESCALATION',ok:true})}}});reg({id:'TaskRunner',name:'TaskRunner',layer:'specialist',behavior:async({body,post})=>{if(body?.type==='EXECUTE'){post('CECCA',{type:'TASK_ACK',task:body.task,ts:Date.now()})}}});const stack=(manifest.stacks&&manifest.stacks[0])||null;for(const m of (stack?.micros||[])){reg({id:m.id,name:m.name,layer:'micro',behavior:async({body,post})=>{if(body?.type==='PING_MICRO'){post('CECCA',{type:'MICRO_PONG',id:m.id})}}})}if(opts.task){send('CECCA',{type:'START_TASK',task:opts.task,opts:opts})}return {kernel:k,manifest}};"
+    },
+
+    "inventory": {
+      "js": "export const inventory=()=>({files:[{path:'updated_kit/tools/normalize_csv_v2.py',lang:'python'},{path:'updated_kit/schema/CSV_SCHEMA_v2.md',lang:'markdown'},{path:'updated_kit/schema/capsule.schema.v2.json',lang:'json'},{path:'updated_kit/HOW-TO-USE_v3_1_extended.md',lang:'markdown'},{path:'updated_kit/README_extended.md',lang:'markdown'},{path:'updated_kit/stack.manifest.v2.json',lang:'json'},{path:'updated_kit/All_Inclusive_Agent_Directory_v6_plus.normalized.full.csv',lang:'csv'}]});"
+    },
+
+    "docs": {
+      "js": "export const HOWTO=`Extended guide: use normalize_csv_v2 to heal CSV (862x81), build stack.manifest.v2.json, set NOA_MANIFEST env, run agent factory.`;"
+    }
+  },
+
+  "entry": "bootstrap",
+
+  "resources": {
+    "csv": ""
+  },
+
+  "manifest": {
+    "meta": { "note": "If you include CSV in resources.csv, bootstrap will build a manifest at boot. Otherwise this sample is used." },
+    "cecca": [
+      { "id": "CECCA", "name": "ChiefExecutiveChiefCommanderAgent", "layer": "cecca", "scope": ["global"], "inputs": [], "outputs": [], "tools": ["internal"], "guardrails": ["offline-first","audited"], "escalation_to": "Board" }
+    ],
+    "board": [
+      { "id": "PolicyEnforcement", "name": "Policy Enforcement Agent", "layer": "board", "scope": ["governance"], "inputs": [], "outputs": [], "tools": [], "guardrails": [], "escalation_to": null }
+    ],
+    "executives": [],
+    "stacks": [
+      {
+        "stack_name": "Subject-001",
+        "chief": null,
+        "specialists": [],
+        "micros": [
+          { "id": "AgentSelfUpgradeRetirementAgent", "name": "AgentSelfUpgradeRetirementAgent", "layer": "micro", "scope": [], "inputs": ["upgrade_status","retirement_policy"], "outputs": ["agent_lifecycle_event"], "tools": ["internal"], "guardrails": ["offline-first"], "escalation_to": "Stack-Chief" },
+          { "id": "MultiTenantIsolationAgent", "name": "MultiTenantIsolationAgent", "layer": "micro", "scope": [], "inputs": ["tenant_config","resource_usage"], "outputs": ["isolation_report","quota_alert"], "tools": ["internal"], "guardrails": ["offline-first"], "escalation_to": "Stack-Chief" },
+          { "id": "UpgradePatchAgent", "name": "UpgradePatchAgent", "layer": "micro", "scope": [], "inputs": ["current_version","available_patch"], "outputs": ["upgrade_status"], "tools": ["internal"], "guardrails": ["offline-first"], "escalation_to": "Stack-Chief" },
+          { "id": "AgentSupervisorHeartbeatAgent", "name": "AgentSupervisorHeartbeatAgent", "layer": "micro", "scope": [], "inputs": ["agent_status","health_signals"], "outputs": ["health_report","restart_action"], "tools": ["internal"], "guardrails": ["offline-first"], "escalation_to": "Stack-Chief" }
+        ]
+      }
+    ],
+    "policy": {}
+  }
+}
