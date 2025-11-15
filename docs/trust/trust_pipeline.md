@@ -24,7 +24,6 @@ workflow orchestrator enforces automatically.
    scopes whenever the capability metric drops below its warning or critical
    thresholds.
 
-## Customising inputs
 
 The Makefile target accepts optional overrides:
 
