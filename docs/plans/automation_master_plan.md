@@ -169,7 +169,7 @@ Provide an offline-capable GitHub CLI (gh) installer bundle with checksum verifi
 - **Deterministic builds**: lock tool versions (`rust-toolchain.toml`, `pnpm-lock.yaml`, `go.sum`) and vendor dependencies into `vendor/` for offline usage.
 - **SBOM & license**: run `syft packages . -o json` (offline) and `licensee detect . --json` within sandbox; store under `build_artifacts/sbom/`.
 - **Secret scanning**: offline regex-based scanner `tools/security/secrets_scan.py` invoked pre-merge.
-- **A11y checks**: `pnpm --filter vibe-kanban test:a11y` (new script using `axe-core`) executed in pipeline.
+- **A11y checks**: `corepack pnpm --filter vibe-kanban test:a11y` (new script using `axe-core`) executed in pipeline.
 
 ## Feature Flags & Env
 ```

@@ -193,11 +193,13 @@ describe("useBoardState planner integration", () => {
     expect(plan.stages[0].state).toBe("pending");
 
     const client = getLastClient();
-    client?.emit("workflow:update", {
-      eventType: "workflow/stage",
-      workflowId: plan.workflowId,
-      payload: { stage_id: "Goal Intake", state: "Running" },
-      timestamp: new Date().toISOString(),
+    await act(async () => {
+      client?.emit("workflow:update", {
+        eventType: "workflow/stage",
+        workflowId: plan.workflowId,
+        payload: { stage_id: "Goal Intake", state: "Running" },
+        timestamp: new Date().toISOString(),
+      });
     });
 
     await waitFor(() => expect(result.current.planner.plans[0].stages[0].state).toBe("running"));
@@ -206,11 +208,13 @@ describe("useBoardState planner integration", () => {
       String(input).endsWith("/api/workspaces/studio/boards/launchpad")
     ).length;
 
-    client?.emit("workflow:update", {
-      eventType: "workflow/state",
-      workflowId: plan.workflowId,
-      payload: { state: "Completed" },
-      timestamp: new Date().toISOString(),
+    await act(async () => {
+      client?.emit("workflow:update", {
+        eventType: "workflow/state",
+        workflowId: plan.workflowId,
+        payload: { state: "Completed" },
+        timestamp: new Date().toISOString(),
+      });
     });
 
     await waitFor(() => expect(result.current.planner.plans[0].status).toBe("completed"));

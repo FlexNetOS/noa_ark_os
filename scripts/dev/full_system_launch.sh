@@ -7,6 +7,35 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
+CONFIG_JSON="$ROOT_DIR/tools/devshell/config.json"
+
+detect_pnpm_version() {
+  local version=""
+  if command -v node >/dev/null 2>&1; then
+    version=$(node -e '
+      const fs = require("fs");
+      const path = process.argv[1];
+      try {
+        const raw = fs.readFileSync(path, "utf8");
+        const parsed = JSON.parse(raw);
+        const required = (parsed?.pnpm?.requiredVersion) || "";
+        process.stdout.write(required);
+      } catch {
+        process.stdout.write("");
+      }
+    ' "$CONFIG_JSON" 2>/dev/null || true)
+  fi
+  if [[ -z "$version" || "$version" == "None" ]]; then
+    version="8.15.4"
+  fi
+  printf '%s' "$version"
+}
+
+PNPM_REQUIRED_VERSION="$(detect_pnpm_version)"
+PNPM_AGENT="pnpm/${PNPM_REQUIRED_VERSION}"
+PNPM_ENV=(npm_config_user_agent="$PNPM_AGENT")
+PNPM_BIN=(corepack pnpm)
+
 MODE="launch"
 SKIP_TESTS=0
 SKIP_BUILD=0
@@ -99,10 +128,17 @@ activate_toolchains() {
   fi
 }
 
+pnpm_cmd() {
+  "${PNPM_ENV[@]}" "${PNPM_BIN[@]}" "$@"
+}
+
 prepare_env() {
   activate_toolchains
-  require_cmd pnpm
+  require_cmd corepack
   require_cmd cargo
+
+  corepack prepare "pnpm@${PNPM_REQUIRED_VERSION}" --activate >/dev/null 2>&1 || true
+  export npm_config_user_agent="$PNPM_AGENT"
 
   if [[ "$UI_API_BIND" == http://* || "$UI_API_BIND" == https://* ]]; then
     UI_API_URL="$UI_API_BIND"
@@ -121,7 +157,7 @@ prepare_env() {
 }
 
 install_deps() {
-  run_step "Installing pnpm workspace dependencies" pnpm install --frozen-lockfile
+  run_step "Installing pnpm workspace dependencies" pnpm_cmd install --frozen-lockfile
 }
 
 build_workspace() {
@@ -130,7 +166,7 @@ build_workspace() {
     return
   fi
   run_step "Building Rust workspace" cargo build --workspace
-  run_step "Building Vibe Kanban UI" pnpm build
+  run_step "Building Vibe Kanban UI" pnpm_cmd build
 }
 
 run_tests() {
@@ -138,7 +174,7 @@ run_tests() {
     log "⚠ Skipping tests per flag"
     return
   fi
-  run_step "Running pnpm test suite" pnpm test
+  run_step "Running pnpm test suite" pnpm_cmd test
   run_step "Running cargo test suite" cargo test --workspace
 }
 
@@ -175,7 +211,7 @@ start_services() {
   log "▶ Launching Vibe Kanban UI on http://$UI_HOST:$UI_PORT"
   (
     set -euo pipefail
-    HOST="$UI_HOST" PORT="$UI_PORT" pnpm --filter vibe-kanban dev
+    HOST="$UI_HOST" PORT="$UI_PORT" "${PNPM_ENV[@]}" "${PNPM_BIN[@]}" --filter vibe-kanban dev
   ) |& tee "$UI_LOG" &
   UI_PID=$!
 

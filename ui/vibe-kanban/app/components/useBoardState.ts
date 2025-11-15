@@ -474,14 +474,9 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     return () => {
       clearInterval(interval);
       presenceIntervalRef.current = null;
-      if (typeof fetch === "function") {
-        const presenceRequest = fetch(`/api/workspaces/${workspaceId}/presence`, { method: "DELETE" });
-        if (!presenceRequest) {
-          return;
-        }
-        if (typeof (presenceRequest as { catch?: unknown }).catch === "function") {
-          (presenceRequest as Promise<Response>).catch(() => undefined);
-        }
+      const cleanupRequest = fetch(`/api/workspaces/${workspaceId}/presence`, { method: "DELETE" });
+      if (cleanupRequest && typeof (cleanupRequest as { catch?: unknown }).catch === "function") {
+        (cleanupRequest as Promise<Response>).catch(() => undefined);
       }
     };
   }, [workspaceId, boardId, user]);
