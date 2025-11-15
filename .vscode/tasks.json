@@ -4,6 +4,12 @@
     {
       "label": "Activate Portable Toolchain",
       "type": "shell",
+      "command": "echo 'Deprecated: run make cargo-build/check/test/run instead.'",
+      "windows": {
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Write-Host 'Deprecated: use make cargo-build/check/test/run.'\""
+      },
+      "linux": {
+        "command": "echo 'Deprecated: run make cargo-build/check/test/run instead.'"
       "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1",
       "windows": {
         "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1"
@@ -22,11 +28,18 @@
         "reveal": "always",
         "panel": "new"
       },
-      "problemMatcher": []
+      "problemMatcher": [],
+      "detail": "Deprecated: use make cargo-* targets or tools/devshell shims directly."
     },
     {
-      "label": "Cargo Build (Portable)",
+      "label": "[Deprecated] Cargo Build (Portable)",
       "type": "shell",
+      "command": "make cargo-build",
+      "windows": {
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\tools\\devshell\\cargo-build.ps1"
+      },
+      "linux": {
+        "command": "make cargo-build"
       "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo build",
       "windows": {
         "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo build"
@@ -48,11 +61,20 @@
       "presentation": {
         "reveal": "always"
       },
-      "problemMatcher": ["$rustc"]
+      "problemMatcher": [
+        "$rustc"
+      ],
+      "detail": "Use make cargo-build or tools/devshell/cargo-build.* directly."
     },
     {
-      "label": "Cargo Run (Portable)",
+      "label": "[Deprecated] Cargo Run (Portable)",
       "type": "shell",
+      "command": "make cargo-run",
+      "windows": {
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\tools\\devshell\\cargo-run.ps1"
+      },
+      "linux": {
+        "command": "make cargo-run"
       "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo run",
       "windows": {
         "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo run"
@@ -70,11 +92,20 @@
       "presentation": {
         "reveal": "always"
       },
-      "problemMatcher": ["$rustc"]
+      "problemMatcher": [
+        "$rustc"
+      ],
+      "detail": "Use make cargo-run or tools/devshell/cargo-run.* directly."
     },
     {
-      "label": "Cargo Test (Portable)",
+      "label": "[Deprecated] Cargo Test (Portable)",
       "type": "shell",
+      "command": "make cargo-test",
+      "windows": {
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\tools\\devshell\\cargo-test.ps1"
+      },
+      "linux": {
+        "command": "make cargo-test"
       "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo test",
       "windows": {
         "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo test"
@@ -92,11 +123,20 @@
       "presentation": {
         "reveal": "always"
       },
-      "problemMatcher": ["$rustc"]
+      "problemMatcher": [
+        "$rustc"
+      ],
+      "detail": "Use make cargo-test or tools/devshell/cargo-test.* directly."
     },
     {
-      "label": "Cargo Check (Portable)",
+      "label": "[Deprecated] Cargo Check (Portable)",
       "type": "shell",
+      "command": "make cargo-check",
+      "windows": {
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\tools\\devshell\\cargo-check.ps1"
+      },
+      "linux": {
+        "command": "make cargo-check"
       "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo check",
       "windows": {
         "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo check"
@@ -114,6 +154,10 @@
       "presentation": {
         "reveal": "always"
       },
+      "problemMatcher": [
+        "$rustc"
+      ],
+      "detail": "Use make cargo-check or tools/devshell/cargo-check.* directly."
       "problemMatcher": ["$rustc"]
     },
     {

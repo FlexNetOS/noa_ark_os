@@ -361,3 +361,26 @@ jupyter nbconvert --clear-output --inplace notebooks/**/*.ipynb
 # Check for secrets
 detect-secrets scan notebooks/
 ```
+
+## Contribution Workflow
+
+- Use the unified CLI to manage templates and hygiene:
+
+  ```bash
+  # Scaffold (or refresh) the full directory tree and placeholder notebooks
+  cargo run -p noa-cli -- notebook init
+
+  # Strip outputs locally
+  cargo run -p noa-cli -- notebook clean
+
+  # Validate that no execution counts or outputs remain
+  cargo run -p noa-cli -- notebook lint
+  ```
+
+- Install [`nbstripout`](https://github.com/kynan/nbstripout) with the repository-provided configuration:
+
+  ```bash
+  nbstripout --install --attributes notebooks/.gitattributes
+  ```
+
+- Always commit notebooks without outputs. CI runs `noa notebook lint` on every change, so clean locally before pushing.
