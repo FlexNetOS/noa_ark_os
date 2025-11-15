@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NOA Stack Manifest",
+  "type": "object",
+  "required": [
+    "meta",
+    "policy",
+    "stacks"
+  ],
+  "properties": {
+    "meta": {
+      "type": "object"
+    },
+    "policy": {
+      "type": "object"
+    },
+    "cecca": {
+      "type": "array",
+      "items": {
+        "$ref": "capsule.schema.json"
+      }
+    },
+    "board": {
+      "type": "array",
+      "items": {
+        "$ref": "capsule.schema.json"
+      }
+    },
+    "executives": {
+      "type": "array",
+      "items": {
+        "$ref": "capsule.schema.json"
+      }
+    },
+    "stacks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "stack_name",
+          "specialists",
+          "micros"
+        ],
+        "properties": {
+          "stack_name": {
+            "type": "string"
+          },
+          "chief": {
+            "$ref": "capsule.schema.json"
+          },
+          "specialists": {
+            "type": "array",
+            "items": {
+              "$ref": "capsule.schema.json"
+            }
+          },
+          "micros": {
+            "type": "array",
+            "items": {
+              "$ref": "capsule.schema.json"
+            }
+          }
+        }
+      }
+    }
+  }
+}

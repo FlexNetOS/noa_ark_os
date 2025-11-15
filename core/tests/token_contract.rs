@@ -1,15 +1,26 @@
+use std::sync::{Mutex, MutexGuard, OnceLock};
+
 use noa_core::config::manifest::{KernelManifest, SCOPE_HOST_ENVIRONMENT_TAKEOVER};
 use noa_core::token::{self, service as token_service, TokenError, TokenIssuanceRequest};
 
-fn setup_manifest() {
+fn token_test_guard() -> &'static Mutex<()> {
+    static GUARD: OnceLock<Mutex<()>> = OnceLock::new();
+    GUARD.get_or_init(|| Mutex::new(()))
+}
+
+fn setup_manifest() -> MutexGuard<'static, ()> {
+    let guard = token_test_guard()
+        .lock()
+        .expect("token test guard poisoned");
     token_service().reset();
     let manifest = KernelManifest::default();
     token::configure_from_manifest(&manifest);
+    guard
 }
 
 #[test]
 fn token_issuance_and_validation_flow() {
-    setup_manifest();
+    let _guard = setup_manifest();
     let request = TokenIssuanceRequest::new("controller", [SCOPE_HOST_ENVIRONMENT_TAKEOVER]);
     let token = token_service()
         .issue_token(request)
@@ -24,7 +35,7 @@ fn token_issuance_and_validation_flow() {
 
 #[test]
 fn token_revocation_is_enforced() {
-    setup_manifest();
+    let _guard = setup_manifest();
     let request = TokenIssuanceRequest::new("tester", [SCOPE_HOST_ENVIRONMENT_TAKEOVER]);
     let token = token_service()
         .issue_token(request)
@@ -42,7 +53,7 @@ fn token_revocation_is_enforced() {
 
 #[test]
 fn rejecting_unknown_scopes() {
-    setup_manifest();
+    let _guard = setup_manifest();
     let request = TokenIssuanceRequest::new("tester", ["unknown.scope"]);
     let result = token_service().issue_token(request);
     assert!(matches!(result, Err(TokenError::UnknownScope(scope)) if scope == "unknown.scope"));

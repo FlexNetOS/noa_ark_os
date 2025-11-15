@@ -1,0 +1,105 @@
+[workspace]
+members = [
+    "core",
+    "flexnetos/execution/core",
+    "flexnetos/execution/wasm_host",
+    "shared"
+]
+resolver = "2"
+
+[workspace.package]
+name = "agentaskit-production"
+version = "0.1.0"
+edition = "2021"
+authors = ["AgentasKit Contributors"]
+license = "MIT OR Apache-2.0"
+description = "Multi-Agent AgenticAI Task Deployment Kit - Production Ready System"
+
+[workspace.dependencies]
+# Core async runtime and utilities
+tokio = { version = "1.0", features = ["full"] }
+async-trait = "0.1"
+futures = "0.3"
+once_cell = "1.0"
+
+# Serialization and data handling
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+uuid = { version = "1.0", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+# Error handling and logging
+anyhow = "1.0"
+thiserror = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Concurrency and synchronization
+parking_lot = "0.12"
+crossbeam = "0.8"
+dashmap = "5.0"
+
+# Network and HTTP
+reqwest = { version = "0.11", features = ["json"] }
+tonic = "0.9"
+prost = "0.11"
+
+# Desktop interface (Tauri)
+tauri = { version = "1.0", features = ["api-all"] }
+tauri-build = { version = "1.0", features = [] }
+
+# Command line interface
+clap = { version = "4.0", features = ["derive"] }
+
+# Security and cryptography
+ring = "0.16"
+sha2 = "0.10"
+
+# WASM runtime
+wasmtime = "13.0"
+wasi-common = "13.0"
+wat = "1.0"
+base64 = "0.22"
+hmac = "0.12"
+cap-std = "3.0"
+walkdir = "2.0"
+
+# Database and storage
+sled = "0.34"
+bincode = "1.3"
+
+# Configuration
+config = "0.13"
+toml = "0.8"
+
+# Testing utilities
+mockall = "0.11"
+tempfile = "3.0"
+
+# Machine Learning and Vector Intelligence
+candle-core = "0.3"
+candle-nn = "0.3"
+burn = "0.11"
+fastembed = "3.0"
+qdrant-client = "1.5"
+
+# Additional dependencies
+hex = "0.4"
+chrono = { version = "0.4", features = ["serde"] }
+capnp = "0.17"
+capnpc = "0.17"
+
+[package]
+name = "agentaskit-production"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description.workspace = true
+
+[dependencies]
+# Main workspace just provides common types and utilities
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+anyhow.workspace = true
