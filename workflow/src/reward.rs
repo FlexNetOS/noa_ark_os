@@ -360,8 +360,8 @@ impl RewardScorekeeper {
 
     fn rebuild_standings(&mut self) {
         self.standings.clear();
-        for delta in self.history.clone() {
-            self.update_standings(&delta);
+        for delta in &self.history {
+            self.update_standings(delta);
         }
     }
 
