@@ -24,6 +24,10 @@ This workspace supports development on **three platforms**:
 
 ### Every Session
 
+```powershell
+# Activate portable Cargo
+python server/tools/dev_env_cli.py activate --platform windows
+.\server\tools\activate-cargo.ps1
 ````powershell
 ./server/tools/activate-cargo.ps1
 ./server/tools/activate-node.ps1
@@ -58,6 +62,22 @@ pnpm -v
 
 ### Option 2 – Use Windows Portable Cargo from WSL
 
+```bash
+# Activate Cargo
+python server/tools/dev_env_cli.py activate --platform linux
+source ./server/tools/activate-cargo.sh
+
+# Or add to ~/.bashrc for automatic loading:
+echo 'source $HOME/.cargo/env' >> ~/.bashrc
+```
+
+### Option 2: Use Windows Portable Cargo from WSL
+
+**Setup:**
+
+```bash
+# Set environment variables
+python server/tools/dev_env_cli.py activate --platform wsl
 ````bash
 export CARGO_HOME="/mnt/d/dev/workspaces/noa_ark_os/server/tools/cargo-portable"
 export RUSTUP_HOME="/mnt/d/dev/workspaces/noa_ark_os/server/tools/rustup-portable"
@@ -71,8 +91,12 @@ cargo.exe --version
 
 ---
 
-## 🎯 VS Code Terminal Profiles
+## 🧭 CLI Reference
 
+- `python server/tools/dev_env_cli.py summary` – Display workspace paths and profiles.
+- `python server/tools/dev_env_cli.py activate --platform <windows|wsl|linux>` – Print activation steps.
+- `python server/tools/dev_env_cli.py doctor` – Check required scripts and directories.
+- `python server/tools/dev_env_cli.py diagnostics` – Rust-analyzer troubleshooting guidance.
 - **PowerShell** – Default for portable toolchains on Windows
 - **WSL** – Ubuntu shell
 - **Git Bash / CMD** – Optional
@@ -91,6 +115,13 @@ Switch via the terminal dropdown or `Ctrl+Shift+P → Terminal: Select Default P
 
 ---
 
+## 🧪 CLI Workflows
+
+- `cargo build` / `cargo build --release` – Compile projects after activation.
+- `cargo test` – Run the test suite.
+- `cargo run --bin <target>` – Execute binaries.
+- `cargo check` – Fast validation without producing binaries.
+- `python server/tools/dev_env_cli.py doctor` – Confirm scripts before running automation or CI jobs.
 ## 🔧 VS Code Tasks
 
 Tasks now assume both activators are available:
@@ -144,6 +175,26 @@ Outputs should always reference `server/tools/...` once activated.
 
 ## 🆘 Troubleshooting
 
+### "Command not found" in PowerShell
+- **Solution**: Run `.\server\tools\activate-cargo.ps1`
+
+### "Command not found" in WSL
+- **Solution**: Run `source ./server/tools/activate-cargo.sh`
+- Or install Rust: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
+
+### Rust-analyzer not working
+- **Run**: `python server/tools/dev_env_cli.py diagnostics`
+- **Windows**: Ensure `.\server\tools\activate-cargo.ps1` was executed in the current session
+- **WSL**: Ensure native Rust is installed or select the portable toolchain during activation
+
+### Wrong Cargo version
+- **Check**: Run `where.exe cargo` (Windows) or `which cargo` (Linux)
+- **Fix**: Ensure activation script ran successfully
+
+### Mixing Windows and WSL
+- **Issue**: Using Windows paths in WSL or vice versa
+- **Fix**: Use appropriate activation script for your terminal
+- **Tip**: Check prompt - `PS D:\...` = PowerShell, `deflex@...` = WSL
 | Issue | Resolution |
 | --- | --- |
 | `pnpm`/`node` missing | Run `source ./server/tools/activate-node.sh` or `./server/tools/activate-node.ps1`. |
@@ -173,6 +224,39 @@ server/tools/
 
 ## 🚀 Getting Started
 
+### First Time (Choose Your Platform)
+
+**Windows Developer:**
+```powershell
+# PowerShell
+.\server\tools\setup-portable-cargo.ps1
+.\server\tools\activate-cargo.ps1
+```
+
+**Linux/WSL Developer:**
+```bash
+# WSL/Ubuntu
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source $HOME/.cargo/env
+```
+
+**Multi-Platform Developer:**
+- Do both! Keep them separate:
+  - Windows portable in `server/tools/`
+  - Linux system-wide in `~/.cargo/`
+
+---
+
+## 💡 Tips
+
+1. **Run the CLI summary** before switching platforms to confirm paths.
+2. **Use `python server/tools/dev_env_cli.py doctor`** after upgrades or reinstalls.
+3. **Keep Windows and WSL toolchains separate** to avoid path collisions.
+4. **Add to shell profile** for automatic activation:
+   - PowerShell: Add `.\server\tools\activate-cargo.ps1` to `$PROFILE`
+   - Bash: Add `source ./server/tools/activate-cargo.sh` to `~/.bashrc`
+
+---
 1. Run both setup scripts for your platform.
 2. Activate cargo + node in every new terminal.
 3. Use `pnpm` and `cargo` confidently knowing they originate from `server/tools/` and satisfy HT‑01.
