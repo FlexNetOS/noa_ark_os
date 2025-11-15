@@ -2,22 +2,41 @@ SHELL := /bin/bash
 
 PNPM ?= pnpm
 CARGO ?= cargo
-PYTHON ?= python3
 
+.PHONY: build test digest run ci:local lint typecheck format
+.PHONY: pipeline.local world-verify world-fix kernel snapshot rollback verify publish-audit rollback-sim setup
+.PHONY: build test digest run ci:local lint typecheck format docs:check
+PYTHON ?= python3
+BASE_REF ?= origin/main
+
+ACTIVATION_CHECK := \
+	@if [ -z "$$NOA_CARGO_ENV" ] || [ -z "$$NOA_NODE_ENV" ]; then \
+		echo "❌ Portable toolchain not activated. Run 'source ./server/tools/activate-cargo.sh' and 'source ./server/tools/activate-node.sh' first." >&2; \
+		exit 1; \
+	fi
+
+.PHONY: deps build test digest run ci-local lint typecheck format
+
+# Snapshot configuration (retained from local-first pipeline additions)
 SNAPSHOT_ARCHIVE_ROOT ?= archive
 SNAPSHOT_BUNDLE_PREFIX ?= noa-ark-os
 SNAPSHOT_LEDGER_NAME ?= ledger.json
 SNAPSHOT_TAR_COMPRESS ?= --zstd
 SNAPSHOT_TAR_DECOMPRESS ?= --zstd
 SNAPSHOT_BUNDLE_EXT ?= tar.zst
-
-.PHONY: build test digest run ci-local ci\:local lint typecheck format
 .PHONY: pipeline.local world-verify world-fix kernel snapshot rollback verify publish-audit setup
+.PHONY: provider-pointers archival-verify duplicate-check router-singleton conventional-commits export-roadmap
+.PHONY: record-local-pipeline
 
-build:
+
+deps:
+	$(ACTIVATION_CHECK)
+	$(PNPM) install --frozen-lockfile
+
+build: deps
 	$(PNPM) build
 
-test:
+test: deps
 	$(PNPM) test
 	$(CARGO) test -p noa_crc
 	bash tests/shell/test_snapshot.sh
@@ -25,23 +44,23 @@ test:
 digest:
 	$(CARGO) run -p noa_crc -- ingest
 
-lint:
+lint: deps
 	$(PNPM) lint
 
-format:
+format: deps
 	$(PNPM) format
 	$(CARGO) fmt --all
 
-typecheck:
+typecheck: deps
 	$(PNPM) typecheck
 
+docs:check:
+	$(PNPM) docs:lint
+
+ci:local: lint typecheck format docs:check test
 ci-local: lint typecheck format test
 
-ci\:local:
-	@echo "⚠️  'ci:local' is deprecated; forwarding to 'ci-local'"
-	@$(MAKE) ci-local
-
-run:
+run: deps
 	@set -euo pipefail; \
 	UI_PID=""; \
 	API_PID=""; \
@@ -56,6 +75,36 @@ run:
 # Machine-First Pipeline (authoritative local pipeline)
 pipeline.local: world-verify build sbom test package sign verify scorekeeper publish-audit
 @echo "✅ Pipeline complete"
+pipeline.local: world-verify build provider-pointers archival-verify duplicate-check router-singleton ci-local sbom scorekeeper package sign conventional-commits export-roadmap record-local-pipeline
+	@echo "✅ Pipeline complete"
+
+provider-pointers: deps
+	$(ACTIVATION_CHECK)
+	$(PNPM) exec tsx tools/ci/verify_provider_pointers.ts
+
+archival-verify: deps
+	$(ACTIVATION_CHECK)
+	BASE_REF="$(BASE_REF)" $(PNPM) exec tsx tools/ci/verify_archival.ts
+
+duplicate-check: deps
+	$(ACTIVATION_CHECK)
+	$(PNPM) exec tsx tools/ci/check_duplicate_content.ts
+
+router-singleton: deps
+	$(ACTIVATION_CHECK)
+	$(PNPM) exec tsx tools/ci/check_router_singleton.ts
+
+conventional-commits: deps
+	$(ACTIVATION_CHECK)
+	$(PNPM) exec tsx tools/commit_copilot/cli.ts enforce
+
+export-roadmap: deps
+	$(ACTIVATION_CHECK)
+	$(PNPM) export:roadmap
+
+record-local-pipeline:
+	$(ACTIVATION_CHECK)
+	scripts/pipeline/record_local_pipeline.sh "make pipeline.local"
 
 # World model verification
 world-verify:
@@ -68,6 +117,21 @@ world-fix:
 
 # Kernel build
 kernel:
+	@echo "🔨 Building kernel crate..."
+	$(CARGO) build -p noa_core
+	@echo "✅ Kernel crate compiled"
+
+image: kernel
+	@echo "🛠️ Producing standalone kernel image..."
+	$(CARGO) build -p noa_core --bin noa_kernel --bin noa_host_control --release
+	@mkdir -p dist/kernel
+	@cp target/release/noa_kernel dist/kernel/
+	@cp target/release/noa_host_control dist/kernel/
+	@cp core/config/default_manifest.yaml dist/kernel/manifest.yaml
+	@printf "# NOA ARK Kernel Image\n\nThis directory contains the release-built kernel binaries and manifest for controlled execution.\n" > dist/kernel/README.md
+	@set -euo pipefail; $(CARGO) test -p noa_core --tests -- --nocapture | tee dist/kernel/test-results.log
+	@echo "✅ Kernel image staged under dist/kernel"
+	$(ACTIVATION_CHECK)
 	@echo "🔨 Building kernel independently..."
 	$(CARGO) build -p noa_core --release
 	@echo "✅ Kernel build complete"
@@ -79,6 +143,21 @@ sbom:
 
 # Scorekeeper (trust calculation)
 scorekeeper:
+        @echo "🎯 Calculating trust scores..."
+        @mkdir -p metrics
+        @cargo run -p noa_workflow --bin reward_report -- --json > metrics/reward_summary.json
+        @cargo run -p noa_workflow --bin reward_report -- > metrics/reward_summary.txt
+        @echo "✅ Scorekeeper report generated at metrics/reward_summary.json"
+        @TARGET=$${NOA_TRUST_METRICS_PATH:-metrics/trust_score.json}; \
+            NOA_TRUST_METRICS_PATH=$$TARGET $(CARGO) run -p noa_core --bin noa_scorekeeper -- \
+                --integrity-pass $${TRUST_INTEGRITY_PASS:-120} \
+                --integrity-fail $${TRUST_INTEGRITY_FAIL:-0} \
+                --reversibility-pass $${TRUST_REVERSIBILITY_PASS:-96} \
+                --reversibility-fail $${TRUST_REVERSIBILITY_FAIL:-4} \
+                --capability-pass $${TRUST_CAPABILITY_PASS:-80} \
+                --capability-fail $${TRUST_CAPABILITY_FAIL:-20} \
+            || { echo "❌ Scorekeeper failed"; exit 1; }; \
+            echo "✅ Trust snapshot stored at $$TARGET"
 @echo "🎯 Calculating trust scores..."
 @$(PYTHON) -m tools.repro.audit_pipeline score
 
@@ -147,6 +226,21 @@ verify:
 
 # Publish audit bundle
 publish-audit:
+	@echo "📤 Publishing audit bundle..."
+	@mkdir -p audit
+	@cargo run --manifest-path cicd/Cargo.toml --bin publish_audit -- --repo . --output audit --ledger audit/ledger.jsonl
+	@latest=$$(ls -d audit/bundle-* 2>/dev/null | tail -n 1); \
+	if [ -n "$$latest" ]; then \
+		echo "🔍 Verifying $$latest"; \
+		audit/verify.sh "$$latest"; \
+	else \
+		echo "⚠️  No bundle produced"; \
+	fi
+
+# Run rollback simulation locally
+rollback-sim:
+	@echo "⏱️  Running rollback simulation..."
+	@cargo run --manifest-path cicd/Cargo.toml --bin rollback_simulation -- --repo . --ledger audit/ledger.jsonl --output audit/rollbacks
 @echo "📤 Publishing audit bundle..."
 @$(PYTHON) -m tools.repro.audit_pipeline publish
 
