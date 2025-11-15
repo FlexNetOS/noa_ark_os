@@ -412,7 +412,7 @@ struct WorkflowStartRequest {
     workflow: Workflow,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 struct WorkflowStageSnapshot {
     id: String,
     name: String,

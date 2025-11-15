@@ -1,8 +1,15 @@
+use std::sync::{Mutex, OnceLock};
+
 use noa_core::config::manifest::{
     KernelManifest, SCOPE_HOST_ENVIRONMENT_TAKEOVER, SCOPE_HOST_RESOURCE_ARBITRATE,
 };
 use noa_core::host_control::{self, HostControlError, ResourceArbitrationRequest};
 use noa_core::token::{self, service as token_service, TokenIssuanceRequest};
+
+fn test_guard() -> &'static Mutex<()> {
+    static GUARD: OnceLock<Mutex<()>> = OnceLock::new();
+    GUARD.get_or_init(|| Mutex::new(()))
+}
 
 fn setup_services() {
     token_service().reset();
@@ -13,6 +20,7 @@ fn setup_services() {
 
 #[test]
 fn environment_takeover_requires_scope() {
+    let _guard = test_guard().lock().expect("test guard poisoned");
     setup_services();
     let request = TokenIssuanceRequest::new("controller", [SCOPE_HOST_RESOURCE_ARBITRATE]);
     let token = token_service()
@@ -24,6 +32,7 @@ fn environment_takeover_requires_scope() {
 
 #[test]
 fn arbitration_enforces_isolation() {
+    let _guard = test_guard().lock().expect("test guard poisoned");
     setup_services();
     let takeover_request = TokenIssuanceRequest::new(
         "controller",
