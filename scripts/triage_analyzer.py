@@ -33,7 +33,7 @@ import textwrap
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Iterable, Optional
+from typing import Any, Dict, Iterable, Optional, AsyncIterator
 
 INCIDENT_ROOT = Path("tools/offline_pr_queue/triage")
 SUPPORTED_EXTENSIONS = {".json", ".ndjson"}
