@@ -10,7 +10,8 @@ cd /workspace 2>/dev/null || true
 if [[ -z "${DEV_ENV_SKIP_POST_CREATE:-}" && -x /opt/devcontainer/post-create.sh ]]; then
   echo "[dev-env] Running post-create script" >&2
   if ! /opt/devcontainer/post-create.sh; then
-    echo "[dev-env] Warning: post-create script exited with status $?" >&2
+    exit_code=$?
+    echo "[dev-env] Warning: post-create script exited with status $exit_code" >&2
   fi
 fi
 
