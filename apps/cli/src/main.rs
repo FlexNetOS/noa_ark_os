@@ -13,7 +13,7 @@ use noa_inference::{
 };
 use noa_cicd::CICDSystem;
 use noa_workflow::EvidenceLedgerEntry;
-use noa_workflow::{InferenceMetric, PipelineInstrumentation};
+use noa_workflow::{run_storage_doctor, InferenceMetric, PipelineInstrumentation, StorageDoctorStatus};
 use relocation_daemon::{ExecutionMode, RelocationDaemon};
 use serde::Serialize;
 use serde_json::json;
@@ -109,6 +109,8 @@ enum Commands {
     Collaboration { #[command(flatten)] query: RegistryArgs },
     /// Surface plugin tooling from the shared registry
     Plugin { #[command(flatten)] query: RegistryArgs },
+    /// Storage utilities for instrumentation mirrors
+    Storage { #[command(subcommand)] command: StorageCommands },
     /// Interact with agents using configured inference providers
     Agent { #[command(subcommand)] command: AgentCommands },
     /// Run a natural language query through the inference router
@@ -214,6 +216,12 @@ enum PipelineCommands {
         #[arg(long)]
         workspace: Option<PathBuf>,
     },
+}
+
+#[derive(Subcommand)]
+enum StorageCommands {
+    /// Validate mirrored instrumentation logs
+    Doctor,
 }
 
 fn parse_mode(value: &str) -> std::result::Result<ExecutionMode, String> {
@@ -366,6 +374,17 @@ fn main() -> Result<()> {
             Commands::Plugin { query } => {
                 handle_registry_category("plugin", query)?;
             }
+            Commands::Storage { command } => match command {
+                StorageCommands::Doctor => {
+                    let report = run_storage_doctor()
+                        .context("failed to inspect storage mirrors")?;
+                    let payload = serde_json::to_value(&report)?;
+                    print_obj(out_mode, &payload)?;
+                    if report.status != StorageDoctorStatus::Healthy {
+                        bail!("storage doctor detected drift or missing mirrors");
+                    }
+                }
+            },
             Commands::Agent { command } => {
                 let instrumentation = Arc::new(
                     PipelineInstrumentation::new()
