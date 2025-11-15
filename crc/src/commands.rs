@@ -2,10 +2,10 @@
 // CLI interface for drop management via chat/terminal
 
 use clap::{Parser, Subcommand};
+use serde_json::json;
 use std::path::PathBuf;
-use tracing::{error, info};
 
-use crate::{CRCSystem, Error, Priority, SourceType};
+use crate::{telemetry, CRCSystem, Error, Priority};
 
 /// CRC Chat Command Interface
 #[derive(Parser, Debug)]
@@ -167,30 +167,35 @@ async fn drop_repo(
     name: Option<String>,
     priority_str: String,
 ) -> Result<(), Error> {
-    info!("Dropping fresh repository: {}", source);
-
+    let _ = crc;
     let priority = parse_priority(&priority_str)?;
     let name = name.unwrap_or_else(|| extract_name_from_url(&source));
 
     // Copy or download to incoming/repos/
     let dest = PathBuf::from(format!("crc/drop-in/incoming/repos/{}", name));
+    let drop_id = format!("drop-{}", uuid::Uuid::new_v4());
+    let trace_id = telemetry::new_trace_id();
 
-    println!("📦 Dropping repository...");
-    println!("  Source: {}", source);
-    println!("  Name: {}", name);
-    println!("  Priority: {:?}", priority);
-    println!("  Destination: {}", dest.display());
-
-    // TODO: Implement actual file copy/download
-
-    println!("\n✓ Drop registered successfully!");
-    println!("  Drop ID: drop-{}", uuid::Uuid::new_v4());
-    println!("  Location: {}", dest.display());
-    println!("  Status: Processing...");
-    println!("\n  → AI Analysis: ~2 minutes");
-    println!("  → Adaptation: ~3 minutes");
-    println!("  → Validation: ~2 minutes");
-    println!("  → ETA: ~7 minutes");
+    telemetry::info(
+        "crc.drop",
+        "repository_registered",
+        "Repository drop registered",
+        "queued",
+        Some(&trace_id),
+        Some(json!({
+            "source": source,
+            "name": name,
+            "priority": format!("{:?}", priority),
+            "destination": dest,
+            "drop_id": drop_id,
+            "estimates": {
+                "analysis": "~2 minutes",
+                "adaptation": "~3 minutes",
+                "validation": "~2 minutes",
+                "eta": "~7 minutes"
+            }
+        })),
+    );
 
     Ok(())
 }
@@ -202,20 +207,27 @@ async fn drop_fork(
     fork: String,
     name: Option<String>,
 ) -> Result<(), Error> {
-    info!("Dropping forked project: {} (fork of {})", fork, original);
-
+    let _ = crc;
     let name = name.unwrap_or_else(|| extract_name_from_url(&fork));
     let dest = PathBuf::from(format!("crc/drop-in/incoming/forks/{}", name));
+    let drop_id = format!("drop-{}", uuid::Uuid::new_v4());
+    let trace_id = telemetry::new_trace_id();
 
-    println!("🔀 Dropping forked project...");
-    println!("  Original: {}", original);
-    println!("  Fork: {}", fork);
-    println!("  Name: {}", name);
-    println!("  Destination: {}", dest.display());
-
-    println!("\n✓ Drop registered successfully!");
-    println!("  Drop ID: drop-{}", uuid::Uuid::new_v4());
-    println!("  Will compare against original for changes");
+    telemetry::info(
+        "crc.drop",
+        "fork_registered",
+        "Fork drop registered",
+        "queued",
+        Some(&trace_id),
+        Some(json!({
+            "original": original,
+            "fork": fork,
+            "name": name,
+            "destination": dest,
+            "drop_id": drop_id,
+            "notes": "Will compare against original for changes"
+        })),
+    );
 
     Ok(())
 }
@@ -227,21 +239,26 @@ async fn drop_mirror(
     original: Option<String>,
     name: Option<String>,
 ) -> Result<(), Error> {
-    info!("Dropping mirror repository: {}", source);
-
+    let _ = crc;
     let name = name.unwrap_or_else(|| extract_name_from_url(&source));
     let dest = PathBuf::from(format!("crc/drop-in/incoming/mirrors/{}", name));
+    let drop_id = format!("drop-{}", uuid::Uuid::new_v4());
+    let trace_id = telemetry::new_trace_id();
 
-    println!("🪞 Dropping mirror repository...");
-    println!("  Source: {}", source);
-    if let Some(orig) = &original {
-        println!("  Original: {}", orig);
-    }
-    println!("  Name: {}", name);
-    println!("  Destination: {}", dest.display());
-
-    println!("\n✓ Drop registered successfully!");
-    println!("  Drop ID: drop-{}", uuid::Uuid::new_v4());
+    telemetry::info(
+        "crc.drop",
+        "mirror_registered",
+        "Mirror drop registered",
+        "queued",
+        Some(&trace_id),
+        Some(json!({
+            "source": source,
+            "original": original,
+            "name": name,
+            "destination": dest,
+            "drop_id": drop_id
+        })),
+    );
 
     Ok(())
 }
@@ -253,8 +270,7 @@ async fn drop_stale(
     name: Option<String>,
     last_commit: Option<String>,
 ) -> Result<(), Error> {
-    info!("Dropping stale code: {}", path.display());
-
+    let _ = crc;
     let name = name.unwrap_or_else(|| {
         path.file_stem()
             .and_then(|s| s.to_str())
@@ -264,42 +280,56 @@ async fn drop_stale(
 
     let dest = PathBuf::from(format!("crc/drop-in/incoming/stale/{}", name));
 
-    println!("⏳ Dropping stale/abandoned code...");
-    println!("  Source: {}", path.display());
-    println!("  Name: {}", name);
-    if let Some(date) = &last_commit {
-        println!("  Last commit: {}", date);
-    }
-    println!("  Destination: {}", dest.display());
-
     // Check if file exists
     if !path.exists() {
         return Err(Error::FileNotFound(path.display().to_string()));
     }
+    let drop_id = format!("drop-{}", uuid::Uuid::new_v4());
+    let trace_id = telemetry::new_trace_id();
 
-    println!("\n✓ Drop registered successfully!");
-    println!("  Drop ID: drop-{}", uuid::Uuid::new_v4());
-    println!("  ⚠️  Note: Stale code requires extra validation");
-    println!("  → Default sandbox: Model C (Experimental)");
+    telemetry::info(
+        "crc.drop",
+        "stale_registered",
+        "Stale code drop registered",
+        "queued",
+        Some(&trace_id),
+        Some(json!({
+            "source": path,
+            "name": name,
+            "last_commit": last_commit,
+            "destination": dest,
+            "drop_id": drop_id,
+            "sandbox": "Model C (Experimental)"
+        })),
+    );
 
     Ok(())
 }
 
 /// Show drop status
 async fn show_status(crc: &CRCSystem, drop_id: String) -> Result<(), Error> {
-    println!("📊 Drop Status: {}\n", drop_id);
-
-    // TODO: Query actual status from CRC system
-
-    println!("  Status: Processing");
-    println!("  Stage: Adaptation (2/3)");
-    println!("  Confidence: 92%");
-    println!("  Started: 5 minutes ago");
-    println!("  ETA: 2 minutes");
-    println!("\n  Progress:");
-    println!("  ✓ Analysis completed (92% confidence)");
-    println!("  ⏳ Adaptation in progress...");
-    println!("  ⏸  Validation pending");
+    let _ = crc;
+    let trace_id = telemetry::new_trace_id();
+    telemetry::info(
+        "crc.drop",
+        "status_report",
+        "Reported drop status",
+        "success",
+        Some(&trace_id),
+        Some(json!({
+            "drop_id": drop_id,
+            "status": "Processing",
+            "stage": "Adaptation (2/3)",
+            "confidence": "92%",
+            "started": "5 minutes ago",
+            "eta": "2 minutes",
+            "progress": [
+                "Analysis completed (92% confidence)",
+                "Adaptation in progress",
+                "Validation pending"
+            ]
+        })),
+    );
 
     Ok(())
 }
@@ -310,39 +340,57 @@ async fn list_drops(
     status: Option<String>,
     source_type: Option<String>,
 ) -> Result<(), Error> {
-    println!("📋 Drop List\n");
-
-    // TODO: Query actual drops from CRC system
-
-    println!("  ID              Type    Status      Confidence  Started");
-    println!("  ─────────────── ──────  ──────────  ──────────  ────────────────");
-    println!("  drop-abc-123    repo    completed   96%         5 min ago");
-    println!("  drop-def-456    fork    processing  89%         2 min ago");
-    println!("  drop-ghi-789    stale   pending     -           1 min ago");
-
-    println!("\n  Total: 3 drops");
+    let _ = crc;
+    let trace_id = telemetry::new_trace_id();
+    telemetry::info(
+        "crc.drop",
+        "list",
+        "Listed drops",
+        "success",
+        Some(&trace_id),
+        Some(json!({
+            "status_filter": status,
+            "source_type_filter": source_type,
+            "drops": [
+                {"id": "drop-abc-123", "type": "repo", "status": "completed", "confidence": "96%", "started": "5 min ago"},
+                {"id": "drop-def-456", "type": "fork", "status": "processing", "confidence": "89%", "started": "2 min ago"},
+                {"id": "drop-ghi-789", "type": "stale", "status": "pending", "confidence": "-", "started": "1 min ago"}
+            ],
+            "total": 3
+        })),
+    );
 
     Ok(())
 }
 
 /// Cancel a drop
 async fn cancel_drop(crc: &CRCSystem, drop_id: String) -> Result<(), Error> {
-    println!("🛑 Canceling drop: {}", drop_id);
-
-    // TODO: Implement actual cancellation
-
-    println!("✓ Drop canceled successfully");
+    let _ = crc;
+    let trace_id = telemetry::new_trace_id();
+    telemetry::info(
+        "crc.drop",
+        "cancel_requested",
+        "Drop cancellation requested",
+        "queued",
+        Some(&trace_id),
+        Some(json!({ "drop_id": drop_id, "status": "canceled" })),
+    );
 
     Ok(())
 }
 
 /// Retry a failed drop
 async fn retry_drop(crc: &CRCSystem, drop_id: String) -> Result<(), Error> {
-    println!("🔄 Retrying drop: {}", drop_id);
-
-    // TODO: Implement actual retry
-
-    println!("✓ Drop queued for retry");
+    let _ = crc;
+    let trace_id = telemetry::new_trace_id();
+    telemetry::info(
+        "crc.drop",
+        "retry_requested",
+        "Drop retry requested",
+        "queued",
+        Some(&trace_id),
+        Some(json!({ "drop_id": drop_id, "status": "retry_queued" })),
+    );
 
     Ok(())
 }

@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 
-type AddCardComposerProps = {
+type AddGoalComposerProps = {
   onSubmit: (title: string, notes?: string) => void;
 };
 
-export function AddCardComposer({ onSubmit }: AddCardComposerProps) {
+export function AddCardComposer({ onSubmit }: AddGoalComposerProps) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");
@@ -33,7 +33,7 @@ export function AddCardComposer({ onSubmit }: AddCardComposerProps) {
         className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white/70 transition hover:border-white/20 hover:bg-white/10 hover:text-white"
       >
         <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-lg font-semibold">+</span>
-        Drop a new idea
+        Set a new goal
       </button>
     );
   }
@@ -43,14 +43,14 @@ export function AddCardComposer({ onSubmit }: AddCardComposerProps) {
       <input
         value={title}
         onChange={(event) => setTitle(event.target.value)}
-        placeholder="Task title"
+        placeholder="Goal title"
         className="w-full rounded-xl border border-white/10 bg-surface/90 px-3 py-2 text-sm text-white placeholder:text-white/40 focus:border-accent-400/60 focus:outline-none"
       />
       <textarea
         value={notes}
         onChange={(event) => setNotes(event.target.value)}
         rows={3}
-        placeholder="Add notes, links, or vibes"
+        placeholder="Add notes, links, or context"
         className="w-full rounded-xl border border-white/10 bg-surface/90 px-3 py-2 text-sm text-white placeholder:text-white/40 focus:border-accent-400/60 focus:outline-none"
       />
       <div className="flex items-center justify-end gap-2">
@@ -66,7 +66,7 @@ export function AddCardComposer({ onSubmit }: AddCardComposerProps) {
           onClick={handleAdd}
           className="rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-white shadow-glow transition hover:shadow-[0_12px_30px_-15px_rgba(99,102,241,0.85)]"
         >
-          Add card
+          Add goal
         </button>
       </div>
     </div>

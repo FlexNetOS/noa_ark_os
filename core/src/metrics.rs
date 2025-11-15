@@ -7,9 +7,6 @@ const MAX_HISTORY: usize = 32;
 
 fn registry() -> &'static RwLock<TelemetryRegistry> {
     static REGISTRY: OnceLock<RwLock<TelemetryRegistry>> = OnceLock::new();
-static REGISTRY: OnceLock<RwLock<TelemetryRegistry>> = OnceLock::new();
-
-fn registry() -> &'static RwLock<TelemetryRegistry> {
     REGISTRY.get_or_init(|| RwLock::new(TelemetryRegistry::default()))
 }
 
@@ -215,6 +212,12 @@ mod tests {
 
         let aggregated = aggregated().expect("expected aggregated telemetry");
         assert_eq!(aggregated.recent.timestamp, s2.timestamp);
-        assert!(aggregated.rolling_cpu_utilisation >= 0.39);
+        let expected_avg = (s1.cpu_utilisation + s2.cpu_utilisation) / 2.0;
+        assert!((aggregated.rolling_cpu_utilisation - expected_avg).abs() < 1e-6);
+        assert!(
+            (aggregated.rolling_cpu_utilisation - 0.30).abs() < f32::EPSILON,
+            "unexpected rolling cpu utilisation: {}",
+            aggregated.rolling_cpu_utilisation
+        );
     }
 }

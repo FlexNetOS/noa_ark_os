@@ -23,3 +23,10 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 thiserror = "1.0"
 anyhow = "1.0"
 noa_core = { path = "../core" }
+noa_workflow = { path = "../workflow" }
+noa_security_shim = { path = "../tools/security/shim" }
+sha2 = "0.10"
+time = { version = "0.3", features = ["formatting", "macros"] }
+
+[dev-dependencies]
+tempfile = "3"

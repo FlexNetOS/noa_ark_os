@@ -6,7 +6,6 @@ use std::fmt;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, OnceLock, RwLock};
 use std::sync::{OnceLock, RwLock};
 
 const SUPPORTED_REGISTRY_VERSION: &str = "1.0.0";
@@ -14,9 +13,6 @@ const SUPPORTED_REGISTRY_VERSION: &str = "1.0.0";
 static ALLOCATED_MEMORY: AtomicUsize = AtomicUsize::new(0);
 static REGISTRY_GRAPH: OnceLock<RwLock<RegistryGraph>> = OnceLock::new();
 
-fn registry_graph() -> &'static Arc<RwLock<RegistryGraph>> {
-    static REGISTRY_GRAPH: OnceLock<Arc<RwLock<RegistryGraph>>> = OnceLock::new();
-    REGISTRY_GRAPH.get_or_init(|| Arc::new(RwLock::new(RegistryGraph::default())))
 fn registry_graph() -> &'static RwLock<RegistryGraph> {
     REGISTRY_GRAPH.get_or_init(|| RwLock::new(RegistryGraph::default()))
 }
@@ -575,7 +571,7 @@ mod tests {
         .unwrap();
 
         load_registry(dir.path()).unwrap();
-        let snapshot = registry_snapshot();
+        let snapshot = registry_snapshot().expect("registry snapshot should be available");
         assert_eq!(snapshot.components().len(), 1);
         assert_eq!(snapshot.owners().len(), 1);
     }

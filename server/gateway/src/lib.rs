@@ -167,7 +167,7 @@ mod tests {
             agent_id: Some("fixed_agent_gateway".into()),
             credentials: AuthCredentials {
                 mtls: Some("agent-cert".into()),
-                oidc: Some("id-token".into()),
+                oidc: Some("id-token-verified".into()),
                 api_key: Some("key-123".into()),
             },
             protocol: Protocol::GraphQl,

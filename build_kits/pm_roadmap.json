@@ -1,0 +1,90 @@
+[
+  {
+    "code": "AGENTOS-1",
+    "title": "Establish kernel dependency graph & portable packaging",
+    "theme": "Kernel-first dependency graph & portable packaging",
+    "description": "Build a unified dependency graph for kernels covering runtime crates, models, and system services, then emit portable bundles compatible with OCI registries and air-gapped installs.",
+    "priority": "P0",
+    "status": "Proposed",
+    "depends_on": [],
+    "acceptance_criteria": [
+      "Graph validation command fails on missing or cyclic dependencies.",
+      "Portable bundle installs succeed on a clean machine using documented steps."
+    ]
+  },
+  {
+    "code": "AGENTOS-2",
+    "title": "Design single-host AgentOS server profile",
+    "theme": "Single-host server profile (full stack on one machine)",
+    "description": "Deliver a reference deployment profile that layers gateway, runtime services, storage, and UI on a single host with scripted bootstrap and health diagnostics.",
+    "priority": "P0",
+    "status": "Proposed",
+    "depends_on": [
+      "AGENTOS-1"
+    ],
+    "acceptance_criteria": [
+      "Bootstrap script completes on a clean VM using documented prerequisites.",
+      "Health dashboard reports green status for all core services under nominal load."
+    ]
+  },
+  {
+    "code": "AGENTOS-3",
+    "title": "Deliver unified UI/UX shell",
+    "theme": "Unified UI/UX shell (desktop + web + immersive)",
+    "description": "Create a shared shell framework that synchronizes navigation, session state, and notifications across desktop, web, and immersive canvases with adaptive layouts.",
+    "priority": "P1",
+    "status": "Proposed",
+    "depends_on": [
+      "AGENTOS-2"
+    ],
+    "acceptance_criteria": [
+      "Shell components render consistently across target surfaces using design tokens.",
+      "Feature flag toggles immersive canvas bridge without regressions in existing clients."
+    ]
+  },
+  {
+    "code": "AGENTOS-4",
+    "title": "Implement adaptive runtime portability policies",
+    "theme": "Adaptive runtime/portability (edge/VM/containers)",
+    "description": "Extend runtime scheduler to detect edge, VM, and container contexts, applying tuned placement, resource quotas, and failover behaviors.",
+    "priority": "P1",
+    "status": "Proposed",
+    "depends_on": [
+      "AGENTOS-2"
+    ],
+    "acceptance_criteria": [
+      "Runtime enforces context-appropriate policies verified by automated smoke tests.",
+      "Observability dashboards surface policy decisions and outcomes per workload."
+    ]
+  },
+  {
+    "code": "AGENTOS-5",
+    "title": "Advance gateway security & observability mesh",
+    "theme": "Advanced gateway & observability (routing, security, metrics)",
+    "description": "Harden gateway with policy-driven routing, zero-trust authentication adapters, and end-to-end observability spanning traces, metrics, and alerts.",
+    "priority": "P1",
+    "status": "Proposed",
+    "depends_on": [
+      "AGENTOS-4"
+    ],
+    "acceptance_criteria": [
+      "Security posture meets defined zero-trust baseline validated by penetration tests.",
+      "Observability dashboards and alerts cover golden signals with actionable metadata."
+    ]
+  },
+  {
+    "code": "AGENTOS-6",
+    "title": "Launch value-add automation & analytics kits",
+    "theme": "Value-add ecosystem (blueprints, automation, analytics)",
+    "description": "Publish curated blueprints, automation packs, and analytics accelerators with pipelines, sample data, and guided onboarding inside the marketplace.",
+    "priority": "P2",
+    "status": "Proposed",
+    "depends_on": [
+      "AGENTOS-5"
+    ],
+    "acceptance_criteria": [
+      "Marketplace lists ≥3 automation/analytics packs with verified install flows.",
+      "Guided onboarding results in successful trial run captured by telemetry events."
+    ]
+  }
+]

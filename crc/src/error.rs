@@ -25,6 +25,12 @@ pub enum Error {
     #[error("System error: {0}")]
     SystemError(String),
 
+    #[error("Unsupported archive type: {0}")]
+    UnsupportedArchive(String),
+
+    #[error("Archive error: {0}")]
+    ArchiveError(String),
+
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 

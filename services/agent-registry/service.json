@@ -1,0 +1,5 @@
+{
+  "id": "agent-registry",
+  "version": "0.8.0",
+  "interfaces": ["registry-api", "kernel-api"]
+}

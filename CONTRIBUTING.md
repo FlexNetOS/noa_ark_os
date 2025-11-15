@@ -49,6 +49,24 @@ We are committed to providing a welcoming and inclusive environment for all cont
    git remote add upstream https://github.com/FlexNetOS/noa_ark_os.git
    ```
 
+4. Authenticate the GitHub CLI (`gh`) using a fine-grained personal access token (PAT):
+   - In a browser, navigate to **Settings → Developer settings → Personal access tokens → Fine-grained tokens** and create a new token scoped to `github.com`.
+   - Grant the token access to the fork you will push to, with at least **Repository permissions → Contents (Read and write)** and **Pull requests (Read and write)**. Refer to the [GitHub PAT scope documentation](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token#creating-a-fine-grained-personal-access-token) for detailed guidance on selecting scopes and renewal cadence.
+   - Run `gh auth login --hostname github.com --with-token`, then paste the token when prompted.
+   - For headless or CI environments, export the token before running `gh auth login`:
+     ```bash
+     export GH_TOKEN=YOUR_FINE_GRAINED_TOKEN
+     export GITHUB_TOKEN="$GH_TOKEN"
+     printf '%s\n' "$GH_TOKEN" | gh auth login --hostname github.com --with-token
+     ```
+   - Verify authentication:
+     ```bash
+     gh auth status --hostname github.com
+     ```
+
+   > **Troubleshooting:** If you encounter `gh: GitHub authentication is required. Run "gh auth login".`, rerun the login command above with a valid fine-grained PAT and ensure the `GH_TOKEN`/`GITHUB_TOKEN` variables are exported in non-interactive environments.
+
+5. Install development dependencies:
 4. Install the GitHub CLI if it is not already available:
 
    ```bash
@@ -60,13 +78,18 @@ We are committed to providing a welcoming and inclusive environment for all cont
 
 5. Authenticate the GitHub CLI (required for `gh` commands and automation scripts):
    1. Create a fine-grained personal access token (PAT) with **`repo`**, **`workflow`**, and **`project`** read/write scopes.
-   2. Run an interactive login:
+        2. Run an interactive login:
 
       ```bash
       gh auth login --hostname github.com --git-protocol https
       ```
 
       Select GitHub.com → HTTPS → “Paste an authentication token” and paste the PAT when prompted.
+            > **WSL note:** If interop with Windows is disabled (common inside hardened dev VMs), prefer the automation helper:
+            > ```bash
+            > ./scripts/tools/gh-auth-login.sh
+            > ```
+            > The script detects the WSL interop flag and falls back to the device-code flow when a Windows browser cannot be launched. See `docs/runbook/WSL_INTEROP.md` for the full recovery checklist.
    3. For non-interactive environments, export the token before running scripts:
 
       ```bash
@@ -210,6 +233,20 @@ Branch naming conventions:
 - Follow coding standards
 - Add tests for new functionality
 - Update documentation as needed
+
+### 2a. Run archival and duplicate-content checks locally
+
+Before staging your changes, validate that archival requirements and duplicate-content policies pass locally. These scripts match the CI jobs and will fail fast if additional work is required:
+
+```bash
+# Verify that any deletions or renames include archived artifacts and ledger entries
+BASE_REF=origin/main pnpm exec tsx tools/ci/verify_archival.ts
+
+# Detect identical file contents that are not registered in the whitelist
+pnpm exec tsx tools/ci/check_duplicate_content.ts
+```
+
+If a check fails for a legitimate exception, consult a maintainer. Do **not** rely on the override labels (`ci-allow-archive-skip`, `ci-allow-duplicate-content`) without explicit approval captured in the pull request summary.
 
 ### 3. Commit Your Changes
 

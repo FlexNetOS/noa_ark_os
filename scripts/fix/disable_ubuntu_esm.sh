@@ -69,6 +69,56 @@ HOOK
     fi
 }
 
+disable_yaml_sources() {
+    local file="$1"
+    if [ ! -f "$file" ]; then
+        return
+    fi
+    if ! grep -qE 'esm\\.ubuntu\\.com' "$file"; then
+        return
+    fi
+    if grep -qE '^[[:space:]]*Enabled:[[:space:]]*(no|false)\b' "$file" || grep -q '# disabled-by-noa' "$file"; then
+        INFO "ESM entries already disabled in $file"
+        return
+    fi
+
+    backup_file "$file"
+    INFO "Disabling ESM entries in $file"
+
+    # Rewrite the file stanza by stanza, disabling ESM stanzas
+    awk -v comment="# disabled-by-noa" '
+    BEGIN { stanza=""; enabled_seen=0; esm_seen=0; }
+    function flush() {
+        if (stanza == "") return;
+        if (esm_seen) {
+            if (enabled_seen) {
+                # Replace Enabled: yes/true with no
+                gsub(/^[[:space:]]*Enabled:[[:space:]]*(yes|true)[[:space:]]*$/i, "Enabled: no", stanza);
+            } else {
+                # Add Enabled: no at end of stanza
+                sub(/[[:space:]]*$/, "", stanza); # trim trailing newlines
+                stanza = stanza "\n" comment "\nEnabled: no\n";
+            }
+        }
+        print stanza "\n";
+    }
+    /^[[:space:]]*$/ {
+        flush();
+        stanza=""; enabled_seen=0; esm_seen=0;
+        next;
+    }
+    {
+        stanza = stanza $0 "\n";
+        if ($0 ~ /^[[:space:]]*Enabled:[[:space:]]*(yes|true)[[:space:]]*$/i) enabled_seen=1;
+        if ($0 ~ /esm\.ubuntu\.com/) esm_seen=1;
+    }
+    END { flush(); }
+    ' "$file" > "${file}.noa-tmp"
+    mv "${file}.noa-tmp" "$file"
+
+    OK "ESM endpoints disabled in $(basename "$file")"
+}
+
 main() {
     require_root "$@"
 
@@ -80,6 +130,13 @@ main() {
                 comment_esm_entries "$path"
                 changed=1
             fi
+        fi
+    done
+
+    for path in /etc/apt/sources.list.d/*.sources; do
+        if [ -e "$path" ]; then
+            disable_yaml_sources "$path"
+            changed=1
         fi
     done
 

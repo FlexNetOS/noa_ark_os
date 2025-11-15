@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 
-import { assertUser } from "../../../../lib/session";
-import { getBoard, getWorkspace, removeBoard, saveBoard } from "../../../../../server/workspace-store";
-import { workspaceEventHub } from "../../../../../server/workspace-events";
-import type { WorkspaceBoard } from "../../../../components/board-types";
+import { assertUser } from "@/app/lib/session";
+import { getBoard, getWorkspace, removeBoard, saveBoard } from "@/server/workspace-store";
+import { workspaceEventHub } from "@/server/workspace-events";
+import type { WorkspaceBoard } from "@/app/components/board-types";
 
 export async function GET(
   _request: Request,

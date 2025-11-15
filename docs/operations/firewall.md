@@ -29,8 +29,19 @@ The script:
 - Backs up every modified file to `/etc/apt/noa-backups/` with a timestamp.
 - Comments out any non-disabled entries that reference `esm.ubuntu.com` in
   `/etc/apt/sources.list` and `/etc/apt/sources.list.d/*.list`.
+- Marks any Ubuntu `.sources` definitions that point to `esm.ubuntu.com`
+  as disabled.
 - Neutralizes the `20apt-esm-hook.conf` file so future `apt update` runs do
   not re-enable the hook.
+
+## Agent Role Assignments
+
+| Agent Role | Responsibilities |
+| --- | --- |
+| **Orchestrator** | Identifies firewall-triggered failures, schedules remediation windows, and records the workaround in the operations ledger. |
+| **Planner** | Confirms the affected hosts, prepares rollback checkpoints, and updates SOP references before execution. |
+| **Worker** | Runs the disable script, captures backups, and documents commands used during remediation. |
+| **Verifier** | Validates the post-remediation state (`grep` check, package retry) and signs off on evidence captured for the ledger. |
 
 After the script reports success, rerun your package command (for example
 `sudo apt-get update`). The firewall warning should no longer appear because

@@ -1,6 +1,6 @@
 # Blueprint Catalog
 
-The blueprint catalog enumerates curated, UI-ready workflow pipelines that operators can deploy with a single click. Each blueprint includes the domain-specific automations, guardrails, and UI affordances required by the Noa Ark kernel to hydrate a runnable flow.
+The blueprint catalog enumerates curated, UI-ready workflow pipelines that orchestrator agents can deploy with a single click. Each blueprint includes the domain-specific automations, guardrails, and UI affordances required by the Noa Ark kernel to hydrate a runnable flow.
 
 ## Blueprint Index
 
@@ -41,9 +41,18 @@ The blueprint catalog enumerates curated, UI-ready workflow pipelines that opera
 
 ## UI Deployment Flow
 1. The UI lists blueprints via the catalog index and exposes metadata cards with capability tags.
-2. Operators click **Deploy** to prefill configuration forms with blueprint defaults retrieved from kernel APIs.
+2. Orchestrator agents trigger **Deploy** to prefill configuration forms with blueprint defaults retrieved from kernel APIs.
 3. Validation checks ensure required integrations (CRC stream, registries, connectors) are satisfied before instantiation.
-4. Successful deployment registers the pipeline under the operator's workspace and emits observability hooks for analytics ingestion.
+4. Successful deployment registers the pipeline under the orchestrator agent's workspace ledger and emits observability hooks for analytics ingestion.
+
+## Agent Role Responsibilities
+
+| Agent Role | Responsibilities in Blueprint Lifecycle |
+| --- | --- |
+| **Orchestrator** | Curates catalog entries, launches blueprint deployments, and records workspace stewardship for instantiated flows. |
+| **Planner** | Interprets blueprint defaults, expands configuration manifests, and sequences prerequisite integrations before execution. |
+| **Worker** | Executes provisioned tasks (e.g., builds, ingestion jobs, swarm activation) defined by the blueprint manifests. |
+| **Verifier** | Confirms blueprint health by validating CRC telemetry, dependency readiness, and post-deployment assertions. |
 
 ## Extensibility
 - Add new blueprints as subdirectories under this folder and register them in the index table above.
@@ -56,7 +65,7 @@ Each blueprint **must** include a `blueprint.yaml` file describing its metadata,
 ```yaml
 # blueprint.yaml
 name: <string>                # Unique identifier for the blueprint (e.g., "ci_cd/continuous-assurance")
-display_name: <string>        # Human-readable name for UI display
+display_name: <string>        # Agent-facing display label for UI surfaces
 description: <string>         # Brief summary of the blueprint's purpose
 category: <string>            # Category (e.g., "CI/CD", "Data Processing", "Agent Swarms")
 version: <string>             # Semantic version (e.g., "1.0.0")

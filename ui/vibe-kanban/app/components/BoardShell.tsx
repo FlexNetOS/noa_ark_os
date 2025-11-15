@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import type { DragEvent as ReactDragEvent } from "react";
 
-import type { VibeCard } from "./board-types";
+import type { Goal } from "./board-types";
 import type { BoardState } from "./useBoardState";
 import { BoardColumn } from "./BoardColumn";
 import { CardEditor } from "./CardEditor";
@@ -12,9 +12,11 @@ import { BoardHeader } from "./BoardHeader";
 import { isFeatureEnabled } from "./featureFlags";
 import { readDragData, setDragData } from "./drag-utils";
 
-type CardTarget = {
+const COMPLETED_COLUMN_PATTERN = /done|complete|finished/i;
+
+type GoalTarget = {
   columnId: string;
-  cardId: string;
+  goalId: string;
 };
 
 type BoardShellProps = {
@@ -27,84 +29,109 @@ export function BoardShell({ state }: BoardShellProps) {
     addColumn,
     removeColumn,
     renameColumn,
-    addCard,
-    updateCard,
-    removeCard,
-    moveCardWithinColumn,
-    moveCardToColumn,
+    addGoal,
+    updateGoal,
+    removeGoal,
+    moveGoalWithinColumn,
+    moveGoalToColumn,
     moveColumn,
     setProjectName,
   } = state;
+
+  const [activeGoal, setActiveGoal] = useState<Goal | null>(null);
+  const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
+  const [draggingGoalId, setDraggingGoalId] = useState<string | null>(null);
+  const [draggingColumnId, setDraggingColumnId] = useState<string | null>(null);
+  const [goalDropTarget, setGoalDropTarget] = useState<GoalTarget | null>(null);
+  const [columnDropTarget, setColumnDropTarget] = useState<string | null>(null);
+  const [columnGoalDropTarget, setColumnGoalDropTarget] = useState<string | null>(null);
+
+  const totalGoalCount = useMemo(() => {
+    if (!snapshot) return 0;
+    return snapshot.columns.reduce((acc, column) => acc + column.goals.length, 0);
+  }, [snapshot]);
+
+  const completedGoalCount = useMemo(() => {
+    if (!snapshot) return 0;
+
+    return snapshot.columns.reduce((count, column) => {
+      if (!COMPLETED_COLUMN_PATTERN.test(column.title)) {
+        return count;
+      }
+
+      return count + column.goals.length;
+    }, 0);
+  }, [snapshot]);
+
+  const ambientBackdropEnabled = isFeatureEnabled("ambientBackdrop");
+  const boardMetricsEnabled =
+    !state.capabilities.loading &&
+    isFeatureEnabled("boardMetrics") &&
+    state.capabilities.has("kanban.metrics");
+  const goalInsightsEnabled =
+    boardMetricsEnabled &&
+    isFeatureEnabled("goalInsights") &&
+    state.capabilities.has("kanban.goalInsights");
+  const quickComposerEnabled =
+    !state.capabilities.loading &&
+    isFeatureEnabled("quickComposer") &&
+    state.capabilities.has("kanban.quickComposer");
+  const canManageColumns = !state.capabilities.loading && state.capabilities.has("kanban.manageColumns");
+  const addColumnDisabledReason = canManageColumns
+    ? undefined
+    : "Enable the kanban.manageColumns capability to add new columns.";
 
   if (!snapshot) {
     return null;
   }
 
-  const [activeCard, setActiveCard] = useState<VibeCard | null>(null);
-  const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
-  const [draggingCardId, setDraggingCardId] = useState<string | null>(null);
-  const [draggingColumnId, setDraggingColumnId] = useState<string | null>(null);
-  const [cardDropTarget, setCardDropTarget] = useState<CardTarget | null>(null);
-  const [columnDropTarget, setColumnDropTarget] = useState<string | null>(null);
-  const [columnCardDropTarget, setColumnCardDropTarget] = useState<string | null>(null);
-
-  const totalCards = useMemo(
-    () => snapshot.columns.reduce((acc, column) => acc + column.cards.length, 0),
-    [snapshot.columns]
-  );
-  const completedCount = useMemo(() => {
-    return snapshot.columns
-      .filter((column) => /done|complete|finished/i.test(column.title))
-      .reduce((count, column) => count + column.cards.length, 0);
-  }, [snapshot.columns]);
-
-  const handleCardDragStart = (columnId: string, card: VibeCard, event: ReactDragEvent<HTMLButtonElement>) => {
-    setDragData(event, { type: "card", columnId, cardId: card.id });
-    setDraggingCardId(card.id);
+  const handleGoalDragStart = (columnId: string, goal: Goal, event: ReactDragEvent<HTMLButtonElement>) => {
+    setDragData(event, { type: "goal", columnId, goalId: goal.id });
+    setDraggingGoalId(goal.id);
   };
 
-  const handleCardDragOver = (columnId: string, cardId: string, event: ReactDragEvent<HTMLButtonElement>) => {
+  const handleGoalDragOver = (columnId: string, goalId: string, event: ReactDragEvent<HTMLButtonElement>) => {
     const payload = readDragData(event);
-    if (!payload || payload.type !== "card") return;
+    if (!payload || payload.type !== "goal") return;
     event.preventDefault();
-    setCardDropTarget({ columnId, cardId });
+    setGoalDropTarget({ columnId, goalId });
   };
 
-  const handleCardDragLeave = (columnId: string, cardId: string) => {
-    setCardDropTarget((current) => {
+  const handleGoalDragLeave = (columnId: string, goalId: string) => {
+    setGoalDropTarget((current) => {
       if (!current) return null;
-      if (current.columnId === columnId && current.cardId === cardId) {
+      if (current.columnId === columnId && current.goalId === goalId) {
         return null;
       }
       return current;
     });
   };
 
-  const handleCardDrop = (columnId: string, cardId: string, event: ReactDragEvent<HTMLButtonElement>) => {
+  const handleGoalDrop = (columnId: string, goalId: string, event: ReactDragEvent<HTMLButtonElement>) => {
     const payload = readDragData(event);
-    if (!payload || payload.type !== "card") return;
+    if (!payload || payload.type !== "goal") return;
     event.preventDefault();
 
     if (payload.columnId === columnId) {
-      if (payload.cardId !== cardId) {
-        moveCardWithinColumn(columnId, payload.cardId, cardId);
+      if (payload.goalId !== goalId) {
+        moveGoalWithinColumn(columnId, payload.goalId, goalId);
       }
     } else {
-      moveCardToColumn(payload.columnId, columnId, payload.cardId, cardId);
+      moveGoalToColumn(payload.columnId, columnId, payload.goalId, goalId);
     }
 
-    setDraggingCardId(null);
-    setCardDropTarget(null);
-    setColumnCardDropTarget(null);
+    setDraggingGoalId(null);
+    setGoalDropTarget(null);
+    setColumnGoalDropTarget(null);
   };
 
   const handleColumnSurfaceDragOver = (columnId: string, event: ReactDragEvent<HTMLDivElement>) => {
     const payload = readDragData(event);
     if (!payload) return;
 
-    if (payload.type === "card") {
+    if (payload.type === "goal") {
       event.preventDefault();
-      setColumnCardDropTarget(columnId);
+      setColumnGoalDropTarget(columnId);
     }
 
     if (payload.type === "column") {
@@ -118,11 +145,11 @@ export function BoardShell({ state }: BoardShellProps) {
     if (!payload) return;
     event.preventDefault();
 
-    if (payload.type === "card") {
+    if (payload.type === "goal") {
       if (payload.columnId !== columnId) {
-        moveCardToColumn(payload.columnId, columnId, payload.cardId);
+        moveGoalToColumn(payload.columnId, columnId, payload.goalId);
       }
-      setDraggingCardId(null);
+      setDraggingGoalId(null);
     }
 
     if (payload.type === "column") {
@@ -132,20 +159,20 @@ export function BoardShell({ state }: BoardShellProps) {
       setDraggingColumnId(null);
     }
 
-    setCardDropTarget(null);
+    setGoalDropTarget(null);
     setColumnDropTarget(null);
-    setColumnCardDropTarget(null);
+    setColumnGoalDropTarget(null);
   };
 
   const handleColumnSurfaceDragLeave = (columnId: string) => {
     setColumnDropTarget((current) => (current === columnId ? null : current));
-    setColumnCardDropTarget((current) => (current === columnId ? null : current));
+    setColumnGoalDropTarget((current) => (current === columnId ? null : current));
   };
 
-  const handleCardDragEnd = () => {
-    setDraggingCardId(null);
-    setCardDropTarget(null);
-    setColumnCardDropTarget(null);
+  const handleGoalDragEnd = () => {
+    setDraggingGoalId(null);
+    setGoalDropTarget(null);
+    setColumnGoalDropTarget(null);
   };
 
   const handleColumnDragStart = (columnId: string, event: ReactDragEvent<HTMLButtonElement>) => {
@@ -160,7 +187,7 @@ export function BoardShell({ state }: BoardShellProps) {
 
   return (
     <div className="relative min-h-screen pb-24">
-      {isFeatureEnabled("ambientBackdrop") && <AmbientBackground />}
+      {ambientBackdropEnabled && <AmbientBackground />}
 
       <div className="relative mx-auto flex max-w-7xl flex-col gap-10 px-6 pt-12">
         <BoardHeader
@@ -168,11 +195,16 @@ export function BoardShell({ state }: BoardShellProps) {
           lastUpdated={snapshot.lastUpdated}
           onRename={setProjectName}
           onAddColumn={() => addColumn("New Column")}
+          canAddColumn={canManageColumns}
+          addColumnDisabledReason={addColumnDisabledReason}
           columnCount={snapshot.columns.length}
-          totalCardCount={totalCards}
-          completedCount={completedCount}
-          showMetrics={isFeatureEnabled("boardMetrics")}
+          totalGoalCount={totalGoalCount}
+          completedGoalCount={completedGoalCount}
+          showMetrics={boardMetricsEnabled}
           metrics={snapshot.metrics}
+          goalInsightsEnabled={goalInsightsEnabled}
+          capabilitySummary={state.capabilities.featureGates}
+          capabilitiesLoading={state.capabilities.loading}
         />
 
         <div className="relative overflow-hidden rounded-[3rem] border border-white/10 bg-surface/60 p-8 shadow-[0_60px_160px_-60px_rgba(14,165,233,0.35)]">
@@ -183,17 +215,17 @@ export function BoardShell({ state }: BoardShellProps) {
                 column={column}
                 onRemove={removeColumn}
                 onRename={renameColumn}
-                onAddCard={(title, notes) => addCard(column.id, title, notes ?? "")}
-                onCardOpen={(card) => {
-                  setActiveCard(card);
+                onAddGoal={(title, notes) => addGoal(column.id, title, notes ?? "")}
+                onGoalOpen={(goal) => {
+                  setActiveGoal(goal);
                   setActiveColumnId(column.id);
                 }}
-                enableComposer={isFeatureEnabled("quickComposer")}
-                onCardDragStart={(card, event) => handleCardDragStart(column.id, card, event)}
-                onCardDragOver={(cardId, event) => handleCardDragOver(column.id, cardId, event)}
-                onCardDragLeave={(cardId) => handleCardDragLeave(column.id, cardId)}
-                onCardDrop={(cardId, event) => handleCardDrop(column.id, cardId, event)}
-                onCardDragEnd={handleCardDragEnd}
+                enableComposer={quickComposerEnabled}
+                onGoalDragStart={(goal, event) => handleGoalDragStart(column.id, goal, event)}
+                onGoalDragOver={(goalId, event) => handleGoalDragOver(column.id, goalId, event)}
+                onGoalDragLeave={(goalId) => handleGoalDragLeave(column.id, goalId)}
+                onGoalDrop={(goalId, event) => handleGoalDrop(column.id, goalId, event)}
+                onGoalDragEnd={handleGoalDragEnd}
                 onColumnDragStart={(event) => handleColumnDragStart(column.id, event)}
                 onColumnDragEnd={handleColumnDragEnd}
                 onColumnSurfaceDragOver={(event) => handleColumnSurfaceDragOver(column.id, event)}
@@ -201,10 +233,10 @@ export function BoardShell({ state }: BoardShellProps) {
                 onColumnSurfaceDrop={(event) => handleColumnSurfaceDrop(column.id, event)}
                 isDraggingColumn={draggingColumnId === column.id}
                 isColumnDropTarget={columnDropTarget === column.id}
-                isCardDropZoneActive={columnCardDropTarget === column.id}
-                draggingCardId={draggingCardId}
-                dropTargetCardId={
-                  cardDropTarget && cardDropTarget.columnId === column.id ? cardDropTarget.cardId : null
+                isGoalDropZoneActive={columnGoalDropTarget === column.id}
+                draggingGoalId={draggingGoalId}
+                dropTargetGoalId={
+                  goalDropTarget && goalDropTarget.columnId === column.id ? goalDropTarget.goalId : null
                 }
               />
             ))}
@@ -213,14 +245,14 @@ export function BoardShell({ state }: BoardShellProps) {
       </div>
 
       <CardEditor
-        card={activeCard}
+        goal={activeGoal}
         columnId={activeColumnId}
         onClose={() => {
-          setActiveCard(null);
+          setActiveGoal(null);
           setActiveColumnId(null);
         }}
-        onUpdate={updateCard}
-        onDelete={removeCard}
+        onUpdate={updateGoal}
+        onDelete={removeGoal}
       />
     </div>
   );

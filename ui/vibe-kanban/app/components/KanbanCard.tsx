@@ -3,12 +3,13 @@
 import { useState } from "react";
 import type { DragEvent as ReactDragEvent } from "react";
 
-import type { VibeCard } from "./board-types";
+import type { Goal } from "./board-types";
 import { CardMoodBadge } from "./CardMoodBadge";
+import { AIPromptButton } from "../features/ai_assist/AIPromptButton";
 
 type KanbanCardProps = {
-  card: VibeCard;
-  onOpen: (card: VibeCard) => void;
+  goal: Goal;
+  onOpen: (goal: Goal) => void;
   onDragStart: (event: ReactDragEvent<HTMLButtonElement>) => void;
   onDragOver: (event: ReactDragEvent<HTMLButtonElement>) => void;
   onDragLeave: () => void;
@@ -19,7 +20,7 @@ type KanbanCardProps = {
 };
 
 export function KanbanCard({
-  card,
+  goal,
   onOpen,
   onDragStart,
   onDragOver,
@@ -52,7 +53,7 @@ export function KanbanCard({
     <button
       type="button"
       draggable
-      onClick={() => onOpen(card)}
+      onClick={() => onOpen(goal)}
       onDragStart={(event) => {
         onDragStart(event);
       }}
@@ -74,13 +75,16 @@ export function KanbanCard({
       }}
       className={classes.join(" ")}
     >
-      <div className="flex items-center justify-between">
-        <h3 className="text-base font-semibold text-white/90 group-hover:text-white">{card.title}</h3>
-        <CardMoodBadge mood={card.mood} />
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-base font-semibold text-white/90 group-hover:text-white">{goal.title}</h3>
+        <CardMoodBadge mood={goal.mood} />
       </div>
-      {card.notes && <p className="mt-3 line-clamp-3 text-sm text-white/60">{card.notes}</p>}
+      {goal.notes && <p className="mt-3 line-clamp-3 text-sm text-white/60">{goal.notes}</p>}
+      <div className="mt-4">
+        <AIPromptButton goal={goal} />
+      </div>
       <div className="mt-4 flex items-center justify-between text-xs text-white/40">
-        <span>Created {new Date(card.createdAt).toLocaleDateString()}</span>
+        <span>Created {new Date(goal.createdAt).toLocaleDateString()}</span>
         <span className="flex items-center gap-1 text-white/50">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -93,7 +97,7 @@ export function KanbanCard({
             <path d="M3 5h18M6 5v14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V5" />
             <path d="M9 5V3h6v2" />
           </svg>
-          tap to open
+          tap to open goal
         </span>
       </div>
     </button>

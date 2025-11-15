@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 
-import { assertUser } from "../../../lib/session";
-import { createBoard, getWorkspace } from "../../../../server/workspace-store";
-import { workspaceEventHub } from "../../../../server/workspace-events";
-import type { WorkspaceBoard } from "../../../components/board-types";
+import { assertUser } from "@/app/lib/session";
+import { createBoard, getWorkspace } from "@/server/workspace-store";
+import { workspaceEventHub } from "@/server/workspace-events";
+import type { WorkspaceBoard } from "@/app/components/board-types";
 
 export async function GET(
   _request: Request,
@@ -42,9 +42,24 @@ export async function POST(
       payload.columns?.length
         ? payload.columns
         : [
-            { id: "todo", title: "To Do", accent: payload.accent ?? "from-indigo-500 via-purple-500 to-blue-500", cards: [] },
-            { id: "in-progress", title: "In Progress", accent: "from-sky-500 via-cyan-400 to-emerald-400", cards: [] },
-            { id: "done", title: "Completed", accent: "from-violet-500 via-indigo-400 to-fuchsia-500", cards: [] },
+            {
+              id: "todo",
+              title: "To Do",
+              accent: payload.accent ?? "from-indigo-500 via-purple-500 to-blue-500",
+              goals: [],
+            },
+            {
+              id: "in-progress",
+              title: "In Progress",
+              accent: "from-sky-500 via-cyan-400 to-emerald-400",
+              goals: [],
+            },
+            {
+              id: "done",
+              title: "Completed",
+              accent: "from-violet-500 via-indigo-400 to-fuchsia-500",
+              goals: [],
+            },
           ],
     archived: false,
     moodSamples: payload.moodSamples ?? [],

@@ -2,11 +2,7 @@
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex, OnceLock};
-use std::sync::{
-    atomic::{AtomicU64, Ordering},
-    Mutex, OnceLock,
-};
+use std::sync::{Mutex, OnceLock};
 
 pub type ProcessId = u64;
 
@@ -25,17 +21,16 @@ pub enum ProcessState {
     Terminated,
 }
 
-fn process_table() -> &'static Arc<Mutex<HashMap<ProcessId, Process>>> {
-    static PROCESS_TABLE: OnceLock<Arc<Mutex<HashMap<ProcessId, Process>>>> = OnceLock::new();
-    PROCESS_TABLE.get_or_init(|| Arc::new(Mutex::new(HashMap::new())))
+fn process_table() -> &'static Mutex<HashMap<ProcessId, Process>> {
+    static PROCESS_TABLE: OnceLock<Mutex<HashMap<ProcessId, Process>>> = OnceLock::new();
+    PROCESS_TABLE.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
-static NEXT_PID: AtomicU64 = AtomicU64::new(1);
-static PROCESS_TABLE: OnceLock<Mutex<HashMap<ProcessId, Process>>> = OnceLock::new();
-static NEXT_PID: AtomicU64 = AtomicU64::new(1);
-
-fn process_table() -> &'static Mutex<HashMap<ProcessId, Process>> {
-    PROCESS_TABLE.get_or_init(|| Mutex::new(HashMap::new()))
+fn next_pid() -> ProcessId {
+    static NEXT_PID: OnceLock<AtomicU64> = OnceLock::new();
+    NEXT_PID
+        .get_or_init(|| AtomicU64::new(1))
+        .fetch_add(1, Ordering::SeqCst)
 }
 
 /// Initialize process management
@@ -45,8 +40,7 @@ pub fn init() -> Result<(), &'static str> {
 }
 
 fn create_process_inner(name: String) -> Result<ProcessId, &'static str> {
-    let pid = NEXT_PID.fetch_add(1, Ordering::SeqCst);
-
+    let pid = next_pid();
     let process = Process {
         id: pid,
         name,

@@ -76,8 +76,8 @@ impl UnifiedShell {
         let context = init(platform.clone())?;
         let renderer = Renderer::new(context.clone());
         let state = UIState::new(context.clone());
-        let store = GlobalStore::global().clone();
-        store.update(|global| *global = GlobalState::default());
+        // Each shell instance holds its own store to avoid test interference when run in parallel.
+        let store = GlobalStore::new(GlobalState::default());
 
         if let Some(session) = session {
             store.update(|state| state.session = session);

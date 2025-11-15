@@ -2,69 +2,186 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Activate Portable Cargo",
+      "label": "Activate Portable Toolchain",
       "type": "shell",
-      "command": ".\\server\\tools\\activate-cargo.ps1",
+      "command": "echo 'Deprecated: run make cargo-build/check/test/run instead.'",
       "windows": {
-        "command": ".\\server\\tools\\activate-cargo.ps1"
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Write-Host 'Deprecated: use make cargo-build/check/test/run.'\""
+      },
+      "linux": {
+        "command": "echo 'Deprecated: run make cargo-build/check/test/run instead.'"
+      "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1",
+      "windows": {
+        "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1"
+      },
+      "linux": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "source ./server/tools/activate-cargo-wsl.sh && source ./server/tools/activate-node.sh && cargo --version && node -v && pnpm -v"
+        ]
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
       },
       "presentation": {
         "reveal": "always",
         "panel": "new"
       },
-      "problemMatcher": []
+      "problemMatcher": [],
+      "detail": "Deprecated: use make cargo-* targets or tools/devshell shims directly."
     },
     {
-      "label": "Cargo Build (Portable)",
+      "label": "[Deprecated] Cargo Build (Portable)",
       "type": "shell",
-      "command": ".\\server\\tools\\activate-cargo.ps1; cargo build",
+      "command": "make cargo-build",
       "windows": {
-        "command": ".\\server\\tools\\activate-cargo.ps1; cargo build"
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\tools\\devshell\\cargo-build.ps1"
+      },
+      "linux": {
+        "command": "make cargo-build"
+      "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo build",
+      "windows": {
+        "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo build"
+      },
+      "linux": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "source ./server/tools/activate-cargo-wsl.sh && source ./server/tools/activate-node.sh && cargo build --workspace"
+        ]
       },
       "group": {
         "kind": "build",
         "isDefault": true
       },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "presentation": {
         "reveal": "always"
       },
+      "problemMatcher": [
+        "$rustc"
+      ],
+      "detail": "Use make cargo-build or tools/devshell/cargo-build.* directly."
+    },
+    {
+      "label": "[Deprecated] Cargo Run (Portable)",
+      "type": "shell",
+      "command": "make cargo-run",
+      "windows": {
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\tools\\devshell\\cargo-run.ps1"
+      },
+      "linux": {
+        "command": "make cargo-run"
+      "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo run",
+      "windows": {
+        "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo run"
+      },
+      "linux": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "source ./server/tools/activate-cargo-wsl.sh && source ./server/tools/activate-node.sh && cargo run --workspace"
+        ]
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always"
+      },
+      "problemMatcher": [
+        "$rustc"
+      ],
+      "detail": "Use make cargo-run or tools/devshell/cargo-run.* directly."
+    },
+    {
+      "label": "[Deprecated] Cargo Test (Portable)",
+      "type": "shell",
+      "command": "make cargo-test",
+      "windows": {
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\tools\\devshell\\cargo-test.ps1"
+      },
+      "linux": {
+        "command": "make cargo-test"
+      "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo test",
+      "windows": {
+        "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo test"
+      },
+      "linux": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "source ./server/tools/activate-cargo-wsl.sh && source ./server/tools/activate-node.sh && cargo test --workspace"
+        ]
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always"
+      },
+      "problemMatcher": [
+        "$rustc"
+      ],
+      "detail": "Use make cargo-test or tools/devshell/cargo-test.* directly."
+    },
+    {
+      "label": "[Deprecated] Cargo Check (Portable)",
+      "type": "shell",
+      "command": "make cargo-check",
+      "windows": {
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\tools\\devshell\\cargo-check.ps1"
+      },
+      "linux": {
+        "command": "make cargo-check"
+      "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo check",
+      "windows": {
+        "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo check"
+      },
+      "linux": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "source ./server/tools/activate-cargo-wsl.sh && source ./server/tools/activate-node.sh && cargo check --workspace"
+        ]
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always"
+      },
+      "problemMatcher": [
+        "$rustc"
+      ],
+      "detail": "Use make cargo-check or tools/devshell/cargo-check.* directly."
       "problemMatcher": ["$rustc"]
     },
     {
-      "label": "Cargo Run (Portable)",
+      "label": "Pipeline Local (Portable)",
       "type": "shell",
-      "command": ".\\server\\tools\\activate-cargo.ps1; cargo run",
+      "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; make pipeline.local",
       "windows": {
-        "command": ".\\server\\tools\\activate-cargo.ps1; cargo run"
+        "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; make pipeline.local"
+      },
+      "linux": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "source ./server/tools/activate-cargo-wsl.sh && source ./server/tools/activate-node.sh && make pipeline.local"
+        ]
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
       },
       "presentation": {
-        "reveal": "always"
+        "reveal": "always",
+        "panel": "shared"
       },
-      "problemMatcher": ["$rustc"]
-    },
-    {
-      "label": "Cargo Test (Portable)",
-      "type": "shell",
-      "command": ".\\server\\tools\\activate-cargo.ps1; cargo test",
-      "windows": {
-        "command": ".\\server\\tools\\activate-cargo.ps1; cargo test"
-      },
-      "presentation": {
-        "reveal": "always"
-      },
-      "problemMatcher": ["$rustc"]
-    },
-    {
-      "label": "Cargo Check (Portable)",
-      "type": "shell",
-      "command": ".\\server\\tools\\activate-cargo.ps1; cargo check",
-      "windows": {
-        "command": ".\\server\\tools\\activate-cargo.ps1; cargo check"
-      },
-      "presentation": {
-        "reveal": "always"
-      },
-      "problemMatcher": ["$rustc"]
+      "problemMatcher": []
     }
   ]
 }

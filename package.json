@@ -1,0 +1,25 @@
+{
+  "name": "noa-ark-os",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@8.15.4",
+  "scripts": {
+    "orchestrate": "tsx scripts/orchestrator.ts",
+    "guardrails:local": "bash scripts/guardrails-local.sh",
+    "smoke:local": "bash scripts/smoke-local.sh",
+    "export:roadmap": "tsx scripts/export_roadmap.ts",
+    "lint": "pnpm --filter vibe-kanban lint && pnpm --filter vibe-kanban lint:eslint",
+    "typecheck": "pnpm --filter vibe-kanban typecheck",
+    "test": "pnpm --filter vibe-kanban test && pnpm exec tsx --test tools/offline_pr_queue/tests/**/*.test.ts",
+    "build": "pnpm --filter vibe-kanban build",
+    "format": "pnpm --filter vibe-kanban format",
+    "docs:lint": "pnpm exec markdownlint-cli2 \"CHANGELOG.md\" \"docs/guides/AGENTIC_OS_GUIDE.md\"",
+    "offline:queue": "pnpm exec tsx tools/offline_pr_queue/cli.ts",
+    "commit:copilot": "pnpm exec tsx tools/commit_copilot/cli.ts"
+  },
+  "devDependencies": {
+    "markdownlint-cli2": "0.14.0",
+    "tsx": "4.7.1",
+    "typescript": "5.4.5"
+  }
+}
