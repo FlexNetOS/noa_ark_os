@@ -350,11 +350,13 @@ impl ContextPenaltyAggregate {
             .collect();
         latency.sort_unstable();
 
+        // Use p95 as a standard metric for tail latency/usage. Change PERCENTILE to adjust.
+        const PERCENTILE: f64 = 0.95;
         let percentile_index = |len: usize| -> usize {
             if len == 0 {
                 return 0;
             }
-            let raw = ((len as f64) * 0.95).ceil() as usize;
+            let raw = ((len as f64) * PERCENTILE).ceil() as usize;
             raw.saturating_sub(1).min(len - 1)
         };
 
