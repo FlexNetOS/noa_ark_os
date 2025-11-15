@@ -1,6 +1,7 @@
 //! Security subsystem
 
 use crate::time::current_timestamp_millis;
+use crate::token::{self, ScopeToken, TokenError, TokenIssuanceRequest};
 use crate::utils::simple_hash;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -292,11 +293,44 @@ impl SecurityService {
     pub fn check_permission(&self, user_id: UserId, permission: Permission) -> bool {
         check_permission_inner(user_id, permission)
     }
+
+    /// Issue a capability token for the provided actor and scopes.
+    pub fn issue_scope_token(
+        &self,
+        request: TokenIssuanceRequest,
+    ) -> Result<ScopeToken, TokenError> {
+        token::service().issue_token(request)
+    }
+
+    /// Validate that a token authorises the given scope.
+    pub fn validate_scope(&self, token: &str, scope: &str) -> Result<ScopeToken, TokenError> {
+        token::service().validate(token, scope)
+    }
+
+    /// Revoke a capability token, preventing future use.
+    pub fn revoke_token(&self, token: &str) -> Result<(), TokenError> {
+        token::service().revoke(token)
+    }
 }
 
 /// Check if user has permission.
 pub fn check_permission(user_id: UserId, permission: Permission) -> bool {
     SecurityService::default().check_permission(user_id, permission)
+}
+
+/// Issue a capability token for the provided actor and scopes.
+pub fn issue_scope_token(request: TokenIssuanceRequest) -> Result<ScopeToken, TokenError> {
+    SecurityService::default().issue_scope_token(request)
+}
+
+/// Validate that a capability token contains the requested scope.
+pub fn validate_scope_token(token: &str, scope: &str) -> Result<ScopeToken, TokenError> {
+    SecurityService::default().validate_scope(token, scope)
+}
+
+/// Revoke a capability token.
+pub fn revoke_scope_token(token: &str) -> Result<(), TokenError> {
+    SecurityService::default().revoke_token(token)
 }
 
 #[cfg(test)]
