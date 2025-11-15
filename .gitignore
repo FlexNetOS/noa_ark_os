@@ -39,7 +39,9 @@ dist/
 !.workspace/registry/*.json
 !.workspace/sop/
 !.workspace/sop/*.md
-.graphs/
+# .graphs/ handled by explicit allow-list below
+!.graphs/workflows/
+!.graphs/workflows/**
 
 # Rust
 **/*.rs.bk

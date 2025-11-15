@@ -2,6 +2,8 @@ SHELL := /bin/bash
 
 PNPM ?= pnpm
 CARGO ?= cargo
+
+.PHONY: build test digest run ci:local lint typecheck format docs:check
 PYTHON ?= python3
 BASE_REF ?= origin/main
 
@@ -50,6 +52,10 @@ format: deps
 typecheck: deps
 	$(PNPM) typecheck
 
+docs:check:
+	$(PNPM) docs:lint
+
+ci:local: lint typecheck format docs:check test
 ci-local: lint typecheck format test
 
 run: deps
