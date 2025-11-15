@@ -2,11 +2,8 @@ SHELL := /bin/bash
 
 PNPM ?= pnpm
 CARGO ?= cargo
-<<<<<<< HEAD
 PYTHON ?= python3
-=======
 BASE_REF ?= origin/main
->>>>>>> 0aa72fd (feat: implement local-first pipeline evidence validation and GitHub workflow integration)
 
 ACTIVATION_CHECK := \
 	@if [ -z "$$NOA_CARGO_ENV" ] || [ -z "$$NOA_NODE_ENV" ]; then \
@@ -68,13 +65,10 @@ run: deps
 	wait $$UI_PID $$API_PID
 
 # Machine-First Pipeline (authoritative local pipeline)
-<<<<<<< HEAD
 pipeline.local: world-verify build sbom test package sign verify scorekeeper publish-audit
 @echo "✅ Pipeline complete"
-=======
 pipeline.local: world-verify build provider-pointers archival-verify duplicate-check router-singleton ci-local sbom scorekeeper package sign conventional-commits export-roadmap record-local-pipeline
 	@echo "✅ Pipeline complete"
->>>>>>> 0aa72fd (feat: implement local-first pipeline evidence validation and GitHub workflow integration)
 
 provider-pointers: deps
 	$(ACTIVATION_CHECK)
@@ -127,6 +121,18 @@ sbom:
 
 # Scorekeeper (trust calculation)
 scorekeeper:
+        @echo "🎯 Calculating trust scores..."
+        @mkdir -p metrics
+        @TARGET=$${NOA_TRUST_METRICS_PATH:-metrics/trust_score.json}; \
+            NOA_TRUST_METRICS_PATH=$$TARGET $(CARGO) run -p noa_core --bin noa_scorekeeper -- \
+                --integrity-pass $${TRUST_INTEGRITY_PASS:-120} \
+                --integrity-fail $${TRUST_INTEGRITY_FAIL:-0} \
+                --reversibility-pass $${TRUST_REVERSIBILITY_PASS:-96} \
+                --reversibility-fail $${TRUST_REVERSIBILITY_FAIL:-4} \
+                --capability-pass $${TRUST_CAPABILITY_PASS:-80} \
+                --capability-fail $${TRUST_CAPABILITY_FAIL:-20} \
+            || { echo "❌ Scorekeeper failed"; exit 1; }; \
+            echo "✅ Trust snapshot stored at $$TARGET"
 @echo "🎯 Calculating trust scores..."
 @$(PYTHON) -m tools.repro.audit_pipeline score
 

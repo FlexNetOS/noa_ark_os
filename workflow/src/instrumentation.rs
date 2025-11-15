@@ -1225,6 +1225,7 @@ mod tests {
                 agent: "builder".to_string(),
                 action: "compile".to_string(),
                 parameters: HashMap::from([("target".to_string(), json!({"path": "src/main.rs"}))]),
+                tool_requirements: Vec::new(),
                 agent_role: None,
                 tool_requirements: vec![],
             }],
