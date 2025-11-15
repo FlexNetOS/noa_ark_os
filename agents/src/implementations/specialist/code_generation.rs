@@ -4,7 +4,7 @@
 //! Handles code generation and synthesis
 
 use crate::unified_types::*;
-use crate::{Error, Result};
+use crate::Result;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -17,10 +17,23 @@ pub struct CodeGenerationAgent {
     generation_data: Arc<RwLock<GenerationData>>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct GenerationData {
     templates: Vec<CodeTemplate>,
     generated_count: u64,
+}
+
+impl GenerationData {
+    fn with_default_template() -> Self {
+        Self {
+            templates: vec![CodeTemplate {
+                template_id: "rust-basic".into(),
+                language: "rust".into(),
+                pattern: "// fn main() {{\n//     println!(\"{}\");\n// }}".into(),
+            }],
+            generated_count: 0,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -87,7 +100,7 @@ impl CodeGenerationAgent {
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
-            generation_data: Arc::new(RwLock::new(GenerationData::default())),
+            generation_data: Arc::new(RwLock::new(GenerationData::with_default_template())),
         }
     }
 
@@ -100,11 +113,18 @@ impl CodeGenerationAgent {
     pub async fn generate_code(&self, request: GenerationRequest) -> Result<GeneratedCode> {
         let mut data = self.generation_data.write().await;
         data.generated_count += 1;
+        let template_hint = data
+            .templates
+            .iter()
+            .find(|tpl| tpl.language.eq_ignore_ascii_case(&request.language))
+            .or_else(|| data.templates.first())
+            .map(|tpl| tpl.pattern.clone())
+            .unwrap_or_else(|| "// template missing".to_string());
 
         Ok(GeneratedCode {
             code: format!(
-                "// Generated {} code\n// TODO: Implementation",
-                request.language
+                "// Generated {} code\n{}\n// TODO: Implementation",
+                request.language, template_hint
             ),
             language: request.language,
             confidence: 0.85,

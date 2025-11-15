@@ -124,7 +124,6 @@ impl WasmProbeRunner {
                     }
                 }
             }
-            start_fn.call(&mut store, ())?;
         }
         let duration = start.elapsed();
 

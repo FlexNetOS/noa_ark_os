@@ -2,7 +2,7 @@ use crate::{Stage, StageType, Task, TaskDispatchReceipt};
 use crate::reward::{
     AgentApprovalStatus, AgentStandingSummary, RewardAgentSnapshot, RewardInputs, RewardScorekeeper,
 };
-use crate::{reward::RewardError, Stage, StageType, Task, TaskDispatchReceipt};
+use crate::reward::RewardError;
 use chrono::Utc;
 use noa_core::security::{self, OperationKind, OperationRecord, SignedOperation};
 use noa_core::utils::{current_timestamp_millis, simple_hash};
@@ -1767,7 +1767,6 @@ mod tests {
                 agent: "builder".to_string(),
                 action: "compile".to_string(),
                 parameters: HashMap::from([("target".to_string(), json!({"path": "src/main.rs"}))]),
-                tool_requirements: vec![],
                 tool_requirements: Vec::new(),
                 agent_role: None,
             }],
