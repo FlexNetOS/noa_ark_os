@@ -8,7 +8,6 @@ use axum::extract::ws::{Message, WebSocket};
 use axum::extract::{Multipart, Path as AxumPath, State, WebSocketUpgrade};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::response::Response;
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use bytes::Bytes;
@@ -408,7 +407,7 @@ struct DropUploadResponse {
     receipt_url: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 struct WorkflowStartRequest {
     workflow: Workflow,
 }
@@ -420,7 +419,7 @@ struct WorkflowStageSnapshot {
     state: StageState,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 struct WorkflowStartResponse {
     workflow_id: String,
     state: WorkflowState,
@@ -753,7 +752,7 @@ mod tests {
     use axum::http::{Request, StatusCode as HttpStatus};
     use http_body_util::BodyExt;
     use noa_workflow::{Stage, StageType, Task, Workflow};
-    use serde::Deserialize;
+    use serde::{Deserialize, Serialize};
     use serde_json::Value;
     use std::sync::Mutex as StdMutex;
     use tower::ServiceExt;
@@ -794,6 +793,38 @@ mod tests {
 
         fn recorded_manifest(&self) -> Option<DropManifest> {
             self.registered_manifest.lock().unwrap().clone()
+        }
+    }
+
+    #[derive(Serialize)]
+    struct WorkflowStartRequestPayload<'a> {
+        #[serde(borrow)]
+        workflow: &'a Workflow,
+    }
+
+    impl<'a> WorkflowStartRequestPayload<'a> {
+        fn new(workflow: &'a Workflow) -> Self {
+            Self { workflow }
+        }
+
+        fn into_body(&self) -> Vec<u8> {
+            serde_json::to_vec(self).expect("serialize workflow request")
+        }
+    }
+
+    #[derive(Deserialize)]
+    struct WorkflowStartResponsePayload {
+        #[serde(flatten)]
+        response: WorkflowStartResponse,
+    }
+
+    impl WorkflowStartResponsePayload {
+        fn from_slice(bytes: &[u8]) -> Self {
+            serde_json::from_slice(bytes).expect("parse workflow response")
+        }
+
+        fn into_inner(self) -> WorkflowStartResponse {
+            self.response
         }
     }
 
@@ -880,7 +911,7 @@ mod tests {
             .uri("/ui/workflows")
             .header("content-type", "application/json")
             .body(Body::from(
-                serde_json::to_vec(&WorkflowStartRequest { workflow }).unwrap(),
+                WorkflowStartRequestPayload::new(&workflow).into_body(),
             ))
             .unwrap();
 
@@ -888,7 +919,7 @@ mod tests {
         assert_eq!(response.status(), HttpStatus::OK);
 
         let bytes = response.into_body().collect().await.unwrap().to_bytes();
-        let payload: WorkflowStartResponse = serde_json::from_slice(&bytes).unwrap();
+        let payload = WorkflowStartResponsePayload::from_slice(&bytes).into_inner();
 
         assert_eq!(payload.workflow_id, "plan-test");
         assert_eq!(payload.state, WorkflowState::Pending);
@@ -930,7 +961,7 @@ mod tests {
 
         let receipt_path = PathBuf::from(&parsed.receipt_path);
         assert!(receipt_path.exists());
-        let receipt: serde_json::Value =
+        let receipt: Value =
             serde_json::from_str(&std::fs::read_to_string(&receipt_path).unwrap()).unwrap();
         assert_eq!(
             receipt.get("drop_id").and_then(|v| v.as_str()),
