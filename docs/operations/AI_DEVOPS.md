@@ -46,6 +46,29 @@ checkpoint is missing or if the relevant artefact has not been generated.
 - Instrumentation ensures Merkle receipts, task dispatch logs, and deployment outcomes
   are synchronised with the evidence ledger in `storage/db/evidence/`.
 
+## State Persistence and Replay
+
+1. `storage/db/pipelines/state.json` records the latest pipelines and deployments. Every write now emits
+   `pipeline.state.*` and `deployment.state.*` entries through `PipelineInstrumentation::log_pipeline_event`,
+   ensuring `.workspace/indexes/pipeline_events.log` and the mirrored
+   `storage/db/pipeline_events.log` share identical histories.
+2. The same event stream is mirrored into `storage/db/evidence/ledger.jsonl` with `PipelineEvent` records,
+   allowing auditors to trace the signature associated with each persisted state transition.
+3. Deployment actions automatically add structured rows to `docs/reports/AGENT_DEPLOYMENT_OUTCOMES.md`, so
+   replaying a pipeline surfaces both the runtime evidence and the human-readable report in one place.
+
+### Replay Procedure
+
+1. Point `NOA_WORKFLOW_ROOT` at the workspace snapshot that contains the desired `storage/db/pipelines/state.json`.
+2. Launch a `CICDSystem` instance (e.g. via `examples/crc_cicd_demo.rs` or an integration harness) and call
+   `configure_workspace_root` followed by the internal `load_state_from_disk` helper to hydrate the in-memory
+   registry from the persisted JSON.
+3. Inspect `storage/db/pipeline_events.log` (or `.workspace/indexes/pipeline_events.log`) to locate the
+   relevant `pipeline.state.*` and `deployment.state.*` entries; cross-reference the corresponding
+   `PipelineEvent` rows in `storage/db/evidence/ledger.jsonl` to verify the Merkle hash chain and signature.
+4. Review `docs/reports/AGENT_DEPLOYMENT_OUTCOMES.md` for the textual ledger of deployment outcomes that were
+   replayed, ensuring the notes column matches the metadata captured in the pipeline event payloads.
+
 ## Verification Scripts
 
 End-to-end verification scripts live in `tests/ci/`:

@@ -1,8 +1,8 @@
-use crate::{Stage, StageType, Task, TaskDispatchReceipt};
+use crate::reward::RewardError;
 use crate::reward::{
     AgentApprovalStatus, AgentStandingSummary, RewardAgentSnapshot, RewardInputs, RewardScorekeeper,
 };
-use crate::reward::RewardError;
+use crate::{Stage, StageType, Task, TaskDispatchReceipt};
 use chrono::Utc;
 use noa_core::security::{self, OperationKind, OperationRecord, SignedOperation};
 use noa_core::utils::{current_timestamp_millis, simple_hash};
@@ -615,6 +615,7 @@ pub enum EvidenceLedgerKind {
     TaskDispatch,
     AutoFixAction,
     BudgetDecision,
+    PipelineEvent,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -746,6 +747,27 @@ impl EvidenceLedgerEntry {
             timestamp: current_timestamp_millis(),
             reference: "GENESIS".to_string(),
             payload: json!({"message": "ledger initialised"}),
+            signed_operation: signed,
+        }
+    }
+
+    fn pipeline_event(
+        actor: &str,
+        subject: &str,
+        event_type: &str,
+        metadata: &Value,
+        signed: SignedOperation,
+    ) -> Self {
+        Self {
+            kind: EvidenceLedgerKind::PipelineEvent,
+            timestamp: current_timestamp_millis(),
+            reference: signed.signature.clone(),
+            payload: json!({
+                "actor": actor,
+                "subject": subject,
+                "event_type": event_type,
+                "metadata": metadata,
+            }),
             signed_operation: signed,
         }
     }
@@ -1042,7 +1064,12 @@ impl PipelineInstrumentation {
         rewritten_plan: Option<Value>,
     ) -> Result<BudgetDecisionRecord, InstrumentationError> {
         let timestamp = current_timestamp_millis();
-        let filename = format!("{}-{}-{}-budget.json", timestamp, workflow_id, stage_id.replace('/', "_"));
+        let filename = format!(
+            "{}-{}-{}-budget.json",
+            timestamp,
+            workflow_id,
+            stage_id.replace('/', "_")
+        );
         let snapshot_path = self.budget_guardian_dir.join(filename);
         if let Some(parent) = snapshot_path.parent() {
             fs::create_dir_all(parent)?;
@@ -1070,15 +1097,19 @@ impl PipelineInstrumentation {
             metadata: manifest.clone(),
             timestamp,
         };
-        let record = OperationRecord::new(OperationKind::Other, workflow_id.to_string(), stage_id.to_string())
-            .with_metadata(json!({
-                "tokens_used": tokens_used,
-                "token_limit": token_limit,
-                "latency_ms": latency_ms,
-                "latency_limit": latency_limit,
-                "action": action,
-                "snapshot": snapshot_path.to_string_lossy(),
-            }));
+        let record = OperationRecord::new(
+            OperationKind::Other,
+            workflow_id.to_string(),
+            stage_id.to_string(),
+        )
+        .with_metadata(json!({
+            "tokens_used": tokens_used,
+            "token_limit": token_limit,
+            "latency_ms": latency_ms,
+            "latency_limit": latency_limit,
+            "action": action,
+            "snapshot": snapshot_path.to_string_lossy(),
+        }));
         let signed = self.append_entry(BUDGET_DECISION_LOG, event, record)?;
         let record = BudgetDecisionRecord {
             workflow_id: workflow_id.to_string(),
@@ -1142,12 +1173,13 @@ impl PipelineInstrumentation {
             metadata: manifest.clone(),
             timestamp,
         };
-        let record = OperationRecord::new(OperationKind::Other, fixer.to_string(), target.to_string())
-            .with_metadata(json!({
-                "snapshot": snapshot_path.to_string_lossy(),
-                "plan_digest": simple_hash(&plan_serialised),
-                "policy_digest": simple_hash(&policy_serialised),
-            }));
+        let record =
+            OperationRecord::new(OperationKind::Other, fixer.to_string(), target.to_string())
+                .with_metadata(json!({
+                    "snapshot": snapshot_path.to_string_lossy(),
+                    "plan_digest": simple_hash(&plan_serialised),
+                    "policy_digest": simple_hash(&policy_serialised),
+                }));
         let signed = self.append_entry(AUTO_FIX_LOG, event, record)?;
         let receipt = AutoFixActionReceipt {
             fixer: fixer.to_string(),
@@ -1229,6 +1261,8 @@ impl PipelineInstrumentation {
         metadata: Value,
     ) -> Result<SignedOperation, InstrumentationError> {
         let metadata_for_event = metadata.clone();
+        let metadata_for_record = metadata.clone();
+        let metadata_for_ledger = metadata;
         let event = PipelineLogEvent {
             event_type: event_type.to_string(),
             actor: actor.to_string(),
@@ -1241,8 +1275,16 @@ impl PipelineInstrumentation {
         let record =
             OperationRecord::new(OperationKind::Other, actor.to_string(), subject.to_string())
                 .with_context(Some(actor.to_string()), Some(subject.to_string()))
-                .with_metadata(metadata);
-        self.append_entry(PIPELINE_EVENT_LOG, event, record)
+                .with_metadata(metadata_for_record);
+        let signed = self.append_entry(PIPELINE_EVENT_LOG, event, record)?;
+        self.append_evidence_ledger(EvidenceLedgerEntry::pipeline_event(
+            actor,
+            subject,
+            event_type,
+            &metadata_for_ledger,
+            signed.clone(),
+        ))?;
+        Ok(signed)
     }
     pub fn record_deployment_outcome(
         &self,
