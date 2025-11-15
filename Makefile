@@ -80,9 +80,9 @@ scorekeeper:
                 --reversibility-pass $${TRUST_REVERSIBILITY_PASS:-96} \
                 --reversibility-fail $${TRUST_REVERSIBILITY_FAIL:-4} \
                 --capability-pass $${TRUST_CAPABILITY_PASS:-80} \
-                --capability-fail $${TRUST_CAPABILITY_FAIL:-20}; \
+                --capability-fail $${TRUST_CAPABILITY_FAIL:-20} \
+            || { echo "❌ Scorekeeper failed"; exit 1; }; \
             echo "✅ Trust snapshot stored at $$TARGET"
-
 # Package artifacts
 package:
 	@echo "📦 Packaging artifacts..."
