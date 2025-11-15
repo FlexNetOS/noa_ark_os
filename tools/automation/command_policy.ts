@@ -87,8 +87,12 @@ function parsePolicyFile(filePath: string): CommandPolicy {
 
 function compileRule(rule: PolicyRule): CompiledRule {
   if (rule.type === "regex") {
-    const regex = new RegExp(rule.value, rule.flags ?? "");
-    return { ...rule, regex, scope: rule.scope ?? "line" };
+    try {
+      const regex = new RegExp(rule.value, rule.flags ?? "");
+      return { ...rule, regex, scope: rule.scope ?? "line" };
+    } catch (error) {
+      throw new Error(`Invalid regex pattern in rule ${rule.id}: ${(error as Error).message}`);
+    }
   }
   return { ...rule, scope: rule.scope ?? "line" };
 }
