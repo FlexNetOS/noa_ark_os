@@ -16,6 +16,14 @@ def main() -> int:
         return 1
 
     bundle = pathlib.Path(sys.argv[1])
+    try:
+        bundle = bundle.resolve(strict=True)
+    except FileNotFoundError:
+        print(f"Bundle directory does not exist: {bundle}", file=sys.stderr)
+        return 2
+    if not bundle.is_dir():
+        print(f"Bundle path is not a directory: {bundle}", file=sys.stderr)
+        return 2
     manifest_path = bundle / "bundle_manifest.json"
     signature_path = bundle / "signature.json"
 
