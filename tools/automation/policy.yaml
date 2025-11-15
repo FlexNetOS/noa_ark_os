@@ -30,6 +30,15 @@
       "description": "Block legacy shell command substitution using backticks (known limitation: does not detect escaped or quoted backticks)"
     },
     {
+      "id": "deny-subshell-dollar",
+      "type": "regex",
+      "value": "\\$\\(.+\\)",
+      "flags": "s",
+      "scope": "line",
+      "action": "deny",
+      "description": "Block dollar-paren command substitution"
+    },
+    {
       "id": "deny-git-branch-destructive",
       "type": "regex",
       "value": "^git branch\\b.*-(d|D|m|M|-delete|-force)\\b",
