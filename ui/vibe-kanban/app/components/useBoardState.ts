@@ -24,7 +24,7 @@ import {
   type CapabilityRegistry,
   normalizeCapabilityRegistry,
 } from "@/shared/capabilities";
-import { logError } from "@/shared/logging";
+import { logError } from "@noa-ark/shared-ui/logging";
 import { isFeatureEnabled } from "./featureFlags";
 
 const accentPalette = [
@@ -229,10 +229,10 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
       setAssist((previous) =>
         previous
           ? {
-              ...previous,
-              memory: normalized,
-              longTermSuggestions: buildMemorySuggestions(normalized),
-            }
+            ...previous,
+            memory: normalized,
+            longTermSuggestions: buildMemorySuggestions(normalized),
+          }
           : previous
       );
     } catch (error) {
@@ -519,17 +519,17 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
         columns.map((column) =>
           column.id === columnId
             ? {
-                ...column,
-                goals: column.goals.map((goal) =>
-                  goal.id === goalId
-                    ? {
-                        ...goal,
-                        ...patch,
-                        title: patch.title ? patch.title.trim() || goal.title : goal.title,
-                      }
-                    : goal
-                ),
-              }
+              ...column,
+              goals: column.goals.map((goal) =>
+                goal.id === goalId
+                  ? {
+                    ...goal,
+                    ...patch,
+                    title: patch.title ? patch.title.trim() || goal.title : goal.title,
+                  }
+                  : goal
+              ),
+            }
             : column
         )
       );
@@ -692,21 +692,21 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
         setWorkspace((prev) =>
           prev
             ? {
-                ...prev,
-                uploadReceipts: [upload, ...(prev.uploadReceipts ?? [])].slice(0, 50),
-                notifications: notification
-                  ? [notification, ...(prev.notifications ?? [])].slice(0, 50)
-                  : prev.notifications ?? [],
-              }
+              ...prev,
+              uploadReceipts: [upload, ...(prev.uploadReceipts ?? [])].slice(0, 50),
+              notifications: notification
+                ? [notification, ...(prev.notifications ?? [])].slice(0, 50)
+                : prev.notifications ?? [],
+            }
             : prev
         );
       } else if (notification) {
         setWorkspace((prev) =>
           prev
             ? {
-                ...prev,
-                notifications: [notification, ...(prev.notifications ?? [])].slice(0, 50),
-              }
+              ...prev,
+              notifications: [notification, ...(prev.notifications ?? [])].slice(0, 50),
+            }
             : prev
         );
       }
@@ -714,22 +714,25 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     [workspaceId, boardId]
   );
 
+  useEffect(() => {
     if (!workspaceId || !boardId) return;
-    const response = await fetch(`/api/workspaces/${workspaceId}/boards/${boardId}/assist`, { method: "POST" });
-    if (!response.ok) return;
-    const payload = await response.json();
-    const updatedAt = new Date().toISOString();
-    const memory = payload.memory ? normalizeGoalMemory({ ...payload.memory, goalId: `board:${boardId}`, workspaceId }) : goalInsights;
-    if (payload.memory && memory) {
-      setGoalInsights(memory);
-    }
-    setAssist({
-      suggestions: payload.suggestions ?? [],
-      focusCard: payload.focusCard ?? null,
-      updatedAt,
-      memory: memory ?? null,
-      longTermSuggestions: memory ? buildMemorySuggestions(memory) : undefined,
-    });
+    (async () => {
+      const response = await fetch(`/api/workspaces/${workspaceId}/boards/${boardId}/assist`, { method: "POST" });
+      if (!response.ok) return;
+      const payload = await response.json();
+      const updatedAt = new Date().toISOString();
+      const memory = payload.memory ? normalizeGoalMemory({ ...payload.memory, goalId: `board:${boardId}`, workspaceId }) : goalInsights;
+      if (payload.memory && memory) {
+        setGoalInsights(memory);
+      }
+      setAssist({
+        suggestions: payload.suggestions ?? [],
+        focusCard: payload.focusCard ?? null,
+        updatedAt,
+        memory: memory ?? null,
+        longTermSuggestions: memory ? buildMemorySuggestions(memory) : undefined,
+      });
+    })();
   }, [workspaceId, boardId, goalInsights]);
 
   useEffect(() => {
@@ -817,11 +820,11 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
       setAutonomy((prev) =>
         prev.replanTriggered || prev.escalationTriggered
           ? {
-              replanTriggered: false,
-              escalationTriggered: false,
-              lastTriggeredAt: nowIso,
-              summary: null,
-            }
+            replanTriggered: false,
+            escalationTriggered: false,
+            lastTriggeredAt: nowIso,
+            summary: null,
+          }
           : prev
       );
     }
@@ -1122,58 +1125,58 @@ function normalizeGoalMemory(payload: unknown): GoalMemoryInsights {
   const lastSeen = typeof lastSeenRaw === "string" ? lastSeenRaw : null;
   const traces = Array.isArray(tracesRaw)
     ? tracesRaw.map((trace) => ({
-        id: String((trace as { id?: unknown }).id ?? cryptoRandom()),
-        goalId: String((trace as { goalId?: unknown }).goalId ?? ""),
-        workspaceId: String((trace as { workspaceId?: unknown }).workspaceId ?? ""),
-        boardId: (trace as { boardId?: unknown }).boardId ?? null,
-        actorId: (trace as { actorId?: unknown }).actorId ? String((trace as { actorId?: unknown }).actorId) : null,
-        actorName: (trace as { actorName?: unknown }).actorName ? String((trace as { actorName?: unknown }).actorName) : null,
-        action: String((trace as { action?: unknown }).action ?? "unknown"),
-        summary: (trace as { summary?: unknown }).summary ? String((trace as { summary?: unknown }).summary) : null,
-        metadata:
-          (trace as { metadata?: unknown }).metadata && typeof (trace as { metadata?: unknown }).metadata === "object"
-            ? ((trace as { metadata: Record<string, unknown> }).metadata as Record<string, unknown>)
-            : null,
-        createdAt: String((trace as { createdAt?: unknown }).createdAt ?? new Date().toISOString()),
-      }))
+      id: String((trace as { id?: unknown }).id ?? cryptoRandom()),
+      goalId: String((trace as { goalId?: unknown }).goalId ?? ""),
+      workspaceId: String((trace as { workspaceId?: unknown }).workspaceId ?? ""),
+      boardId: (trace as { boardId?: unknown }).boardId ?? null,
+      actorId: (trace as { actorId?: unknown }).actorId ? String((trace as { actorId?: unknown }).actorId) : null,
+      actorName: (trace as { actorName?: unknown }).actorName ? String((trace as { actorName?: unknown }).actorName) : null,
+      action: String((trace as { action?: unknown }).action ?? "unknown"),
+      summary: (trace as { summary?: unknown }).summary ? String((trace as { summary?: unknown }).summary) : null,
+      metadata:
+        (trace as { metadata?: unknown }).metadata && typeof (trace as { metadata?: unknown }).metadata === "object"
+          ? ((trace as { metadata: Record<string, unknown> }).metadata as Record<string, unknown>)
+          : null,
+      createdAt: String((trace as { createdAt?: unknown }).createdAt ?? new Date().toISOString()),
+    }))
     : [];
   const lifecycleRaw = (value as { lifecycle?: unknown }).lifecycle;
   const lifecycle = Array.isArray(lifecycleRaw)
     ? lifecycleRaw.map((event) => ({
-        id: Number((event as { id?: unknown }).id ?? Date.now()),
-        goalId: String((event as { goalId?: unknown }).goalId ?? ""),
-        workspaceId: String((event as { workspaceId?: unknown }).workspaceId ?? ""),
-        eventType: String((event as { eventType?: unknown }).eventType ?? "unknown"),
-        status: (event as { status?: unknown }).status ? String((event as { status?: unknown }).status) : null,
-        summary: (event as { summary?: unknown }).summary ? String((event as { summary?: unknown }).summary) : null,
-        payload: (event as { payload?: unknown }).payload,
-        createdAt: String((event as { createdAt?: unknown }).createdAt ?? new Date().toISOString()),
-      }))
+      id: Number((event as { id?: unknown }).id ?? Date.now()),
+      goalId: String((event as { goalId?: unknown }).goalId ?? ""),
+      workspaceId: String((event as { workspaceId?: unknown }).workspaceId ?? ""),
+      eventType: String((event as { eventType?: unknown }).eventType ?? "unknown"),
+      status: (event as { status?: unknown }).status ? String((event as { status?: unknown }).status) : null,
+      summary: (event as { summary?: unknown }).summary ? String((event as { summary?: unknown }).summary) : null,
+      payload: (event as { payload?: unknown }).payload,
+      createdAt: String((event as { createdAt?: unknown }).createdAt ?? new Date().toISOString()),
+    }))
     : [];
   const artifactsRaw = (value as { artifacts?: unknown }).artifacts;
   const artifacts = Array.isArray(artifactsRaw)
     ? artifactsRaw.map((artifact) => ({
-        id: Number((artifact as { id?: unknown }).id ?? Date.now()),
-        goalId: String((artifact as { goalId?: unknown }).goalId ?? ""),
-        workspaceId: String((artifact as { workspaceId?: unknown }).workspaceId ?? ""),
-        artifactType: String((artifact as { artifactType?: unknown }).artifactType ?? "unknown"),
-        artifactUri: String((artifact as { artifactUri?: unknown }).artifactUri ?? ""),
-        title: (artifact as { title?: unknown }).title ? String((artifact as { title?: unknown }).title) : null,
-        summary: (artifact as { summary?: unknown }).summary ? String((artifact as { summary?: unknown }).summary) : null,
-        metadata:
-          (artifact as { metadata?: unknown }).metadata && typeof (artifact as { metadata?: unknown }).metadata === "object"
-            ? ((artifact as { metadata: Record<string, unknown> }).metadata as Record<string, unknown>)
-            : null,
-        createdAt: String((artifact as { createdAt?: unknown }).createdAt ?? new Date().toISOString()),
-      }))
+      id: Number((artifact as { id?: unknown }).id ?? Date.now()),
+      goalId: String((artifact as { goalId?: unknown }).goalId ?? ""),
+      workspaceId: String((artifact as { workspaceId?: unknown }).workspaceId ?? ""),
+      artifactType: String((artifact as { artifactType?: unknown }).artifactType ?? "unknown"),
+      artifactUri: String((artifact as { artifactUri?: unknown }).artifactUri ?? ""),
+      title: (artifact as { title?: unknown }).title ? String((artifact as { title?: unknown }).title) : null,
+      summary: (artifact as { summary?: unknown }).summary ? String((artifact as { summary?: unknown }).summary) : null,
+      metadata:
+        (artifact as { metadata?: unknown }).metadata && typeof (artifact as { metadata?: unknown }).metadata === "object"
+          ? ((artifact as { metadata: Record<string, unknown> }).metadata as Record<string, unknown>)
+          : null,
+      createdAt: String((artifact as { createdAt?: unknown }).createdAt ?? new Date().toISOString()),
+    }))
     : [];
   const similarGoalsRaw = (value as { similarGoals?: unknown }).similarGoals;
   const similarGoals = Array.isArray(similarGoalsRaw)
     ? similarGoalsRaw.map((goal) => ({
-        goalId: String((goal as { goalId?: unknown }).goalId ?? ""),
-        workspaceId: String((goal as { workspaceId?: unknown }).workspaceId ?? ""),
-        score: Number((goal as { score?: unknown }).score ?? 0),
-      }))
+      goalId: String((goal as { goalId?: unknown }).goalId ?? ""),
+      workspaceId: String((goal as { workspaceId?: unknown }).workspaceId ?? ""),
+      score: Number((goal as { score?: unknown }).score ?? 0),
+    }))
     : [];
   const insightSummaryRaw = (value as { insightSummary?: unknown }).insightSummary;
   const insightSummary = typeof insightSummaryRaw === "string" ? insightSummaryRaw : undefined;
