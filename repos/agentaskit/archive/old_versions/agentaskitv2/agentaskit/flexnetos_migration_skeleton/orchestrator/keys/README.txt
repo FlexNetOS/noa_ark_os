@@ -1,0 +1,1 @@
+Place offline keys here (minisign.key, gpg keyring).

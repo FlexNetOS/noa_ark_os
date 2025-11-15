@@ -30,6 +30,7 @@ pub enum GpuBackend {
 }
 
 impl GpuBackend {
+    #[cfg_attr(not(test), allow(dead_code))]
     fn from_vendor_hint(vendor_id: Option<&str>, name: &str) -> Self {
         let vendor = vendor_id.unwrap_or("").to_ascii_lowercase();
         if vendor.contains("10de") || name.to_ascii_lowercase().contains("nvidia") {

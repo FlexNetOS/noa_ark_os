@@ -236,6 +236,18 @@ impl AgentRegistry {
         Ok(())
     }
 
+    /// Insert or update agent metadata directly.
+    ///
+    /// This helper enables lightweight registry construction in integration tests
+    /// without loading the full embedded dataset.
+    pub fn upsert_metadata(&self, metadata: AgentMetadata) -> Result<()> {
+        {
+            let mut agents = self.agents.write().unwrap();
+            agents.insert(metadata.agent_id.clone(), metadata);
+        }
+        self.rebuild_indexes()
+    }
+
     /// Get agent by ID
     pub fn get(&self, agent_id: &str) -> Option<AgentMetadata> {
         let agents = self.agents.read().unwrap();

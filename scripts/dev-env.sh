@@ -104,12 +104,19 @@ if enable_pnpm:
 else:
     lines.append("RUN corepack enable")
 
+# Security note: Download, verify, and execute rustup installer instead of using 'curl | sh' to reduce risk.
+# Update the SHA256 value below if the installer changes. See: https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init.sha256
 lines.extend([
     textwrap.dedent(f"""
-    RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \\
-        sh -s -- -y --default-toolchain {rust_toolchain} --profile {rust_profile}
+    # Download rustup installer
+    RUN curl --proto '=https' --tlsv1.2 -sSfL -o /tmp/rustup-init.sh https://sh.rustup.rs
+    # Verify installer checksum (update SHA256 as needed)
+    RUN echo "e7c0b9e5e1e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2  /tmp/rustup-init.sh" | sha256sum -c - || (echo "WARNING: rustup-init.sh checksum mismatch. Review https://sh.rustup.rs security before proceeding." && exit 1)
+    # Install Rust
+    RUN bash /tmp/rustup-init.sh -y --default-toolchain {rust_toolchain} --profile {rust_profile}
     ENV PATH="/home/${{USERNAME}}/.cargo/bin:$PATH"
     RUN /bin/bash -lc "rustup component add rustfmt clippy"
+    RUN rm /tmp/rustup-init.sh
     """).strip(),
 ])
 

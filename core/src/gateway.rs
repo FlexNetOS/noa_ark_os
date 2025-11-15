@@ -413,7 +413,7 @@ impl IntentControlPlane {
 /// Observed state of a connector.
 #[derive(Debug, Clone)]
 struct SymbolGenome {
-    blueprint: HashMap<String, String>,
+    _blueprint: HashMap<String, String>,
     performance_score: f32,
     mutation_history: Vec<String>,
 }
@@ -425,7 +425,7 @@ impl SymbolGenome {
         blueprint.insert("kind".into(), symbol.kind.to_string());
         blueprint.insert("schema".into(), symbol.schema_hash.clone());
         Self {
-            blueprint,
+            _blueprint: blueprint,
             performance_score: 0.75,
             mutation_history: Vec::new(),
         }
@@ -769,7 +769,7 @@ struct EvolutionState {
 
 #[derive(Debug, Clone)]
 struct ConnectorSnapshot {
-    id: String,
+    _id: String,
     provider_id: String,
     state: ConnectionState,
     health_score: f32,
@@ -789,7 +789,7 @@ struct ConnectorRecord {
     genome: SymbolGenome,
     provider_id: String,
     schematic: ExecutionSchematic,
-    verification_cache: VerificationReport,
+    _verification_cache: VerificationReport,
 }
 
 impl ConnectorRecord {
@@ -809,13 +809,13 @@ impl ConnectorRecord {
             genome,
             provider_id,
             schematic,
-            verification_cache: VerificationReport::success(),
+            _verification_cache: VerificationReport::success(),
         }
     }
 
     fn snapshot(&self) -> ConnectorSnapshot {
         ConnectorSnapshot {
-            id: self.symbol.id.clone(),
+            _id: self.symbol.id.clone(),
             provider_id: self.provider_id.clone(),
             state: self.state,
             health_score: self.health_score,
@@ -1746,6 +1746,11 @@ impl Gateway {
             .take(3)
             .map(|view| view.id.clone())
             .collect();
+        let provider_mix: Vec<String> = candidates
+            .iter()
+            .take(3)
+            .map(|view| view.provider_id.clone())
+            .collect();
 
         let predicted_latency_ms = candidates
             .iter()
@@ -1763,6 +1768,7 @@ impl Gateway {
             .map(|view| view.snapshot.clone())
             .collect();
 
+        let snapshot_ids: Vec<String> = snapshots.iter().map(|view| view._id.clone()).collect();
         let verification =
             VerificationReport::evaluate(intent, &schematic, &snapshots, &reliability);
 
@@ -1773,6 +1779,7 @@ impl Gateway {
                 ("intent".into(), intent.description.clone()),
                 ("success".into(), verification.is_success().to_string()),
                 ("issues".into(), verification.issues.join("|")),
+                ("snapshots".into(), snapshot_ids.join(",")),
             ]),
         );
         self.emit_event(
@@ -1803,9 +1810,10 @@ impl Gateway {
             self.emit_event(
                 TelemetryKind::RouteCompiled,
                 format!(
-                    "intent:{} connectors:{}",
+                    "intent:{} connectors:{} providers:{}",
                     intent.description,
-                    plan.connectors.len()
+                    plan.connectors.len(),
+                    provider_mix.join("|")
                 ),
             )?;
             self.emit_event(
@@ -2483,9 +2491,17 @@ mod tests {
         register_sample_symbol(&gateway, "analytics.primary");
         register_sample_symbol(&gateway, "analytics.secondary");
 
+        let provider_id = gateway
+            .connectors_read()
+            .expect("connectors accessible")
+            .values()
+            .next()
+            .map(|record| record.provider_id.clone())
+            .expect("connector provider available");
+
         gateway
             .update_reliability_feed(ReliabilityFeed {
-                provider_id: "analytics".into(),
+                provider_id,
                 probability_of_failure: 0.6,
                 maintenance_windows: vec![],
                 last_update: SystemTime::now(),

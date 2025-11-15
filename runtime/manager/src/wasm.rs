@@ -124,7 +124,6 @@ impl WasmProbeRunner {
                     }
                 }
             }
-            start_fn.call(&mut store, ())?;
         }
         let duration = start.elapsed();
 
@@ -173,13 +172,27 @@ impl WasmProbeRunner {
 
         for dir in &self.config.allowed_directories {
             // Canonicalize the directory to prevent path traversal and ensure absolute path
-            let canonical_dir = std::fs::canonicalize(dir)
-                .map_err(|err| WasmProbeError::Wasi(format!("Failed to canonicalize directory '{}': {}", dir.display(), err)))?;
+            let canonical_dir = std::fs::canonicalize(dir).map_err(|err| {
+                WasmProbeError::Wasi(format!(
+                    "Failed to canonicalize directory '{}': {}",
+                    dir.display(),
+                    err
+                ))
+            })?;
             if !canonical_dir.is_dir() {
-                return Err(WasmProbeError::Wasi(format!("Allowed directory '{}' is not a directory", canonical_dir.display())));
+                return Err(WasmProbeError::Wasi(format!(
+                    "Allowed directory '{}' is not a directory",
+                    canonical_dir.display()
+                )));
             }
-            let cap_dir = Dir::open_ambient_dir(&canonical_dir, ambient_authority())
-                .map_err(|err| WasmProbeError::Wasi(format!("Failed to open directory '{}': {}", canonical_dir.display(), err)))?;
+            let cap_dir =
+                Dir::open_ambient_dir(&canonical_dir, ambient_authority()).map_err(|err| {
+                    WasmProbeError::Wasi(format!(
+                        "Failed to open directory '{}': {}",
+                        canonical_dir.display(),
+                        err
+                    ))
+                })?;
             builder
                 .preopened_dir(cap_dir, &canonical_dir)
                 .map_err(|err| WasmProbeError::Wasi(err.to_string()))?;

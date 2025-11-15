@@ -49,6 +49,11 @@ We are committed to providing a welcoming and inclusive environment for all cont
    git remote add upstream https://github.com/FlexNetOS/noa_ark_os.git
    ```
 
+4. Install development dependencies:
+   ```bash
+   # Python components
+   pip install -r requirements-dev.txt
+   
 4. Authenticate the GitHub CLI (`gh`) using a fine-grained personal access token (PAT):
    - In a browser, navigate to **Settings → Developer settings → Personal access tokens → Fine-grained tokens** and create a new token scoped to `github.com`.
    - Grant the token access to the fork you will push to, with at least **Repository permissions → Contents (Read and write)** and **Pull requests (Read and write)**. Refer to the [GitHub PAT scope documentation](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token#creating-a-fine-grained-personal-access-token) for detailed guidance on selecting scopes and renewal cadence.
@@ -78,13 +83,18 @@ We are committed to providing a welcoming and inclusive environment for all cont
 
 5. Authenticate the GitHub CLI (required for `gh` commands and automation scripts):
    1. Create a fine-grained personal access token (PAT) with **`repo`**, **`workflow`**, and **`project`** read/write scopes.
-   2. Run an interactive login:
+        2. Run an interactive login:
 
       ```bash
       gh auth login --hostname github.com --git-protocol https
       ```
 
       Select GitHub.com → HTTPS → “Paste an authentication token” and paste the PAT when prompted.
+            > **WSL note:** If interop with Windows is disabled (common inside hardened dev VMs), prefer the automation helper:
+            > ```bash
+            > ./scripts/tools/gh-auth-login.sh
+            > ```
+            > The script detects the WSL interop flag and falls back to the device-code flow when a Windows browser cannot be launched. See `docs/runbook/WSL_INTEROP.md` for the full recovery checklist.
    3. For non-interactive environments, export the token before running scripts:
 
       ```bash

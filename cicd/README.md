@@ -6,6 +6,30 @@ Maximum focus on Continuous Delivery (CD) for NOA ARK OS.
 
 **Continuous Delivery First**: Every commit is potentially deployable. CI validates, CD delivers.
 
+## Autonomous Release Controls
+
+- **Trust-gated auto merges** – `cicd/src/trigger.rs` now evaluates historical trust metrics from
+  `audit/ledger.jsonl` before executing a git merge preview. Passing merges archive their diff under
+  `audit/merges/` and append an approval entry to the ledger.
+- **Scheduled rollback drills** – _Planned:_ automated exercises of git worktree rollbacks, with outcomes to be recorded in both `audit/rollbacks/` and the ledger. (Implementation pending)
+- **Signed audit bundles** – `make publish-audit` captures an SBOM, trust summary, and release
+  metadata into `audit/bundle-*` directories and validates the output through
+  `audit/verify.sh` / `audit/verify.py`.
+## Local-First Authority Workflow
+
+1. Activate both portable toolchains:
+    ```bash
+    source server/tools/activate-cargo.sh
+    source server/tools/activate-node.sh
+    ```
+2. Run the authoritative pipeline locally: `make pipeline.local` (VS Code task **Pipeline Local (Portable)** does the same).
+3. The run writes (and you must commit) `audit/local_pipeline_status.json` via `scripts/pipeline/record_local_pipeline.sh` with commit, timestamps, and log hashes.
+4. Configure git to use the provided hooks so pushes are blocked until fresh evidence exists:
+    ```bash
+    git config core.hooksPath tools/git-hooks
+    ```
+5. GitHub Actions refuse to run merge workflows if the evidence file is missing, stale, or mismatched. Local always leads; remote workflows only mirror and archive what already passed offline.
+
 ## Architecture
 
 ```

@@ -1,0 +1,177 @@
+{
+  "bundle_version": "10.7.1-healed-inline",
+  "provenance": {
+    "source": "chat-merged v1–v10.7",
+    "mode": "Provable-Truth",
+    "note": "Inline-only: no external file refs; unknown third-party bundle contents marked MISSING with rationale."
+  },
+
+  "style": {
+    "paradigm": "kernel-first",
+    "agents": "message-passing",
+    "execution": "async-first",
+    "globals": "none",
+    "bloat": "zero",
+    "offline": true
+  },
+
+  "environment_defaults": {
+    "CECCA_NAMESPACE": "default",
+    "CECCA_EPOCH": "000000",
+    "CECCA_KEYS_DIR": "./keys",
+    "PYTHONHASHSEED": "0"
+  },
+
+  "policies": {
+    "TRUTH_GATE_AND_DECEPTION_POLICY.md": {
+      "status": "MISSING",
+      "reason": "Not supplied in chat; placeholder provided to keep gates wired without fabricating policy text.",
+      "placeholder": "Policy must enumerate disallowed deception, mandate verifiable claims, require citations for assertions, and define incident actions (block, rollback, forensics)."
+    }
+  },
+
+  "kits_inline": {
+    "capsule_model_starter_FINAL_20250905-154407.zip": {
+      "status": "MISSING",
+      "reason": "Binary contents were never shared; cannot fabricate. Wiring below preserves behavior and SBOM checks."
+    },
+    "NOA_Deployment_Kit_v3_1.zip": {
+      "status": "MISSING",
+      "reason": "Binary contents were never shared; cannot fabricate. Gate and registry stubs remain active."
+    },
+    "All_Inclusive_Agent_Directory_v6_plus_copy.csv": {
+      "status": "MISSING",
+      "reason": "CSV not provided; importer remains functional with schema below."
+    }
+  },
+
+  "schemas": {
+    "cell.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "CellContract",
+      "type": "object",
+      "required": ["id", "role", "inputs", "outputs", "timeout_ms", "retry", "escalation_to", "tests"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+$" },
+        "role": { "type": "string" },
+        "inputs": { "type": "array", "items": { "type": "string" } },
+        "outputs": { "type": "array", "items": { "type": "string" } },
+        "timeout_ms": { "type": "integer", "minimum": 1 },
+        "retry": {
+          "type": "object",
+          "properties": {
+            "max": { "type": "integer", "minimum": 0 },
+            "backoff": { "type": "string", "enum": ["fixed", "exponential"] },
+            "delay_ms": { "type": "integer", "minimum": 0 }
+          },
+          "required": ["max", "backoff", "delay_ms"]
+        },
+        "escalation_to": { "type": "string" },
+        "tests": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+    "capsule.manifest.schema.json": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "title": "CapsuleManifest",
+      "type": "object",
+      "required": ["name", "version", "dag", "policies", "modules"],
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" },
+        "dag": { "type": "string" },
+        "policies": { "type": "array", "items": { "type": "string" } },
+        "modules": { "type": "array", "items": { "type": "string" } },
+        "tests_dir": { "type": "string" },
+        "evidence_dir": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  },
+
+  "config_inline": {
+    "operator.offline.yaml (compiled)": {
+      "CECCA_NAMESPACE": "default",
+      "FEATURE_SECONDARY_LAYER": false,
+      "PROMOTION_VIOLATIONS_POLICY": "zero-tolerance",
+      "DATA_RETENTION_DAYS": 90
+    },
+    "cecca.manifest.yaml (compiled)": {
+      "capsule": "CECCA",
+      "epoch": "000000",
+      "keys_dir": "./keys",
+      "registry_scope": "local"
+    },
+    "knowledge_capsules.yaml (compiled)": {
+      "capsules": ["KIDX_CAP", "KSCHEMA_CAP", "KMETRICS_CAP", "KDIR_CAP", "KRET_CAP", "KSNAP_CAP", "KCRASH_CAP", "KREG_CAP", "KPARITY_CAP"]
+    },
+    "ndk.presets.yaml (compiled)": {
+      "NOA": { "enable_voice": true, "enable_ui": true, "safety_mode": "strict" }
+    },
+    "tenant.local.yaml (compiled)": {}
+  },
+
+  "mermaid_inline": {
+    "all_in_one_map_v10_7.mmd": "flowchart TB\n%% =========================================\n%% ALL-IN-ONE STEM-DRIVEN AUTONOMOUS SYSTEM MAP (v10 • OFFLINE-ONLY)\n%% Build-Kit orchestration + packaging wired; CMS/NDK integration verified\n%% =========================================\nA[CECCA • Root-Stem Program Capsule]:::cecca --> B[Board Agents • Risk • Compliance • Finance]\nB --> C[Executive Agents • Program Owners]\nsubgraph CECCA_CAP[CECCA Capsule]\n  direction TB\n  CC_ENV[ENV • CECCA_NAMESPACE • CECCA_EPOCH • CECCA_KEYS_DIR • PYTHONHASHSEED]\n  CC_DEPS[DEPS • python3.11 • sqlite3 • zipfile • yaml-compiler-lite • hashlib]\n  CC_CONST[Cell: Constitution/Signer] --> S2\n  CC_QUORUM[Cell: Quorum/Virtual Board] --> S2\n  CC_STEM_REPL[Cell: Stem Replicator] --> S5\n  CC_STEM_DIFF[Cell: Stem Differentiator] --> S4\n  CC_CHOP[Cell: Capsule Surgeon] --> S3\n  CC_ARBITER[Cell: Promotion Arbiter] --> S7\n  CC_AUDIT[Cell: Global Auditor] --> KMETRICS_CAP\n  CC_YAML[Cell: YAML→JSON Compiler & Linter (offline)]\n  CC_KIT_INST[Cell: Kit Installer (verify→unpack→register)]\n  CC_LICENSE[Cell: License/Provenance Gate]\n  CC_CONFLICT[Cell: Conflict Resolver]\n  CC_DIR_IMP[Cell: Directory Importer (CSV+YAML)]\n  CC_DIR_MAP[Cell: Role/Layer Mapper]\n  CC_ESC_SYN[Cell: Escalation Synthesizer]\n  CC_DIR_VAL[Cell: Directory Validator]\n  CC_DIR_CAN[Cell: Canonicalizer → agent_registry.canonical.jsonl]\n  CC_BUILD[Cell: Build-Kit Orchestrator • reads AI_BUILD_PROMPT* • drives S17]:::accent\n  CC_ENFORCE[Cell: Promotion Enforcer & Rollback Hooks]:::accent\n  CC_PACK[Cell: Packager • zip + manifest(sha256) + FINAL_REPORT.md]:::accent\nend\nCC_ENV --> CC_KIT_INST\nCC_DEPS --> CC_KIT_INST\nCC_YAML --> KSCHEMA_CAP\nCC_YAML --> CC_DIR_IMP\nCC_KIT_INST --> CC_LICENSE --> CC_CONFLICT --> S2\nCC_DIR_IMP --> CC_DIR_MAP --> CC_ESC_SYN --> CC_DIR_VAL --> CC_DIR_CAN\nCC_BUILD --> S17\nCC_ENFORCE --> S7\nS7 --> CC_PACK\nsubgraph CECCA_KITS[CECCA Embedded Bundles]\n  KIT_CMS[Bundle: capsule_model_starter_FINAL_20250905-154407.zip]\n  KIT_NOA[Bundle: NOA_Deployment_Kit_v3_1.zip]\n  ORIG_CSV[File: All_Inclusive_Agent_Directory_v6_plus_copy.csv]\nend\nKIT_CMS --> CC_KIT_INST\nKIT_NOA --> CC_KIT_INST\nORIG_CSV --> CC_DIR_IMP\nEXPORTS[(exports/)]:::accent\nCC_PACK --> EXPORTS\nC --> S[STEM LAYER • Pluripotent • Self-Replicating • Policy-Signed]\nsubgraph STEM[STEM]\n  direction TB\n  S1[Signal Bus] --> S4[Differentiator]\n  S2[Policy Forge • RBAC • Escalation Graph • signature verify]\n  S15[Policy Compatibility Matrix • epochs] --> S2\n  S14[Keyring/Revocation] --> S2\n  S5[Replicator] --> S7\n  S12[Admission Controller]\n  S13[Quota Ledger]\n  S6[Niche Controller • budgets/quotas/blast]\n  S6A[Energy/Thermal Ledger] --> S6\n  S7[Test Gates • unit/scenario/policy/rebuild-hash]\n  S8[Score Engine • success/p95/violations∞/cpu-time]\n  S16[Drift Detectors] --> S7\n  S10[Autophagy/DR]\n  S11[Incident Brain]\n  S17[Bundle Builder • tar.zst]\n  S18[Delta Patcher]\nend\nsubgraph CONTROL[CONTROL PLANE]\n  DIR[Directory/Registry]\n  NSM[Namespace Manager] --> DIR\n  POL[Policy Lock] --> SCH\n  PCM[Epoch Manager] --> POL\n  RRL[Revocation List] --> POL\n  SCH[Scheduler • canary/waves] --> RSW\n  RSW[Release Switcher • blue/green]\n  RNP[Release Notes/Provenance] --> RSW\n  AUD[Signed Audit] <--> DIR\nend\nsubgraph EXEC[EXECUTION PLANE]\n  DAG[DAG Runner • deterministic • checkpoints]\n  SEED[Deterministic Seeds] --> DAG\n  DEAD[Deadline Scheduler] --> DAG\n  FAIR[Fair-Share] --> DAG\n  Q[File-backed Queue • retry/backoff] --> RT\n  RT[Cell Sandbox • subprocess/timeout]\n  FSG[FS Guard • syscall/path denylist] --> RT\n  RLIM[rlimit time/mem] --> RT\n  CKPT[Checkpoint/Snapshot] --> DAG\n  SECR[Local Sealed-Secrets (.sec)] --> RT\nend\nsubgraph KPLANE[KNOWLEDGE CAPSULES]\n  direction TB\n  subgraph KIDX_CAP[Capsule: CAS Index & Blob Store]\n    KIDX[CAS Index] --> KIDX_DB[(index.db)]\n  end\n  subgraph KSCHEMA_CAP[Capsule: Schema Registry]\n    KSCHEMA[Schemas/Contracts]\n  end\n  subgraph KMETRICS_CAP[Capsule: Metrics & Event Logs]\n    KMET[Ingest + Views]\n  end\n  subgraph KDIR_CAP[Capsule: Agent Directory/Registry]\n    KDIR[Canonical Registry] --> KDIR_DB[(agent_registry.db)]\n  end\n  subgraph KRET_CAP[Capsule: Data Catalog & Retention]\n    KRET[Classify + Retain/Purge]\n  end\n  subgraph KSNAP_CAP[Capsule: Snapshot & Restore]\n    KSNAP[Create/Restore Snapshots]\n  end\n  subgraph KCRASH_CAP[Capsule: Crash Forensics]\n    KCRASH[Crash Bundle Builder]\n  end\n  subgraph KREG_CAP[Capsule: Kit Registry]\n    KREG[Kit Index + Epoch Tags]\n  end\nend\nKIT_NOA --> GOV_N\nKIT_NOA --> N1\nKIT_CMS --> KSCHEMA_CAP\nORIG_CSV --> KDIR_CAP\nsubgraph Stack_NOA[P4 • Stack: NOA Runtime]\n  CMD_N[Stack Commander] --> GOV_N[Stack Policy Lock]\n  GOV_N --> RTE_N[Router/Flags]\n  RTE_N --> N1[Capsule: SDK/Runtime]\n  RTE_N --> N2[Capsule: Tool Graph & Permissions]\n  RTE_N --> N3[Capsule: Local Knowledge Index]\n  RTE_N --> N4[Capsule: UI/Voice/AR Shell]\n  RTE_N --> N5[Capsule: Safety/Guardrails]\nend\nsubgraph EXT_CAP[Capsule: External Adapters (Optional)]\n  EXT_ENV[ENV • FEATURE_SECONDARY_LAYER=false]\n  AD_DKR[Adapter: Docker]:::ghost\n  AD_GH[Adapter: GitHub]:::ghost\n  AD_MINIO[Adapter: MinIO]:::ghost\nend\nCECCA_CAP -. toggle .-> EXT_CAP\nsubgraph GLOSS[Glossary & YAML Notes]\n  YAML1[.yaml is operator config only → compiled to JSON offline • NOT Docker/Compose]\n  YAML2[Precedence: operator.offline.yaml ≻ kit defaults ≻ tenant.local.yaml • deterministic hash]\n  MAN1[Manifest: packager emits sha256 for every file in exports/manifest.sha256]\nend\nclassDef cecca fill:#2d3b7f,stroke:#9fb3ff,color:#fff;\nclassDef accent fill:#333,stroke:#999,color:#fff;\nclassDef ghost fill:#444,stroke:#666,color:#bbb,stroke-dasharray: 4 4;\n"
+  },
+
+  "tests_inline": {
+    "unit": [
+      {
+        "name": "truth_gate_blocks_missing_policy",
+        "assert": "boot should refuse promotion when TRUTH policy is MISSING",
+        "given": { "policies": { "TRUTH": "MISSING" } },
+        "expect": { "gate": "truth", "result": "block" }
+      },
+      {
+        "name": "kv_shim_writes_and_reads",
+        "assert": "fallback KV persists entries",
+        "given": [{ "put": ["foo", "bar"] }, { "get": "foo" }],
+        "expect": "bar"
+      }
+    ],
+    "scenario": [
+      {
+        "name": "kit_register_without_binary",
+        "steps": ["receive kit meta", "registry records presence with status=MISSING", "promotion gates remain intact"],
+        "expect": { "registry_status": "MISSING_OK", "promotion": "gated" }
+      }
+    ]
+  },
+
+  "evidence_inline": {
+    "append_only_jsonl": [],
+    "manifests": { "exports.manifest.sha256": [] }
+  },
+
+  "js_sources": {
+    "runtime/bus.js": "export const createBus = () => { const topics = new Map(); const sub = (t, h) => { if(!topics.has(t)) topics.set(t, new Set()); topics.get(t).add(h); return () => topics.get(t).delete(h); }; const pub = async (t, msg) => { const hs = topics.get(t); if(!hs) return; await Promise.all([...hs].map(h => Promise.resolve().then(() => h(msg)))); }; return { sub, pub }; };",
+    "runtime/kvstore_fallback.js": "export const kv = () => { const s = new Map(); const put = (k,v)=>{ s.set(String(k), JSON.stringify(v)); return true; }; const get = (k)=>{ const v = s.get(String(k)); return v?JSON.parse(v):undefined; }; const del = (k)=> s.delete(String(k)); const keys = ()=>[...s.keys()]; return { put, get, del, keys }; };",
+    "runtime/yaml_min.js": "export const compileYamlToJson = (src) => { // minimal superset: supports only simple key: value, lists, no anchors/aliases\n  const lines = src.split(/\\r?\\n/).filter(l=>l.trim().length && !/^\\s*#/.test(l));\n  const stack = [{ indent: -1, value: {} }];\n  const set = (obj, key, val) => { obj[key]=val; };\n  for(const line of lines){ const m = line.match(/^(\\s*)([-]?)(.*)$/); if(!m) continue; const indent = m[1].length; const bullet = m[2]==='-'; const rest = m[3].trim(); while(stack.length && indent <= stack[stack.length-1].indent) stack.pop(); const cur = stack[stack.length-1]; if(bullet){ cur.value = Array.isArray(cur.value)?cur.value: (cur.value = []); const item = {}; cur.value.push(item); stack.push({ indent, value: item }); continue; } const kv = rest.split(/:\\s*/); if(kv.length>=2){ const key = kv.shift(); const val = kv.join(': '); if(/^\\d+$/.test(val)) set(cur.value, key, parseInt(val,10)); else if(val==='true'||val==='false') set(cur.value, key, val==='true'); else if(val==='null') set(cur.value, key, null); else set(cur.value, key, val); stack.push({ indent, value: cur.value[key] && typeof cur.value[key]==='object'? cur.value[key]: {} }); }\n  }\n  return stack[0].value;\n};",
+    "runtime/sbom.js": "export const sbom = ({env, modules})=>({\n  scan(){ const requiredEnv = ['CECCA_NAMESPACE','CECCA_EPOCH','CECCA_KEYS_DIR','PYTHONHASHSEED']; const holes = []; for(const k of requiredEnv){ if(!(k in env)) holes.push({type:'env_missing', key:k}); }\n    const requiredMod = ['json','yaml_compiler_lite','sha256','zip_archive','sqlite3_kv']; for(const m of requiredMod){ if(!(m in modules)) holes.push({type:'module_missing', module:m}); } return holes; },\n  patch(holes){ const fixes=[]; for(const h of holes){ if(h.type==='env_missing' && h.key==='PYTHONHASHSEED'){ env.PYTHONHASHSEED='0'; fixes.push({fix:'set_default', key:'PYTHONHASHSEED'}); } if(h.type==='module_missing' && h.module==='sqlite3_kv'){ modules.sqlite3_kv = { shim:true, impl:'kvstore_fallback' }; fixes.push({fix:'shim', module:'sqlite3_kv'}); } if(h.type==='module_missing' && h.module==='yaml_compiler_lite'){ modules.yaml_compiler_lite = { shim:true, impl:'yaml_min' }; fixes.push({fix:'shim', module:'yaml_compiler_lite'}); } } return fixes; }\n});",
+    "runtime/agents.js": "export class Agent { constructor({id,inbox,outbox,bus,handle}){ this.id=id; this.inbox=inbox; this.outbox=outbox; this.bus=bus; this.handle=handle; this.unsub=null; }\n  start(){ this.unsub=this.bus.sub(this.inbox,(msg)=>this.handle(msg,(t,p)=>this.bus.pub(t,{...p, _from:this.id}))); }\n  stop(){ if(this.unsub) this.unsub(); }\n}\nexport const createAgents = ({bus})=>({\n  truthGate(policyPresent){ return new Agent({ id:'CC_TRUTH', inbox:'graph.ingest', outbox:'truth.*', bus, handle: (msg, send)=>{ if(!policyPresent) return send('truth.block',{reason:'missing_policy'}); return send('truth.ok',{hash: msg?.hash||null}); } }); },\n  promotionArbiter(){ return new Agent({ id:'CC_ARBITER', inbox:'gate.results', outbox:'promotion.decision', bus, handle:(msg,send)=>{ const ok = msg&&msg.tests_pass && msg.violations===0; return send('promotion.decision',{artifact:msg.artifact, action: ok?'promote':'block', reason: ok?'gates_passed':'violations_or_tests_failed'}); } }); },\n  packager(){ return new Agent({ id:'CC_PACK', inbox:'bundle.ready', outbox:'exports.ready', bus, handle:(msg,send)=> send('exports.ready',{manifest_sha256:'INLINED-MANIFEST', files: Object.keys(msg?.files||{})}) }); }\n});",
+    "runtime/kernel.js": "import {createBus} from './bus.js';\nimport {kv as createKV} from './kvstore_fallback.js';\nimport {compileYamlToJson} from './yaml_min.js';\nimport {sbom as createSBOM} from './sbom.js';\nimport {createAgents} from './agents.js';\nexport const createKernel = ({env={}, modules={}}={})=>{\n  const bus = createBus();\n  const kv = createKV();\n  const sbom = createSBOM({env, modules});\n  const agents = createAgents({bus});\n  const state = { env, modules, kv, bus, agents, started:false };\n  const boot = async ({truthPolicyPresent})=>{\n    // SBOM\n    const holes = sbom.scan(); const fixes = sbom.patch(holes);\n    // YAML compiler shim test\n    if(!modules.yaml_compiler_lite){ modules.yaml_compiler_lite = { shim:true, impl:'yaml_min', compile: compileYamlToJson }; }\n    // Agents\n    const truth = agents.truthGate(truthPolicyPresent); truth.start();\n    const arb = agents.promotionArbiter(); arb.start();\n    const pack = agents.packager(); pack.start();\n    state.started=true; return { holes, fixes };\n  };\n  const shutdown = ()=>{ /* stop agents gracefully */ };\n  return { boot, shutdown, state };\n};"
+  },
+
+  "js_boot_demo": {
+    "script": "import {createKernel} from './runtime/kernel.js';\nconst kernel = createKernel({ env: { CECCA_NAMESPACE:'default', CECCA_EPOCH:'000000', CECCA_KEYS_DIR:'./keys' }, modules: { json:{} } });\nconst main = async ()=>{\n  const result = await kernel.boot({ truthPolicyPresent: false });\n  // simulate ingest\n  await kernel.state.bus.pub('graph.ingest',{hash:'abc'});\n  // simulate gate results\n  await kernel.state.bus.pub('gate.results',{artifact:'capsule://demo', tests_pass:true, violations:0});\n  // simulate bundle ready\n  await kernel.state.bus.pub('bundle.ready',{files:{'a':'1','b':'2'}});\n  return result;\n};\nexport default main;",
+    "note": "This is illustrative JS kept inline inside JSON. Your loader should extract and run it in your local runtime."
+  },
+
+  "data_inline": {
+    "agent_registry.canonical.jsonl": [],
+    "revocations.json": [],
+    "sealed_secrets.sec": []
+  },
+
+  "invariants": [
+    "offline_first_no_net",
+    "signed_policies_only",
+    "blue_green_every_level",
+    "shared_nothing_cells_capsules_stacks",
+    "promotion_score_gated_violations_zero",
+    "AMPK_on_scarcity",
+    "additive_only_heal_dont_break",
+    "every_cell_declares_escalation_to"
+  ]
+}

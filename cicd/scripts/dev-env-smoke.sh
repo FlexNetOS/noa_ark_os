@@ -4,7 +4,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SCRIPT_PATH="${REPO_ROOT}/scripts/dev-env.sh"
 
-if [[ ! -x "${SCRIPT_PATH}" ]]; then
+if [[ ! -f "${SCRIPT_PATH}" ]]; then
   echo "Error: dev environment script not found at ${SCRIPT_PATH}" >&2
   exit 1
 fi

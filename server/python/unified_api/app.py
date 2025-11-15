@@ -7,7 +7,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
 from .event_bus import GLOBAL_EVENT_BUS
-from .routers import agents, analytics, chat, ci, inference, storage, workflows
+from .routers import agents, analytics, chat, ci, inference, self_status, storage, workflows
 
 
 def create_app() -> FastAPI:
@@ -28,6 +28,7 @@ def create_app() -> FastAPI:
     app.include_router(inference.router, prefix="/api/inference", tags=["inference"])
     app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
     app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
+    app.include_router(self_status.router, prefix="/api", tags=["self"])
 
     @app.get("/api/health", tags=["meta"])
     async def health() -> Dict[str, str]:

@@ -85,7 +85,7 @@ scripts/dev-env.ps1 build
 scripts/dev-env.ps1 run
 
 # Execute a single command
-scripts/dev-env.ps1 run "cargo check"
+scripts/dev-env.ps1 run cargo check
 
 # Smoke test container tooling
 scripts/dev-env.ps1 smoke
