@@ -5,7 +5,13 @@ DEV_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APPLIER="${DEV_DIR}/apply-config.mjs"
 
 if command -v node >/dev/null 2>&1 && [ -f "${APPLIER}" ]; then
-  eval "$(node "${APPLIER}" posix)"
+  if ! command -v jq >/dev/null 2>&1; then
+    echo "❌ 'jq' is required to parse environment configuration. Please install 'jq'." >&2
+    exit 1
+  fi
+  node "${APPLIER}" posix | jq -r 'to_entries[] | "export \(.key)=\(.value|@sh)"' | while read -r line; do
+    eval "$line"
+  done
 else
   echo "⚠️  Node.js is required to hydrate NOA Ark OS devshell environment" >&2
 fi
