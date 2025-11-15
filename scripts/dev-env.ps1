@@ -39,6 +39,9 @@ function Invoke-Python {
     try {
         Set-Content -Path $tempFile -Value $Script -Encoding UTF8
         & $python.Source $tempFile @Arguments
+        if ($LASTEXITCODE -ne 0) {
+            throw "Python script failed with exit code $LASTEXITCODE"
+        }
     }
     finally {
         Remove-Item -Force $tempFile -ErrorAction SilentlyContinue
