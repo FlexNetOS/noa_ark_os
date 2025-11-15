@@ -98,7 +98,7 @@ class PeriodicPlanner:
             recommendations.append(
                 {
                     "action": "optimize_hot_paths",
-                    "detail": f"prioritise top {min(goal_count, 3)} workflows by run volume",
+                    "detail": f"prioritize top {min(goal_count, 3)} workflows by run volume",
                 }
             )
         else:
