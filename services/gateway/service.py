@@ -228,5 +228,26 @@ def build_default_config(manifest_path: Optional[Path] = None) -> GatewayConfig:
             requires_authentication=False,
             rate_limit_per_minute=120,
         ),
+        "openai": PolicyRule(
+            service_id="openai",
+            allowed_methods=["POST", "GET"],
+            allowed_paths=["/v1/chat/completions", "/v1/models"],
+            requires_authentication=True,
+            rate_limit_per_minute=90,
+        ),
+        "anthropic": PolicyRule(
+            service_id="anthropic",
+            allowed_methods=["POST", "GET"],
+            allowed_paths=["/v1/messages", "/v1/models"],
+            requires_authentication=True,
+            rate_limit_per_minute=90,
+        ),
+        "llama.cpp": PolicyRule(
+            service_id="llama.cpp",
+            allowed_methods=["POST", "GET"],
+            allowed_paths=["/completion", "/health"],
+            requires_authentication=False,
+            rate_limit_per_minute=120,
+        ),
     }
     return GatewayConfig(manifest=manifest, policy_rules=policy_rules)
