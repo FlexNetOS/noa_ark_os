@@ -19,6 +19,8 @@ pub use agent_dispatch::{
     ToolExecutionStatus, ToolRequirement,
 };
 pub use instrumentation::{
+    AgentExecutionResult, EvidenceLedgerEntry, EvidenceLedgerKind, GoalAgentMetric,
+    GoalMetricSnapshot, GoalOutcomeRecord, InferenceMetric, MerkleLeaf, MerkleLevel,
     AgentExecutionResult, DeploymentOutcomeRecord, EvidenceLedgerEntry, EvidenceLedgerKind,
     GoalAgentMetric, GoalMetricSnapshot, GoalOutcomeRecord, MerkleLeaf, MerkleLevel,
     PipelineInstrumentation, SecurityScanReport, SecurityScanStatus, StageReceipt, TaskReceipt,
@@ -149,6 +151,10 @@ impl GoalRunTracker {
 
     fn snapshot(&self) -> Vec<AgentExecutionResult> {
         self.agents.clone()
+    }
+
+    fn into_snapshot(self) -> Vec<AgentExecutionResult> {
+        self.agents
     }
 }
 
@@ -294,7 +300,7 @@ impl WorkflowEngine {
                     completed_at,
                     duration_ms: completed_at.saturating_sub(run_started_at),
                     success: false,
-                    agents: tracker.snapshot(),
+                    agents: tracker.clone().into_snapshot(),
                 };
                 if let Err(metric_err) = self.instrumentation.record_goal_outcome(outcome) {
                     println!("[WORKFLOW] Failed to record goal outcome: {}", metric_err);
@@ -311,7 +317,7 @@ impl WorkflowEngine {
             completed_at,
             duration_ms: completed_at.saturating_sub(run_started_at),
             success: true,
-            agents: tracker.snapshot(),
+            agents: tracker.into_snapshot(),
         };
         if let Err(metric_err) = self.instrumentation.record_goal_outcome(outcome) {
             println!("[WORKFLOW] Failed to record goal outcome: {}", metric_err);
@@ -440,6 +446,7 @@ impl WorkflowEngine {
     fn execute_task(
         &self,
         workflow_id: &str,
+        stage_name: &str,
         stage_id: &str,
         task: &Task,
         tracker: &mut GoalRunTracker,
@@ -447,6 +454,14 @@ impl WorkflowEngine {
         let dispatch_receipt = self
             .dispatcher
             .dispatch(task)
+            .map_err(|err| {
+                println!(
+                    "[WORKFLOW] Dispatcher failed for agent {}: {}",
+                    task.agent, err
+                );
+                err
+            })
+            .ok();
             .map_err(|err| format!("agent dispatch failed: {}", err))?;
         self.instrumentation
             .log_task_dispatch(workflow_id, stage_id, &dispatch_receipt)
@@ -497,6 +512,26 @@ impl WorkflowEngine {
             }))
         })();
 
+        if let Some(receipt) = dispatch_receipt.as_ref() {
+            if let Err(err) =
+                self.instrumentation
+                    .log_task_dispatch(workflow_id, stage_name, receipt)
+            {
+                println!("[WORKFLOW] Task dispatch instrumentation failed: {}", err);
+            }
+        }
+
+        let mut final_result = result;
+        if let (Some(receipt), Ok(_)) = (dispatch_receipt.as_ref(), &final_result) {
+            if receipt.output != Value::Null {
+                final_result = Ok(receipt.output.clone());
+            }
+        }
+
+        if final_result.is_ok() {
+            tracker.record(&task.agent, true);
+        } else {
+            tracker.record(&task.agent, false);
         let action_lower = task.action.to_lowercase();
         let success = result.is_ok();
         tracker.record(&resolved_agent, success);
@@ -532,7 +567,7 @@ impl WorkflowEngine {
             }
         }
 
-        result
+        final_result
     }
 
     fn observe_task(&self, task: &Task) -> Result<(), String> {
@@ -740,6 +775,11 @@ mod tests {
         let dir = tempdir().unwrap();
         let _guard = EnvGuard::set("NOA_WORKFLOW_ROOT", dir.path());
         let engine = WorkflowEngine::new();
+        let now = Utc::now();
+        let fallback_nanos = now.timestamp_micros() * 1_000;
+        let workflow_name = format!(
+            "dispatch-{}",
+            now.timestamp_nanos_opt().unwrap_or(fallback_nanos)
         let workflow_name = format!(
             "dispatch-{}",
             Utc::now()
@@ -777,6 +817,15 @@ mod tests {
             .join("indexes")
             .join("task_dispatches.log");
         let content = fs::read_to_string(&log_path).expect("dispatch log present");
+        let mut entries = content
+            .lines()
+            .filter_map(|line| serde_json::from_str::<serde_json::Value>(line).ok());
+        let dispatch_entry = entries
+            .find(|entry| {
+                entry.get("event").and_then(|e| e.get("event_type"))
+                    == Some(&json!("task.dispatch"))
+            })
+            .expect("task dispatch entry present");
         let entries: Vec<Value> = content
             .lines()
             .filter(|line| !line.trim().is_empty())
@@ -788,6 +837,16 @@ mod tests {
             .get("event")
             .and_then(|event| event.get("scope"))
             .and_then(Value::as_str)
+            .unwrap_or_default();
+        assert_eq!(scope, format!("{}::dispatch-stage", workflow_name));
+        let receipts = dispatch_entry
+            .get("event")
+            .and_then(|event| event.get("metadata"))
+            .and_then(|meta| meta.get("tool_receipts"))
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        assert_eq!(receipts.len(), 1);
             .expect("scope string available");
         assert_eq!(scope, format!("{}::dispatch-stage", workflow_name));
         let metadata = dispatch_entry
@@ -815,6 +874,7 @@ mod tests {
         let dir = tempdir().unwrap();
         let _guard = EnvGuard::set("NOA_WORKFLOW_ROOT", dir.path());
         let engine = WorkflowEngine::new();
+        let workflow_name = format!("merkle-{}", Utc::now().timestamp_nanos_opt().unwrap());
         let workflow_name = format!(
             "merkle-{}",
             Utc::now()
@@ -832,6 +892,7 @@ mod tests {
                     agent: "role::planner".to_string(),
                     action: "document".to_string(),
                     parameters: HashMap::from([(String::from("path"), json!("docs/test.md"))]),
+                    tool_requirements: Vec::new(),
                     agent_role: Some("planner".to_string()),
                     tool_requirements: vec![],
                 }],

@@ -17,6 +17,8 @@ const DOCUMENT_LOG: &str = "documentation";
 const STAGE_RECEIPT_LOG: &str = "stage_receipts";
 const SECURITY_SCAN_LOG: &str = "security_scans";
 const TASK_DISPATCH_LOG: &str = "task_dispatches";
+const INFERENCE_LOG: &str = "inference_metrics";
+const PIPELINE_EVENT_LOG: &str = "pipeline_events";
 const EVIDENCE_LEDGER_DIR: &str = "storage/db/evidence";
 const EVIDENCE_LEDGER_FILE: &str = "ledger.jsonl";
 const GOAL_ANALYTICS_DIR: &str = "storage/db/analytics";
@@ -314,6 +316,18 @@ pub struct GoalMetricSnapshot {
     pub updated_at: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InferenceMetric {
+    pub provider: String,
+    pub model: String,
+    pub status: String,
+    pub latency_ms: u128,
+    pub tokens_prompt: usize,
+    pub tokens_completion: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
 impl StageReceipt {
     pub fn new(
         workflow_id: &str,
@@ -514,6 +528,8 @@ impl PipelineInstrumentation {
         instrumentation.ensure_genesis(STAGE_RECEIPT_LOG, OperationKind::StageReceipt)?;
         instrumentation.ensure_genesis(TASK_DISPATCH_LOG, OperationKind::Other)?;
         instrumentation.ensure_genesis(SECURITY_SCAN_LOG, OperationKind::SecurityScan)?;
+        instrumentation.ensure_genesis(INFERENCE_LOG, OperationKind::Other)?;
+        instrumentation.ensure_genesis(PIPELINE_EVENT_LOG, OperationKind::Other)?;
         instrumentation.ensure_evidence_ledger()?;
         instrumentation.ensure_goal_metrics()?;
         instrumentation.ensure_deployment_report()?;
@@ -778,6 +794,28 @@ impl PipelineInstrumentation {
         Ok(report)
     }
 
+    pub fn log_pipeline_event(
+        &self,
+        actor: &str,
+        subject: &str,
+        event_type: &str,
+        metadata: Value,
+    ) -> Result<SignedOperation, InstrumentationError> {
+        let metadata_for_event = metadata.clone();
+        let event = PipelineLogEvent {
+            event_type: event_type.to_string(),
+            actor: actor.to_string(),
+            scope: subject.to_string(),
+            source: Some(actor.to_string()),
+            target: Some(subject.to_string()),
+            metadata: metadata_for_event,
+            timestamp: current_timestamp_millis(),
+        };
+        let record =
+            OperationRecord::new(OperationKind::Other, actor.to_string(), subject.to_string())
+                .with_context(Some(actor.to_string()), Some(subject.to_string()))
+                .with_metadata(metadata);
+        self.append_entry(PIPELINE_EVENT_LOG, event, record)
     pub fn record_deployment_outcome(
         &self,
         record: DeploymentOutcomeRecord,
@@ -825,6 +863,42 @@ impl PipelineInstrumentation {
     pub fn goal_metrics_snapshot(&self) -> Result<Vec<GoalMetricSnapshot>, InstrumentationError> {
         let store = self.goal_metrics.lock().unwrap();
         Ok(store.snapshots())
+    }
+
+    pub fn log_inference_metric(
+        &self,
+        metric: InferenceMetric,
+    ) -> Result<(), InstrumentationError> {
+        let provider = metric.provider;
+        let model = metric.model;
+        let status = metric.status;
+        let latency_ms = metric.latency_ms;
+        let tokens_prompt = metric.tokens_prompt;
+        let tokens_completion = metric.tokens_completion;
+        let error = metric.error;
+        let metadata = json!({
+            "provider": provider,
+            "model": model,
+            "status": status,
+            "latency_ms": latency_ms,
+            "tokens_prompt": tokens_prompt,
+            "tokens_completion": tokens_completion,
+            "error": error,
+        });
+        let event = PipelineLogEvent {
+            event_type: "inference.metric".to_string(),
+            actor: provider.clone(),
+            scope: model.clone(),
+            source: None,
+            target: None,
+            metadata: metadata.clone(),
+            timestamp: current_timestamp_millis(),
+        };
+        let record =
+            OperationRecord::new(OperationKind::Other, provider, model).with_metadata(metadata);
+
+        self.append_entry(INFERENCE_LOG, event, record)?;
+        Ok(())
     }
 
     fn append_entry(
@@ -1151,6 +1225,7 @@ mod tests {
                 agent: "builder".to_string(),
                 action: "compile".to_string(),
                 parameters: HashMap::from([("target".to_string(), json!({"path": "src/main.rs"}))]),
+                tool_requirements: Vec::new(),
                 agent_role: None,
                 tool_requirements: vec![],
             }],

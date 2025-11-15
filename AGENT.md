@@ -233,6 +233,24 @@ Set environment variables when supported:
 * **CI Acceptance:** Lint, type checks, unit tests, duplicate detectors, and offline jobs must pass. Linux job mandatory; macOS/Windows matrix best-effort.
 * **Dead-code-aware stubs:** Wrap inactive pathways and document them for quick reactivation of archived features.
 
+### Capability Token Flow (Phase 5 Rollout)
+
+1. **Kernel issuance:** Use `core/kernel/security/issue_capability_token` for controlled tooling/tests. Each token carries `fs`, `network`, and `rate_limit_per_minute` claims signed with the kernel secret defined in `core/kernel/security/tokens.py`.
+2. **Gateway enforcement:** `services/gateway/service.py` must call `verify_capability_token` before routing. Reject when client IDs mismatch, required fs/network scopes are absent, or token rates fall below `PolicyRule.rate_limit_per_minute`.
+3. **Effective throttling:** Honor the stricter of gateway policy vs. token allowance to prevent clients from exceeding kernel quotas while keeping telemetry coherent.
+4. **Extension loading:** Route every adapter load through `extensions.ExtensionRegistry`. Declarative manifests (`extensions/*/manifest.json`) declare scope requirements; registry refreshes allow hot-swaps without process restarts while guarding adapters with the same capability token checks.
+5. **Telemetry + auditing:** Persist gateway telemetry with scope metadata (`fs_scope`, `network_scope`, `token_rate_limit`) so audits can trace which claim combinations were exercised per request.
+### Dead Code Handling
+* Quarantine any superseded component by copying it into `archive/quarantine/<component>@<commit>/` and filling in both `README.md` and `status.yaml` (owner, contact, reintegration gates, hash ledger).
+* Capture a fresh repository snapshot with `make snapshot` immediately after quarantining files so the ledger records a verified rollback point.
+* Reference archived assets via the ledger only—never link to the relocated files directly from live code.
+
+### Reintegration Procedure
+1. Review the quarantine bundle’s `status.yaml` gates and confirm every condition has been satisfied (tests, reviews, telemetry).
+2. Run `cargo run -p quarantine_guard --bin quarantine_guard -- <paths>` on the candidate changes; the guard must report zero quarantined references.
+3. Restore the bundle through `make rollback BUNDLE=archive/YYYY/MM/snapshots/<snapshot>.tar.zst` if provenance files are required for comparison, then delete the restored copy once verification is complete.
+4. When bundles age past 90 days, execute `cargo run -p quarantine_guard --bin quarantine_rotate` (or allow the scheduled workflow) to relocate them into `archive/YYYY/MM/quarantine/` and append a rotation entry to the monthly ledger.
+
 ---
 
 ## 9) Autonomy & Sub-Agent Pattern
