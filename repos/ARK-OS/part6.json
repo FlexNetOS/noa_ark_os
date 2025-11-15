@@ -1,0 +1,47 @@
+{
+  "bundle": {
+    "name": "noa-cecca-stemcell-bundle-part6",
+    "version": "0.5.1-part6",
+    "created": "2025-09-16T00:00:00Z",
+    "style": "kernel-first • message-passing • async-only • no-globals • zero-bloat",
+    "entry": "kernel/bootstrap",
+    "sbom": {
+      "policy": {
+        "failOnMissingModules": false,
+        "failOnMissingEnv": false
+      },
+      "expectedEnv": ["NOA_PORT", "OFFLINE_MODE", "BASE_URL"],
+      "autoFix": true
+    },
+    "modules": {
+      "docs/Trifecta Court.txt": {
+        "language": "text",
+        "code": "[Placeholder for contents of Trifecta Court.txt]"
+      },
+      "docs/Trifecta-Court-1.txt": {
+        "language": "text",
+        "code": "[Placeholder for contents of Trifecta-Court-1.txt]"
+      },
+      "docs/Unity Harmonica.txt": {
+        "language": "text",
+        "code": "[Placeholder for contents of Unity Harmonica.txt]"
+      },
+      "docs/Ark-OS-NOA Full Rebuild Engineering Plan.docx": {
+        "language": "binary",
+        "code": "[Placeholder for contents of Ark-OS-NOA Full Rebuild Engineering Plan.docx]"
+      },
+      "docs/ark-os-noa_all-in-one_v2.pdf": {
+        "language": "binary",
+        "code": "[Placeholder for contents of ark-os-noa_all-in-one_v2.pdf]"
+      },
+      "docs/ark-os-noa_framework_flow.md": {
+        "language": "markdown",
+        "code": "[Placeholder for contents of ark-os-noa_framework_flow.md]"
+      },
+      "docs/arkos_noa_build_kit": {
+        "language": "directory",
+        "code": "[Placeholder for contents of arkos_noa_build_kit directory]"
+      }
+    }
+  }
+}

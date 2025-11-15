@@ -1,0 +1,18 @@
+name: llama.cpp optional build
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'agentaskit-production/integrations/llama.cpp/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch llama.cpp
+        run: |
+          bash agentaskit-production/integrations/llama.cpp/fetch.sh
+      - name: Build (CPU)
+        run: |
+          bash agentaskit-production/integrations/llama.cpp/build.sh
