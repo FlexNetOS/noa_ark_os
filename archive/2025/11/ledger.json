@@ -28,7 +28,7 @@
     "archive": "archive/2025/11/scripts/triage_analyzer.py.archive.json",
     "sha256": "98f8769d13e53e6c39002d9c726e4cefa071cd55e5361fb75dba89a7630736e0",
     "timestamp": "2025-11-14T21:51:21.395212Z",
-    "reason": "Upgraded CLI script into event-driven triage service with remediation automation. Archived binary bundle replaced with text-armored snapshot to satisfy no-binary policy.",
+    "reason": "Upgraded CLI script into event-driven triage service with remediation automation. Legacy script replaced with text-armored snapshot to satisfy no-binary policy.",
     "replacement": "scripts/triage_analyzer.py"
   }
 ]
