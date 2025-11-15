@@ -8,9 +8,9 @@ use axum::extract::ws::{Message, WebSocket};
 use axum::extract::{Multipart, Path as AxumPath, State, WebSocketUpgrade};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
+use axum::response::Response;
 use axum::routing::{get, post};
 use axum::{Json, Router};
-use axum::response::Response;
 use bytes::Bytes;
 use chrono::Utc;
 use flate2::read::GzDecoder;
@@ -227,7 +227,9 @@ f.addEventListener('submit', async e=>{
                 let value: Result<JsonValue, _> = serde_json::from_slice(&bytes);
                 match value {
                     Ok(v) => Ok(Json(v)),
-                    Err(err) => Err(internal_error(format!("invalid JSON in capabilities.json: {err}"))),
+                    Err(err) => Err(internal_error(format!(
+                        "invalid JSON in capabilities.json: {err}"
+                    ))),
                 }
             }
             Err(_) => Ok(Json(serde_json::json!({ "capabilities": [] }))),
@@ -469,8 +471,7 @@ fn sanitize_file_name(file_name: Option<&str>) -> String {
 /// This implementation **must** stay in sync with the TypeScript `slugifyStage` function.
 /// It lowercases, replaces non-alphanumerics with hyphens, and collapses consecutive hyphens.
 fn slugify_stage(name: &str) -> String {
-    name
-        .to_lowercase()
+    name.to_lowercase()
         .chars()
         .map(|ch| if ch.is_ascii_alphanumeric() { ch } else { '-' })
         .collect::<String>()
@@ -751,11 +752,11 @@ mod tests {
     use axum::body::Body;
     use axum::http::{Request, StatusCode as HttpStatus};
     use http_body_util::BodyExt;
+    use noa_workflow::{Stage, StageType, Task, Workflow};
     use serde::Deserialize;
     use serde_json::Value;
     use std::sync::Mutex as StdMutex;
     use tower::ServiceExt;
-    use noa_workflow::{Stage, StageType, Task, Workflow};
 
     #[derive(Clone)]
     struct MockRegistry {
