@@ -18,6 +18,8 @@ def _decode_payload(data: dict[str, Any]) -> bytes:
     encoding = data.get("encoding", "utf-8")
     raw = data["content"]
     if encoding == "base64":
+        if not isinstance(raw, str):
+            raise ValueError(f"Expected string content for {encoding} encoding, got {type(raw).__name__}")
         return base64.b64decode(raw.encode("ascii"))
     if encoding == "utf-8":
         return raw.encode("utf-8")
