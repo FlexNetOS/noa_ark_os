@@ -3,6 +3,8 @@ SHELL := /bin/bash
 PNPM ?= pnpm
 CARGO ?= cargo
 
+.PHONY: build test digest run ci:local lint typecheck format
+.PHONY: pipeline.local world-verify world-fix kernel snapshot rollback verify publish-audit rollback-sim setup
 .PHONY: build test digest run ci:local lint typecheck format docs:check
 PYTHON ?= python3
 BASE_REF ?= origin/main
@@ -224,6 +226,21 @@ verify:
 
 # Publish audit bundle
 publish-audit:
+	@echo "📤 Publishing audit bundle..."
+	@mkdir -p audit
+	@cargo run --manifest-path cicd/Cargo.toml --bin publish_audit -- --repo . --output audit --ledger audit/ledger.jsonl
+	@latest=$$(ls -d audit/bundle-* 2>/dev/null | tail -n 1); \
+	if [ -n "$$latest" ]; then \
+		echo "🔍 Verifying $$latest"; \
+		audit/verify.sh "$$latest"; \
+	else \
+		echo "⚠️  No bundle produced"; \
+	fi
+
+# Run rollback simulation locally
+rollback-sim:
+	@echo "⏱️  Running rollback simulation..."
+	@cargo run --manifest-path cicd/Cargo.toml --bin rollback_simulation -- --repo . --ledger audit/ledger.jsonl --output audit/rollbacks
 @echo "📤 Publishing audit bundle..."
 @$(PYTHON) -m tools.repro.audit_pipeline publish
 
