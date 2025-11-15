@@ -4,6 +4,10 @@ import json
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
+import json
+import time
+from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Dict, List, Optional
 
 from core.kernel.manifest import KernelManifest, load_manifest
@@ -130,19 +134,19 @@ class Gateway:
                 return GatewayResponse(status=401, upstream=None, message=f"invalid capability token: {exc}")
 
             if token_claims.client_id != request.client_id:
-                self.telemetry.rejected_auth += 1
+                self.telemetry.rejected_policy += 1
                 return GatewayResponse(status=403, upstream=None, message="token client mismatch")
 
             if not token_claims.allows_scope("fs", rule.fs_scope):
-                self.telemetry.rejected_auth += 1
+                self.telemetry.rejected_policy += 1
                 return GatewayResponse(status=403, upstream=None, message="missing fs scope")
 
             if not token_claims.allows_scope("network", rule.network_scope):
-                self.telemetry.rejected_auth += 1
+                self.telemetry.rejected_policy += 1
                 return GatewayResponse(status=403, upstream=None, message="missing network scope")
 
             if not token_claims.allows_rate(rule.rate_limit_per_minute):
-                self.telemetry.rejected_auth += 1
+                self.telemetry.rejected_policy += 1
                 return GatewayResponse(status=403, upstream=None, message="rate scope below requirement")
 
             effective_rate_limit = min(rule.rate_limit_per_minute, token_claims.rate_limit_per_minute)
@@ -202,6 +206,48 @@ def build_default_config(manifest_path: Optional[Path] = None) -> GatewayConfig:
             rate_limit_per_minute=60,
             fs_scope="fs.runtime.control",
             network_scope="net.runtime",
+        ),
+        "openai": PolicyRule(
+            service_id="openai",
+            allowed_methods=["POST", "GET"],
+            allowed_paths=["/v1/chat/completions", "/v1/models"],
+            requires_authentication=True,
+            rate_limit_per_minute=90,
+        ),
+        "anthropic": PolicyRule(
+            service_id="anthropic",
+            allowed_methods=["POST", "GET"],
+            allowed_paths=["/v1/messages", "/v1/models"],
+            requires_authentication=True,
+            rate_limit_per_minute=90,
+        ),
+        "llama.cpp": PolicyRule(
+            service_id="llama.cpp",
+            allowed_methods=["POST", "GET"],
+            allowed_paths=["/completion", "/health"],
+            requires_authentication=False,
+            rate_limit_per_minute=120,
+        ),
+        "openai": PolicyRule(
+            service_id="openai",
+            allowed_methods=["POST", "GET"],
+            allowed_paths=["/v1/chat/completions", "/v1/models"],
+            requires_authentication=True,
+            rate_limit_per_minute=90,
+        ),
+        "anthropic": PolicyRule(
+            service_id="anthropic",
+            allowed_methods=["POST", "GET"],
+            allowed_paths=["/v1/messages", "/v1/models"],
+            requires_authentication=True,
+            rate_limit_per_minute=90,
+        ),
+        "llama.cpp": PolicyRule(
+            service_id="llama.cpp",
+            allowed_methods=["POST", "GET"],
+            allowed_paths=["/completion", "/health"],
+            requires_authentication=False,
+            rate_limit_per_minute=120,
         ),
     }
     return GatewayConfig(manifest=manifest, policy_rules=policy_rules)

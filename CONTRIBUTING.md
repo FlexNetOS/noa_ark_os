@@ -78,13 +78,18 @@ We are committed to providing a welcoming and inclusive environment for all cont
 
 5. Authenticate the GitHub CLI (required for `gh` commands and automation scripts):
    1. Create a fine-grained personal access token (PAT) with **`repo`**, **`workflow`**, and **`project`** read/write scopes.
-   2. Run an interactive login:
+        2. Run an interactive login:
 
       ```bash
       gh auth login --hostname github.com --git-protocol https
       ```
 
       Select GitHub.com → HTTPS → “Paste an authentication token” and paste the PAT when prompted.
+            > **WSL note:** If interop with Windows is disabled (common inside hardened dev VMs), prefer the automation helper:
+            > ```bash
+            > ./scripts/tools/gh-auth-login.sh
+            > ```
+            > The script detects the WSL interop flag and falls back to the device-code flow when a Windows browser cannot be launched. See `docs/runbook/WSL_INTEROP.md` for the full recovery checklist.
    3. For non-interactive environments, export the token before running scripts:
 
       ```bash

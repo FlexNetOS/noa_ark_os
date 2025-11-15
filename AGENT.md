@@ -76,6 +76,19 @@ Establish one strict operating policy for every agent-driven action so each task
 8. **Organization Management & Gateway Reuse:** Enforce single sources of truth, re-use assets via gateways, and keep duplicate-check CI passing.
 9. **Provider Instruction Uniformity:** Provider files remain empty pointers that direct readers back to this policy.
 
+### Phase 0.5–10 Operator Patterns
+
+Detailed execution guidance for the active roadmap phases lives in
+`docs/guides/AGENTIC_OS_GUIDE.md` (sourced from
+`docs/tasks/ROADMAP_AGENTIC_KERNEL_TASK_LINKS.md`). Operators must:
+
+- **Phase 0.5 (CLI-First Foundation):** Drive all actions through CLI targets (`Makefile`, `pnpm`, `cargo`) and record evidence snapshots before state changes.
+- **Phase 1 (Kernel Baseline):** Keep kernel manifests authoritative and trigger `make snapshot` prior to structural migrations.
+- **Phase 2–4 (North Star, Contract Tests, CLI Expansion):** Extend capability registries instead of importing subsystems directly and publish machine-readable evidence for automation replay.
+- **Phase 5 (Gateway Tokens):** Enforce registry-only execution; capability tokens issued via `services/gateway/` gate all runtime launches.
+- **Phase 6–7 (Retrieval Discipline, Reward System):** Update metrics and analytics in lock-step with capability changes to preserve reproducibility.
+- **Phase 8–10 (SBOM Split, Deployment Profiles, Machine-First Pipelines):** Generate SBOM placeholders, promote deployments through gateway-controlled profiles, and document machine-first behaviors in Truth Gate artifacts.
+
 ---
 
 ## 3) Repository Structure Map (Where Things Belong)
@@ -227,6 +240,16 @@ Set environment variables when supported:
 3. **Effective throttling:** Honor the stricter of gateway policy vs. token allowance to prevent clients from exceeding kernel quotas while keeping telemetry coherent.
 4. **Extension loading:** Route every adapter load through `extensions.ExtensionRegistry`. Declarative manifests (`extensions/*/manifest.json`) declare scope requirements; registry refreshes allow hot-swaps without process restarts while guarding adapters with the same capability token checks.
 5. **Telemetry + auditing:** Persist gateway telemetry with scope metadata (`fs_scope`, `network_scope`, `token_rate_limit`) so audits can trace which claim combinations were exercised per request.
+### Dead Code Handling
+* Quarantine any superseded component by copying it into `archive/quarantine/<component>@<commit>/` and filling in both `README.md` and `status.yaml` (owner, contact, reintegration gates, hash ledger).
+* Capture a fresh repository snapshot with `make snapshot` immediately after quarantining files so the ledger records a verified rollback point.
+* Reference archived assets via the ledger only—never link to the relocated files directly from live code.
+
+### Reintegration Procedure
+1. Review the quarantine bundle’s `status.yaml` gates and confirm every condition has been satisfied (tests, reviews, telemetry).
+2. Run `cargo run -p quarantine_guard --bin quarantine_guard -- <paths>` on the candidate changes; the guard must report zero quarantined references.
+3. Restore the bundle through `make rollback BUNDLE=archive/YYYY/MM/snapshots/<snapshot>.tar.zst` if provenance files are required for comparison, then delete the restored copy once verification is complete.
+4. When bundles age past 90 days, execute `cargo run -p quarantine_guard --bin quarantine_rotate` (or allow the scheduled workflow) to relocate them into `archive/YYYY/MM/quarantine/` and append a rotation entry to the monthly ledger.
 
 ---
 
@@ -277,6 +300,7 @@ Before marking a task complete:
 * `HIERARCHY.md`, `WORKSPACE_ORGANIZATION_PLAN.md`, `WORKSPACE_MEMORY.md`
 * `docs/architecture/`, `docs/plans/`, `docs/roadmap/`
 * `.workspace/registry/` inventories and `.graphs/` diagrams
+* `docs/guides/AGENTIC_OS_GUIDE.md` for end-to-end operator workflows, kernel sovereignty diagrams, and Phase 0.5–10 patterns
 * `.github/workflows/` CI/CD enforcement points
 
 ### B) Provider Pointer Snippets

@@ -39,7 +39,9 @@ dist/
 !.workspace/registry/*.json
 !.workspace/sop/
 !.workspace/sop/*.md
-.graphs/
+# .graphs/ handled by explicit allow-list below
+!.graphs/workflows/
+!.graphs/workflows/**
 
 # Rust
 **/*.rs.bk
@@ -52,6 +54,9 @@ __pycache__/
 *.so
 .Python
 env/
+!tools/devshell/env/
+!tools/devshell/env/*.sh
+!tools/devshell/env/*.ps1
 venv/
 ENV/
 build/
@@ -98,6 +103,7 @@ server/tools/rustup-portable/*
 !server/tools/rustup-portable/
 !server/tools/rustup-portable/README.md
 !server/tools/rustup-portable/settings.toml
+server/tools/node-portable/
 
 # Runtime Data
 server/data/
@@ -106,6 +112,10 @@ crc/archive/
 crc/sandboxes/*/active/
 crc/drop-in/incoming/stale/
 crc/drop-in/incoming/forks/*/
+
+# Devshell state snapshots
+tools/devshell/state/*
+!tools/devshell/state/.gitkeep
 
 # Models & Large Files
 *.bin
@@ -122,6 +132,7 @@ models/
 .env.local
 .env.*.local
 *.key
+!audit/offline-dev-hmac.key
 *.pem
 *.crt
 secrets/
