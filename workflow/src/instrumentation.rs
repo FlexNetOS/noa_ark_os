@@ -1,4 +1,8 @@
 use crate::{Stage, StageType, Task, TaskDispatchReceipt};
+use crate::reward::{
+    AgentApprovalStatus, AgentStandingSummary, RewardAgentSnapshot, RewardInputs, RewardScorekeeper,
+};
+use crate::{reward::RewardError, Stage, StageType, Task, TaskDispatchReceipt};
 use chrono::Utc;
 use noa_core::security::{self, OperationKind, OperationRecord, SignedOperation};
 use noa_core::utils::{current_timestamp_millis, simple_hash};
@@ -17,16 +21,26 @@ const DOCUMENT_LOG: &str = "documentation";
 const STAGE_RECEIPT_LOG: &str = "stage_receipts";
 const SECURITY_SCAN_LOG: &str = "security_scans";
 const TASK_DISPATCH_LOG: &str = "task_dispatches";
+const AUTO_FIX_LOG: &str = "auto_fix_actions";
+const BUDGET_DECISION_LOG: &str = "budget_guardian";
+const AUTO_FIX_DIR: &str = "auto_fix";
+const BUDGET_GUARDIAN_DIR: &str = "budget_guardian";
+const INFERENCE_LOG: &str = "inference_metrics";
+const PIPELINE_EVENT_LOG: &str = "pipeline_events";
 const EVIDENCE_LEDGER_DIR: &str = "storage/db/evidence";
 const EVIDENCE_LEDGER_FILE: &str = "ledger.jsonl";
 const GOAL_ANALYTICS_DIR: &str = "storage/db/analytics";
 const GOAL_ANALYTICS_FILE: &str = "goal_kpis.json";
+const METRICS_DIR: &str = "metrics";
+const REWARD_HISTORY_FILE: &str = "reward_history.json";
+const DEPLOYMENT_REPORT_PATH: &str = "docs/reports/AGENT_DEPLOYMENT_OUTCOMES.md";
 
 #[derive(Debug)]
 pub enum InstrumentationError {
     Io(std::io::Error),
     Serialization(serde_json::Error),
     Security(security::PolicyError),
+    Reward(RewardError),
 }
 
 impl std::fmt::Display for InstrumentationError {
@@ -35,6 +49,7 @@ impl std::fmt::Display for InstrumentationError {
             InstrumentationError::Io(err) => write!(f, "io error: {}", err),
             InstrumentationError::Serialization(err) => write!(f, "serialization error: {}", err),
             InstrumentationError::Security(err) => write!(f, "policy error: {}", err),
+            InstrumentationError::Reward(err) => write!(f, "reward error: {}", err),
         }
     }
 }
@@ -56,6 +71,12 @@ impl From<serde_json::Error> for InstrumentationError {
 impl From<security::PolicyError> for InstrumentationError {
     fn from(err: security::PolicyError) -> Self {
         Self::Security(err)
+    }
+}
+
+impl From<RewardError> for InstrumentationError {
+    fn from(err: RewardError) -> Self {
+        Self::Reward(err)
     }
 }
 
@@ -97,6 +118,41 @@ impl ImmutableLogEntry {
             entry_hash,
         })
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PolicyDecisionRecord {
+    pub decision: String,
+    pub reason: String,
+    #[serde(default)]
+    pub signals: Vec<String>,
+    #[serde(default)]
+    pub metadata: Value,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AutoFixActionReceipt {
+    pub fixer: String,
+    pub target: String,
+    pub snapshot_path: PathBuf,
+    pub plan: Value,
+    pub policy: PolicyDecisionRecord,
+    pub signed_operation: SignedOperation,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BudgetDecisionRecord {
+    pub workflow_id: String,
+    pub stage_id: String,
+    pub tokens_used: f64,
+    pub token_limit: f64,
+    pub latency_ms: f64,
+    pub latency_limit: f64,
+    pub action: String,
+    #[serde(default)]
+    pub rewritten_plan: Option<Value>,
+    pub snapshot_path: PathBuf,
+    pub signed_operation: SignedOperation,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -149,6 +205,20 @@ pub struct GoalOutcomeRecord {
     pub success: bool,
     #[serde(default)]
     pub agents: Vec<AgentExecutionResult>,
+    #[serde(default)]
+    pub reward_inputs: Option<RewardInputs>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeploymentOutcomeRecord {
+    pub workflow_id: String,
+    pub stage_id: String,
+    pub agent_role: String,
+    pub agent_id: String,
+    pub action: String,
+    pub status: String,
+    pub notes: Value,
+    pub recorded_at: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -458,6 +528,18 @@ pub struct GoalMetricSnapshot {
     pub context_p95_latency_ms: u64,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InferenceMetric {
+    pub provider: String,
+    pub model: String,
+    pub status: String,
+    pub latency_ms: u128,
+    pub tokens_prompt: usize,
+    pub tokens_completion: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
 impl StageReceipt {
     pub fn new(
         workflow_id: &str,
@@ -531,6 +613,8 @@ pub enum EvidenceLedgerKind {
     StageReceipt,
     SecurityScan,
     TaskDispatch,
+    AutoFixAction,
+    BudgetDecision,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -598,6 +682,60 @@ impl EvidenceLedgerEntry {
         }
     }
 
+    fn auto_fix_action(
+        fixer: &str,
+        target: &str,
+        snapshot: &PathBuf,
+        plan: &Value,
+        policy: &PolicyDecisionRecord,
+        signed: SignedOperation,
+    ) -> Self {
+        Self {
+            kind: EvidenceLedgerKind::AutoFixAction,
+            timestamp: current_timestamp_millis(),
+            reference: signed.signature.clone(),
+            payload: json!({
+                "fixer": fixer,
+                "target": target,
+                "snapshot": snapshot,
+                "plan": plan,
+                "policy": policy,
+            }),
+            signed_operation: signed,
+        }
+    }
+
+    fn budget_decision(
+        workflow_id: &str,
+        stage_id: &str,
+        tokens_used: f64,
+        token_limit: f64,
+        latency_ms: f64,
+        latency_limit: f64,
+        action: &str,
+        rewritten_plan: &Option<Value>,
+        snapshot: &PathBuf,
+        signed: SignedOperation,
+    ) -> Self {
+        Self {
+            kind: EvidenceLedgerKind::BudgetDecision,
+            timestamp: current_timestamp_millis(),
+            reference: signed.signature.clone(),
+            payload: json!({
+                "workflow_id": workflow_id,
+                "stage_id": stage_id,
+                "tokens_used": tokens_used,
+                "token_limit": token_limit,
+                "latency_ms": latency_ms,
+                "latency_limit": latency_limit,
+                "action": action,
+                "rewritten_plan": rewritten_plan,
+                "snapshot": snapshot,
+            }),
+            signed_operation: signed,
+        }
+    }
+
     fn genesis() -> Self {
         let record =
             OperationRecord::new(OperationKind::Other, "system/bootstrap", "evidence_ledger")
@@ -618,9 +756,15 @@ pub struct PipelineInstrumentation {
     index_dir: PathBuf,
     mirror_dir: PathBuf,
     evidence_dir: PathBuf,
+    auto_fix_dir: PathBuf,
+    budget_guardian_dir: PathBuf,
     evidence_ledger_path: PathBuf,
     goal_metrics_path: PathBuf,
+    deployment_report_path: PathBuf,
     goal_metrics: Mutex<GoalMetricStore>,
+    metrics_dir: PathBuf,
+    reward_history_path: PathBuf,
+    reward_scorekeeper: Mutex<RewardScorekeeper>,
 }
 
 impl PipelineInstrumentation {
@@ -629,31 +773,55 @@ impl PipelineInstrumentation {
         let mirror_dir = resolve_path(STORAGE_MIRROR_DIR);
         let evidence_dir = resolve_path(EVIDENCE_LEDGER_DIR);
         let analytics_dir = resolve_path(GOAL_ANALYTICS_DIR);
+        let metrics_dir = resolve_path(METRICS_DIR);
         fs::create_dir_all(&index_dir)?;
         fs::create_dir_all(&mirror_dir)?;
         fs::create_dir_all(&evidence_dir)?;
         fs::create_dir_all(&analytics_dir)?;
+        let auto_fix_dir = mirror_dir.join(AUTO_FIX_DIR);
+        let budget_guardian_dir = mirror_dir.join(BUDGET_GUARDIAN_DIR);
+        fs::create_dir_all(&auto_fix_dir)?;
+        fs::create_dir_all(&budget_guardian_dir)?;
+        fs::create_dir_all(&metrics_dir)?;
 
         let evidence_ledger_path = evidence_dir.join(EVIDENCE_LEDGER_FILE);
         let goal_metrics_path = analytics_dir.join(GOAL_ANALYTICS_FILE);
+        let deployment_report_path = resolve_path(DEPLOYMENT_REPORT_PATH);
+        if let Some(parent) = deployment_report_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
         let goal_metrics = Mutex::new(load_goal_metrics(&goal_metrics_path)?);
+        let reward_history_path = metrics_dir.join(REWARD_HISTORY_FILE);
+        let reward_scorekeeper = Mutex::new(RewardScorekeeper::new(reward_history_path.clone())?);
 
         let instrumentation = Self {
             index_dir,
             mirror_dir,
             evidence_dir,
+            auto_fix_dir,
+            budget_guardian_dir,
             evidence_ledger_path,
             goal_metrics_path,
+            deployment_report_path,
             goal_metrics,
+            metrics_dir,
+            reward_history_path,
+            reward_scorekeeper,
         };
 
         instrumentation.ensure_genesis(RELOCATION_LOG, OperationKind::FileMove)?;
         instrumentation.ensure_genesis(DOCUMENT_LOG, OperationKind::DocumentUpdate)?;
         instrumentation.ensure_genesis(STAGE_RECEIPT_LOG, OperationKind::StageReceipt)?;
         instrumentation.ensure_genesis(TASK_DISPATCH_LOG, OperationKind::Other)?;
+        instrumentation.ensure_genesis(AUTO_FIX_LOG, OperationKind::Other)?;
+        instrumentation.ensure_genesis(BUDGET_DECISION_LOG, OperationKind::Other)?;
         instrumentation.ensure_genesis(SECURITY_SCAN_LOG, OperationKind::SecurityScan)?;
+        instrumentation.ensure_genesis(INFERENCE_LOG, OperationKind::Other)?;
+        instrumentation.ensure_genesis(PIPELINE_EVENT_LOG, OperationKind::Other)?;
         instrumentation.ensure_evidence_ledger()?;
         instrumentation.ensure_goal_metrics()?;
+        instrumentation.ensure_reward_history()?;
+        instrumentation.ensure_deployment_report()?;
 
         Ok(instrumentation)
     }
@@ -862,6 +1030,144 @@ impl PipelineInstrumentation {
         Ok(receipt)
     }
 
+    pub fn record_budget_decision(
+        &self,
+        workflow_id: &str,
+        stage_id: &str,
+        tokens_used: f64,
+        token_limit: f64,
+        latency_ms: f64,
+        latency_limit: f64,
+        action: &str,
+        rewritten_plan: Option<Value>,
+    ) -> Result<BudgetDecisionRecord, InstrumentationError> {
+        let timestamp = current_timestamp_millis();
+        let filename = format!("{}-{}-{}-budget.json", timestamp, workflow_id, stage_id.replace('/', "_"));
+        let snapshot_path = self.budget_guardian_dir.join(filename);
+        if let Some(parent) = snapshot_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        let manifest = json!({
+            "workflow_id": workflow_id,
+            "stage_id": stage_id,
+            "recorded_at": timestamp,
+            "tokens_used": tokens_used,
+            "token_limit": token_limit,
+            "latency_ms": latency_ms,
+            "latency_limit": latency_limit,
+            "action": action,
+            "rewritten_plan": rewritten_plan,
+        });
+        fs::write(&snapshot_path, serde_json::to_string_pretty(&manifest)?)?;
+
+        let event = PipelineLogEvent {
+            event_type: "budget.guardian".to_string(),
+            actor: workflow_id.to_string(),
+            scope: stage_id.to_string(),
+            source: None,
+            target: Some(snapshot_path.to_string_lossy().to_string()),
+            metadata: manifest.clone(),
+            timestamp,
+        };
+        let record = OperationRecord::new(OperationKind::Other, workflow_id.to_string(), stage_id.to_string())
+            .with_metadata(json!({
+                "tokens_used": tokens_used,
+                "token_limit": token_limit,
+                "latency_ms": latency_ms,
+                "latency_limit": latency_limit,
+                "action": action,
+                "snapshot": snapshot_path.to_string_lossy(),
+            }));
+        let signed = self.append_entry(BUDGET_DECISION_LOG, event, record)?;
+        let record = BudgetDecisionRecord {
+            workflow_id: workflow_id.to_string(),
+            stage_id: stage_id.to_string(),
+            tokens_used,
+            token_limit,
+            latency_ms,
+            latency_limit,
+            action: action.to_string(),
+            rewritten_plan: rewritten_plan.clone(),
+            snapshot_path: snapshot_path.clone(),
+            signed_operation: signed.clone(),
+        };
+        self.append_evidence_ledger(EvidenceLedgerEntry::budget_decision(
+            workflow_id,
+            stage_id,
+            tokens_used,
+            token_limit,
+            latency_ms,
+            latency_limit,
+            action,
+            &record.rewritten_plan,
+            &record.snapshot_path,
+            signed,
+        ))?;
+        Ok(record)
+    }
+
+    pub fn record_auto_fix_action(
+        &self,
+        fixer: &str,
+        target: &str,
+        plan: &Value,
+        policy: &PolicyDecisionRecord,
+    ) -> Result<AutoFixActionReceipt, InstrumentationError> {
+        let timestamp = current_timestamp_millis();
+        let filename = format!("{}-{}-auto-fix.json", timestamp, fixer.replace('/', "_"));
+        let snapshot_path = self.auto_fix_dir.join(filename);
+        if let Some(parent) = snapshot_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        let manifest = json!({
+            "fixer": fixer,
+            "target": target,
+            "recorded_at": timestamp,
+            "plan": plan,
+            "policy": policy,
+        });
+        fs::write(&snapshot_path, serde_json::to_string_pretty(&manifest)?)?;
+
+        let plan_serialised = serde_json::to_string(plan)?;
+        let policy_serialised = serde_json::to_string(policy)?;
+
+        let event = PipelineLogEvent {
+            event_type: "auto_fix.action".to_string(),
+            actor: fixer.to_string(),
+            scope: target.to_string(),
+            source: None,
+            target: Some(snapshot_path.to_string_lossy().to_string()),
+            metadata: manifest.clone(),
+            timestamp,
+        };
+        let record = OperationRecord::new(OperationKind::Other, fixer.to_string(), target.to_string())
+            .with_metadata(json!({
+                "snapshot": snapshot_path.to_string_lossy(),
+                "plan_digest": simple_hash(&plan_serialised),
+                "policy_digest": simple_hash(&policy_serialised),
+            }));
+        let signed = self.append_entry(AUTO_FIX_LOG, event, record)?;
+        let receipt = AutoFixActionReceipt {
+            fixer: fixer.to_string(),
+            target: target.to_string(),
+            snapshot_path: snapshot_path.clone(),
+            plan: plan.clone(),
+            policy: policy.clone(),
+            signed_operation: signed.clone(),
+        };
+        self.append_evidence_ledger(EvidenceLedgerEntry::auto_fix_action(
+            fixer,
+            target,
+            &snapshot_path,
+            plan,
+            policy,
+            signed,
+        ))?;
+        Ok(receipt)
+    }
+
     pub fn log_security_scan(
         &self,
         subject: &str,
@@ -915,6 +1221,62 @@ impl PipelineInstrumentation {
         Ok(report)
     }
 
+    pub fn log_pipeline_event(
+        &self,
+        actor: &str,
+        subject: &str,
+        event_type: &str,
+        metadata: Value,
+    ) -> Result<SignedOperation, InstrumentationError> {
+        let metadata_for_event = metadata.clone();
+        let event = PipelineLogEvent {
+            event_type: event_type.to_string(),
+            actor: actor.to_string(),
+            scope: subject.to_string(),
+            source: Some(actor.to_string()),
+            target: Some(subject.to_string()),
+            metadata: metadata_for_event,
+            timestamp: current_timestamp_millis(),
+        };
+        let record =
+            OperationRecord::new(OperationKind::Other, actor.to_string(), subject.to_string())
+                .with_context(Some(actor.to_string()), Some(subject.to_string()))
+                .with_metadata(metadata);
+        self.append_entry(PIPELINE_EVENT_LOG, event, record)
+    }
+    pub fn record_deployment_outcome(
+        &self,
+        record: DeploymentOutcomeRecord,
+    ) -> Result<(), InstrumentationError> {
+        self.ensure_deployment_report()?;
+        let notes = serde_json::to_string(&record.notes)?;
+        let sanitized_notes = notes.replace('|', "\\|").replace('\n', " ");
+        let row = format!(
+            "| {} | {} | {} | {} | {} | {} | {} | {} |",
+            record.recorded_at,
+            record.workflow_id,
+            record.stage_id,
+            record.agent_role,
+            record.agent_id,
+            record.action,
+            record.status,
+            sanitized_notes
+        );
+        with_log_lock(|| {
+            if let Some(parent) = self.deployment_report_path.parent() {
+                fs::create_dir_all(parent)?;
+            }
+            let mut file = OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&self.deployment_report_path)?;
+            writeln!(file, "{}", row)?;
+            file.flush()?;
+            file.sync_all()?;
+            Ok(())
+        })
+    }
+
     pub fn record_goal_outcome(
         &self,
         outcome: GoalOutcomeRecord,
@@ -922,6 +1284,35 @@ impl PipelineInstrumentation {
         {
             let mut store = self.goal_metrics.lock().unwrap();
             store.record(&outcome);
+        }
+        if let Some(inputs) = outcome.reward_inputs.clone() {
+            let agent_snapshots: Vec<RewardAgentSnapshot> = outcome
+                .agents
+                .iter()
+                .map(|agent| RewardAgentSnapshot {
+                    agent: agent.agent.clone(),
+                    success: agent.success,
+                })
+                .collect();
+            let mut keeper = self.reward_scorekeeper.lock().unwrap();
+            let delta = keeper.record(
+                &outcome.goal_id,
+                &outcome.workflow_id,
+                inputs,
+                &agent_snapshots,
+            );
+            self.persist_reward_history(&*keeper)?;
+            drop(keeper);
+            println!(
+                "[REWARD] {}::{} delta={:.2} coverage={:.2} flake={:.2} tokens={:.2} rollback={:.2}",
+                outcome.goal_id,
+                outcome.workflow_id,
+                delta.total_reward,
+                delta.coverage_delta,
+                delta.flake_delta,
+                delta.token_delta,
+                delta.rollback_delta
+            );
         }
         self.persist_goal_metrics()
     }
@@ -944,6 +1335,52 @@ impl PipelineInstrumentation {
     pub fn goal_metrics_snapshot(&self) -> Result<Vec<GoalMetricSnapshot>, InstrumentationError> {
         let store = self.goal_metrics.lock().unwrap();
         Ok(store.snapshots())
+    }
+
+    pub fn evaluate_agent_for_execution(&self, agent: &str) -> AgentApprovalStatus {
+        let keeper = self.reward_scorekeeper.lock().unwrap();
+        keeper.approval_status(agent)
+    }
+
+    pub fn flagged_agents(&self) -> Vec<AgentStandingSummary> {
+        let keeper = self.reward_scorekeeper.lock().unwrap();
+        keeper.flagged_agents()
+    }
+
+    pub fn log_inference_metric(
+        &self,
+        metric: InferenceMetric,
+    ) -> Result<(), InstrumentationError> {
+        let provider = metric.provider;
+        let model = metric.model;
+        let status = metric.status;
+        let latency_ms = metric.latency_ms;
+        let tokens_prompt = metric.tokens_prompt;
+        let tokens_completion = metric.tokens_completion;
+        let error = metric.error;
+        let metadata = json!({
+            "provider": provider,
+            "model": model,
+            "status": status,
+            "latency_ms": latency_ms,
+            "tokens_prompt": tokens_prompt,
+            "tokens_completion": tokens_completion,
+            "error": error,
+        });
+        let event = PipelineLogEvent {
+            event_type: "inference.metric".to_string(),
+            actor: provider.clone(),
+            scope: model.clone(),
+            source: None,
+            target: None,
+            metadata: metadata.clone(),
+            timestamp: current_timestamp_millis(),
+        };
+        let record =
+            OperationRecord::new(OperationKind::Other, provider, model).with_metadata(metadata);
+
+        self.append_entry(INFERENCE_LOG, event, record)?;
+        Ok(())
     }
 
     fn append_entry(
@@ -1003,6 +1440,42 @@ impl PipelineInstrumentation {
         })
     }
 
+    fn ensure_reward_history(&self) -> Result<(), InstrumentationError> {
+        with_log_lock(|| {
+            if self.reward_history_path.exists() {
+                return Ok(());
+            }
+            let keeper = self.reward_scorekeeper.lock().unwrap();
+            keeper.save()?;
+            Ok(())
+        })
+    }
+
+    fn ensure_deployment_report(&self) -> Result<(), InstrumentationError> {
+        with_log_lock(|| {
+            if self.deployment_report_path.exists() {
+                let content = fs::read_to_string(&self.deployment_report_path)?;
+                if !content.trim().is_empty() {
+                    return Ok(());
+                }
+            }
+
+            if let Some(parent) = self.deployment_report_path.parent() {
+                fs::create_dir_all(parent)?;
+            }
+
+            let mut file = OpenOptions::new()
+                .create(true)
+                .write(true)
+                .truncate(true)
+                .open(&self.deployment_report_path)?;
+            file.write_all(b"# Agent Deployment Outcomes\n\n| Timestamp | Workflow | Stage | Agent Role | Agent ID | Action | Status | Notes |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n")?;
+            file.flush()?;
+            file.sync_all()?;
+            Ok(())
+        })
+    }
+
     fn persist_goal_metrics(&self) -> Result<(), InstrumentationError> {
         let store = self.goal_metrics.lock().unwrap();
         let snapshots = store.snapshots();
@@ -1014,6 +1487,24 @@ impl PipelineInstrumentation {
                 .write(true)
                 .truncate(true)
                 .open(&self.goal_metrics_path)?;
+            file.write_all(payload.as_bytes())?;
+            file.flush()?;
+            file.sync_all()?;
+            Ok(())
+        })
+    }
+
+    fn persist_reward_history(
+        &self,
+        keeper: &RewardScorekeeper,
+    ) -> Result<(), InstrumentationError> {
+        let payload = serde_json::to_string_pretty(keeper.history())?;
+        with_log_lock(|| {
+            let mut file = OpenOptions::new()
+                .create(true)
+                .write(true)
+                .truncate(true)
+                .open(&self.reward_history_path)?;
             file.write_all(payload.as_bytes())?;
             file.flush()?;
             file.sync_all()?;
@@ -1147,13 +1638,20 @@ fn build_merkle_tree(
 impl Clone for PipelineInstrumentation {
     fn clone(&self) -> Self {
         let metrics = self.goal_metrics.lock().unwrap().clone();
+        let reward = self.reward_scorekeeper.lock().unwrap().clone();
         Self {
             index_dir: self.index_dir.clone(),
             mirror_dir: self.mirror_dir.clone(),
             evidence_dir: self.evidence_dir.clone(),
+            auto_fix_dir: self.auto_fix_dir.clone(),
+            budget_guardian_dir: self.budget_guardian_dir.clone(),
             evidence_ledger_path: self.evidence_ledger_path.clone(),
             goal_metrics_path: self.goal_metrics_path.clone(),
+            deployment_report_path: self.deployment_report_path.clone(),
             goal_metrics: Mutex::new(metrics),
+            metrics_dir: self.metrics_dir.clone(),
+            reward_history_path: self.reward_history_path.clone(),
+            reward_scorekeeper: Mutex::new(reward),
         }
     }
 }
@@ -1222,18 +1720,30 @@ mod tests {
     use super::*;
     use serde_json::json;
     use std::collections::HashMap;
+    use std::sync::{Mutex, OnceLock};
     use tempfile::tempdir;
+
+    fn env_lock() -> &'static Mutex<()> {
+        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        LOCK.get_or_init(|| Mutex::new(()))
+    }
 
     struct EnvGuard {
         key: &'static str,
         prev: Option<std::ffi::OsString>,
+        lock: Option<std::sync::MutexGuard<'static, ()>>,
     }
 
     impl EnvGuard {
         fn set(key: &'static str, value: &PathBuf) -> Self {
+            let guard = env_lock().lock().expect("workflow env lock poisoned");
             let prev = std::env::var_os(key);
             std::env::set_var(key, value);
-            Self { key, prev }
+            Self {
+                key,
+                prev,
+                lock: Some(guard),
+            }
         }
     }
 
@@ -1244,6 +1754,7 @@ mod tests {
             } else {
                 std::env::remove_var(self.key);
             }
+            self.lock.take();
         }
     }
 
@@ -1257,6 +1768,8 @@ mod tests {
                 action: "compile".to_string(),
                 parameters: HashMap::from([("target".to_string(), json!({"path": "src/main.rs"}))]),
                 tool_requirements: vec![],
+                tool_requirements: Vec::new(),
+                agent_role: None,
             }],
         }
     }

@@ -1,0 +1,54 @@
+[profile]
+name = "edge_lite"
+description = "Minimal edge deployment with constrained compute and telemetry-only egress"
+version = "0.1.0"
+
+[tools]
+allowed = [
+  "bash",
+  "busybox",
+  "python3",
+  "rsync",
+]
+denied = [
+  "docker",
+  "git",
+  "node",
+]
+
+[egress]
+mode = "allow_list"
+allowed_domains = [
+  "telemetry.noa-ark.local",
+]
+notes = "Only telemetry uploads are allowed; control traffic must flow through the upstream gateway."
+
+[budgets.cpu]
+reserved_cores = 1
+max_cores = 2
+
+[budgets.memory]
+soft_mb = 4096
+hard_mb = 6144
+
+[budgets.network]
+egress_mbps = 50
+burst_mbps = 100
+
+[[storage.roots]]
+name = "workspace"
+path = "/opt/noa/workspaces"
+mode = "read_write"
+quota_mb = 4096
+
+[[storage.roots]]
+name = "telemetry_buffer"
+path = "/opt/noa/telemetry"
+mode = "read_write"
+quota_mb = 2048
+
+[[storage.roots]]
+name = "artifacts"
+path = "/opt/noa/artifacts"
+mode = "read_only"
+quota_mb = 2048

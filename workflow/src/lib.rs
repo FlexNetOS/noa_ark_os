@@ -4,7 +4,10 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use chrono::{Duration, Utc};
-use noa_agents::{AgentFactory, AgentRegistry, AGENT_FACTORY_CAPABILITY};
+use noa_agents::{
+    unified_types::{AgentCategory, AgentMetadata},
+    AgentFactory, AgentRegistry, AGENT_FACTORY_CAPABILITY,
+};
 use noa_core::capabilities::KernelHandle;
 use noa_core::config::manifest::CAPABILITY_PROCESS;
 use noa_core::process::ProcessService;
@@ -14,15 +17,36 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
 mod agent_dispatch;
+mod auto_fixers;
+mod budget_guardian;
 mod instrumentation;
 pub use agent_dispatch::{
     AgentDispatchError, AgentDispatcher, TaskDispatchReceipt, ToolExecutionReceipt,
     ToolExecutionStatus, ToolRequirement,
+mod reward;
+pub use agent_dispatch::{
+    AgentDispatchError, AgentDispatcher, TaskDispatchReceipt, ToolExecutionReceipt,
+    ToolExecutionStatus, ToolRequirement,
+};
+pub use auto_fixers::{
+    AutoFixActionPlan, AutoFixCoordinator, AutoFixError, AutoFixOutcome, AutoFixRequest, AutoFixerKind,
 };
 pub use instrumentation::{
-    AgentExecutionResult, EvidenceLedgerEntry, EvidenceLedgerKind, GoalAgentMetric,
-    GoalMetricSnapshot, GoalOutcomeRecord, MerkleLeaf, MerkleLevel, PipelineInstrumentation,
-    SecurityScanReport, SecurityScanStatus, StageReceipt, TaskReceipt,
+    AgentExecutionResult, AutoFixActionReceipt, BudgetDecisionRecord, DeploymentOutcomeRecord,
+    EvidenceLedgerEntry, EvidenceLedgerKind, GoalAgentMetric, GoalMetricSnapshot, GoalOutcomeRecord,
+    MerkleLeaf, MerkleLevel, PipelineInstrumentation, PolicyDecisionRecord, SecurityScanReport,
+    SecurityScanStatus, StageReceipt, TaskReceipt,
+};
+pub use budget_guardian::{
+    BudgetAction, BudgetDecision, BudgetGuardian, BudgetGuardianError, BudgetLimits, BudgetUsage,
+    AgentExecutionResult, DeploymentOutcomeRecord, EvidenceLedgerEntry, EvidenceLedgerKind,
+    GoalAgentMetric, GoalMetricSnapshot, GoalOutcomeRecord, InferenceMetric, MerkleLeaf,
+    MerkleLevel, PipelineInstrumentation, SecurityScanReport, SecurityScanStatus, StageReceipt,
+    TaskReceipt,
+};
+pub use reward::{
+    AgentApprovalStatus, AgentStanding, AgentStandingSummary, RewardAgentSnapshot, RewardDelta,
+    RewardInputs, RewardReport, RewardScorekeeper,
 };
 use tokio::sync::broadcast;
 
@@ -60,6 +84,8 @@ pub struct Task {
     pub agent: String,
     pub action: String,
     pub parameters: HashMap<String, serde_json::Value>,
+    #[serde(default)]
+    pub agent_role: Option<String>,
     #[serde(default)]
     pub tool_requirements: Vec<ToolRequirement>,
 }
@@ -141,18 +167,70 @@ impl WorkflowEventStream {
 #[derive(Default, Clone)]
 struct GoalRunTracker {
     agents: Vec<AgentExecutionResult>,
+    total_token_ratio: f64,
+    token_samples: u32,
+    rollback_count: u32,
 }
 
 impl GoalRunTracker {
-    fn record(&mut self, agent: &str, success: bool) {
+    fn record(&mut self, agent: &str, success: bool, token_ratio: Option<f64>, rollback: bool) {
         self.agents.push(AgentExecutionResult {
             agent: agent.to_string(),
             success,
         });
+        if let Some(ratio) = token_ratio {
+            self.total_token_ratio += ratio;
+            self.token_samples = self.token_samples.saturating_add(1);
+        }
+        if rollback {
+            self.rollback_count = self.rollback_count.saturating_add(1);
+        }
+    }
+
+    fn snapshot(&self) -> Vec<AgentExecutionResult> {
+        self.agents.clone()
     }
 
     fn into_snapshot(self) -> Vec<AgentExecutionResult> {
         self.agents
+    }
+
+    fn reward_inputs(&self) -> RewardInputs {
+        let total_runs = self.agents.len() as f64;
+        let successes = self.agents.iter().filter(|agent| agent.success).count() as f64;
+        let coverage = if total_runs.abs() < f64::EPSILON {
+            1.0
+        } else {
+            (successes / total_runs).clamp(0.0, 1.0)
+        };
+        // Flake rate: proportion of agents that have both successes and failures (i.e., are flaky)
+        let mut agent_outcomes: HashMap<&str, (usize, usize)> = HashMap::new();
+        for result in &self.agents {
+            let entry = agent_outcomes.entry(result.agent.as_str()).or_insert((0, 0));
+            if result.success {
+                entry.0 += 1;
+            } else {
+                entry.1 += 1;
+            }
+        }
+        let total_agents = agent_outcomes.len() as f64;
+        let flaky_agents = agent_outcomes.values().filter(|(succ, fail)| *succ > 0 && *fail > 0).count() as f64;
+        let flake_rate = if total_agents.abs() < f64::EPSILON {
+            0.0
+        } else {
+            (flaky_agents / total_agents).clamp(0.0, 1.0)
+        };
+        let token_ratio = if self.token_samples == 0 {
+            1.0
+        } else {
+            (self.total_token_ratio / self.token_samples as f64).max(0.0)
+        };
+        RewardInputs {
+            coverage,
+            flake_rate,
+            token_ratio,
+            rollback_count: self.rollback_count,
+        }
     }
 }
 
@@ -161,6 +239,7 @@ pub struct WorkflowEngine {
     states: Arc<Mutex<HashMap<String, WorkflowState>>>,
     stage_states: Arc<Mutex<HashMap<String, HashMap<String, StageState>>>>,
     instrumentation: Arc<PipelineInstrumentation>,
+    budget_guardian: BudgetGuardian,
     dispatcher: Arc<AgentDispatcher>,
     memory: Arc<MemoryCoordinator>,
     context_cursors: Arc<Mutex<HashMap<String, MemoryCursor>>>,
@@ -170,8 +249,10 @@ pub struct WorkflowEngine {
 
 impl WorkflowEngine {
     pub fn new() -> Self {
-        let instrumentation =
-            PipelineInstrumentation::new().expect("failed to initialise pipeline instrumentation");
+        let instrumentation = Arc::new(
+            PipelineInstrumentation::new().expect("failed to initialise pipeline instrumentation"),
+        );
+        let budget_guardian = BudgetGuardian::new(Arc::clone(&instrumentation));
         let registry = AgentRegistry::with_default_data().unwrap_or_else(|_| AgentRegistry::new());
         let factory = AgentFactory::new();
         let dispatcher = AgentDispatcher::new(registry, factory);
@@ -187,7 +268,8 @@ impl WorkflowEngine {
             workflows: Arc::new(Mutex::new(HashMap::new())),
             states: Arc::new(Mutex::new(HashMap::new())),
             stage_states: Arc::new(Mutex::new(HashMap::new())),
-            instrumentation: Arc::new(instrumentation),
+            instrumentation,
+            budget_guardian,
             dispatcher: Arc::new(dispatcher),
             memory: Arc::new(memory),
             context_cursors: Arc::new(Mutex::new(HashMap::new())),
@@ -202,12 +284,16 @@ impl WorkflowEngine {
 
     pub fn memory(&self) -> Arc<MemoryCoordinator> {
         Arc::clone(&self.memory)
+    pub fn budget_guardian(&self) -> &BudgetGuardian {
+        &self.budget_guardian
     }
 
     /// Create a workflow engine that interacts with kernel capabilities.
     pub fn with_kernel(kernel: KernelHandle) -> Self {
-        let instrumentation =
-            PipelineInstrumentation::new().expect("failed to initialise pipeline instrumentation");
+        let instrumentation = Arc::new(
+            PipelineInstrumentation::new().expect("failed to initialise pipeline instrumentation"),
+        );
+        let budget_guardian = BudgetGuardian::new(Arc::clone(&instrumentation));
         let registry = AgentRegistry::with_default_data().unwrap_or_else(|_| AgentRegistry::new());
         let factory =
             AgentFactory::with_kernel(kernel.clone()).unwrap_or_else(|_| AgentFactory::new());
@@ -224,7 +310,8 @@ impl WorkflowEngine {
             workflows: Arc::new(Mutex::new(HashMap::new())),
             states: Arc::new(Mutex::new(HashMap::new())),
             stage_states: Arc::new(Mutex::new(HashMap::new())),
-            instrumentation: Arc::new(instrumentation),
+            instrumentation,
+            budget_guardian,
             dispatcher: Arc::new(dispatcher),
             memory: Arc::new(memory),
             context_cursors: Arc::new(Mutex::new(HashMap::new())),
@@ -325,6 +412,8 @@ impl WorkflowEngine {
                     duration_ms: completed_at.saturating_sub(run_started_at),
                     success: false,
                     agents: tracker.clone().into_snapshot(),
+                    agents: tracker.snapshot(),
+                    reward_inputs: Some(tracker.reward_inputs()),
                 };
                 if let Err(metric_err) = self.instrumentation.record_goal_outcome(outcome) {
                     println!("[WORKFLOW] Failed to record goal outcome: {}", metric_err);
@@ -342,6 +431,8 @@ impl WorkflowEngine {
             duration_ms: completed_at.saturating_sub(run_started_at),
             success: true,
             agents: tracker.clone().into_snapshot(),
+            agents: tracker.snapshot(),
+            reward_inputs: Some(tracker.reward_inputs()),
         };
         if let Err(metric_err) = self.instrumentation.record_goal_outcome(outcome) {
             println!("[WORKFLOW] Failed to record goal outcome: {}", metric_err);
@@ -419,6 +510,7 @@ impl WorkflowEngine {
         let mut artifacts = Vec::with_capacity(stage.tasks.len());
         for task in &stage.tasks {
             artifacts.push(self.execute_task(workflow_id, task, tracker)?);
+            artifacts.push(self.execute_task(workflow_id, &stage.name, task, tracker)?);
         }
         Ok(artifacts)
     }
@@ -439,6 +531,7 @@ impl WorkflowEngine {
         let mut artifacts = Vec::with_capacity(stage.tasks.len());
         for task in &stage.tasks {
             artifacts.push(self.execute_task(workflow_id, task, tracker)?);
+            artifacts.push(self.execute_task(workflow_id, &stage.name, task, tracker)?);
         }
 
         Ok(artifacts)
@@ -473,21 +566,67 @@ impl WorkflowEngine {
         task: &Task,
         tracker: &mut GoalRunTracker,
     ) -> Result<Value, String> {
+        stage_id: &str,
+        task: &Task,
+        tracker: &mut GoalRunTracker,
+    ) -> Result<Value, String> {
+        let approval = self
+            .instrumentation
+            .evaluate_agent_for_execution(&task.agent);
+        if approval.requires_manual_approval {
+            tracker.record(&task.agent, false, None, false);
+            let reason = approval
+                .reason
+                .unwrap_or_else(|| "reward score below threshold".to_string());
+            return Err(format!(
+                "agent '{}' requires manual approval before execution: {}",
+                task.agent, reason
+            ));
+        }
+
+        let token_ratio = extract_token_ratio(&task.parameters);
+        let rollback_flag = task_requests_rollback(task);
+        let dispatch_receipt = self
+            .dispatcher
+            .dispatch(task)
+            .map_err(|err| {
+                println!(
+                    "[WORKFLOW] Dispatcher failed for agent {}: {}",
+                    task.agent, err
+                );
+                format!("agent dispatch failed: {}", err)
+            })?;
+        self.instrumentation
+            .log_task_dispatch(workflow_id, stage_id, &dispatch_receipt)
+            .map_err(|err| format!("task dispatch instrumentation failed: {}", err))?;
+
+        let resolved_agent = dispatch_receipt.agent_metadata.agent_id.clone();
+        let resolved_role = task
+            .agent_role
+            .clone()
+            .unwrap_or_else(|| dispatch_receipt.agent_metadata.role.clone());
+        let mut observed_task = task.clone();
+        observed_task.agent = resolved_agent.clone();
+        if observed_task.agent_role.is_none() {
+            observed_task.agent_role = Some(resolved_role.clone());
+        }
+
         let result = (|| {
             println!(
                 "[WORKFLOW] Executing task: agent={}, action={}",
-                task.agent, task.action
+                resolved_agent, task.action
             );
             self.capture_context_snapshot(workflow_id, &task.agent);
             self.observe_task(workflow_id, task)?;
+            self.observe_task(&observed_task)?;
             println!(
                 "[WORKFLOW] Executing task via kernel: agent={}, action={}",
-                task.agent, task.action
+                resolved_agent, task.action
             );
 
             if let Some(kernel) = &self.kernel {
                 if let Ok(process_service) = kernel.request::<ProcessService>(CAPABILITY_PROCESS) {
-                    let _ = process_service.create_process(format!("workflow::{}", task.agent));
+                    let _ = process_service.create_process(format!("workflow::{}", resolved_agent));
                 }
 
                 if let Ok(factory) = kernel.request::<AgentFactory>(AGENT_FACTORY_CAPABILITY) {
@@ -499,7 +638,8 @@ impl WorkflowEngine {
             }
 
             Ok(json!({
-                "agent": task.agent,
+                "agent": resolved_agent,
+                "agent_role": resolved_role,
                 "action": task.action,
                 "parameters": parameters_to_value(&task.parameters),
                 "status": "completed",
@@ -507,15 +647,103 @@ impl WorkflowEngine {
             }))
         })();
 
-        if result.is_ok() {
-            tracker.record(&task.agent, true);
-        } else {
-            tracker.record(&task.agent, false);
+        tracker.record(&task.agent, result.is_ok(), token_ratio, rollback_flag);
+        self.log_task_dispatch(workflow_id, stage_id, task, &result);
+
+        let mut final_result = result;
+        if final_result.is_ok() && dispatch_receipt.output != Value::Null {
+            final_result = Ok(dispatch_receipt.output.clone());
         }
 
         self.persist_memory_result(workflow_id, task, &result);
 
         result
+        let success = final_result.is_ok();
+        tracker.record(&resolved_agent, success, token_ratio, rollback_flag);
+
+        let action_lower = task.action.to_lowercase();
+        if action_lower.contains("deploy") {
+            let mut notes = json!({
+                "parameters": parameters_to_value(&task.parameters),
+                "tool_receipts": dispatch_receipt.tool_receipts.clone(),
+                "output": dispatch_receipt.output.clone(),
+            });
+            if let Err(err) = &final_result {
+                notes["error"] = json!(err);
+            }
+            let record = DeploymentOutcomeRecord {
+                workflow_id: workflow_id.to_string(),
+                stage_id: stage_id.to_string(),
+                agent_role: resolved_role.clone(),
+                agent_id: resolved_agent.clone(),
+                action: task.action.clone(),
+                status: if success {
+                    "succeeded".to_string()
+                } else {
+                    "failed".to_string()
+                },
+                notes,
+                recorded_at: now_iso(),
+            };
+            if let Err(err) = self.instrumentation.record_deployment_outcome(record) {
+                println!(
+                    "[WORKFLOW] Failed to record deployment outcome for {}::{}: {}",
+                    workflow_id, stage_id, err
+                );
+            }
+        }
+
+        final_result
+    }
+
+    fn log_task_dispatch(
+        &self,
+        workflow_id: &str,
+        stage_id: &str,
+        task: &Task,
+        result: &Result<Value, String>,
+    ) {
+        let mut metadata = AgentMetadata::minimal(
+            task.agent.clone(),
+            format!("Synthetic dispatch for {}", task.action),
+            AgentCategory::Other,
+        );
+        metadata.capabilities = task
+            .tool_requirements
+            .iter()
+            .map(|req| req.capability.clone())
+            .collect();
+        let tool_receipts: Vec<ToolExecutionReceipt> = task
+            .tool_requirements
+            .iter()
+            .map(|requirement| ToolExecutionReceipt {
+                requirement: requirement.clone(),
+                status: if requirement.optional {
+                    ToolExecutionStatus::Skipped
+                } else {
+                    ToolExecutionStatus::Succeeded
+                },
+                output: Value::Null,
+                error: None,
+            })
+            .collect();
+        let dispatch_output = result.clone().unwrap_or(Value::Null);
+        let receipt = TaskDispatchReceipt {
+            agent_metadata: metadata,
+            agent_instance_id: format!("synthetic::{}", task.agent),
+            task: task.clone(),
+            output: dispatch_output,
+            tool_receipts,
+        };
+        if let Err(err) = self
+            .instrumentation
+            .log_task_dispatch(workflow_id, stage_id, &receipt)
+        {
+            println!(
+                "[WORKFLOW] Failed to log task dispatch for {}::{}: {}",
+                workflow_id, stage_id, err
+            );
+        }
     }
 
     fn observe_task(&self, workflow_id: &str, task: &Task) -> Result<(), String> {
@@ -751,6 +979,40 @@ fn value_to_string(value: &Value) -> String {
             entries.join(";")
         }
     }
+fn extract_token_ratio(parameters: &HashMap<String, Value>) -> Option<f64> {
+    parameters
+        .get("token_ratio")
+        .and_then(Value::as_f64)
+        .or_else(|| {
+            match (
+                parameters.get("token_usage"),
+                parameters.get("token_budget"),
+            ) {
+                (Some(usage), Some(budget)) => usage
+                    .as_f64()
+                    .zip(budget.as_f64())
+                    .and_then(|(u, b)| if b > 0.0 { Some(u / b) } else { None }),
+                _ => parameters.get("token_usage").and_then(Value::as_f64),
+            }
+        })
+        .map(|ratio| if ratio.is_finite() { ratio } else { 1.0 })
+}
+
+fn task_requests_rollback(task: &Task) -> bool {
+    let action = task.action.to_lowercase();
+    if action.contains("rollback") {
+        return true;
+    }
+
+    for key in ["rollback", "rolled_back", "requires_rollback"] {
+        if let Some(value) = task.parameters.get(key) {
+            if value.as_bool().unwrap_or(false) {
+                return true;
+            }
+        }
+    }
+
+    false
 }
 
 fn now_iso() -> String {
@@ -809,6 +1071,20 @@ mod tests {
         };
 
         let engine = WorkflowEngine::new();
+        let registry = engine.dispatcher.registry();
+        let mut metadata = AgentMetadata::minimal(
+            "WorkflowVerifier".to_string(),
+            "Workflow Verifier".to_string(),
+            AgentCategory::Other,
+        );
+        metadata.capabilities.push("workflow.taskDispatch".to_string());
+        registry
+            .upsert_metadata(metadata)
+            .expect("register workflow verifier agent");
+        assert!(
+            registry.get("WorkflowVerifier").is_some(),
+            "workflow verifier metadata should exist"
+        );
         let id = engine.load_workflow(workflow).unwrap();
         assert_eq!(engine.get_state(&id), Some(WorkflowState::Pending));
     }
@@ -850,6 +1126,40 @@ mod tests {
             Utc::now()
                 .timestamp_nanos_opt()
                 .expect("timestamp available")
+        let mut engine = WorkflowEngine::new();
+        let registry = AgentRegistry::new();
+        let mut workflow_verifier = AgentMetadata::from_registry(
+            "WorkflowVerifier".to_string(),
+            "WorkflowVerifier".to_string(),
+        );
+        workflow_verifier
+            .capabilities
+            .push("workflow.taskDispatch".to_string());
+        registry
+            .upsert_metadata(workflow_verifier)
+            .expect("stub workflow verifier registration");
+
+        let mut model_selector = AgentMetadata::from_registry(
+            "ModelSelectorAgent".to_string(),
+            "ModelSelectorAgent".to_string(),
+        );
+        model_selector
+            .capabilities
+            .push("workflow.taskDispatch".to_string());
+        registry
+            .upsert_metadata(model_selector)
+            .expect("stub model selector registration");
+        engine.dispatcher = Arc::new(AgentDispatcher::new(registry, AgentFactory::new()));
+        assert_eq!(
+            engine.dispatcher.registry().all().len(),
+            2,
+            "dispatcher registry should include stub agents"
+        );
+        let now = Utc::now();
+        let fallback_nanos = now.timestamp_micros() * 1_000;
+        let workflow_name = format!(
+            "dispatch-{}",
+            now.timestamp_nanos_opt().unwrap_or(fallback_nanos)
         );
         let workflow = Workflow {
             name: workflow_name.clone(),
@@ -862,6 +1172,7 @@ mod tests {
                     agent: "ModelSelectorAgent".to_string(),
                     action: "evaluate_tools".to_string(),
                     parameters: HashMap::from([(String::from("scope"), json!("tests"))]),
+                    agent_role: None,
                     tool_requirements: vec![ToolRequirement {
                         name: "Analysis pass".to_string(),
                         capability: "workflow.taskDispatch".to_string(),
@@ -881,8 +1192,45 @@ mod tests {
             .join("indexes")
             .join("task_dispatches.log");
         let content = fs::read_to_string(&log_path).expect("dispatch log present");
-        assert!(content.contains("\"tool_receipts\""));
-        assert!(content.contains("workflow::dispatch-stage"));
+        let entries: Vec<Value> = content
+            .lines()
+            .filter(|line| !line.trim().is_empty())
+            .map(|line| serde_json::from_str(line).expect("log entry should parse"))
+            .collect();
+        assert!(entries.len() >= 2, "expected genesis and dispatch entries");
+        let dispatch_entry = entries
+            .iter()
+            .rev()
+            .find(|entry| {
+                entry
+                    .get("event")
+                    .and_then(|e| e.get("event_type"))
+                    == Some(&json!("task.dispatch"))
+            })
+            .expect("task dispatch entry present");
+        let scope = dispatch_entry
+            .get("event")
+            .and_then(|event| event.get("scope"))
+            .and_then(Value::as_str)
+            .unwrap_or_default();
+        assert_eq!(scope, format!("{}::dispatch-stage", workflow_name));
+        let metadata = dispatch_entry
+            .get("event")
+            .and_then(|event| event.get("metadata"))
+            .expect("metadata present on dispatch event");
+        let receipts = metadata
+            .get("tool_receipts")
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        assert_eq!(receipts.len(), 1);
+        assert_eq!(
+            metadata
+                .get("agent")
+                .and_then(Value::as_str)
+                .unwrap_or_default(),
+            "ModelSelectorAgent"
+        );
     }
 
     #[test]
@@ -944,6 +1292,27 @@ mod tests {
             Utc::now()
                 .timestamp_nanos_opt()
                 .expect("timestamp available")
+        let registry = engine.dispatcher.registry();
+        let mut metadata = AgentMetadata::minimal(
+            "WorkflowVerifier".to_string(),
+            "Workflow Verifier".to_string(),
+            AgentCategory::Other,
+        );
+        metadata
+            .capabilities
+            .push("workflow.taskDispatch".to_string());
+        registry
+            .upsert_metadata(metadata)
+            .expect("register workflow verifier agent");
+        assert!(
+            registry.get("WorkflowVerifier").is_some(),
+            "workflow verifier metadata should exist"
+        );
+        let now = Utc::now();
+        let fallback_nanos = now.timestamp_micros() * 1_000;
+        let workflow_name = format!(
+            "merkle-{}",
+            now.timestamp_nanos_opt().unwrap_or(fallback_nanos)
         );
         let workflow = Workflow {
             name: workflow_name.clone(),
@@ -953,10 +1322,12 @@ mod tests {
                 stage_type: StageType::Sequential,
                 depends_on: vec![],
                 tasks: vec![Task {
-                    agent: "tester".to_string(),
+                    agent: "WorkflowVerifier".to_string(),
                     action: "document".to_string(),
                     parameters: HashMap::from([(String::from("path"), json!("docs/test.md"))]),
                     tool_requirements: vec![],
+                    agent_role: None,
+                    tool_requirements: Vec::new(),
                 }],
             }],
         };
@@ -965,6 +1336,12 @@ mod tests {
         engine.execute(&id).unwrap();
 
         let ledger_path = dir.path().join("storage/db/evidence/ledger.jsonl");
+        let ledger_path = dir
+            .path()
+            .join("storage")
+            .join("db")
+            .join("evidence")
+            .join("ledger.jsonl");
         let content = fs::read_to_string(&ledger_path)
             .unwrap_or_else(|_| panic!("ledger missing at {:?}", ledger_path));
 
@@ -1002,5 +1379,7 @@ mod tests {
             .and_then(Value::as_str)
             .unwrap_or_default();
         assert!(!receipt_merkle_root.is_empty());
+        let merkle_root = receipt.reference.as_str();
+        assert!(!merkle_root.is_empty());
     }
 }
