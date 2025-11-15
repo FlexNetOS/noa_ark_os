@@ -127,6 +127,17 @@ Transformed NOA ARK OS roadmap to prioritize **CLI-first architecture**, making 
 * `noa agent session start` – Persistent sessions
 * `noa agent cache warm` – Pre-cache queries
 
+**Registry Alignment (2025-03 update):**
+
+- Canonical metadata now lives in `registry/tools.registry.json`, enabling
+  automation, CLI, and plugin experiences to stay synchronized.
+- Observability, automation, analysis, collaboration, and plugin commands read
+  directly from the registry to emit machine-readable JSON that mirrors the
+  OpenAPI (`docs/api/noa-tools.openapi.yaml`) and gRPC (`server/protos/noa_tools.proto`)
+  definitions.
+- Plugin SDK scaffolding (`plugins/sdk/`) exposes helper utilities so extension
+  authors can adopt the registry schema without duplicating logic.
+
 ### 4. CLI-First Philosophy Section
 
 Added comprehensive philosophy explaining:

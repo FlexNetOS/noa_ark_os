@@ -21,6 +21,10 @@
         "common": {
           "type": "object",
           "additionalProperties": {
+            "oneOf": [
+              { "type": "string" },
+              { "type": "array", "items": { "type": "string" } }
+            ]
             "type": ["string", "array"],
             "items": { "type": "string" }
           }
@@ -28,6 +32,10 @@
         "posix": {
           "type": "object",
           "additionalProperties": {
+            "oneOf": [
+              { "type": "string" },
+              { "type": "array", "items": { "type": "string" } }
+            ]
             "type": ["string", "array"],
             "items": { "type": "string" }
           }
@@ -35,6 +43,10 @@
         "windows": {
           "type": "object",
           "additionalProperties": {
+            "oneOf": [
+              { "type": "string" },
+              { "type": "array", "items": { "type": "string" } }
+            ]
             "type": ["string", "array"],
             "items": { "type": "string" }
           }

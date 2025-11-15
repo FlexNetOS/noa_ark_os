@@ -1,0 +1,19 @@
+# SLO Policies (baseline)
+service: agentaskit
+
+availability:
+  target: 99.9
+  windows:
+    - name: fast
+      lookback: 1h
+      burn_rate: 14.4
+    - name: slow
+      lookback: 6h
+      burn_rate: 6.0
+
+latency:
+  p95_ms: 50
+  p99_ms: 100
+
+startup_time:
+  p95_ms: 100

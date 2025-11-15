@@ -12,6 +12,12 @@ function loadConfig() {
   if (!fs.existsSync(configPath)) {
     return {};
   }
+  try {
+    return JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  } catch (err) {
+    console.error(`Error: Failed to parse config file at "${configPath}":\n${err.message}`);
+    process.exit(1);
+  }
   return JSON.parse(fs.readFileSync(configPath, 'utf8'));
 }
 
@@ -130,6 +136,12 @@ function renderPwsh(config) {
   }
   const aliases = config.pnpm?.aliases || {};
   Object.entries(aliases).forEach(([alias, command]) => {
+    // If the command is a single word (no whitespace), use Set-Alias; otherwise, define a function
+    if (/^[\w.-]+$/.test(command)) {
+      lines.push(`Set-Alias -Name ${alias} -Value ${command} -Force`);
+    } else {
+      lines.push(`function ${alias} { ${command} $args }`);
+    }
     lines.push(`Set-Alias -Name ${alias} -Value "${command}" -Force`);
   });
   return lines.join('\n');
