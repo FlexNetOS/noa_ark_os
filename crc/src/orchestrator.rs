@@ -5,7 +5,7 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use tokio::time::{sleep, Duration};
 
-use crate::engine::Engine;
+use crate::engine::{Engine, ExecutionSummary};
 use crate::graph::{CRCGraph, GraphNode, NodeKind};
 use crate::ir::Lane;
 
@@ -51,6 +51,7 @@ pub struct JobRecord {
     pub state: JobState,
     pub attempts: u32,
     pub last_error: Option<String>,
+    pub last_summary: Option<ExecutionSummary>,
 }
 
 #[derive(Default)]
@@ -71,6 +72,7 @@ impl Orchestrator {
             state: JobState::Queued,
             attempts: 0,
             last_error: None,
+            last_summary: None,
         });
     }
 
@@ -87,6 +89,7 @@ impl Orchestrator {
                     Ok(summary) => {
                         job.state = JobState::Succeeded;
                         job.last_error = None;
+                        job.last_summary = Some(summary);
                         job.plan.graph = job.plan.graph.clone();
                         return Ok(Some(job));
                     }

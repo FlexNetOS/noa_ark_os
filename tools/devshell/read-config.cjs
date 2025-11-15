@@ -34,7 +34,6 @@ try {
   console.error(`Error: Failed to parse config file at "${configPath}": ${err.message}`);
   process.exit(1);
 }
-const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 
 function resolveValue(value) {
   if (typeof value !== 'string') {

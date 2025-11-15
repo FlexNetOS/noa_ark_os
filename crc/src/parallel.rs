@@ -4,11 +4,11 @@
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
-use tokio::sync::{Mutex, RwLock, Semaphore};
+use tokio::sync::{Mutex, RwLock};
 use tokio::task::JoinHandle;
-use tracing::{debug, error, info, instrument, warn};
+use tracing::{error, info, instrument};
 
-use crate::{DropManifest, Error, SandboxModel, SourceType};
+use crate::{Error, SandboxModel, SourceType};
 
 /// Processing stage
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -32,8 +32,7 @@ pub struct DropState {
 /// Worker pool for a specific processing stage
 pub struct WorkerPool {
     name: String,
-    workers: Vec<JoinHandle<()>>,
-    semaphore: Arc<Semaphore>,
+    capacity: usize,
     queue: Arc<Mutex<VecDeque<String>>>,
 }
 
@@ -41,10 +40,13 @@ impl WorkerPool {
     pub fn new(name: String, worker_count: usize) -> Self {
         Self {
             name,
-            workers: Vec::new(),
-            semaphore: Arc::new(Semaphore::new(worker_count)),
+            capacity: worker_count,
             queue: Arc::new(Mutex::new(VecDeque::new())),
         }
+    }
+
+    pub fn capacity(&self) -> usize {
+        self.capacity
     }
 
     pub async fn enqueue(&self, drop_id: String) {
@@ -120,8 +122,7 @@ impl ParallelDropProcessor {
 
     /// Get max concurrent workers
     pub fn max_concurrent(&self) -> usize {
-        // Return based on analysis pool size
-        4 // TODO: Store in struct
+        self.analysis_pool.capacity()
     }
 
     /// Enqueue drop for processing
@@ -170,6 +171,12 @@ impl ParallelDropProcessor {
     /// Start processing all queues in parallel
     pub async fn start_processing(&self) -> Result<(), Error> {
         info!("Starting parallel drop processing...");
+        info!(
+            "Stage capacities — analysis: {}, adaptation: {}, validation: {}",
+            self.analysis_pool.capacity(),
+            self.adaptation_pool.capacity(),
+            self.validation_pool.capacity()
+        );
 
         // Spawn queue processors
         let handles = vec![
