@@ -1,0 +1,79 @@
+name: Subject Intake (Chat-triggered)
+
+on:
+  push:
+    paths:
+      - 'agentaskit-production/agentask.subject.todo'
+      - 'agentaskit-production/.todo'
+      - 'agentaskit-production/core/src/orchestration/tasks.todo'
+  workflow_dispatch:
+  issue_comment:
+    types: [created]
+  repository_dispatch:
+    types: [run-todo]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: subject-intake-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  intake:
+    if: |
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'repository_dispatch' ||
+      (github.event_name == 'issue_comment' && (
+         contains(github.event.comment.body, '/intake') ||
+         contains(github.event.comment.body, '/run-todo') ||
+         contains(github.event.comment.body, 'run todo')
+      ))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Ack in thread (if issue/PR)
+        if: github.event_name == 'issue_comment'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {context, github} = require('@actions/github');
+            const body = 'Subject Intake: run todo acknowledged. Executing cross-reference and TODO sync.';
+            if (context.payload.issue) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.issue.number,
+                body
+              });
+            }
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Run cross-reference (Python)
+        id: crossref_py
+        run: |
+          python agentaskit-production/tools/analysis/cross_reference.py --root . \
+            --out-dir agentaskit-production/docs/reports/cross_reference/artifacts
+      - name: Run cross-reference (PowerShell fallback)
+        if: failure()
+        shell: pwsh
+        run: |
+          ./agentaskit-production/tools/analysis/cross_reference.ps1 -Root . -OutDir agentaskit-production/docs/reports/cross_reference/artifacts
+      - name: Update tasks.todo from report (Python)
+        shell: bash
+        run: |
+          python agentaskit-production/tools/analysis/update_todo_from_report.py
+      - name: Commit updates
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore(intake): update tasks.todo from subject + crossref"
+          file_pattern: |
+            agentaskit-production/core/src/orchestration/tasks.todo
+            agentaskit-production/docs/reports/cross_reference/artifacts/*

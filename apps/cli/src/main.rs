@@ -1,17 +1,18 @@
+use std::fs;
 use std::io::{BufRead, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::{bail, Context, Result};
 use clap::{Args, Parser, Subcommand};
-use noa_plugin_sdk::{ToolDescriptor, ToolRegistry};
 use futures::StreamExt;
+use noa_cicd::CICDSystem;
 use noa_inference::{
     CompletionRequest, ProviderRouter, TelemetryEvent, TelemetryHandle, TelemetrySink,
     TelemetryStatus,
 };
-use noa_cicd::CICDSystem;
+use noa_plugin_sdk::{ToolDescriptor, ToolRegistry};
 use noa_workflow::EvidenceLedgerEntry;
 use noa_workflow::{InferenceMetric, PipelineInstrumentation};
 use relocation_daemon::{ExecutionMode, RelocationDaemon};
@@ -19,6 +20,7 @@ use serde::Serialize;
 use serde_json::json;
 use tokio::runtime::Runtime;
 use uuid::Uuid;
+use walkdir::WalkDir;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum OutputMode {
@@ -47,7 +49,11 @@ struct Cli {
 
 impl Cli {
     fn output_mode(&self) -> OutputMode {
-        if self.yaml { OutputMode::Yaml } else { OutputMode::Json }
+        if self.yaml {
+            OutputMode::Yaml
+        } else {
+            OutputMode::Json
+        }
     }
 }
 
@@ -73,24 +79,51 @@ struct RegistryArgs {
 #[derive(Subcommand)]
 enum Commands {
     /// Kernel operations
-    Kernel { #[command(subcommand)] cmd: KernelCmd },
+    Kernel {
+        #[command(subcommand)]
+        cmd: KernelCmd,
+    },
     /// World model operations
-    World { #[command(subcommand)] cmd: WorldCmd },
+    World {
+        #[command(subcommand)]
+        cmd: WorldCmd,
+    },
     /// Registry operations
-    Registry { #[command(subcommand)] cmd: RegistryCmd },
+    Registry {
+        #[command(subcommand)]
+        cmd: RegistryCmd,
+    },
     /// Trust operations
-    Trust { #[command(subcommand)] cmd: TrustCmd },
+    Trust {
+        #[command(subcommand)]
+        cmd: TrustCmd,
+    },
     /// Snapshot operations
-    Snapshot { #[command(subcommand)] cmd: SnapshotCmd },
+    Snapshot {
+        #[command(subcommand)]
+        cmd: SnapshotCmd,
+    },
     /// Policy operations
-    Policy { #[command(subcommand)] cmd: PolicyCmd },
+    Policy {
+        #[command(subcommand)]
+        cmd: PolicyCmd,
+    },
     /// SBOM operations
-    Sbom { #[command(subcommand)] cmd: SbomCmd },
+    Sbom {
+        #[command(subcommand)]
+        cmd: SbomCmd,
+    },
     /// Profile operations
-    Profile { #[command(subcommand)] cmd: ProfileCmd },
+    Profile {
+        #[command(subcommand)]
+        cmd: ProfileCmd,
+    },
 
     /// Relocation daemon tooling (legacy)
-    Relocation { #[command(subcommand)] cmd: RelocationCmd },
+    Relocation {
+        #[command(subcommand)]
+        cmd: RelocationCmd,
+    },
 
     /// Inspect the evidence ledger
     Evidence {
@@ -100,17 +133,40 @@ enum Commands {
         limit: Option<usize>,
     },
     /// Surface observability tooling from the shared registry
-    Observability { #[command(flatten)] query: RegistryArgs },
+    Observability {
+        #[command(flatten)]
+        query: RegistryArgs,
+    },
     /// Surface automation tooling from the shared registry
-    Automation { #[command(flatten)] query: RegistryArgs },
+    Automation {
+        #[command(flatten)]
+        query: RegistryArgs,
+    },
     /// Surface analysis tooling from the shared registry
-    Analysis { #[command(flatten)] query: RegistryArgs },
+    Analysis {
+        #[command(flatten)]
+        query: RegistryArgs,
+    },
     /// Surface collaboration tooling from the shared registry
-    Collaboration { #[command(flatten)] query: RegistryArgs },
+    Collaboration {
+        #[command(flatten)]
+        query: RegistryArgs,
+    },
     /// Surface plugin tooling from the shared registry
-    Plugin { #[command(flatten)] query: RegistryArgs },
+    Plugin {
+        #[command(flatten)]
+        query: RegistryArgs,
+    },
     /// Interact with agents using configured inference providers
-    Agent { #[command(subcommand)] command: AgentCommands },
+    Agent {
+        #[command(subcommand)]
+        command: AgentCommands,
+    },
+    /// Manage notebook scaffolding and hygiene
+    Notebook {
+        #[command(subcommand)]
+        command: NotebookCommands,
+    },
     /// Run a natural language query through the inference router
     Query {
         #[arg(value_name = "PROMPT")]
@@ -119,32 +175,80 @@ enum Commands {
         stream: bool,
     },
     /// Manage CI/CD pipelines and agent approvals
-    Pipeline { #[command(subcommand)] command: PipelineCommands },
+    Pipeline {
+        #[command(subcommand)]
+        command: PipelineCommands,
+    },
 }
 
 #[derive(Subcommand)]
-enum KernelCmd { Start, Stop, Status, Logs }
+enum KernelCmd {
+    Start,
+    Stop,
+    Status,
+    Logs,
+}
 
 #[derive(Subcommand)]
-enum WorldCmd { Verify, Fix, Graph, Diff { snapshot: String } }
+enum WorldCmd {
+    Verify,
+    Fix,
+    Graph,
+    Diff { snapshot: String },
+}
 
 #[derive(Subcommand)]
-enum RegistryCmd { List, Describe { tool: String }, Search { query: String }, Validate }
+enum RegistryCmd {
+    List,
+    Describe { tool: String },
+    Search { query: String },
+    Validate,
+}
 
 #[derive(Subcommand)]
-enum TrustCmd { Score, Audit { #[arg(long)] history: bool }, Thresholds { #[arg(value_name = "RULES")] rules: Option<String> } }
+enum TrustCmd {
+    Score,
+    Audit {
+        #[arg(long)]
+        history: bool,
+    },
+    Thresholds {
+        #[arg(value_name = "RULES")]
+        rules: Option<String>,
+    },
+}
 
 #[derive(Subcommand)]
-enum SnapshotCmd { Create { name: String }, List, Rollback { id: String }, Verify { id: String } }
+enum SnapshotCmd {
+    Create { name: String },
+    List,
+    Rollback { id: String },
+    Verify { id: String },
+}
 
 #[derive(Subcommand)]
-enum PolicyCmd { Validate { file: PathBuf }, Apply { file: PathBuf }, Test { file: PathBuf }, DryRun { file: PathBuf } }
+enum PolicyCmd {
+    Validate { file: PathBuf },
+    Apply { file: PathBuf },
+    Test { file: PathBuf },
+    DryRun { file: PathBuf },
+}
 
 #[derive(Subcommand)]
-enum SbomCmd { Generate, Verify, Sign, Audit }
+enum SbomCmd {
+    Generate,
+    Verify,
+    Sign,
+    Audit,
+}
 
 #[derive(Subcommand)]
-enum ProfileCmd { Switch { name: String }, List, Validate { name: String }, Diff { a: String, b: String } }
+enum ProfileCmd {
+    Switch { name: String },
+    List,
+    Validate { name: String },
+    Diff { a: String, b: String },
+}
 
 #[derive(Subcommand)]
 enum RelocationCmd {
@@ -156,7 +260,10 @@ enum RelocationCmd {
         mode: ExecutionMode,
     },
     /// Display the current relocation state snapshot
-    Status { #[command(flatten)] daemon: DaemonArgs },
+    Status {
+        #[command(flatten)]
+        daemon: DaemonArgs,
+    },
     /// Approve a pending relocation action by its UUID
     Approve {
         #[command(flatten)]
@@ -194,6 +301,230 @@ enum AgentCommands {
         stream: bool,
     },
 }
+
+#[derive(Subcommand)]
+enum NotebookCommands {
+    /// Scaffold the default notebook directories and placeholder notebooks
+    Init,
+    /// Ensure notebooks have no execution counts or embedded outputs
+    Lint,
+    /// Strip execution counts and outputs from notebooks in-place
+    Clean,
+}
+
+#[derive(Clone, Copy)]
+struct NotebookMeta {
+    file: &'static str,
+    title: &'static str,
+    summary: &'static str,
+}
+
+#[derive(Clone, Copy)]
+struct NotebookCategorySpec {
+    directory: &'static str,
+    display_name: &'static str,
+    purpose: &'static str,
+    notebooks: &'static [NotebookMeta],
+}
+
+struct NotebookLintOutcome {
+    payload: serde_json::Value,
+    clean: bool,
+}
+
+const NOTEBOOK_ROOT: &str = "notebooks";
+
+const DEVELOPMENT_NOTEBOOKS: [NotebookMeta; 5] = [
+    NotebookMeta {
+        file: "01_core_os_development.ipynb",
+        title: "Core OS Development",
+        summary: "Core OS development",
+    },
+    NotebookMeta {
+        file: "02_crc_testing.ipynb",
+        title: "CRC System Testing",
+        summary: "CRC system testing",
+    },
+    NotebookMeta {
+        file: "03_agent_debugging.ipynb",
+        title: "Agent Debugging",
+        summary: "Agent debugging",
+    },
+    NotebookMeta {
+        file: "04_workflow_design.ipynb",
+        title: "Workflow Design",
+        summary: "Workflow design",
+    },
+    NotebookMeta {
+        file: "05_sandbox_validation.ipynb",
+        title: "Sandbox Validation",
+        summary: "Sandbox validation",
+    },
+];
+
+const ANALYSIS_NOTEBOOKS: [NotebookMeta; 5] = [
+    NotebookMeta {
+        file: "performance_analysis.ipynb",
+        title: "Performance Analysis",
+        summary: "Performance metrics",
+    },
+    NotebookMeta {
+        file: "deployment_analysis.ipynb",
+        title: "Deployment Analysis",
+        summary: "Deployment statistics",
+    },
+    NotebookMeta {
+        file: "code_quality_metrics.ipynb",
+        title: "Code Quality Metrics",
+        summary: "Code quality analysis",
+    },
+    NotebookMeta {
+        file: "ai_confidence_trends.ipynb",
+        title: "AI Confidence Trends",
+        summary: "AI confidence tracking",
+    },
+    NotebookMeta {
+        file: "resource_utilization.ipynb",
+        title: "Resource Utilization",
+        summary: "Resource usage analysis",
+    },
+];
+
+const EXPERIMENT_NOTEBOOKS: [NotebookMeta; 4] = [
+    NotebookMeta {
+        file: "ml_model_experiments.ipynb",
+        title: "ML Model Experiments",
+        summary: "ML model testing",
+    },
+    NotebookMeta {
+        file: "optimization_experiments.ipynb",
+        title: "Optimization Experiments",
+        summary: "Performance optimization",
+    },
+    NotebookMeta {
+        file: "new_algorithms.ipynb",
+        title: "New Algorithms",
+        summary: "Algorithm research",
+    },
+    NotebookMeta {
+        file: "integration_prototypes.ipynb",
+        title: "Integration Prototypes",
+        summary: "Integration prototypes",
+    },
+];
+
+const TUTORIAL_NOTEBOOKS: [NotebookMeta; 5] = [
+    NotebookMeta {
+        file: "01_getting_started.ipynb",
+        title: "Getting Started",
+        summary: "Getting started",
+    },
+    NotebookMeta {
+        file: "02_crc_workflow.ipynb",
+        title: "CRC Workflow Tutorial",
+        summary: "CRC workflow tutorial",
+    },
+    NotebookMeta {
+        file: "03_agent_creation.ipynb",
+        title: "Agent Creation",
+        summary: "Agent creation",
+    },
+    NotebookMeta {
+        file: "04_ci_cd_pipeline.ipynb",
+        title: "CI/CD Pipeline",
+        summary: "CI/CD tutorial",
+    },
+    NotebookMeta {
+        file: "05_observability.ipynb",
+        title: "Observability",
+        summary: "Monitoring setup",
+    },
+];
+
+const DEMO_NOTEBOOKS: [NotebookMeta; 4] = [
+    NotebookMeta {
+        file: "complete_system_demo.ipynb",
+        title: "Complete System Demo",
+        summary: "Full system demo",
+    },
+    NotebookMeta {
+        file: "code_drop_demo.ipynb",
+        title: "Code Drop Demo",
+        summary: "Code drop workflow",
+    },
+    NotebookMeta {
+        file: "sandbox_merge_demo.ipynb",
+        title: "Sandbox Merge Demo",
+        summary: "Sandbox merge",
+    },
+    NotebookMeta {
+        file: "deployment_demo.ipynb",
+        title: "Deployment Demo",
+        summary: "Deployment process",
+    },
+];
+
+const REPORT_NOTEBOOKS: [NotebookMeta; 4] = [
+    NotebookMeta {
+        file: "weekly_metrics_report.ipynb",
+        title: "Weekly Metrics Report",
+        summary: "Weekly metrics",
+    },
+    NotebookMeta {
+        file: "deployment_report.ipynb",
+        title: "Deployment Report",
+        summary: "Deployment summary",
+    },
+    NotebookMeta {
+        file: "system_health_report.ipynb",
+        title: "System Health Report",
+        summary: "Health status",
+    },
+    NotebookMeta {
+        file: "security_audit_report.ipynb",
+        title: "Security Audit Report",
+        summary: "Security audit",
+    },
+];
+
+const NOTEBOOK_CATEGORIES: [NotebookCategorySpec; 6] = [
+    NotebookCategorySpec {
+        directory: "development",
+        display_name: "Development",
+        purpose: "Development and debugging workflows",
+        notebooks: &DEVELOPMENT_NOTEBOOKS,
+    },
+    NotebookCategorySpec {
+        directory: "analysis",
+        display_name: "Analysis",
+        purpose: "Data analysis and metrics",
+        notebooks: &ANALYSIS_NOTEBOOKS,
+    },
+    NotebookCategorySpec {
+        directory: "experiments",
+        display_name: "Experiments",
+        purpose: "Research and experimentation",
+        notebooks: &EXPERIMENT_NOTEBOOKS,
+    },
+    NotebookCategorySpec {
+        directory: "tutorials",
+        display_name: "Tutorials",
+        purpose: "Learning and onboarding",
+        notebooks: &TUTORIAL_NOTEBOOKS,
+    },
+    NotebookCategorySpec {
+        directory: "demos",
+        display_name: "Demos",
+        purpose: "Interactive demonstrations",
+        notebooks: &DEMO_NOTEBOOKS,
+    },
+    NotebookCategorySpec {
+        directory: "reports",
+        display_name: "Reports",
+        purpose: "Generated reports and documentation",
+        notebooks: &REPORT_NOTEBOOKS,
+    },
+];
 
 #[derive(Subcommand)]
 enum PipelineCommands {
@@ -377,6 +708,9 @@ fn main() -> Result<()> {
                         handle_invoke(prompt, stream, telemetry).await?
                     }
                 }
+            }
+            Commands::Notebook { command } => {
+                handle_notebook_command(out_mode, command)?;
             }
             Commands::Query { prompt, stream } => {
                 let instrumentation = Arc::new(
@@ -603,4 +937,370 @@ async fn handle_query(prompt: String, stream: bool, telemetry: TelemetryHandle) 
     }
 
     Ok(())
+}
+
+fn handle_notebook_command(out_mode: OutputMode, command: NotebookCommands) -> Result<()> {
+    let root = Path::new(NOTEBOOK_ROOT);
+    match command {
+        NotebookCommands::Init => {
+            let payload = init_notebooks(root)?;
+            print_obj(out_mode, &payload)?;
+        }
+        NotebookCommands::Lint => {
+            let outcome = lint_notebooks(root)?;
+            print_obj(out_mode, &outcome.payload)?;
+            if !outcome.clean {
+                bail!("notebook outputs detected");
+            }
+        }
+        NotebookCommands::Clean => {
+            let payload = clean_notebooks(root)?;
+            print_obj(out_mode, &payload)?;
+        }
+    }
+    Ok(())
+}
+
+fn render_notebook(category: &NotebookCategorySpec, spec: &NotebookMeta) -> serde_json::Value {
+    let header = vec![
+        format!("# {}\\n", spec.title),
+        "\\n".to_string(),
+        format!("**Category**: {}  \\n", category.display_name),
+        format!("**Category Purpose**: {}  \\n", category.purpose),
+        format!("**Purpose**: {}  \\n", spec.summary),
+        "**Status**: Placeholder generated by `noa notebook init`\\n".to_string(),
+    ];
+
+    let guidance = vec![
+        "## Getting Started\\n".to_string(),
+        "\\n".to_string(),
+        "- Replace this template with project-specific context.\\n".to_string(),
+        "- Document hypotheses, assumptions, and results.\\n".to_string(),
+        "- Use `noa notebook clean` before committing changes.\\n".to_string(),
+    ];
+
+    let setup = vec![
+        "# Environment setup\\n".to_string(),
+        "import sys\\n".to_string(),
+        "from pathlib import Path\\n".to_string(),
+        "\\n".to_string(),
+        "# Treat the repository root as a module path\\n".to_string(),
+        "PROJECT_ROOT = Path.cwd().resolve()\\n".to_string(),
+        "if str(PROJECT_ROOT) not in sys.path:\\n".to_string(),
+        "    sys.path.append(str(PROJECT_ROOT))\\n".to_string(),
+        "\\n".to_string(),
+        "print(\"Notebook environment initialised for NOA Ark OS\")\\n".to_string(),
+    ];
+
+    let checklist = vec![
+        "## Next Steps\\n".to_string(),
+        "\\n".to_string(),
+        "- [ ] Fill in context-specific markdown sections.\\n".to_string(),
+        "- [ ] Replace placeholder code with reproducible steps.\\n".to_string(),
+        "- [ ] Attach supporting evidence in the Evidence Ledger when appropriate.\\n".to_string(),
+        "- [ ] Run `noa notebook clean` to strip outputs before committing.\\n".to_string(),
+    ];
+
+    json!({
+        "cells": [
+            {
+                "cell_type": "markdown",
+                "metadata": json!({}),
+                "source": header,
+            },
+            {
+                "cell_type": "markdown",
+                "metadata": json!({}),
+                "source": guidance,
+            },
+            {
+                "cell_type": "code",
+                "metadata": json!({"tags": ["parameters"]}),
+                "execution_count": serde_json::Value::Null,
+                "outputs": json!([]),
+                "source": setup,
+            },
+            {
+                "cell_type": "markdown",
+                "metadata": json!({}),
+                "source": checklist,
+            }
+        ],
+        "metadata": {
+            "kernelspec": {
+                "display_name": "Python 3 (ipykernel)",
+                "language": "python",
+                "name": "python3",
+            },
+            "language_info": {
+                "name": "python",
+                "version": "3.11"
+            },
+            "nbstripout": {
+                "enforced_by": "noa notebook clean",
+                "status": "outputs stripped"
+            }
+        },
+        "nbformat": 4,
+        "nbformat_minor": 5,
+    })
+}
+
+fn init_notebooks(root: &Path) -> Result<serde_json::Value> {
+    fs::create_dir_all(root).with_context(|| {
+        format!(
+            "failed to create notebook root directory {}",
+            root.display()
+        )
+    })?;
+
+    let mut created = Vec::new();
+    let mut updated = Vec::new();
+    let mut skipped = Vec::new();
+
+    for category in NOTEBOOK_CATEGORIES.iter() {
+        let dir_path = root.join(category.directory);
+        fs::create_dir_all(&dir_path).with_context(|| {
+            format!("failed to create notebook directory {}", dir_path.display())
+        })?;
+
+        for spec in category.notebooks.iter() {
+            let path = dir_path.join(spec.file);
+            let notebook = render_notebook(category, spec);
+            let mut content = serde_json::to_string_pretty(&notebook)?;
+            content.push('\n');
+
+            if path.exists() {
+                match fs::read_to_string(&path) {
+                    Ok(existing) => {
+                        if existing == content {
+                            skipped.push(notebook_display_path(&path));
+                            continue;
+                        }
+
+                        if existing.contains("Placeholder generated by `noa notebook init`") {
+                            fs::write(&path, &content).with_context(|| {
+                                format!("failed to refresh notebook template at {}", path.display())
+                            })?;
+                            updated.push(notebook_display_path(&path));
+                            continue;
+                        }
+
+                        skipped.push(notebook_display_path(&path));
+                        continue;
+                    }
+                    Err(err) => {
+                        skipped.push(notebook_display_path(&path));
+                        eprintln!(
+                            "skipping notebook {} due to read error: {err}",
+                            path.display()
+                        );
+                        continue;
+                    }
+                }
+            }
+
+            fs::write(&path, &content).with_context(|| {
+                format!("failed to write notebook template to {}", path.display())
+            })?;
+            created.push(notebook_display_path(&path));
+        }
+    }
+
+    Ok(json!({
+        "component": "notebook",
+        "action": "init",
+        "created": created,
+        "updated": updated,
+        "skipped": skipped,
+    }))
+}
+
+fn lint_notebooks(root: &Path) -> Result<NotebookLintOutcome> {
+    if !root.exists() {
+        return Ok(NotebookLintOutcome {
+            payload: json!({
+                "component": "notebook",
+                "action": "lint",
+                "status": "clean",
+                "violations": [],
+            }),
+            clean: true,
+        });
+    }
+
+    let mut violations = Vec::new();
+
+    for path in gather_notebook_paths(root)? {
+        let display = notebook_display_path(&path);
+        let data =
+            fs::read(&path).with_context(|| format!("failed to read notebook {}", display))?;
+        let notebook: serde_json::Value = serde_json::from_slice(&data)
+            .with_context(|| format!("notebook {} is not valid JSON", display))?;
+
+        if let Some(cells) = notebook.get("cells").and_then(|value| value.as_array()) {
+            for (idx, cell) in cells.iter().enumerate() {
+                let Some(cell_type) = cell.get("cell_type").and_then(|value| value.as_str()) else {
+                    continue;
+                };
+
+                if cell_type != "code" {
+                    continue;
+                }
+
+                if cell
+                    .get("outputs")
+                    .and_then(|value| value.as_array())
+                    .map(|outputs| !outputs.is_empty())
+                    .unwrap_or(false)
+                {
+                    violations.push(json!({
+                        "path": display,
+                        "cell_index": idx,
+                        "issue": "outputs_present",
+                    }));
+                }
+
+                if cell
+                    .get("execution_count")
+                    .map(|value| !value.is_null())
+                    .unwrap_or(false)
+                {
+                    violations.push(json!({
+                        "path": display,
+                        "cell_index": idx,
+                        "issue": "execution_count_set",
+                    }));
+                }
+            }
+        }
+    }
+
+    let clean = violations.is_empty();
+    let payload = json!({
+        "component": "notebook",
+        "action": "lint",
+        "status": if clean { "clean" } else { "dirty" },
+        "violations": violations,
+    });
+
+    Ok(NotebookLintOutcome { payload, clean })
+}
+
+fn clean_notebooks(root: &Path) -> Result<serde_json::Value> {
+    if !root.exists() {
+        return Ok(json!({
+            "component": "notebook",
+            "action": "clean",
+            "modified": [],
+            "untouched": [],
+        }));
+    }
+
+    let mut modified = Vec::new();
+    let mut untouched = Vec::new();
+
+    for path in gather_notebook_paths(root)? {
+        let display = notebook_display_path(&path);
+        let data =
+            fs::read(&path).with_context(|| format!("failed to read notebook {}", display))?;
+        let mut notebook: serde_json::Value = serde_json::from_slice(&data)
+            .with_context(|| format!("notebook {} is not valid JSON", display))?;
+        let mut changed = false;
+
+        if let Some(cells) = notebook
+            .get_mut("cells")
+            .and_then(|value| value.as_array_mut())
+        {
+            for cell in cells.iter_mut() {
+                let Some(cell_type) = cell.get("cell_type").and_then(|value| value.as_str()) else {
+                    continue;
+                };
+
+                if cell_type != "code" {
+                    continue;
+                }
+
+                if let Some(obj) = cell.as_object_mut() {
+                    if obj
+                        .get("outputs")
+                        .and_then(|value| value.as_array())
+                        .map(|outputs| !outputs.is_empty())
+                        .unwrap_or(false)
+                    {
+                        obj.insert("outputs".to_string(), serde_json::Value::Array(vec![]));
+                        changed = true;
+                    } else {
+                        obj.entry("outputs")
+                            .or_insert_with(|| serde_json::Value::Array(vec![]));
+                    }
+
+                    if obj
+                        .get("execution_count")
+                        .map(|value| !value.is_null())
+                        .unwrap_or(false)
+                    {
+                        obj.insert("execution_count".to_string(), serde_json::Value::Null);
+                        changed = true;
+                    } else {
+                        obj.entry("execution_count")
+                            .or_insert(serde_json::Value::Null);
+                    }
+                }
+            }
+        }
+
+        if changed {
+            let mut content = serde_json::to_string_pretty(&notebook)?;
+            content.push('\n');
+            fs::write(&path, content)
+                .with_context(|| format!("failed to write notebook {}", display))?;
+            modified.push(notebook_display_path(&path));
+        } else {
+            untouched.push(notebook_display_path(&path));
+        }
+    }
+
+    Ok(json!({
+        "component": "notebook",
+        "action": "clean",
+        "modified": modified,
+        "untouched": untouched,
+    }))
+}
+
+fn gather_notebook_paths(root: &Path) -> Result<Vec<PathBuf>> {
+    if !root.exists() {
+        return Ok(Vec::new());
+    }
+
+    let mut paths = Vec::new();
+
+    for entry in WalkDir::new(root)
+        .into_iter()
+        .filter_entry(|entry| entry.file_name() != ".ipynb_checkpoints")
+    {
+        let entry = entry?;
+        if !entry.file_type().is_file() {
+            continue;
+        }
+
+        if entry
+            .path()
+            .extension()
+            .and_then(|extension| extension.to_str())
+            != Some("ipynb")
+        {
+            continue;
+        }
+
+        paths.push(entry.into_path());
+    }
+
+    paths.sort();
+    Ok(paths)
+}
+
+fn notebook_display_path(path: &Path) -> String {
+    path.to_string_lossy().replace('\\', "/")
 }
