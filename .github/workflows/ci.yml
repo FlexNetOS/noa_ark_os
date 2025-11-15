@@ -47,10 +47,18 @@ jobs:
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Lint notebooks
+        run: cargo run -p noa-cli -- notebook lint
+
       - name: Show tool versions
         run: |
           node --version
           pnpm --version
+
+      - name: Run storage doctor
+        run: cargo run --bin noa -- storage doctor
+        env:
+          NOA_WORKFLOW_ROOT: ${{ github.workspace }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -209,6 +217,12 @@ PY
           node-version: 20
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Lint notebooks
+        run: cargo run -p noa-cli -- notebook lint
 
       - name: Show tool versions
         run: |

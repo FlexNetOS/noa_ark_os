@@ -7,14 +7,17 @@ pub mod validation;
 use noa_security_shim::{
     run_gitleaks, run_grype, run_syft, run_trivy, ScanConfig, ScanResult, ScanStatus,
 };
-use noa_workflow::{PipelineInstrumentation, SecurityScanReport, SecurityScanStatus};
+use noa_workflow::{
+    DeploymentOutcomeRecord, PipelineInstrumentation, SecurityScanReport, SecurityScanStatus,
+};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
+use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 
 const PIPELINE_STATE_FILE: &str = "storage/db/pipelines/state.json";
 
@@ -380,12 +383,73 @@ impl CICDSystem {
         event_type: &str,
         metadata: serde_json::Value,
     ) -> Result<(), String> {
+        let metadata_for_event = metadata.clone();
         self.emit_pipeline_event(
             &format!("deployment::{}", deployment_id),
             "cicd",
             event_type,
-            metadata,
-        )
+            metadata_for_event,
+        )?;
+        self.record_deployment_outcome_entry(deployment_id, event_type, &metadata)?;
+        Ok(())
+    }
+
+    fn record_deployment_outcome_entry(
+        &self,
+        deployment_id: &str,
+        event_type: &str,
+        metadata: &Value,
+    ) -> Result<(), String> {
+        let stage_id = metadata
+            .get("environment")
+            .or_else(|| metadata.get("target_environment"))
+            .and_then(Value::as_str)
+            .map(|value| value.to_string())
+            .unwrap_or_else(|| event_type.to_string());
+        let status = Self::deployment_status_for_event(event_type, metadata);
+        let recorded_at = OffsetDateTime::now_utc()
+            .format(&Rfc3339)
+            .unwrap_or_else(|_| "1970-01-01T00:00:00Z".to_string());
+        let record = DeploymentOutcomeRecord {
+            workflow_id: format!("deployment::{}", deployment_id),
+            stage_id,
+            agent_role: "cicd::automation".to_string(),
+            agent_id: "cicd::controller".to_string(),
+            action: event_type.to_string(),
+            status,
+            notes: metadata.clone(),
+            recorded_at,
+        };
+        self.instrumentation
+            .record_deployment_outcome(record)
+            .map_err(|err| format!("failed to record deployment outcome: {}", err))
+    }
+
+    fn deployment_status_for_event(event_type: &str, metadata: &Value) -> String {
+        if let Some(current) = metadata
+            .get("current_status")
+            .or_else(|| metadata.get("status"))
+            .and_then(Value::as_str)
+        {
+            return current.to_string();
+        }
+
+        match event_type {
+            "deployment.auto_start" => "running".to_string(),
+            "deployment.awaiting_agent" => "pending".to_string(),
+            "deployment.health_passed" => "healthy".to_string(),
+            "deployment.health_failed" => "unhealthy".to_string(),
+            "deployment.rolled_back" => "rolled_back".to_string(),
+            "deployment.auto_promote" => "promoted".to_string(),
+            "deployment.auto_promote_blocked" => "blocked".to_string(),
+            "deployment.state.created" => "running".to_string(),
+            "deployment.state.status_changed" => metadata
+                .get("current_status")
+                .and_then(Value::as_str)
+                .unwrap_or("updated")
+                .to_string(),
+            _ => "informational".to_string(),
+        }
     }
 
     fn state_path(&self) -> PathBuf {
@@ -439,15 +503,128 @@ impl CICDSystem {
             pipelines,
             deployments,
         };
+        let path = self.state_path();
+        let previous_state = if path.exists() {
+            let raw = fs::read_to_string(&path)
+                .map_err(|err| format!("failed to read existing pipeline state: {err}"))?;
+            if raw.trim().is_empty() {
+                None
+            } else {
+                Some(
+                    serde_json::from_str::<PersistedState>(&raw)
+                        .map_err(|err| format!("failed to parse existing pipeline state: {err}"))?,
+                )
+            }
+        } else {
+            None
+        };
+
+        let previous_pipelines: HashMap<String, Pipeline> = previous_state
+            .as_ref()
+            .map(|state| {
+                state
+                    .pipelines
+                    .iter()
+                    .cloned()
+                    .map(|pipeline| (pipeline.id.clone(), pipeline))
+                    .collect()
+            })
+            .unwrap_or_default();
+        let previous_deployments: HashMap<String, Deployment> = previous_state
+            .as_ref()
+            .map(|state| {
+                state
+                    .deployments
+                    .iter()
+                    .cloned()
+                    .map(|deployment| (deployment.id.clone(), deployment))
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        let mut pipeline_state_events: Vec<(String, String, Value)> = Vec::new();
+        for pipeline in &state.pipelines {
+            match previous_pipelines.get(&pipeline.id) {
+                None => {
+                    pipeline_state_events.push((
+                        pipeline.id.clone(),
+                        "pipeline.state.created".to_string(),
+                        json!({
+                            "name": pipeline.name,
+                            "status": format!("{:?}", pipeline.status),
+                            "commit_sha": pipeline.commit_sha,
+                            "triggered_at": pipeline.triggered_at,
+                            "auto_approved": pipeline.auto_approved,
+                        }),
+                    ));
+                }
+                Some(previous) => {
+                    if previous.status != pipeline.status {
+                        pipeline_state_events.push((
+                            pipeline.id.clone(),
+                            "pipeline.state.status_changed".to_string(),
+                            json!({
+                                "name": pipeline.name,
+                                "previous_status": format!("{:?}", previous.status),
+                                "current_status": format!("{:?}", pipeline.status),
+                            }),
+                        ));
+                    }
+                }
+            }
+        }
+
+        let mut deployment_state_events: Vec<(String, String, Value)> = Vec::new();
+        for deployment in &state.deployments {
+            match previous_deployments.get(&deployment.id) {
+                None => {
+                    deployment_state_events.push((
+                        deployment.id.clone(),
+                        "deployment.state.created".to_string(),
+                        json!({
+                            "environment": deployment.environment,
+                            "strategy": deployment.strategy,
+                            "version": deployment.version,
+                            "status": format!("{:?}", deployment.status),
+                            "auto_approved": deployment.auto_approved,
+                        }),
+                    ));
+                }
+                Some(previous) => {
+                    if previous.status != deployment.status {
+                        deployment_state_events.push((
+                            deployment.id.clone(),
+                            "deployment.state.status_changed".to_string(),
+                            json!({
+                                "environment": deployment.environment,
+                                "strategy": deployment.strategy,
+                                "version": deployment.version,
+                                "previous_status": format!("{:?}", previous.status),
+                                "current_status": format!("{:?}", deployment.status),
+                            }),
+                        ));
+                    }
+                }
+            }
+        }
+
         let payload = serde_json::to_string_pretty(&state)
             .map_err(|err| format!("failed to serialise pipeline state: {err}"))?;
-        let path = self.state_path();
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)
                 .map_err(|err| format!("failed to create pipeline state directory: {err}"))?;
         }
         fs::write(&path, payload)
             .map_err(|err| format!("failed to persist pipeline state: {err}"))?;
+
+        for (pipeline_id, event_type, metadata) in pipeline_state_events {
+            self.emit_pipeline_event(&pipeline_id, "cicd", &event_type, metadata)?;
+        }
+
+        for (deployment_id, event_type, metadata) in deployment_state_events {
+            self.emit_deployment_event(&deployment_id, &event_type, metadata)?;
+        }
+
         Ok(())
     }
 
@@ -1441,6 +1618,7 @@ struct PersistedState {
 #[cfg(test)]
 mod pipeline_tests {
     use super::*;
+    use noa_workflow::{EvidenceLedgerEntry, EvidenceLedgerKind};
     use serde_json::Value;
     use tempfile::tempdir;
 
@@ -1543,6 +1721,145 @@ mod pipeline_tests {
         assert_eq!(
             cicd.get_pipeline_status(&pipeline_id).unwrap(),
             PipelineStatus::AgentApproved
+        );
+    }
+
+    #[test]
+    fn persisted_state_writes_pipeline_events_and_ledger() {
+        let workspace = tempdir().unwrap();
+        let _guard = EnvGuard::set("NOA_WORKFLOW_ROOT", workspace.path());
+        let cicd = CICDSystem::new();
+        cicd.configure_workspace_root(workspace.path());
+
+        let pipeline_id = cicd
+            .trigger_pipeline("persisted".to_string(), "abc999".to_string())
+            .expect("pipeline triggered");
+        cicd.update_pipeline_status(&pipeline_id, PipelineStatus::Running)
+            .expect("status update succeeds");
+
+        let deployment_id = cicd
+            .deploy_to_environment(
+                "v9.9.9".to_string(),
+                Environment::Staging,
+                DeploymentStrategy::BlueGreen,
+            )
+            .expect("deployment created");
+        let _ = cicd
+            .monitor_deployment(&deployment_id)
+            .expect("monitoring succeeds");
+        cicd.rollback(&deployment_id).expect("rollback succeeds");
+
+        cicd.load_state_from_disk().expect("state reload succeeds");
+        assert_eq!(
+            cicd.get_pipeline_status(&pipeline_id),
+            Some(PipelineStatus::Running)
+        );
+
+        let log_path = workspace
+            .path()
+            .join("storage")
+            .join("db")
+            .join("pipeline_events.log");
+        assert!(log_path.exists(), "pipeline event log missing");
+        let log_contents = std::fs::read_to_string(&log_path).expect("pipeline log readable");
+        let events: Vec<Value> = log_contents
+            .lines()
+            .filter(|line| !line.trim().is_empty())
+            .map(|line| serde_json::from_str::<Value>(line).expect("valid pipeline event"))
+            .collect();
+
+        let has_pipeline_created = events.iter().any(|entry| {
+            entry["event"]["event_type"].as_str() == Some("pipeline.state.created")
+                && entry["event"]["scope"].as_str() == Some(pipeline_id.as_str())
+        });
+        assert!(has_pipeline_created, "missing pipeline.state.created entry");
+
+        let has_pipeline_updated = events.iter().any(|entry| {
+            entry["event"]["event_type"].as_str() == Some("pipeline.state.status_changed")
+                && entry["event"]["scope"].as_str() == Some(pipeline_id.as_str())
+        });
+        assert!(
+            has_pipeline_updated,
+            "missing pipeline.state.status_changed entry"
+        );
+
+        let deployment_scope = format!("deployment::{}", deployment_id);
+        let has_deployment_created = events.iter().any(|entry| {
+            entry["event"]["event_type"].as_str() == Some("deployment.state.created")
+                && entry["event"]["scope"].as_str() == Some(deployment_scope.as_str())
+        });
+        assert!(
+            has_deployment_created,
+            "missing deployment.state.created entry"
+        );
+
+        let has_deployment_status_change = events.iter().any(|entry| {
+            entry["event"]["event_type"].as_str() == Some("deployment.state.status_changed")
+                && entry["event"]["scope"].as_str() == Some(deployment_scope.as_str())
+        });
+        assert!(
+            has_deployment_status_change,
+            "missing deployment.state.status_changed entry"
+        );
+
+        let ledger_path = workspace
+            .path()
+            .join("storage")
+            .join("db")
+            .join("evidence")
+            .join("ledger.jsonl");
+        let ledger_contents = std::fs::read_to_string(&ledger_path).expect("ledger readable");
+        let ledger_entries: Vec<EvidenceLedgerEntry> = ledger_contents
+            .lines()
+            .filter(|line| !line.trim().is_empty())
+            .filter_map(|line| serde_json::from_str::<EvidenceLedgerEntry>(line).ok())
+            .filter(|entry| entry.kind == EvidenceLedgerKind::PipelineEvent)
+            .collect();
+
+        let ledger_has_pipeline_created = ledger_entries.iter().any(|entry| {
+            entry.payload.get("event_type").and_then(Value::as_str)
+                == Some("pipeline.state.created")
+        });
+        let ledger_has_pipeline_updated = ledger_entries.iter().any(|entry| {
+            entry.payload.get("event_type").and_then(Value::as_str)
+                == Some("pipeline.state.status_changed")
+        });
+        let ledger_has_deployment_created = ledger_entries.iter().any(|entry| {
+            entry.payload.get("event_type").and_then(Value::as_str)
+                == Some("deployment.state.created")
+        });
+        let ledger_has_deployment_status_change = ledger_entries.iter().any(|entry| {
+            entry.payload.get("event_type").and_then(Value::as_str)
+                == Some("deployment.state.status_changed")
+        });
+
+        assert!(
+            ledger_has_pipeline_created,
+            "ledger missing pipeline created"
+        );
+        assert!(
+            ledger_has_pipeline_updated,
+            "ledger missing pipeline update"
+        );
+        assert!(
+            ledger_has_deployment_created,
+            "ledger missing deployment created"
+        );
+        assert!(
+            ledger_has_deployment_status_change,
+            "ledger missing deployment status change"
+        );
+
+        let report_path = workspace
+            .path()
+            .join("docs")
+            .join("reports")
+            .join("AGENT_DEPLOYMENT_OUTCOMES.md");
+        let report_contents =
+            std::fs::read_to_string(&report_path).expect("deployment report readable");
+        assert!(
+            report_contents.contains("deployment.state.created"),
+            "deployment report missing state entry"
         );
     }
 

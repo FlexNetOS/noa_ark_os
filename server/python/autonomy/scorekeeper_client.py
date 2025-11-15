@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import json
+import os
 from dataclasses import dataclass
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 from .self_status import SelfStatusAggregator
@@ -31,13 +35,22 @@ class ScorekeeperClient:
         self,
         aggregator: Optional[SelfStatusAggregator] = None,
         capability_threshold: float = 0.7,
+        log_path: Optional[Path] = None,
     ) -> None:
         self.aggregator = aggregator or SelfStatusAggregator()
         self.capability_threshold = capability_threshold
+        default_log = Path(
+            os.environ.get(
+                "NOA_TRUST_EVALUATION_LOG",
+                Path("storage/logs/trust_evaluations.jsonl").as_posix(),
+            )
+        )
+        self.log_path = log_path or default_log
 
     def evaluate(self) -> TrustSignals:
         status = self.aggregator.collect()
         goal_metrics = status.telemetry.get("goal_metrics", {})
+        budget_summary = status.telemetry.get("budget_guardian", {})
         avg_success = float(goal_metrics.get("avg_success_rate", 0.0))
         drift_count = len(status.drift)
         offender_penalty = sum(
@@ -58,15 +71,35 @@ class ScorekeeperClient:
                 for offender in status.budget_offenders
             ],
             "goal_metrics": goal_metrics,
+            "budget_guardian": budget_summary,
             "generated_at": status.generated_at,
         }
-        return TrustSignals(
+        signals = TrustSignals(
             capability=capability,
             integrity=integrity,
             reversibility=reversibility,
             capability_threshold=self.capability_threshold,
             metadata=metadata,
         )
+        self._append_snapshot(signals)
+        return signals
+
+    def _append_snapshot(self, signals: TrustSignals) -> None:
+        payload = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "capability": signals.capability,
+            "integrity": signals.integrity,
+            "reversibility": signals.reversibility,
+            "threshold": signals.capability_threshold,
+            "metadata": signals.metadata,
+        }
+        try:
+            self.log_path.parent.mkdir(parents=True, exist_ok=True)
+            with self.log_path.open("a", encoding="utf-8") as handle:
+                json.dump(payload, handle, sort_keys=True)
+                handle.write("\n")
+        except OSError:
+            return
 
 
 __all__ = ["ScorekeeperClient", "TrustSignals"]

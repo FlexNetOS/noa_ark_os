@@ -46,6 +46,9 @@ path.
   ledger entries must capture the offline cache provenance in their payload.
 - **Verification:** Consumers recompute Merkle roots from `leaves` to confirm
   stage integrity. Signatures chain via `previous_signature`.
+- **Storage doctor:** Run `noa storage doctor` (from `apps/cli`) before
+  committing automation changes to confirm mirrored log pairs are present,
+  begin with a genesis record, and remain in sync.
 
 ## Access
 

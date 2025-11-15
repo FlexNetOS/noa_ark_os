@@ -25,8 +25,9 @@ pub use agent_dispatch::{
 pub use instrumentation::{
     AgentExecutionResult, DeploymentOutcomeRecord, EvidenceLedgerEntry, EvidenceLedgerKind,
     GoalAgentMetric, GoalMetricSnapshot, GoalOutcomeRecord, InferenceMetric, MerkleLeaf,
-    MerkleLevel, PipelineInstrumentation, SecurityScanReport, SecurityScanStatus, StageReceipt,
-    TaskReceipt,
+    MerkleLevel, PipelineInstrumentation, PipelineStorageLayout, SecurityScanReport,
+    SecurityScanStatus, StageReceipt, StorageDoctorReport, StorageDoctorStatus, TaskReceipt,
+    run_storage_doctor,
 };
 pub use reward::{
     AgentApprovalStatus, AgentStanding, AgentStandingSummary, RewardAgentSnapshot, RewardDelta,
