@@ -1,0 +1,19 @@
+# Quarantine status template. Fill in all fields when a bundle is created.
+component: <component>
+commit: <commit-sha>
+owner:
+  team: <team-name>
+  contact: <email-or-handle>
+quarantined_at: <ISO-8601 UTC timestamp>
+reintegration_target: <planned reintegration date or milestone>
+reintegration_gates:
+  - name: <gate-name>
+    description: <requirement description>
+    owner: <reviewer or team>
+    status: pending
+hash_ledger:
+  - path: <relative/path>
+    sha256: <hash>
+    captured_at: <ISO-8601 UTC timestamp>
+notes:
+  - <additional context or links>

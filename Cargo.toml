@@ -21,6 +21,7 @@ members = [
     "tools/symbol_graph",
     "tools/security/shim",
     "plugins/sdk",
+    "tools/quarantine_guard",
 ]
 
 [workspace.package]

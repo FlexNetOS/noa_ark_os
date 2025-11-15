@@ -3,16 +3,25 @@ name = "noa-cli"
 version = "0.1.0"
 edition = "2021"
 authors = ["NOA ARK OS Team"]
-description = "Command line tooling for the NOA Ark OS relocation daemon"
+description = "NOA Ark OS unified CLI (kernel, world, registry, trust, snapshot, agent, policy, sbom, pipeline, profile) with relocation daemon tooling"
 license = "MIT"
+
+[[bin]]
+name = "noa"
+path = "src/main.rs"
 
 [dependencies]
 anyhow = { workspace = true }
 clap = { version = "4.5", features = ["derive"] }
+serde = { workspace = true }
 serde_json = { workspace = true }
+serde_yaml = { workspace = true }
 tokio = { workspace = true }
 relocation-daemon = { path = "../../services/relocation-daemon" }
 uuid = { version = "1.6", features = ["v4"] }
 noa_workflow = { path = "../../workflow" }
 serde = { workspace = true }
 noa-plugin-sdk = { path = "../../plugins/sdk" }
+noa_inference = { path = "../../server/ai/inference" }
+futures = "0.3"
+noa_cicd = { path = "../../cicd" }
