@@ -9,7 +9,7 @@ listener "tcp" {
 }
 
 storage "raft" {
-  path    = "/home/deflex/workspace/server/vault/data"
+  path    = "/home/noa/dev/workspace/noa_ark_os/noa_ark_os/server/vault/data"
   node_id = "vault-node-1"
 }
 
