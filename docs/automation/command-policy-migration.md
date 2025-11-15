@@ -13,9 +13,15 @@ The workspace now centralises terminal safety rules in [`tools/automation/policy
 1. Edit `tools/automation/policy.yaml`. JSON syntax is valid YAML, so formatting can stay consistent with the existing rules.
 2. Preserve rule ordering—deny rules should appear before their corresponding allow rules when both apply to the same command.
 3. Run the validator to confirm your rule behaves as expected:
+
    ```bash
+   # Example: Allowed command (matches "git status" rule)
    pnpm exec tsx tools/automation/validate-command.ts --explain "git status -sb"
-   ```
+   # Output: ✅ Allowed by rule: "git status"
+
+   # Example: Blocked command (not covered by policy)
+   pnpm exec tsx tools/automation/validate-command.ts --explain "git status --dangerous-flag"
+   # Output: ❌ Blocked: no matching allow rule
 4. Commit the policy change alongside any dependent script or documentation updates.
 
 ## Synchronising VS Code settings
