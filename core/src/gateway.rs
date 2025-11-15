@@ -2488,8 +2488,12 @@ mod tests {
             .expect("connectors accessible")
             .values()
             .next()
-            .map(|record| record.provider_id.clone())
-            .expect("expected at least one connector");
+            .map(|record| record.provider_id.clone());
+        assert!(
+            provider_id.is_some(),
+            "Test requires at least one connector in the registry"
+        );
+        let provider_id = provider_id.unwrap();
 
         gateway
             .update_reliability_feed(ReliabilityFeed {
