@@ -64,7 +64,7 @@ class SelfStatus:
 
 
 class SelfStatusAggregator:
-    """Collects self status signals from existing telemetry artefacts."""
+    """Collects self status signals from existing telemetry artifacts."""
 
     def __init__(self, repo_root: Optional[Path] = None) -> None:
         self.repo_root = repo_root or Path(
