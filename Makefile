@@ -22,6 +22,7 @@ PYTHON ?= python3
 
 ifneq ($(PNPM_REQUIRED_VERSION),)
 export NOA_PNPM_REQUIRED := $(PNPM_REQUIRED_VERSION)
+export npm_config_user_agent := pnpm/$(PNPM_REQUIRED_VERSION)
 endif
 
 ifneq ($(PNPM_STORE_DIR_OVERRIDE),)
@@ -53,12 +54,13 @@ endif
 .PHONY: build test digest run ci:local lint typecheck format notebooks-sync
 .PHONY: build test digest run ci-local-full lint typecheck format
 .PHONY: pipeline.local world-verify world-fix kernel snapshot rollback verify publish-audit rollback-sim setup
-.PHONY: build test digest run ci-local-full lint typecheck format docs:check
+.PHONY: build test digest run ci-local-full lint typecheck format docs-check
 PYTHON ?= python3
 BASE_REF ?= origin/main
 
 ifneq ($(PNPM_REQUIRED_VERSION),)
 export NOA_PNPM_REQUIRED := $(PNPM_REQUIRED_VERSION)
+export npm_config_user_agent := pnpm/$(PNPM_REQUIRED_VERSION)
 endif
 
 ifneq ($(PNPM_STORE_DIR_OVERRIDE),)
@@ -137,15 +139,15 @@ format: deps
 typecheck: deps
 	$(PNPM) typecheck
 
-docs:check:
-        $(PNPM) docs:lint
+docs-check:
+	$(PNPM) docs:lint
 
 notebooks-sync: deps
-        $(ACTIVATION_CHECK)
-        $(CARGO) run -p noa_symbol_graph --bin notebook_watcher -- --once .
-        $(PNPM) notebooks:sync
+	$(ACTIVATION_CHECK)
+	$(CARGO) run -p noa_symbol_graph --bin notebook_watcher -- --once .
+	$(PNPM) notebooks:sync
 
-ci-local-full: lint typecheck format docs:check test
+ci-local-full: lint typecheck format docs-check test
 ci-local: lint typecheck format test
 
 run: deps
@@ -193,7 +195,6 @@ ui-dev:
 # Machine-First Pipeline (authoritative local pipeline)
 pipeline.local: world-verify build sbom test package sign verify scorekeeper publish-audit
 	@echo "✅ Pipeline complete"
-@echo "✅ Pipeline complete"
 pipeline.local: world-verify build provider-pointers archival-verify duplicate-check router-singleton ci-local sbom scorekeeper package sign conventional-commits export-roadmap record-local-pipeline
 	@echo "✅ Pipeline complete"
 
@@ -227,12 +228,12 @@ record-local-pipeline:
 
 # World model verification
 world-verify:
-        @echo "🔍 Reconciling world model consistency..."
-        @$(CARGO) run -p noa_core --bin noa_world -- verify
+	@echo "🔍 Reconciling world model consistency..."
+	@$(CARGO) run -p noa_core --bin noa_world -- verify
 
 world-fix:
-        @echo "🛠️ Generating remediation plan for world model drift..."
-        @$(CARGO) run -p noa_core --bin noa_world -- fix
+	@echo "🛠️ Generating remediation plan for world model drift..."
+	@$(CARGO) run -p noa_core --bin noa_world -- fix
 
 # Kernel build
 kernel:
@@ -264,23 +265,21 @@ sbom:
 scorekeeper:
 	@echo "🎯 Calculating trust scores..."
 	@$(PYTHON) -m tools.repro.audit_pipeline score
-        @echo "🎯 Calculating trust scores..."
-        @mkdir -p metrics
-        @cargo run -p noa_workflow --bin reward_report -- --json > metrics/reward_summary.json
-        @cargo run -p noa_workflow --bin reward_report -- > metrics/reward_summary.txt
-        @echo "✅ Scorekeeper report generated at metrics/reward_summary.json"
-        @TARGET=$${NOA_TRUST_METRICS_PATH:-metrics/trust_score.json}; \
-            NOA_TRUST_METRICS_PATH=$$TARGET $(CARGO) run -p noa_core --bin noa_scorekeeper -- \
-                --integrity-pass $${TRUST_INTEGRITY_PASS:-120} \
-                --integrity-fail $${TRUST_INTEGRITY_FAIL:-0} \
-                --reversibility-pass $${TRUST_REVERSIBILITY_PASS:-96} \
-                --reversibility-fail $${TRUST_REVERSIBILITY_FAIL:-4} \
-                --capability-pass $${TRUST_CAPABILITY_PASS:-80} \
-                --capability-fail $${TRUST_CAPABILITY_FAIL:-20} \
-            || { echo "❌ Scorekeeper failed"; exit 1; }; \
-            echo "✅ Trust snapshot stored at $$TARGET"
-@echo "🎯 Calculating trust scores..."
-@$(PYTHON) -m tools.repro.audit_pipeline score
+	@echo "🎯 Calculating trust scores..."
+	@mkdir -p metrics
+	@$(CARGO) run -p noa_workflow --bin reward_report -- --json > metrics/reward_summary.json
+	@$(CARGO) run -p noa_workflow --bin reward_report -- > metrics/reward_summary.txt
+	@echo "✅ Scorekeeper report generated at metrics/reward_summary.json"
+	@TARGET=$${NOA_TRUST_METRICS_PATH:-metrics/trust_score.json}; \
+		NOA_TRUST_METRICS_PATH=$$TARGET $(CARGO) run -p noa_core --bin noa_scorekeeper -- \
+			--integrity-pass $${TRUST_INTEGRITY_PASS:-120} \
+			--integrity-fail $${TRUST_INTEGRITY_FAIL:-0} \
+			--reversibility-pass $${TRUST_REVERSIBILITY_PASS:-96} \
+			--reversibility-fail $${TRUST_REVERSIBILITY_FAIL:-4} \
+			--capability-pass $${TRUST_CAPABILITY_PASS:-80} \
+			--capability-fail $${TRUST_CAPABILITY_FAIL:-20} \
+		|| { echo "❌ Scorekeeper failed"; exit 1; }; \
+		echo "✅ Trust snapshot stored at $$TARGET"
 
 # Package artifacts
 package:
@@ -350,7 +349,7 @@ publish-audit:
 	@echo "📤 Publishing audit bundle..."
 	@$(PYTHON) -m tools.repro.audit_pipeline publish
 	@mkdir -p audit
-	@cargo run --manifest-path cicd/Cargo.toml --bin publish_audit -- --repo . --output audit --ledger audit/ledger.jsonl
+	@$(CARGO) run --manifest-path cicd/Cargo.toml --bin publish_audit -- --repo . --output audit --ledger audit/ledger.jsonl
 	@latest=$$(ls -d audit/bundle-* 2>/dev/null | tail -n 1); \
 	if [ -n "$$latest" ]; then \
 		echo "🔍 Verifying $$latest"; \
@@ -362,17 +361,15 @@ publish-audit:
 # Run rollback simulation locally
 rollback-sim:
 	@echo "⏱️  Running rollback simulation..."
-	@cargo run --manifest-path cicd/Cargo.toml --bin rollback_simulation -- --repo . --ledger audit/ledger.jsonl --output audit/rollbacks
-@echo "📤 Publishing audit bundle..."
-@$(PYTHON) -m tools.repro.audit_pipeline publish
+	@$(CARGO) run --manifest-path cicd/Cargo.toml --bin rollback_simulation -- --repo . --ledger audit/ledger.jsonl --output audit/rollbacks
 
 # Setup toolchain
 setup:
-        @echo "🔧 Setting up build environment..."
-        @# Install Rust if needed
-        @command -v rustc >/dev/null 2>&1 || curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-        @# Install pnpm if needed
-        @command -v pnpm >/dev/null 2>&1 || npm install -g pnpm
-        @echo "🔍 Capturing Cargo environment snapshot..."
-        @$(CARGO) --version
-        @echo "✅ Setup complete"
+	@echo "🔧 Setting up build environment..."
+	@# Install Rust if needed
+	@command -v rustc >/dev/null 2>&1 || curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+	@# Install pnpm if needed
+	@command -v pnpm >/dev/null 2>&1 || npm install -g pnpm
+	@echo "🔍 Capturing Cargo environment snapshot..."
+	@$(CARGO) --version
+	@echo "✅ Setup complete"

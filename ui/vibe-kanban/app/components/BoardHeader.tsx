@@ -42,9 +42,9 @@ export function BoardHeader({
   onAddColumn,
   canAddColumn = true,
   addColumnDisabledReason,
-  columnCount,
-  totalGoalCount,
-  completedGoalCount,
+  columnCount = 0,
+  totalGoalCount = 0,
+  completedGoalCount = 0,
   showMetrics = true,
   metrics: advancedMetrics,
   goalInsightsEnabled = false,
@@ -79,7 +79,7 @@ export function BoardHeader({
       }
     }
     return base;
-  }, [advancedMetrics, columnCount, completedCount, goalInsightsEnabled, totalCardCount]);
+  }, [advancedMetrics, columnCount, completedGoalCount, goalInsightsEnabled, totalGoalCount]);
 
   const hasCapabilitySummary = capabilitySummary.length > 0;
 
@@ -172,34 +172,33 @@ function CapabilitySummaryPanel({ items, loading }: CapabilitySummaryPanelProps)
               data-testid={`capability-${item.id}`}
               className="flex items-start gap-3 rounded-2xl border border-white/10 bg-surface/70 p-4"
             >
-          <span
-            aria-hidden
-            className={`mt-0.5 flex h-6 w-6 items-center justify-center rounded-full border text-sm font-semibold ${badgeClasses}`}
-          >
-            {icon}
-          </span>
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-white">{item.label}</span>
-              <span className={`text-xs font-semibold uppercase tracking-[0.2em] ${
-                loading
-                  ? "text-white/60"
-                  : item.available
-                    ? "text-emerald-200"
-                    : "text-amber-200"
-              }`}
+              <span
+                aria-hidden
+                className={`mt-0.5 flex h-6 w-6 items-center justify-center rounded-full border text-sm font-semibold ${badgeClasses}`}
               >
-                {statusLabel}
+                {icon}
               </span>
-            </div>
-            <p className="text-xs text-white/60">{item.description}</p>
-            {!loading && !item.available && (
-              <p className="text-[11px] uppercase tracking-[0.2em] text-amber-200/80">
-                Requires capability token: {item.capability}
-              </p>
-            )}
-            </div>
-          </li>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-white">{item.label}</span>
+                  <span className={`text-xs font-semibold uppercase tracking-[0.2em] ${loading
+                      ? "text-white/60"
+                      : item.available
+                        ? "text-emerald-200"
+                        : "text-amber-200"
+                    }`}
+                  >
+                    {statusLabel}
+                  </span>
+                </div>
+                <p className="text-xs text-white/60">{item.description}</p>
+                {!loading && !item.available && (
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-amber-200/80">
+                    Requires capability token: {item.capability}
+                  </p>
+                )}
+              </div>
+            </li>
           );
         })}
       </ul>

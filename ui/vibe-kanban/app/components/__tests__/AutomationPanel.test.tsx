@@ -51,7 +51,7 @@ describe("AutomationPanel", () => {
 
     render(<AutomationPanel cards={cards} onRetry={retry} />);
 
-    expect(screen.getByText("Registry Scout")).toBeInTheDocument();
+    expect(screen.getByText(/Registry\s+Scout/i)).toBeInTheDocument();
     expect(screen.getByText(/Capability Scan/)).toBeInTheDocument();
     const retryButton = screen.getByRole("button", { name: /retry automation/i });
     fireEvent.click(retryButton);

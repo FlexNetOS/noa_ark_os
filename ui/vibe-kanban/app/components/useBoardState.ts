@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type {
   ActivityEvent,
+  Goal,
   GoalMemoryInsights,
   NotificationEvent,
   PlannerPlan,
@@ -39,7 +40,7 @@ type MemorySuggestion = { title: string; detail: string; source: "memory" | "rea
 
 type AssistState = {
   suggestions: { title: string; detail: string }[];
-  focusGoal: Goal | null;
+  focusCard: Goal | null;
   updatedAt: string;
   memory?: GoalMemoryInsights | null;
   longTermSuggestions?: MemorySuggestion[];
@@ -68,6 +69,7 @@ type WorkspaceHookState = {
   integrations: WorkspaceIntegrationStatus[];
   assist: AssistState;
   autonomy: AutonomyState;
+  goalInsights: GoalMemoryInsights | null;
   capabilities: {
     loading: boolean;
     registry: CapabilityRegistry;
@@ -81,6 +83,7 @@ type WorkspaceHookState = {
   createBoard: (projectName: string) => Promise<void>;
   dismissNotification: (id: string) => void;
   requestAssist: () => Promise<void>;
+  retryAutomation: (cardId: string) => Promise<void>;
   uploadArtifact: (input: { file: File; dropType: string }) => Promise<void>;
   addColumn: (title: string) => void;
   removeColumn: (columnId: string) => void;
@@ -115,6 +118,7 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     lastTriggeredAt: null,
     summary: null,
   });
+  const [goalInsights, setGoalInsights] = useState<GoalMemoryInsights | null>(null);
   const [capabilityRegistry, setCapabilityRegistry] = useState<CapabilityRegistry>(() => ({
     version: DEFAULT_CAPABILITY_REGISTRY.version,
     capabilities: [],
@@ -130,6 +134,11 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     boardId: null,
     signature: null,
   });
+  const goalInsightsRef = useRef<GoalMemoryInsights | null>(null);
+
+  useEffect(() => {
+    goalInsightsRef.current = goalInsights;
+  }, [goalInsights]);
 
   const logBoardError = useCallback(
     (event: string, error: unknown, context?: Record<string, unknown>) => {
@@ -476,8 +485,8 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     [updateColumns]
   );
 
-  const createCard = useCallback(
-    (partial: Partial<VibeCard> & { title: string }): VibeCard => {
+  const createGoal = useCallback(
+    (partial: Partial<Goal> & { title: string }): Goal => {
       const id =
         partial.id ?? (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `card-${Date.now()}`);
       return {
@@ -489,12 +498,13 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
         assigneeId: partial.assigneeId,
         dueDate: partial.dueDate,
         integrations: partial.integrations ?? [],
-        automation: partial.automation ?? {
-          goalId: id,
-          history: [],
-          lastUpdated: new Date().toISOString(),
-          retryAvailable: true,
-        },
+        automation:
+          partial.automation ?? {
+            goalId: id,
+            history: [],
+            lastUpdated: new Date().toISOString(),
+            retryAvailable: true,
+          },
       };
     },
     []
@@ -714,14 +724,23 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     [workspaceId, boardId]
   );
 
-  useEffect(() => {
-    if (!workspaceId || !boardId) return;
-    (async () => {
+  const requestAssist = useCallback(async () => {
+    if (!workspaceId || !boardId) {
+      setAssist(null);
+      return;
+    }
+
+    try {
       const response = await fetch(`/api/workspaces/${workspaceId}/boards/${boardId}/assist`, { method: "POST" });
-      if (!response.ok) return;
+      if (!response.ok) {
+        throw new Error("Assist request failed");
+      }
       const payload = await response.json();
       const updatedAt = new Date().toISOString();
-      const memory = payload.memory ? normalizeGoalMemory({ ...payload.memory, goalId: `board:${boardId}`, workspaceId }) : goalInsights;
+      const fallbackMemory = goalInsightsRef.current;
+      const memory = payload.memory
+        ? normalizeGoalMemory({ ...payload.memory, goalId: `board:${boardId}`, workspaceId })
+        : fallbackMemory;
       if (payload.memory && memory) {
         setGoalInsights(memory);
       }
@@ -732,8 +751,22 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
         memory: memory ?? null,
         longTermSuggestions: memory ? buildMemorySuggestions(memory) : undefined,
       });
-    })();
-  }, [workspaceId, boardId, goalInsights]);
+    } catch (error) {
+      logBoardError("assist_request_failed", error, { workspaceId, boardId });
+      throw error;
+    }
+  }, [workspaceId, boardId, logBoardError]);
+
+  useEffect(() => {
+    if (!workspaceId || !boardId) {
+      setAssist(null);
+      return;
+    }
+
+    requestAssist().catch((error) =>
+      logBoardError("assist_bootstrap_failed", error, { workspaceId, boardId })
+    );
+  }, [workspaceId, boardId, requestAssist, logBoardError]);
 
   useEffect(() => {
     if (!snapshot || capabilitiesLoading) return;
@@ -861,6 +894,7 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     integrations,
     assist,
     autonomy,
+    goalInsights,
     capabilities: {
       loading: capabilitiesLoading,
       registry: capabilityRegistry,

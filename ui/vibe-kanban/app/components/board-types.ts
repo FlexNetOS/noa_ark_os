@@ -48,6 +48,8 @@ export type VibeCard = {
   automation?: GoalAutomationState | null;
 };
 
+export type Goal = VibeCard;
+
 export type VibeColumn = {
   id: string;
   title: string;
