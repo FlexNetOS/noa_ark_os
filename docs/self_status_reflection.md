@@ -60,3 +60,20 @@ asyncio.run(planner.run_once())
 
 These artifacts already exist in the repository and the aggregator only reads
 them, keeping the new surfaces offline-first and auditable.
+
+## Instrumentation Artefacts
+
+Self-healing surfaces depend on the mirrored instrumentation assets documented
+in the storage layer. Ensure the following exist before invoking automation:
+
+- [Auto-fix action snapshots](../storage/db/auto_fix/README.md) for repair plans
+  and policy decisions.
+- [Budget guardian manifests](../storage/db/budget_guardian/README.md) capturing
+  token/latency enforcement.
+- [Pipeline log mirror schema](../storage/db/pipelines/README.md) describing the
+  signed ledgers that power receipts and analytics.
+
+All three derive from the `.workspace/indexes/` sources described in
+[`storage/db/README.md`](../storage/db/README.md); their presence is required for
+accurate goal and budget reporting on this endpoint.
+
