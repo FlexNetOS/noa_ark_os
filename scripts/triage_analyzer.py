@@ -8,7 +8,7 @@ performs the following steps:
 
 1. Classify the failure type (lint, type, flaky test, infrastructure, etc.).
 2. Persist an incident workspace under ``tools/offline_pr_queue/triage`` with
-   a JSON manifest, copied artefacts, and a policy decision trail.
+   a JSON manifest, copied artifacts, and a policy decision trail.
 3. Invoke the remediation CLI so the workflow automation stack can queue the
    appropriate auto-fixer agent.
 
