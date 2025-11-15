@@ -32,7 +32,7 @@
 - ✅ **Phase 3 – Automation & Healing Fabric**: Zero-trust attestation gating, adaptive routing scores, and reinforcement feedback loops keep routes deterministic while predictive self-healing remediates faults automatically. The automation fabric graduated its final soak, chaos, and failover validation gates, landing hardened telemetry hooks and schema metadata extensions so downstream phases inherit consistent signals and catalogs without rework.
 - ✅ **Phase 3 Validation Run**: Completed chaos, latency, and MTTR certification runs confirm telemetry-backed automations are production-ready; dashboards now show steady-state health and regression gaps have been cleared.
 - 🚧 **Phase 4 – Observability & Knowledge Graph**: Expanded telemetry now tracks attestation, routing model updates, and tool leases, providing richer signals for anomaly detection and digital-twin analytics, but the semantic knowledge graph and operationalized playbooks are still in build-out.
-- ✅ **Phase 5 – Execution Fabric & Acceleration**: Implemented QoS tiers with priority-based enforcement, SmartNIC/DPU integration for hardware acceleration, shared ToolArtifact catalog with sandbox-aware leases, and portable execution sandboxes (WASM/container support). Tool artifacts enforce concurrency limits for deterministic QoS while SmartNIC offload paths accelerate routing and encryption operations.
+- ✅ **Phase 5 – Execution Fabric & Acceleration**: Implemented QoS tiers with priority-based enforcement, SmartNIC/DPU integration for hardware acceleration, shared ToolArtifact catalog with sandbox-aware leases, and portable execution sandboxes (WASM/container support). Tool artifacts enforce concurrency limits for deterministic QoS while SmartNIC offload paths accelerate routing and encryption operations, and the new regression tests (`hardware_offload_*` in `core/src/gateway.rs`) continuously validate the execution fabric wiring.
 - ✅ **Phase 6 – Federation & Ecosystem**: Implemented federated micro-gateways with consensus mesh for global state synchronization, trust exchange marketplace for partner telemetry and automatic reroutes, and partner-facing APIs/SDK in server/gateway/ for third-party symbol onboarding with automated compliance checks.
 - 🚧 **Phase 6+**: Federation, partner trust exchange, and DX/documentation automation remain in-flight future efforts.
 - 🚧 **Phase 3+**: Automation fabric enrichments, observability graph hardening, execution acceleration, federation, and DX streams remain on the roadmap; the telemetry hooks and schema metadata shipped in Phase 3 continue to provide the backbone for these follow-on phases.
@@ -70,6 +70,7 @@
 - Provide portable execution sandboxes (WASM, containers, enclaves) so shared tool artifacts under `tools/` and `apps/` execute once and broadcast outputs everywhere.
 - Investigate SmartNIC/DPU integration under `runtime/` or `server/tools` to offload encryption, verification, and routing calculations for low-latency delivery.
 - Establish QoS tiers that respect latency/trust envelopes and coordinate with the kernel scheduler in `core/kernel.rs` for deterministic guarantees.
+- Back execution claims with CI by exercising the acceleration fabric in `core/src/gateway.rs` (`hardware_offload_*` tests) so SmartNIC/DPU paths never regress.
 
 ### Phase 6 – Federation & Ecosystem
 - Break the gateway into federated micro-stations deployable alongside `server/` services; synchronize via consensus protocols (Raft/BFT) for global state coherence.
@@ -114,8 +115,8 @@ By executing this roadmap, the gateway evolves into the self-aware, policy-compl
 	- ✅ Completed 2025-11-15 via vault-backed config (`server/gateway/src/auth.rs`, `server/vault/gateway_auth.example.json`, `docs/operations/GATEWAY_AUTH_SECRETS.md`) and new regression tests covering API key revocation, SAN pinning, and OIDC claim enforcement.
 
 3. **Distributed Rate Limiting**
-	- Evolve `RateLimiter` to use a replicated store (Redis/sqlite-log) so quotas survive restarts and can be enforced across federated nodes.
-	- Expose rate-limit metrics in `GatewayMetrics` and thread alerts into the telemetry dashboards referenced in `docs/operations/gateway.md`.
+	- ✅ Completed 2025-11-16 by introducing a persistent SQLite-backed store (`server/gateway/src/rate_limit.rs`), telemetry export hooks (`server/gateway/src/telemetry.rs`, `server/gateway/src/lib.rs`), and operational runbook updates (`docs/operations/gateway.md`).
+	- Quotas now persist in `storage/rate_limits/gateway_rate.db`, can be overridden via `GATEWAY_RATE_DB`, and surface aggregate stats inside `GatewayMetrics.rate_limit` for the dashboard pipeline.
 
 4. **Dynamic Routing Catalog**
 	- Refactor `ProgrammableRouter` to ingest symbol catalogs generated from CRC/workflow manifests; remove the static service arrays baked into `router.rs`.
