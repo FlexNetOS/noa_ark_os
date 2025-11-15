@@ -212,6 +212,10 @@ mod tests {
 
         let aggregated = aggregated().expect("expected aggregated telemetry");
         assert_eq!(aggregated.recent.timestamp, s2.timestamp);
-        assert!(aggregated.rolling_cpu_utilisation >= 0.39);
+        assert!(
+            (aggregated.rolling_cpu_utilisation - 0.30).abs() < f32::EPSILON,
+            "unexpected rolling cpu utilisation: {}",
+            aggregated.rolling_cpu_utilisation
+        );
     }
 }

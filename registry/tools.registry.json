@@ -1,0 +1,380 @@
+{
+  "schema_version": "2025.03",
+  "generated_at": "2025-03-28T00:00:00Z",
+  "description": "Canonical registry for noa CLI, automation, and plugin integrations.",
+  "tools": [
+    {
+      "id": "observability.metrics.snapshot",
+      "name": "Kernel Metrics Snapshot",
+      "category": "observability",
+      "layer": "core.telemetry",
+      "summary": "Collects a focused metrics window from kernel telemetry exporters.",
+      "description": "Emits an aggregated telemetry snapshot for the selected kernel component, sourced from offline-first collectors.",
+      "owner": "observability-guild",
+      "maturity": "beta",
+      "lifecycle": "active",
+      "aliases": ["observe metrics", "metrics snapshot"],
+      "parameters": [
+        {
+          "name": "target",
+          "description": "Kernel component or subsystem to sample (kernel, io, process, sandbox).",
+          "data_type": "string",
+          "required": true,
+          "example": "kernel",
+          "source": "telemetry.topology"
+        },
+        {
+          "name": "window",
+          "description": "Time window in seconds to aggregate telemetry across.",
+          "data_type": "integer",
+          "required": false,
+          "default": "60",
+          "example": "120",
+          "source": "telemetry.collector"
+        }
+      ],
+      "side_effects": [
+        {
+          "impact": "read",
+          "scope": "telemetry-cache",
+          "description": "Reads counters from the offline metrics cache to avoid production scraping.",
+          "mitigation": "Cache snapshots rotate every 15 minutes; no live scraping occurs."
+        }
+      ],
+      "budgets": {
+        "cpu_millis": 150,
+        "memory_mebibytes": 64,
+        "storage_mebibytes": 4,
+        "max_duration_seconds": 30,
+        "network_class": "offline"
+      },
+      "outputs": [
+        {
+          "format": "application/json",
+          "description": "Structured telemetry snapshot keyed by metric and component.",
+          "schema": "#/components/schemas/TelemetrySnapshot"
+        }
+      ],
+      "cli_mappings": [
+        {
+          "command": ["observability", "metrics"],
+          "description": "Display the current kernel metrics snapshot.",
+          "arguments": ["--target <component>", "--window <seconds>"],
+          "flags": ["--json"],
+          "example": "noa observability metrics --target kernel --window 120"
+        }
+      ],
+      "api": {
+        "grpc": "noa.tools.v1.ObservabilityService/GetMetricsSnapshot",
+        "rest": {
+          "method": "POST",
+          "path": "/api/tools/v1/observability/metrics:collect",
+          "operation_id": "ObservabilityMetricsCollect"
+        }
+      },
+      "automation": {
+        "events": ["telemetry.threshold_breach"],
+        "approvals_required": [],
+        "runbooks": ["docs/runbook/observability/metrics_snapshot.md"]
+      }
+    },
+    {
+      "id": "automation.plan.execute",
+      "name": "Automation Plan Executor",
+      "category": "automation",
+      "layer": "workflow.engine",
+      "summary": "Runs an approved automation plan with safety gates and ledger output.",
+      "description": "Executes an automation plan from the workflow engine, honoring approvals and budget constraints before producing an evidence ledger receipt.",
+      "owner": "automation-guild",
+      "maturity": "alpha",
+      "lifecycle": "active",
+      "aliases": ["auto exec"],
+      "parameters": [
+        {
+          "name": "plan_id",
+          "description": "Identifier for the automation plan stored in the workflow graph.",
+          "data_type": "uuid",
+          "required": true,
+          "example": "2f3f15de-2d71-4e89-b848-55f98ae6d6dd",
+          "source": "workflow.registry"
+        },
+        {
+          "name": "dry_run",
+          "description": "Whether to perform a dry-run evaluation without committing outputs.",
+          "data_type": "boolean",
+          "required": false,
+          "default": "false",
+          "example": "true",
+          "source": "workflow.controller"
+        }
+      ],
+      "side_effects": [
+        {
+          "impact": "write",
+          "scope": "workflow-ledger",
+          "description": "Appends an execution receipt to the workflow evidence ledger.",
+          "mitigation": "Ledger writes are idempotent via plan-id deduplication."
+        },
+        {
+          "impact": "execute",
+          "scope": "automation-targets",
+          "description": "May trigger downstream automation hooks defined in the plan nodes.",
+          "mitigation": "Dry run mode allows preview without executing actions."
+        }
+      ],
+      "budgets": {
+        "cpu_millis": 500,
+        "memory_mebibytes": 256,
+        "storage_mebibytes": 32,
+        "max_duration_seconds": 600,
+        "network_class": "internal"
+      },
+      "outputs": [
+        {
+          "format": "application/json",
+          "description": "Workflow execution receipt with approvals, actions, and resulting artifacts.",
+          "schema": "#/components/schemas/AutomationReceipt"
+        }
+      ],
+      "cli_mappings": [
+        {
+          "command": ["automation", "run"],
+          "description": "Execute an automation plan with optional dry-run mode.",
+          "arguments": ["--plan-id <uuid>", "--dry-run"],
+          "flags": ["--json"],
+          "example": "noa automation run --plan-id 2f3f15de-2d71-4e89-b848-55f98ae6d6dd"
+        }
+      ],
+      "api": {
+        "grpc": "noa.tools.v1.AutomationService/ExecutePlan",
+        "rest": {
+          "method": "POST",
+          "path": "/api/tools/v1/automation/plans:execute",
+          "operation_id": "AutomationExecutePlan"
+        }
+      },
+      "automation": {
+        "events": ["workflow.plan.ready"],
+        "approvals_required": ["operations"],
+        "runbooks": ["docs/runbook/automation/execute_plan.md"]
+      }
+    },
+    {
+      "id": "analysis.security.scan",
+      "name": "Security Posture Scan",
+      "category": "analysis",
+      "layer": "security.analysis",
+      "summary": "Performs a targeted security scan across runtime manifests and dependencies.",
+      "description": "Uses the CRC engine to inspect manifests, SBOM artifacts, and recent diffs to produce a consolidated security posture report.",
+      "owner": "security-guild",
+      "maturity": "beta",
+      "lifecycle": "active",
+      "aliases": ["analyze security"],
+      "parameters": [
+        {
+          "name": "scope",
+          "description": "Scope of the security scan (runtime, services, agents, full).",
+          "data_type": "string",
+          "required": true,
+          "example": "services",
+          "source": "security.catalogue"
+        },
+        {
+          "name": "since",
+          "description": "Commit or timestamp boundary to limit the scan.",
+          "data_type": "string",
+          "required": false,
+          "default": "HEAD~1",
+          "example": "2025-03-01T00:00:00Z",
+          "source": "git.history"
+        }
+      ],
+      "side_effects": [
+        {
+          "impact": "read",
+          "scope": "sbom-cache",
+          "description": "Reads SBOM and vulnerability databases from the offline cache.",
+          "mitigation": "Cache is refreshed by nightly automation; no network calls performed."
+        }
+      ],
+      "budgets": {
+        "cpu_millis": 750,
+        "memory_mebibytes": 512,
+        "storage_mebibytes": 64,
+        "max_duration_seconds": 900,
+        "network_class": "offline"
+      },
+      "outputs": [
+        {
+          "format": "application/json",
+          "description": "Consolidated security scan findings grouped by severity and component.",
+          "schema": "#/components/schemas/SecurityReport"
+        }
+      ],
+      "cli_mappings": [
+        {
+          "command": ["analysis", "security"],
+          "description": "Run the security posture scan across the selected scope.",
+          "arguments": ["--scope <target>", "--since <ref>"],
+          "flags": ["--json"],
+          "example": "noa analysis security --scope services --since HEAD~3"
+        }
+      ],
+      "api": {
+        "grpc": "noa.tools.v1.AnalysisService/RunSecurityScan",
+        "rest": {
+          "method": "POST",
+          "path": "/api/tools/v1/analysis/security:scan",
+          "operation_id": "AnalysisSecurityScan"
+        }
+      },
+      "automation": {
+        "events": ["security.scan.scheduled", "security.scan.manual"],
+        "approvals_required": [],
+        "runbooks": ["docs/runbook/analysis/security_scan.md"]
+      }
+    },
+    {
+      "id": "collaboration.review.prepare",
+      "name": "Collaboration Review Packager",
+      "category": "collaboration",
+      "layer": "workflow.collab",
+      "summary": "Bundles workflow state, telemetry, and evidence into a shareable review packet.",
+      "description": "Aggregates workflow tasks, evidence ledger entries, and observability snapshots into a single collaboration artifact for asynchronous review.",
+      "owner": "collaboration-guild",
+      "maturity": "beta",
+      "lifecycle": "active",
+      "aliases": ["collab review"],
+      "parameters": [
+        {
+          "name": "workflow_id",
+          "description": "Workflow identifier to package for review.",
+          "data_type": "string",
+          "required": true,
+          "example": "workflow-ops-1827",
+          "source": "workflow.registry"
+        },
+        {
+          "name": "include_logs",
+          "description": "Whether to include sanitized execution logs in the package.",
+          "data_type": "boolean",
+          "required": false,
+          "default": "true",
+          "example": "false",
+          "source": "collaboration.preferences"
+        }
+      ],
+      "side_effects": [
+        {
+          "impact": "write",
+          "scope": "collaboration-cache",
+          "description": "Writes a packaged artifact to the collaboration exchange cache.",
+          "mitigation": "Artifacts expire after 48 hours via retention policy."
+        }
+      ],
+      "budgets": {
+        "cpu_millis": 200,
+        "memory_mebibytes": 128,
+        "storage_mebibytes": 128,
+        "max_duration_seconds": 120,
+        "network_class": "internal"
+      },
+      "outputs": [
+        {
+          "format": "application/json",
+          "description": "Metadata about the generated collaboration package, including handoff location.",
+          "schema": "#/components/schemas/CollaborationPacket"
+        }
+      ],
+      "cli_mappings": [
+        {
+          "command": ["collaboration", "review"],
+          "description": "Prepare a collaboration review package for the provided workflow.",
+          "arguments": ["--workflow-id <id>", "--include-logs"],
+          "flags": ["--json"],
+          "example": "noa collaboration review --workflow-id workflow-ops-1827"
+        }
+      ],
+      "api": {
+        "grpc": "noa.tools.v1.CollaborationService/PrepareReviewPackage",
+        "rest": {
+          "method": "POST",
+          "path": "/api/tools/v1/collaboration/reviews:prepare",
+          "operation_id": "CollaborationPrepareReview"
+        }
+      },
+      "automation": {
+        "events": ["workflow.stage.completed"],
+        "approvals_required": ["review-board"],
+        "runbooks": ["docs/runbook/collaboration/review_package.md"]
+      }
+    },
+    {
+      "id": "plugin.catalog.describe",
+      "name": "Plugin Catalog Descriptor",
+      "category": "plugin",
+      "layer": "platform.plugins",
+      "summary": "Describes plugin integration points and scaffolding tasks based on the registry.",
+      "description": "Reads the canonical registry to highlight plugin extension points, SDK scaffolding commands, and matching API definitions for rapid onboarding.",
+      "owner": "platform-guild",
+      "maturity": "preview",
+      "lifecycle": "active",
+      "aliases": ["plugin describe"],
+      "parameters": [
+        {
+          "name": "surface",
+          "description": "Surface to focus on (cli, api, automation, all).",
+          "data_type": "string",
+          "required": false,
+          "default": "all",
+          "example": "cli",
+          "source": "plugin.registry"
+        }
+      ],
+      "side_effects": [
+        {
+          "impact": "read",
+          "scope": "registry",
+          "description": "Reads the tool registry and plugin scaffolding manifests.",
+          "mitigation": "Read-only access; writes are not performed."
+        }
+      ],
+      "budgets": {
+        "cpu_millis": 50,
+        "memory_mebibytes": 32,
+        "storage_mebibytes": 1,
+        "max_duration_seconds": 10,
+        "network_class": "offline"
+      },
+      "outputs": [
+        {
+          "format": "application/json",
+          "description": "Plugin scaffolding recommendations with CLI and API entry points.",
+          "schema": "#/components/schemas/PluginDescriptor"
+        }
+      ],
+      "cli_mappings": [
+        {
+          "command": ["plugin", "describe"],
+          "description": "Describe plugin scaffolding tasks for a given surface.",
+          "arguments": ["--surface <surface>"],
+          "flags": ["--json"],
+          "example": "noa plugin describe --surface cli"
+        }
+      ],
+      "api": {
+        "grpc": "noa.tools.v1.PluginService/Describe",
+        "rest": {
+          "method": "GET",
+          "path": "/api/tools/v1/plugins:describe",
+          "operation_id": "PluginDescribe"
+        }
+      },
+      "automation": {
+        "events": ["plugin.catalog.updated"],
+        "approvals_required": [],
+        "runbooks": ["docs/runbook/plugins/catalog_refresh.md"]
+      }
+    }
+  ]
+}
