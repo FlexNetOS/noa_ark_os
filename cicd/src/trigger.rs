@@ -214,8 +214,8 @@ impl TriggerManager {
             event.confidence
         };
 
-        let passed = event.confidence >= self.config.auto_merge_threshold
-            && effective_score >= self.config.required_trust_average;
+        let confidence_threshold_met = event.confidence >= self.config.auto_merge_threshold;
+        let passed = confidence_threshold_met && effective_score >= self.config.required_trust_average;
 
         let reason = if passed {
             format!(
