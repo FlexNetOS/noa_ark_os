@@ -386,7 +386,7 @@ impl RewardScorekeeper {
 
     fn requires_manual_approval_for(&self, standing: &AgentStanding) -> bool {
         standing.total_reward < self.config.gating_threshold
-            && standing.recent_average() < self.config.gating_recent_threshold
+            || standing.recent_average() < self.config.gating_recent_threshold
     }
 }
 
