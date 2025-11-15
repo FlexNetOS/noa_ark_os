@@ -21,22 +21,28 @@
         "common": {
           "type": "object",
           "additionalProperties": {
-            "type": ["string", "array"],
-            "items": { "type": "string" }
+            "oneOf": [
+              { "type": "string" },
+              { "type": "array", "items": { "type": "string" } }
+            ]
           }
         },
         "posix": {
           "type": "object",
           "additionalProperties": {
-            "type": ["string", "array"],
-            "items": { "type": "string" }
+            "oneOf": [
+              { "type": "string" },
+              { "type": "array", "items": { "type": "string" } }
+            ]
           }
         },
         "windows": {
           "type": "object",
           "additionalProperties": {
-            "type": ["string", "array"],
-            "items": { "type": "string" }
+            "oneOf": [
+              { "type": "string" },
+              { "type": "array", "items": { "type": "string" } }
+            ]
           }
         }
       },
