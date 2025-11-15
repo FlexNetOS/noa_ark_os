@@ -193,6 +193,8 @@ Edit `.vscode/settings.json`:
 }
 ```
 
+> **Updated Source of Truth:** Apply the same override in `tools/devshell/config.json` so terminals and other editors inherit the check-only behavior when sourcing `tools/devshell/env/pnpm.*`.
+
 #### Option C: Build Clippy from Source (TIME-CONSUMING)
 ```powershell
 # In WSL where full Rust toolchain exists

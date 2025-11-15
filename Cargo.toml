@@ -3,6 +3,7 @@ resolver = "2"
 
 members = [
     "core",
+    "memory",
     "agents",
     "ai/runtime",
     "workflow",
@@ -20,6 +21,8 @@ members = [
     "server/ui_api",
     "tools/symbol_graph",
     "tools/security/shim",
+    "plugins/sdk",
+    "tools/quarantine_guard",
 ]
 
 [workspace.package]
