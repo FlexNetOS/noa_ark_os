@@ -57,20 +57,20 @@ world-fix:
 
 # Kernel build
 kernel:
-        @echo "🔨 Building kernel crate..."
-        $(CARGO) build -p noa_core
-        @echo "✅ Kernel crate compiled"
+	@echo "🔨 Building kernel crate..."
+	$(CARGO) build -p noa_core
+	@echo "✅ Kernel crate compiled"
 
 image: kernel
-        @echo "🛠️ Producing standalone kernel image..."
-        $(CARGO) build -p noa_core --bin noa_kernel --bin noa_host_control --release
-        @mkdir -p dist/kernel
-        @cp target/release/noa_kernel dist/kernel/
-        @cp target/release/noa_host_control dist/kernel/
-        @cp core/config/default_manifest.yaml dist/kernel/manifest.yaml
-        @printf "# NOA ARK Kernel Image\n\nThis directory contains the release-built kernel binaries and manifest for controlled execution.\n" > dist/kernel/README.md
-        @set -euo pipefail; $(CARGO) test -p noa_core --tests -- --nocapture | tee dist/kernel/test-results.log
-        @echo "✅ Kernel image staged under dist/kernel"
+	@echo "🛠️ Producing standalone kernel image..."
+	$(CARGO) build -p noa_core --bin noa_kernel --bin noa_host_control --release
+	@mkdir -p dist/kernel
+	@cp target/release/noa_kernel dist/kernel/
+	@cp target/release/noa_host_control dist/kernel/
+	@cp core/config/default_manifest.yaml dist/kernel/manifest.yaml
+	@printf "# NOA ARK Kernel Image\n\nThis directory contains the release-built kernel binaries and manifest for controlled execution.\n" > dist/kernel/README.md
+	@set -euo pipefail; $(CARGO) test -p noa_core --tests -- --nocapture | tee dist/kernel/test-results.log
+	@echo "✅ Kernel image staged under dist/kernel"
 
 # SBOM generation
 sbom:
