@@ -11,8 +11,7 @@ Maximum focus on Continuous Delivery (CD) for NOA ARK OS.
 - **Trust-gated auto merges** – `cicd/src/trigger.rs` now evaluates historical trust metrics from
   `audit/ledger.jsonl` before executing a git merge preview. Passing merges archive their diff under
   `audit/merges/` and append an approval entry to the ledger.
-- **Scheduled rollback drills** – `cargo run --manifest-path cicd/Cargo.toml --bin rollback_simulation`
-  exercises git worktree rollbacks and records the outcome in both `audit/rollbacks/` and the ledger.
+- **Scheduled rollback drills** – _Planned:_ automated exercises of git worktree rollbacks, with outcomes to be recorded in both `audit/rollbacks/` and the ledger. (Implementation pending)
 - **Signed audit bundles** – `make publish-audit` captures an SBOM, trust summary, and release
   metadata into `audit/bundle-*` directories and validates the output through
   `audit/verify.sh` / `audit/verify.py`.
