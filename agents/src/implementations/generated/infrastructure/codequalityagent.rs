@@ -1,5 +1,5 @@
 //! CodeQualityAgent - Auto-generated
-//! 
+//!
 //! Enforces linting, formatting, and static analysis on all generated agent code; escalates for non-standard code styles or critical formatting issues.
 
 use crate::unified_types::*;
@@ -48,22 +48,22 @@ impl Codequalityagent {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Ready;
         Ok(())
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -78,13 +78,13 @@ impl Default for Codequalityagent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = Codequalityagent::new();
         assert_eq!(agent.metadata().name, "CodeQualityAgent");
     }
-    
+
     #[tokio::test]
     async fn test_agent_initialization() {
         let mut agent = Codequalityagent::new();

@@ -56,12 +56,12 @@ impl TestingAgent {
             state: RwLock::new(AgentState::Created),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Ready;
         Ok(())
     }
-    
+
     pub async fn run_tests(&self) -> Result<TestResult> {
         Ok(TestResult {
             test_id: Uuid::new_v4(),
@@ -69,13 +69,19 @@ impl TestingAgent {
             details: "All tests passed".to_string(),
         })
     }
-    
-    pub fn metadata(&self) -> &AgentMetadata { &self.metadata }
-    pub async fn state(&self) -> AgentState { self.state.read().await.clone() }
+
+    pub fn metadata(&self) -> &AgentMetadata {
+        &self.metadata
+    }
+    pub async fn state(&self) -> AgentState {
+        self.state.read().await.clone()
+    }
 }
 
 impl Default for TestingAgent {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[cfg(test)]

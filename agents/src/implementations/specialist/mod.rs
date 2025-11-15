@@ -1,5 +1,5 @@
 //! Specialist Agents Module
-//! 
+//!
 //! Specialist-level agents (L4 Operations layer)
 //! Domain-specific expertise and task execution
 

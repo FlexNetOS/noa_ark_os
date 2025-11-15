@@ -1,5 +1,5 @@
 //! TechnologyBoardAgent - Auto-generated
-//! 
+//!
 //! Oversees technical strategy, code review, and infrastructure.
 
 use crate::unified_types::*;
@@ -23,7 +23,8 @@ impl Technologyboardagent {
             category: AgentCategory::Other,
             agent_type: AgentType::Worker,
             language: AgentLanguage::Rust,
-            description: "Oversees technical strategy, code review, and infrastructure.".to_string(),
+            description: "Oversees technical strategy, code review, and infrastructure."
+                .to_string(),
             role: "Micro Agent".to_string(),
             purpose: "Oversees technical strategy, code review, and infrastructure.".to_string(),
             state: AgentState::Created,
@@ -48,22 +49,22 @@ impl Technologyboardagent {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Ready;
         Ok(())
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -78,13 +79,13 @@ impl Default for Technologyboardagent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = Technologyboardagent::new();
         assert_eq!(agent.metadata().name, "TechnologyBoardAgent");
     }
-    
+
     #[tokio::test]
     async fn test_agent_initialization() {
         let mut agent = Technologyboardagent::new();

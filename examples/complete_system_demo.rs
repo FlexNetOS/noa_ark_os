@@ -20,6 +20,8 @@ use std::error::Error;
 use std::collections::HashMap;
 
 use noa_crc::{CRCSystem, CRCConfig, DropManifest, SourceType, Priority, SandboxModel};
+use noa_core::config::manifest::CAPABILITY_PROCESS;
+use noa_core::process::ProcessService;
 use noa_agents::{AgentFactory, AgentType, AgentLanguage};
 use noa_agents::hive::HiveMind;
 use noa_agents::swarm::SwarmCoordinator;
@@ -42,7 +44,22 @@ fn main() -> Result<(), Box<dyn Error>> {
     
     // 1.1 Initialize Core OS
     println!("[Core OS] Initializing kernel, process, memory, IPC, FS, security...");
-    noa_core::init()?;
+    let kernel = noa_core::init()?;
+    let process_service = kernel
+        .request::<ProcessService>(CAPABILITY_PROCESS)
+        .expect("process capability should be available");
+    let _pid = process_service
+        .create_process("demo_kernel_process".to_string())
+        .expect("process should be created");
+
+    noa_agents::register_kernel_capabilities(&kernel)?;
+    let agent_factory = AgentFactory::with_kernel(kernel.clone())?;
+    let _demo_agent = agent_factory.create_agent(
+        "kernel_bootstrap_agent".to_string(),
+        AgentType::Worker,
+        AgentLanguage::Rust,
+        true,
+    )?;
     println!("✓ Core OS initialized and running\n");
     
     // 1.2 Initialize Workspace Management

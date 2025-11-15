@@ -4,12 +4,24 @@ resolver = "2"
 members = [
     "core",
     "agents",
+    "ai/runtime",
     "workflow",
     "sandbox",
     "cicd",
     "crc",
+    "crc-adapter-sdk",
+    "runtime/manager",
     "ui/core",
     "server/ai/inference",
+    "server/gateway",
+    "services/relocation-daemon",
+    "apps/cli",
+    "server/relocation",
+    "server/ui_api",
+    "tools/symbol_graph",
+    "tools/security/shim",
+    "plugins/sdk",
+    "tools/quarantine_guard",
 ]
 
 [workspace.package]
@@ -21,6 +33,17 @@ license = "MIT"
 [workspace.dependencies]
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+serde_yaml = "0.9"
 anyhow = "1.0"
 tokio = { version = "1", features = ["full"] }
 noa_inference = { path = "server/ai/inference" }
+
+[workspace.lints.rust]
+unsafe_code = "warn"
+
+[profile.dev]
+opt-level = 0
+
+[profile.release]
+opt-level = 3
+lto = true

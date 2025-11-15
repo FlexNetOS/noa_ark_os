@@ -2,7 +2,33 @@
 
 Multi-layered AI agent system with hive mind coordination, swarm deployments, and disposable sub-agents.
 
+## Task Planning Source of Truth
+
+Automated planners and supporting tooling must source roadmap directives from the machine-readable index at
+`docs/tasks/index.json`. The index provides structured task codes, summaries, authoritative owning files, and declared
+dependencies so planners can queue work without scraping free-form roadmap text. Consumers should validate the file with
+`python tools/task_index_validator.py` before executing generated plans to ensure the dependency graph and file references
+are up to date.
+
 ## Architecture
+
+### 5-Layer Agent Hierarchy
+
+NOA ARK OS uses a hierarchical 5-layer architecture for organizing agents, from strategic governance to infrastructure tasks:
+
+| Layer | Alternative Name | Description | Examples |
+|-------|-----------------|-------------|----------|
+| **L1Autonomy** | Executive | Root CECCA, Constitutional authority | CECCA, Constitutional Oversight |
+| **L2Reasoning** | Board | Board decision-making | Board agents, Strategic Planning |
+| **L3Orchestration** | Stack-Chief | Chief Commanders, Orchestrators | Stack Chiefs, Workflow Coordinators |
+| **L4Operations** | Specialist | Domain specialists, Workers | Code agents, Security specialists |
+| **L5Infrastructure** | Micro | Micro agents, Infrastructure tasks | Utility agents, Monitoring |
+
+**Escalation Flow**: Agents escalate decisions upward (L5 → L4 → L3 → L2 → L1) when tasks exceed their authority level or require higher-level coordination.
+
+**Historical Note**: The L1-L5 naming provides a clearer numerical hierarchy while maintaining backward compatibility with the original organizational names (Executive, Board, Stack-Chief, Specialist, Micro).
+
+### Component Structure
 
 ```
 agents/

@@ -2,11 +2,21 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Activate Portable Cargo",
+      "label": "Activate Portable Toolchain",
       "type": "shell",
-      "command": ".\\server\\tools\\activate-cargo.ps1",
+      "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1",
       "windows": {
-        "command": ".\\server\\tools\\activate-cargo.ps1"
+        "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1"
+      },
+      "linux": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "source ./server/tools/activate-cargo-wsl.sh && source ./server/tools/activate-node.sh && cargo --version && node -v && pnpm -v"
+        ]
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
       },
       "presentation": {
         "reveal": "always",
@@ -17,13 +27,23 @@
     {
       "label": "Cargo Build (Portable)",
       "type": "shell",
-      "command": ".\\server\\tools\\activate-cargo.ps1; cargo build",
+      "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo build",
       "windows": {
-        "command": ".\\server\\tools\\activate-cargo.ps1; cargo build"
+        "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo build"
+      },
+      "linux": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "source ./server/tools/activate-cargo-wsl.sh && source ./server/tools/activate-node.sh && cargo build --workspace"
+        ]
       },
       "group": {
         "kind": "build",
         "isDefault": true
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
       },
       "presentation": {
         "reveal": "always"
@@ -33,9 +53,19 @@
     {
       "label": "Cargo Run (Portable)",
       "type": "shell",
-      "command": ".\\server\\tools\\activate-cargo.ps1; cargo run",
+      "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo run",
       "windows": {
-        "command": ".\\server\\tools\\activate-cargo.ps1; cargo run"
+        "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo run"
+      },
+      "linux": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "source ./server/tools/activate-cargo-wsl.sh && source ./server/tools/activate-node.sh && cargo run --workspace"
+        ]
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
       },
       "presentation": {
         "reveal": "always"
@@ -45,9 +75,19 @@
     {
       "label": "Cargo Test (Portable)",
       "type": "shell",
-      "command": ".\\server\\tools\\activate-cargo.ps1; cargo test",
+      "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo test",
       "windows": {
-        "command": ".\\server\\tools\\activate-cargo.ps1; cargo test"
+        "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo test"
+      },
+      "linux": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "source ./server/tools/activate-cargo-wsl.sh && source ./server/tools/activate-node.sh && cargo test --workspace"
+        ]
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
       },
       "presentation": {
         "reveal": "always"
@@ -57,14 +97,47 @@
     {
       "label": "Cargo Check (Portable)",
       "type": "shell",
-      "command": ".\\server\\tools\\activate-cargo.ps1; cargo check",
+      "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo check",
       "windows": {
-        "command": ".\\server\\tools\\activate-cargo.ps1; cargo check"
+        "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo check"
+      },
+      "linux": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "source ./server/tools/activate-cargo-wsl.sh && source ./server/tools/activate-node.sh && cargo check --workspace"
+        ]
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
       },
       "presentation": {
         "reveal": "always"
       },
       "problemMatcher": ["$rustc"]
+    },
+    {
+      "label": "Pipeline Local (Portable)",
+      "type": "shell",
+      "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; make pipeline.local",
+      "windows": {
+        "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; make pipeline.local"
+      },
+      "linux": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "source ./server/tools/activate-cargo-wsl.sh && source ./server/tools/activate-node.sh && make pipeline.local"
+        ]
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
     }
   ]
 }

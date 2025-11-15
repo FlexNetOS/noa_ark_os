@@ -1,98 +1,102 @@
 # Portable Cargo - Quick Reference
 
-## ⚡ Quick Start (PowerShell Only!)
+## ⚡ Unified Quick Start
 
+Use the devshell wrapper so Cargo is initialised the same way for terminals, scripts, and CI:
 ```powershell
 # Activate Cargo
+python server/tools/dev_env_cli.py activate --platform windows
 .\server\tools\activate-cargo.ps1
 
-# Verify
-cargo --version
+```powershell
+# Windows PowerShell
+./tools/devshell/portable-cargo.ps1 build
+./tools/devshell/portable-cargo.ps1 test
 ```
 
-## 🔧 VS Code Settings Updated
-
-The workspace now has:
-- ✅ PowerShell as default terminal
-- ✅ Portable Cargo environment variables
-- ✅ Rust-analyzer configured for portable installation
-- ✅ Tasks for common Cargo commands
-
-## 📋 Available VS Code Tasks
-
-Press `Ctrl+Shift+P` → `Tasks: Run Task`:
-- **Activate Portable Cargo** - Sets up environment
-- **Cargo Build (Portable)** - Builds the project
-- **Cargo Run (Portable)** - Runs the project
-- **Cargo Test (Portable)** - Runs tests
-- **Cargo Check (Portable)** - Checks for errors
-
-## ⚠️ Important Notes
-
-### USE POWERSHELL ONLY
-
-**DO NOT** use WSL/bash with the portable Cargo installation!
-
-❌ **Wrong**:
 ```bash
-# This will NOT work (WSL/bash)
-./server/tools/activate-cargo.ps1
-cargo build
+# Linux / WSL
+./tools/devshell/portable-cargo.sh build
+./tools/devshell/portable-cargo.sh test
 ```
+## 🧭 CLI Helpers
 
-✅ **Correct**:
-```powershell
-# This WILL work (PowerShell)
-.\server\tools\activate-cargo.ps1
-cargo build
-```
+Use the workspace CLI to inspect and validate your environment before running commands:
 
-### Why PowerShell Only?
+- `python server/tools/dev_env_cli.py summary` – Show portable toolchain locations.
+- `python server/tools/dev_env_cli.py activate --platform windows` – Review activation steps.
+- `python server/tools/dev_env_cli.py doctor` – Confirm activation scripts and directories exist.
+- `python server/tools/dev_env_cli.py diagnostics` – Rust-analyzer guidance without opening an IDE.
 
-The portable Cargo installation contains Windows executables (`.exe` files) that are designed to run on Windows. While they *can* technically run through WSL interop, the environment variables and paths don't translate correctly.
+## 🧪 Common CLI Commands
 
-## 🚀 Common Workflows
+- `cargo build` – Compile the current project after activation.
+- `cargo test` – Run the full test suite.
+- `cargo run --bin <name>` – Execute a binary target.
+- `cargo check` – Fast verification without producing binaries.
 
-### Building a Project
+The wrapper sources the appropriate activator script, sets `CARGO_HOME`/`RUSTUP_HOME`, and records the current environment in `tools/devshell/state/cargo-env.{json,yaml}` for other commands to reuse.
 
-```powershell
-# Activate Cargo
-.\server\tools\activate-cargo.ps1
-
-# Navigate to project
-cd crc
-
-# Build
-cargo build
-
-# Build release
-cargo build --release
-```
-
-### Running Tests
+## 🛠️ Initial Setup
 
 ```powershell
-# Activate Cargo
-.\server\tools\activate-cargo.ps1
-
-# Run all tests
-cargo test
-
-# Run specific test
-cargo test test_name
+# Windows portable toolchain
+./server/tools/setup-portable-cargo.ps1
 ```
 
-### Checking Code
+```bash
+# Native Linux toolchain
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+
+After installation, run the wrapper once to generate the status snapshot:
 
 ```powershell
-# Activate Cargo
-.\server\tools\activate-cargo.ps1
+./tools/devshell/portable-cargo.ps1 --version
+```
 
-# Quick check (faster than build)
-cargo check
+```bash
+./tools/devshell/portable-cargo.sh --version
+```
 
-# Lint with Clippy
-cargo clippy
+## 🧭 Shell Guidance
+
+- **PowerShell** users can still run `./server/tools/activate-cargo.ps1` for interactive sessions, but the wrapper is preferred for scripted commands.
+- **Bash/WSL** users may source `./server/tools/activate-cargo.sh` for long-lived shells, then rely on the wrapper for builds/tests.
+- `tools/devshell/state/cargo-env.json` reflects the last activation mode (`portable` vs `system`).
+
+## 📋 Common Workflows
+
+### Building
+
+```powershell
+./tools/devshell/portable-cargo.ps1 build
+```
+
+```bash
+./tools/devshell/portable-cargo.sh build
+```
+
+### Testing
+
+```powershell
+./tools/devshell/portable-cargo.ps1 test
+```
+
+```bash
+./tools/devshell/portable-cargo.sh test
+```
+
+### Checking / Linting
+
+```powershell
+./tools/devshell/portable-cargo.ps1 check
+./tools/devshell/portable-cargo.ps1 fmt
+```
+
+```bash
+./tools/devshell/portable-cargo.sh check
+./tools/devshell/portable-cargo.sh fmt
 ```
 
 ## 🔄 Terminal Setup
@@ -104,76 +108,90 @@ If you see:
 deflex@FlexNetOS-1001:/mnt/d/...
 ```
 
-You're in WSL. You need PowerShell instead:
+You're in WSL. Use the bash wrapper:
 
-1. In VS Code: Click the terminal dropdown (v icon) → Select "PowerShell"
-2. Or press `Ctrl+Shift+P` → "Terminal: Select Default Profile" → Choose "PowerShell"
-3. Open new terminal: `Ctrl+Shift+`` (backtick)
-
-### Correct PowerShell Prompt
-
-You should see:
+```bash
+./tools/devshell/portable-cargo.sh --version
 ```
-PS D:\dev\workspaces\noa_ark_os>
+## 🔄 Terminal Check
+
+- Run `python server/tools/dev_env_cli.py doctor` to confirm the activation scripts are present.
+- Ensure your prompt begins with `PS` (PowerShell) before invoking `.\server\tools\activate-cargo.ps1`.
+- If you see a WSL prompt such as `deflex@FlexNetOS-1001:/mnt/d/...`, switch to Windows PowerShell first.
+
+Then run:
+
+```powershell
+./tools/devshell/portable-cargo.ps1 --version
 ```
 
 ## 📁 Installation Locations
 
 ```
 server/tools/
-├── cargo-portable/       # Cargo installation
-│   └── bin/
-│       ├── cargo.exe     # ← Windows executable
-│       ├── rustc.exe     # ← Windows executable
-│       └── rustfmt.exe   # ← Windows executable
-├── rustup-portable/      # Rustup data
-└── activate-cargo.ps1    # Activation script
+├── cargo-portable/       # Cargo installation (portable)
+├── rustup-portable/      # Rustup data (portable)
+├── activate-cargo.ps1    # Activation script (Windows)
+├── activate-cargo.sh     # Activation script (WSL/Linux)
+└── setup-portable-cargo.ps1
+
+tools/devshell/
+├── portable-cargo.ps1    # PowerShell wrapper
+├── portable-cargo.sh     # Bash wrapper
+└── state/                # Auto-generated status snapshots
 ```
 
 ## 🆘 Troubleshooting
 
 ### "cargo: command not found"
 
+- Run the wrapper with `--version` to refresh the environment snapshot.
+- Windows: ensure the portable toolchain exists (`./server/tools/setup-portable-cargo.ps1`).
+- Linux/WSL: install Rust via `rustup` if the system toolchain is missing.
+
+### Need to reinstall (Windows portable)
 **Cause**: Cargo not activated or using wrong shell
 
 **Solution**:
-1. Make sure you're in PowerShell (not WSL)
-2. Run activation script: `.\server\tools\activate-cargo.ps1`
+1. Run `python server/tools/dev_env_cli.py doctor` to confirm scripts are present.
+2. Make sure you're in PowerShell (not WSL).
+3. Run activation script: `.\server\tools\activate-cargo.ps1`.
 
 ### "Cannot find path" errors
 
 **Cause**: Using WSL/bash instead of PowerShell
 
-**Solution**: Switch to PowerShell terminal
+**Solution**: Switch to PowerShell terminal and re-run `python server/tools/dev_env_cli.py activate --platform windows` for guidance.
 
 ### Need to reinstall
 
 ```powershell
-# Remove old installation
 Remove-Item -Recurse -Force server\tools\cargo-portable
 Remove-Item -Recurse -Force server\tools\rustup-portable
-
-# Reinstall
-.\server\tools\setup-portable-cargo.ps1
+./server/tools/setup-portable-cargo.ps1
 ```
 
 ## 💾 VS Code Configuration
 
-The workspace now includes:
+The workspace still includes PowerShell-centric settings today, but these will be phased out as the devshell wrapper becomes the default entrypoint for tooling. Tasks can be updated to call `tools/devshell/portable-cargo.ps1` for parity with the CLI flow.
 
-### `.vscode/settings.json`
-- Sets PowerShell as default terminal
-- Configures Rust-analyzer for portable Cargo
-- Sets environment variables automatically
+# Reinstall
+.\server\tools\setup-portable-cargo.ps1
 
-### `.vscode/tasks.json`
-- Pre-configured build tasks
-- Activates Cargo automatically
-- Run with `Ctrl+Shift+P` → "Tasks: Run Task"
+# Verify
+python server/tools/dev_env_cli.py doctor
+```
+
+## 🗂️ CLI Assets
+
+- `server/tools/dev_env_cli.py` – Workspace configuration helper.
+- `server/tools/activate-cargo.ps1` – Windows activation script.
+- `server/tools/activate-cargo.sh` – WSL/Linux activation script.
+- `server/tools/setup-portable-cargo.ps1` – One-time bootstrapper.
 
 ## 📚 Additional Resources
 
 - [Cargo Documentation](https://doc.rust-lang.org/cargo/)
 - [Rust Book](https://doc.rust-lang.org/book/)
-- Full setup guide: `server/tools/README.md`
+- Full setup guide: `server/tools/MULTI_PLATFORM.md`
 - Audit report: `server/TOOLS_AUDIT.md`

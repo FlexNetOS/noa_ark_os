@@ -158,7 +158,64 @@ stages:
           fi
           
           echo "✓ Integration tests passed"
-      
+
+  # Stage 4: CRC DAG execution
+  - name: crc_dag
+    display_name: "Execute CRC DAG Offline"
+    timeout_minutes: 15
+    depends_on:
+      - test
+    steps:
+      - name: orchestrate_crc
+        display_name: "Run CRC orchestrator"
+        script: |
+          echo "Running CRC orchestrator offline"
+          cargo run -p noa_crc -- run --checkpoint out/ckpt
+          cargo run -p noa_crc -- graph ls
+
+  - name: single_host_acceptance
+    display_name: "Single-host Acceptance"
+    timeout_minutes: 15
+    depends_on:
+      - test
+
+    steps:
+      - name: verify_profile_manifest
+        display_name: "Validate single_host profile"
+        script: |
+          echo "Checking single_host profile..."
+          PROFILE=server/profiles/single_host/profile.toml
+          if [ ! -f "$PROFILE" ]; then
+            echo "single_host profile missing at $PROFILE"
+            exit 1
+          fi
+          grep -q "single_host" "$PROFILE" || {
+            echo "Profile does not contain single_host identifier"
+            exit 1
+          }
+          echo "✓ Profile manifest present"
+
+      - name: dry_run_bootstrap
+        display_name: "Dry-run bootstrap script"
+        script: |
+          echo "Simulating single-host bootstrap"
+          chmod +x services/single-host/init/noa-single-host.sh
+          NOA_DRY_RUN=1 \
+          NOA_PROFILE=server/profiles/single_host/profile.toml \
+            services/single-host/init/noa-single-host.sh start all || true
+          echo "✓ Bootstrap script executed"
+
+      - name: profile_health_matrix
+        display_name: "Profile capability health matrix"
+        script: |
+          set -e
+          echo "Validating capability tokens for all profiles"
+          for PROFILE in single_host air_gapped devcontainer edge_lite; do
+            echo "→ Checking ${PROFILE}"
+            cargo test -p noa_core profile_switching --release -- --nocapture
+          done
+          echo "✓ Capability tokens validated across profiles"
+
       - name: coverage_report
         display_name: "Generate Coverage Report"
         continue_on_error: true

@@ -1,5 +1,5 @@
 //! Each stack digests one or more sources and returns results to the Digest Agent - Auto-generated
-//! 
+//!
 //! ['Performs Micro Agent functions']
 
 use crate::unified_types::*;
@@ -17,8 +17,11 @@ impl EachStackDigestsOneOrMoreSourcesAndReturnsResultsToTheDigestAgent {
     pub fn new() -> Self {
         let metadata = AgentMetadata {
             id: Uuid::new_v4(),
-            agent_id: "each_stack_digests_one_or_more_sources_and_returns_results_to_the_digest_agent".to_string(),
-            name: "Each stack digests one or more sources and returns results to the Digest Agent".to_string(),
+            agent_id:
+                "each_stack_digests_one_or_more_sources_and_returns_results_to_the_digest_agent"
+                    .to_string(),
+            name: "Each stack digests one or more sources and returns results to the Digest Agent"
+                .to_string(),
             layer: AgentLayer::L5Infrastructure,
             category: AgentCategory::Other,
             agent_type: AgentType::Worker,
@@ -48,22 +51,22 @@ impl EachStackDigestsOneOrMoreSourcesAndReturnsResultsToTheDigestAgent {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Ready;
         Ok(())
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -78,13 +81,16 @@ impl Default for EachStackDigestsOneOrMoreSourcesAndReturnsResultsToTheDigestAge
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = EachStackDigestsOneOrMoreSourcesAndReturnsResultsToTheDigestAgent::new();
-        assert_eq!(agent.metadata().name, "Each stack digests one or more sources and returns results to the Digest Agent");
+        assert_eq!(
+            agent.metadata().name,
+            "Each stack digests one or more sources and returns results to the Digest Agent"
+        );
     }
-    
+
     #[tokio::test]
     async fn test_agent_initialization() {
         let mut agent = EachStackDigestsOneOrMoreSourcesAndReturnsResultsToTheDigestAgent::new();

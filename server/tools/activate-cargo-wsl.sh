@@ -2,9 +2,15 @@
 # NOA ARK OS - Activate Cargo (WSL/Linux)
 # Usage: source ./server/tools/activate-cargo-wsl.sh
 
+__NOA_PREV_CARGO_OPTS="$(set +o)"
 set -euo pipefail
 
+SILENT="${NOA_ACTIVATE_SILENT:-0}"
+
 log() {
+    if [[ "$SILENT" == "1" ]]; then
+        return
+    fi
     echo -e "$1"
 }
 
@@ -30,6 +36,7 @@ if [ -f "$HOME/.cargo/env" ]; then
     echo "  • Run 'cargo run' to run projects"
     echo "  • Run 'cargo test' to run tests"
     echo ""
+    export NOA_CARGO_ENV=1
 else
     log "\n⚠️  Rust not found in WSL!"
     log "\nTo install Rust in WSL, run:"
@@ -48,8 +55,12 @@ else
         echo "  export PATH=\"/mnt/d/dev/workspaces/noa_ark_os/server/tools/cargo-portable/bin:\$PATH\""
         echo ""
 
-        read -r -p "Would you like to use Windows Cargo from WSL? (y/N): " reply
-        echo
+        if [[ "$SILENT" == "1" ]]; then
+            reply="n"
+        else
+            read -r -p "Would you like to use Windows Cargo from WSL? (y/N): " reply
+            echo
+        fi
         if [[ $reply =~ ^[Yy]$ ]]; then
             export CARGO_HOME="/mnt/d/dev/workspaces/noa_ark_os/server/tools/cargo-portable"
             export RUSTUP_HOME="/mnt/d/dev/workspaces/noa_ark_os/server/tools/rustup-portable"
@@ -59,6 +70,11 @@ else
             cargo.exe --version
             rustc.exe --version
             echo ""
+            export NOA_CARGO_ENV=1
         fi
     fi
 fi
+
+eval "$__NOA_PREV_CARGO_OPTS"
+unset __NOA_PREV_CARGO_OPTS
+return 0 2>/dev/null || exit 0

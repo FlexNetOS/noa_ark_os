@@ -1,0 +1,72 @@
+# Documentation Incident Simulation
+version: 1
+metadata:
+  id: doc-restore-042
+  objective: "Rebuild core documentation after automated purge"
+  severity: medium
+  playbook: docs-remediation-v1
+  owner: documentation-automation
+  dependencies:
+    - crc/config/standards.yaml
+    - services/monitoring/pipelines/dashboard_feeds.yaml
+
+stages:
+  - name: detection
+    signals:
+      - source: monitoring
+        metric: docs.coverage.drop_pct
+        threshold: 5
+      - source: support
+        metric: tickets.documentation.blocked
+        threshold: 3
+    telemetry:
+      - metric: docs.incident.ttd_minutes
+        target: 10
+        tolerance: 5
+        unit: minutes
+
+  - name: regeneration
+    actions:
+      - run_playbook:
+          name: authoritative-docs
+          scope: knowledge-base
+      - enforce_style_checks: true
+      - auto_archive_superseded: true
+    telemetry:
+      - metric: docs.regeneration.runtime_minutes
+        target: 20
+        tolerance: 10
+        unit: minutes
+      - metric: docs.regeneration.auto_fixes
+        target: 1
+        tolerance: 2
+        unit: count
+
+  - name: validation
+    actions:
+      - route_for_review:
+          required_roles:
+            - tech-writer
+            - product-owner
+      - publish_roi_snapshot: docs/reports/AUTOMATION_EFFECTIVENESS_ROI.md
+      - notify_channels:
+          - "#doc-automation"
+          - "#leadership-updates"
+    telemetry:
+      - metric: docs.validation.review_latency_minutes
+        target: 45
+        tolerance: 15
+        unit: minutes
+      - metric: docs.validation.non_compliance_issues
+        target: 0
+        tolerance: 0
+        unit: count
+
+recovery_assertions:
+  docset_restored: true
+  review_signoff_obtained: true
+  roi_report_generated: true
+success_criteria:
+  - "All regenerated artifacts comply with the documented style guide"
+  - "Alerting pipeline acknowledges review SLA breaches within defined windows"
+  - "ROI snapshot reflects updated metrics during the next refresh cycle"

@@ -1,3 +1,5 @@
+import type { ResumeToken } from "@noa-ark/shared-ui/schema";
+
 export type VibeMood = "focus" | "flow" | "chill" | "hype";
 
 export type CardIntegrationSnapshot = {
@@ -5,6 +7,33 @@ export type CardIntegrationSnapshot = {
   label: string;
   status: "idle" | "running" | "success" | "failed";
   details?: string;
+};
+
+export type ToolExecutionTelemetry = {
+  name: string;
+  capability: string;
+  status: "pending" | "running" | "succeeded" | "failed" | "skipped";
+  output?: string;
+  error?: string;
+  occurredAt?: string;
+};
+
+export type AgentAutomationRun = {
+  agentId: string;
+  agentName: string;
+  status: "queued" | "running" | "completed" | "failed";
+  attempt: number;
+  startedAt: string;
+  finishedAt?: string;
+  notes?: string;
+  toolResults: ToolExecutionTelemetry[];
+};
+
+export type GoalAutomationState = {
+  goalId: string;
+  history: AgentAutomationRun[];
+  lastUpdated: string;
+  retryAvailable: boolean;
 };
 
 export type VibeCard = {
@@ -16,13 +45,14 @@ export type VibeCard = {
   assigneeId?: string;
   dueDate?: string;
   integrations?: CardIntegrationSnapshot[];
+  automation?: GoalAutomationState | null;
 };
 
 export type VibeColumn = {
   id: string;
   title: string;
   accent: string;
-  cards: VibeCard[];
+  goals: Goal[];
 };
 
 export type BoardMoodSample = {
@@ -34,11 +64,13 @@ export type BoardMoodSample = {
 };
 
 export type BoardMetrics = {
-  completedCards: number;
-  activeCards: number;
-  vibeMomentum: number;
+  completedGoals: number;
+  activeGoals: number;
+  goalMomentum: number;
   cycleTimeDays?: number;
   flowEfficiency?: number;
+  goalLeadTimeHours?: number;
+  goalSuccessRate?: number;
 };
 
 export type BoardSnapshot = {
@@ -52,6 +84,7 @@ export type BoardSnapshot = {
   archived?: boolean;
   metrics?: BoardMetrics;
   moodSamples?: BoardMoodSample[];
+  goalId?: string;
 };
 
 export type WorkspaceBoard = BoardSnapshot & {
@@ -85,6 +118,8 @@ export type Workspace = {
   members: WorkspaceMember[];
   boards: WorkspaceBoard[];
   activity: ActivityEvent[];
+  notifications: NotificationEvent[];
+  uploadReceipts: UploadReceiptSummary[];
   lastSyncedAt?: string;
 };
 
@@ -106,6 +141,9 @@ export type NotificationEvent = {
   message: string;
   createdAt: string;
   severity: "info" | "success" | "warning" | "error";
+  href?: string;
+  casKeys?: string[];
+  receiptPath?: string;
 };
 
 export type WorkspaceIntegrationStatus = {
@@ -113,4 +151,74 @@ export type WorkspaceIntegrationStatus = {
   name: string;
   status: "healthy" | "running" | "degraded" | "error";
   lastEvent: string;
+};
+
+export type UploadReceiptSummary = {
+  id: string;
+  workspaceId: string;
+  boardId?: string;
+  dropId: string;
+  dropType: string;
+  originalName: string;
+  casKeys: string[];
+  receiptPath: string;
+  uploadedAt: string;
+  uploadedBy: {
+    id: string;
+    name: string;
+  };
+};
+
+export type GoalMemoryTrace = {
+  id: string;
+  goalId: string;
+  workspaceId: string;
+  boardId?: string | null;
+  actorId?: string | null;
+  actorName?: string | null;
+  action: string;
+  summary?: string | null;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+};
+
+export type GoalLifecycleEventSnapshot = {
+  id: number;
+  goalId: string;
+  workspaceId: string;
+  eventType: string;
+  status?: string | null;
+  summary?: string | null;
+  payload?: unknown;
+  createdAt: string;
+};
+
+export type GoalArtifactSnapshot = {
+  id: number;
+  goalId: string;
+  workspaceId: string;
+  artifactType: string;
+  artifactUri: string;
+  title?: string | null;
+  summary?: string | null;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+};
+
+export type GoalMemorySimilarGoal = {
+  goalId: string;
+  workspaceId: string;
+  score: number;
+};
+
+export type GoalMemoryInsights = {
+  summary: string;
+  traceCount: number;
+  lastSeen: string | null;
+  traces: GoalMemoryTrace[];
+  lifecycle: GoalLifecycleEventSnapshot[];
+  artifacts: GoalArtifactSnapshot[];
+  similarGoals: GoalMemorySimilarGoal[];
+  insightSummary?: string;
+  updatedAt: string;
 };

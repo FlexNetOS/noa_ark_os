@@ -1,5 +1,5 @@
 //! Orchestrated Parallel Repair Execution - Complete Team with Dynamic Agent Spawning - Auto-generated
-//! 
+//!
 //! ['Performs Micro Agent functions']
 
 use crate::unified_types::*;
@@ -17,8 +17,12 @@ impl OrchestratedParallelRepairExecutionCompleteTeamWithDynamicAgentSpawning {
     pub fn new() -> Self {
         let metadata = AgentMetadata {
             id: Uuid::new_v4(),
-            agent_id: "orchestrated_parallel_repair_execution_complete_team_with_dynamic_agent_spawning".to_string(),
-            name: "Orchestrated Parallel Repair Execution - Complete Team with Dynamic Agent Spawning".to_string(),
+            agent_id:
+                "orchestrated_parallel_repair_execution_complete_team_with_dynamic_agent_spawning"
+                    .to_string(),
+            name:
+                "Orchestrated Parallel Repair Execution - Complete Team with Dynamic Agent Spawning"
+                    .to_string(),
             layer: AgentLayer::L5Infrastructure,
             category: AgentCategory::Other,
             agent_type: AgentType::Worker,
@@ -48,22 +52,22 @@ impl OrchestratedParallelRepairExecutionCompleteTeamWithDynamicAgentSpawning {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Ready;
         Ok(())
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -78,16 +82,20 @@ impl Default for OrchestratedParallelRepairExecutionCompleteTeamWithDynamicAgent
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = OrchestratedParallelRepairExecutionCompleteTeamWithDynamicAgentSpawning::new();
-        assert_eq!(agent.metadata().name, "Orchestrated Parallel Repair Execution - Complete Team with Dynamic Agent Spawning");
+        assert_eq!(
+            agent.metadata().name,
+            "Orchestrated Parallel Repair Execution - Complete Team with Dynamic Agent Spawning"
+        );
     }
-    
+
     #[tokio::test]
     async fn test_agent_initialization() {
-        let mut agent = OrchestratedParallelRepairExecutionCompleteTeamWithDynamicAgentSpawning::new();
+        let mut agent =
+            OrchestratedParallelRepairExecutionCompleteTeamWithDynamicAgentSpawning::new();
         agent.initialize().await.unwrap();
         assert_eq!(agent.state().await, AgentState::Ready);
     }

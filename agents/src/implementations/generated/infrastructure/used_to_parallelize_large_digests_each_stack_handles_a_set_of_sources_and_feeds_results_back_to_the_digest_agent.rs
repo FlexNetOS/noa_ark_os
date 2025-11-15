@@ -1,5 +1,5 @@
 //! Used to parallelize large digests-each stack handles a set of sources and feeds results back to the Digest Agent - Auto-generated
-//! 
+//!
 //! ['Performs Micro Agent functions']
 
 use crate::unified_types::*;
@@ -8,7 +8,8 @@ use tokio::sync::RwLock;
 use uuid::Uuid;
 
 /// Used to parallelize large digests-each stack handles a set of sources and feeds results back to the Digest Agent
-pub struct UsedToParallelizeLargeDigestsEachStackHandlesASetOfSourcesAndFeedsResultsBackToTheDigestAgent {
+pub struct UsedToParallelizeLargeDigestsEachStackHandlesASetOfSourcesAndFeedsResultsBackToTheDigestAgent
+{
     metadata: AgentMetadata,
     state: RwLock<AgentState>,
 }
@@ -48,22 +49,22 @@ impl UsedToParallelizeLargeDigestsEachStackHandlesASetOfSourcesAndFeedsResultsBa
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Ready;
         Ok(())
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -78,13 +79,13 @@ impl Default for UsedToParallelizeLargeDigestsEachStackHandlesASetOfSourcesAndFe
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = UsedToParallelizeLargeDigestsEachStackHandlesASetOfSourcesAndFeedsResultsBackToTheDigestAgent::new();
         assert_eq!(agent.metadata().name, "Used to parallelize large digests-each stack handles a set of sources and feeds results back to the Digest Agent");
     }
-    
+
     #[tokio::test]
     async fn test_agent_initialization() {
         let mut agent = UsedToParallelizeLargeDigestsEachStackHandlesASetOfSourcesAndFeedsResultsBackToTheDigestAgent::new();
