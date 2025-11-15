@@ -49,6 +49,11 @@ We are committed to providing a welcoming and inclusive environment for all cont
    git remote add upstream https://github.com/FlexNetOS/noa_ark_os.git
    ```
 
+4. Install development dependencies:
+   ```bash
+   # Python components
+   pip install -r requirements-dev.txt
+   
 4. Authenticate the GitHub CLI (`gh`) using a fine-grained personal access token (PAT):
    - In a browser, navigate to **Settings → Developer settings → Personal access tokens → Fine-grained tokens** and create a new token scoped to `github.com`.
    - Grant the token access to the fork you will push to, with at least **Repository permissions → Contents (Read and write)** and **Pull requests (Read and write)**. Refer to the [GitHub PAT scope documentation](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token#creating-a-fine-grained-personal-access-token) for detailed guidance on selecting scopes and renewal cadence.

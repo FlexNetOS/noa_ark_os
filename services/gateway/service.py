@@ -249,5 +249,14 @@ def build_default_config(manifest_path: Optional[Path] = None) -> GatewayConfig:
             requires_authentication=False,
             rate_limit_per_minute=120,
         ),
+        "notebook-sync": PolicyRule(
+            service_id="notebook-sync",
+            allowed_methods=["POST"],
+            allowed_paths=["/v1/notebooks/sync", "/v1/notebooks/metadata"],
+            requires_authentication=True,
+            rate_limit_per_minute=60,
+            fs_scope="fs.notebooks.sync",
+            network_scope="net.notebooks.loopback",
+        ),
     }
     return GatewayConfig(manifest=manifest, policy_rules=policy_rules)

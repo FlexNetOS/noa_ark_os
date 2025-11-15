@@ -1,0 +1,13 @@
+# Normalize line endings to LF in repo
+* text=auto eol=lf
+
+# Keep Windows scripts CRLF
+*.bat eol=crlf
+*.cmd eol=crlf
+*.ps1 eol=crlf
+
+# Preserve binary
+*.png -text
+*.jpg -text
+*.zip -text
+*.vsidx -text

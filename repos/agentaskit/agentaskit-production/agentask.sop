@@ -1,0 +1,263 @@
+AGENTASK STANDARD OPERATING PROCEDURE (.sop)
+Version: 1.0 • Generated: 2025-10-05T08:12:14Z
+
+============================================================
+TITLE / HEADER
+============================================================
+Agent Task Lifecycle & Release Integrity SOP
+(Three-Plane Stack: Orchestrator • Sandbox • Execution)
+
+============================================================
+PURPOSE
+============================================================
+Guarantee low-latency, contract-based, and verifiable delivery of any
+agent task—from proposal to execution—using immutable artifacts,
+cryptographic verification, capability-scoped connectors, and simple,
+repeatable procedures. This SOP reduces drift, prevents downgrade,
+and enforces upgrade-only changes.
+
+============================================================
+SCOPE
+============================================================
+Applies to all agent tasks executed within the FlexNetOS migration
+skeleton and derivatives. Includes planning, build, verification,
+tri-sandbox evaluation, merge, signing, anchoring, promotion, and
+runtime enforcement. Excludes external vendor release processes and
+non-standard forks without the required policy toggles.
+
+Limitations:
+- Requires supported kernel features for fs-verity, immutable bits,
+  and UNIX domain sockets.
+- WASM connectors require wasmtime-capable hosts.
+
+============================================================
+ROLES & RESPONSIBILITIES
+============================================================
+Board (Approvers)
+  • Approve scopes, budgets, and promotion to Execution plane.
+  • Sign off on policy allowlists and anchor events.
+
+Orchestrator (Deterministic Controller)
+  • Accepts/patches plan DAGs; enforces budget & progress tokens (PT).
+  • Gating: contract-test, verify, policy checks, and CI pre-push.
+
+Sandbox Leads (A/B/C + Unifier)
+  • Implement and run tri-sandbox tasks (Model A/B/C).
+  • Provide merge heuristic or domain metric; produce Model D.
+
+Execution Owners (Core/Connectors)
+  • Maintain Cap’n Proto IDL, UDS server, and runtime verifiers.
+  • Operate WASM host and capability tokens; enforce mount/verity.
+
+Security/Compliance
+  • Manage minisign keys and fs-verity keys/certs.
+  • Maintain allowlists and audit anchors.
+
+DevEx (Tooling)
+  • Maintain Make targets and next-step recommender outputs.
+  • Ensure hooks and scripts remain idempotent and hermetic.
+
+============================================================
+MATERIALS & RESOURCES
+============================================================
+Required tools
+  • Rust toolchain (cargo), wasmtime, capnp compiler (optional strict),
+    minisign, fsverity-utils, numactl, Python 3.
+  • Optional: pycapnp, e2fsprogs (chattr/lsattr).
+
+Environment
+  • FLEX_MINISIGN_PUB – minisign public key path to enforce signatures.
+  • FLEX_ENFORCE_SEAL=1 – require immutable/fs-verity on manifest.
+  • FLEX_ENFORCE_MOUNT_RO=1 – artifacts/ must reside on read-only mount.
+  • FLEX_CONNECTOR_SECRET – HMAC secret for capability tokens.
+  • FLEX_CAP_TOKEN – capability token (scoped: connector:<name>).
+  • FLEX_PREOPEN_DIR – directory to preopen at /cap for WASM connectors.
+  • CAPNP_STRICT=1 – fail contract-test if IDL compile fails.
+
+============================================================
+ARCHITECTURE TREE (REFERENCE)
+============================================================
+/Makefile
+/contracts/
+  inference.capnp
+  samples/{request.bin, reply.bin}
+/tools/
+  sbom_gen.py, signer.py, verify.py, contract_test.py
+  merkle_anchor.py, promote.py, next_actions.py
+  cap_token.py, verity_policy.py
+  numa_pin.sh, hugepages.sh, fs_integrity.sh
+/orchestrator/...
+/sandbox/
+  inputs/, tri-sandbox/{A,B,C}/run.sh, tri-sandbox/unifier/merge.py, parent/
+/execution/
+  core/ (UDS Cap’n Proto server, runtime verifiers)
+  wasm_host/ (WASI host; caps + preopen support)
+  connectors/{echo,json-filter,readfile}/
+  policies/fsverity_allowlist.json
+/anchors/ (per-release merkle receipts)
+/artifacts/ (MANIFEST.sha256 [+ .minisig])
+/sbom/ (CycloneDX sbom.cdx.json)
+/docs/ (imported agent maps, crosswalks)
+
+============================================================
+HASHES • INDEXING • POLICY
+============================================================
+Indexing (SBOM & Manifest)
+  • SBOM: tools/sbom_gen.py → sbom/sbom.cdx.json (CycloneDX 1.5).
+  • Manifest: tools/signer.py → artifacts/MANIFEST.sha256 (file SHA-256s).
+  • Minisign: artifacts/MANIFEST.sha256.minisig (required if FLEX_MINISIGN_PUB set).
+
+Sealing & Verification
+  • Immutable or fs-verity required if FLEX_ENFORCE_SEAL=1.
+  • Runtime verifies minisign and manifest hashes before serving.
+
+fs-verity Policy Allowlist
+  • tools/verity_policy.py update/check maintains measured digests
+    (prefer fs-verity measurement; fallback tagged as filesha256:*).
+  • Make targets: update-verity-policy, check-verity-policy.
+
+Anchoring
+  • tools/merkle_anchor.py merkle-roots the release set → anchors/*.json.
+  • One anchor per release; no continuous anchoring.
+
+Capability Tokens & WASM Policy
+  • HMAC HS256 tokens (cap_token.py) include namespaced scopes:
+    connector:<name> (e.g., connector:readfile).
+  • WASM host requires scope for targeted connector and optionally preopens
+    FLEX_PREOPEN_DIR @ /cap (cap-std based, no ambient fs).
+
+============================================================
+PROCEDURES / INSTRUCTIONS
+============================================================
+0) Bootstrap (one-time)
+  a. git init && make hooks-install
+  b. make init
+  c. Install required tools (see Materials).
+
+1) Author & Prepare
+  a. Place inputs in sandbox/inputs/; implement A/B/C run.sh if needed.
+  b. Update contracts/inference.capnp when interface changes.
+  c. CAPNP_STRICT=1 make contract-test
+
+2) Index & Sign
+  a. make gen-sbom
+  b. make sign    # writes artifacts/MANIFEST.sha256 (+ .minisig if key present)
+  c. make verify
+
+3) Seal & Policy
+  a. sudo make fs-verity-enable
+  b. make update-verity-policy
+  c. make check-verity-policy
+  d. (optional) export FLEX_ENFORCE_SEAL=1 to enforce at runtime.
+  e. (optional) mount artifacts/ read-only and set FLEX_ENFORCE_MOUNT_RO=1.
+
+4) Tri-Sandbox Execution
+  a. make tri-run     # runs A/B/C over inputs, collects traces
+  b. make merge       # produces parent/model-D + fitness-report.json
+  c. Review unifier metric; adjust if domain-specific scoring is needed.
+
+5) Core Service (Cap’n Proto over UDS)
+  a. make build-core
+  b. export FLEX_MINISIGN_PUB=/path/to/pub
+  c. export FLEX_ENFORCE_SEAL=1 FLEX_ENFORCE_MOUNT_RO=1
+  d. make run-core    # server refuses to start if checks fail
+  e. make smoke-client / make py-client
+
+6) Connectors (WASM + Caps)
+  a. export FLEX_CONNECTOR_SECRET=…
+  b. make mint-cap
+  c. make build-wasm-host
+  d. make run-wasm-demo
+  e. FLEX_PREOPEN_DIR=execution/connectors/cap-sandbox make run-wasm-capfile
+
+7) Anchor & Promote
+  a. make anchor     # writes anchors/anchor-*.json
+  b. make promote    # promotes parent/model-D to execution/models/
+
+8) CI Gate (pre-push)
+  • Runs verify + strict contract-test + seal/mount checks (advisory printouts).
+  • Reject pushes if verify/contract-test fails.
+
+9) Post-Task Recommendation
+  • Every major target prints next_actions guidance. Address all items.
+
+============================================================
+QUALITY CHECKS / MONITORING
+============================================================
+Build-time Gates
+  • verify: manifest integrity
+  • contract-test (strict): IDL compiles + golden IO present
+  • verity policy: check against allowlist
+
+Runtime Guards
+  • minisign enforcement (FLEX_MINISIGN_PUB)
+  • seal enforcement (FLEX_ENFORCE_SEAL=1)
+  • read-only mount enforcement (FLEX_ENFORCE_MOUNT_RO=1)
+  • capability scope check on connectors
+  • optional NUMA/hugepages pinning
+
+Metrics to Watch
+  • POP acceptance (if orchestration POP is enabled), error classes, park/unpark counts
+  • Anchor cadence per release
+  • Token scope audit: denied vs allowed
+
+Acceptance Criteria (per task)
+  • All gates pass; Model D produced; anchor generated; promotion attested.
+
+============================================================
+DEFINITIONS / GLOSSARY
+============================================================
+SBOM: CycloneDX inventory of components and hashes.
+Manifest: Flat file of SHA-256 hashes over tracked files.
+Minisign: Lightweight Ed25519 signing tool.
+fs-verity: Kernel feature for file authenticity via Merkle tree.
+Allowlist Policy: JSON of expected fs-verity (or fallback) digests.
+Cap Token: HMAC-authenticated capability token with namespaced scopes.
+Preopen: WASI pattern granting a connector a scoped directory (/cap).
+UDS: UNIX domain socket (low-latency IPC on a single host).
+A/B/C → D: Parallel variants converge via a unifier into Model D.
+
+============================================================
+REFERENCES & RELATED
+============================================================
+- Makefile targets (project root)
+- contracts/inference.capnp
+- tools/* (sbom_gen, signer, verify, contract_test, cap_token, verity_policy, merkle_anchor)
+- execution/policies/fsverity_allowlist.json
+- docs/imported/* (agent maps, data summaries)
+
+============================================================
+APPENDICES
+============================================================
+A) Quick Command Checklist
+  [ ] make init
+  [ ] make gen-sbom && make sign && make verify
+  [ ] CAPNP_STRICT=1 make contract-test
+  [ ] sudo make fs-verity-enable && make update-verity-policy && make check-verity-policy
+  [ ] make tri-run && make merge
+  [ ] export FLEX_MINISIGN_PUB=... FLEX_ENFORCE_SEAL=1 FLEX_ENFORCE_MOUNT_RO=1
+  [ ] make build-core && make run-core && (make smoke-client || make py-client)
+  [ ] export FLEX_CONNECTOR_SECRET=... && make mint-cap && make build-wasm-host
+  [ ] (optional) FLEX_PREOPEN_DIR=... make run-wasm-capfile
+  [ ] make anchor && make promote
+
+B) Flow (ASCII)
+  Author → Index/Sign → Seal/Policy → Tri-Run → Merge(D) → Verify/Contract →
+  Run-Core → (WASM) → Anchor → Promote
+
+C) Policy Files
+  - artifacts/MANIFEST.sha256(.minisig)
+  - execution/policies/fsverity_allowlist.json
+  - anchors/anchor-*.json
+
+============================================================
+APPROVAL SIGNATURES
+============================================================
+Security Lead: __________________ Date: ___________
+Orchestrator Owner: _____________ Date: ___________
+Board Approver: _________________ Date: ___________
+
+============================================================
+REVISION HISTORY
+============================================================
+v1.0  2025-10-05T08:12:14Z  Initial comprehensive SOP import for agent tasks.
