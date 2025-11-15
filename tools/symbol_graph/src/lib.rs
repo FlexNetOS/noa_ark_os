@@ -9,6 +9,8 @@ use thiserror::Error;
 use tree_sitter::{Language, Node, Parser};
 use walkdir::WalkDir;
 
+pub mod notebook;
+
 #[derive(Debug, Error)]
 pub enum GraphError {
     #[error("unsupported language for path {0}")]
