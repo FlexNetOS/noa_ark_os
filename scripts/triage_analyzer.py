@@ -169,7 +169,7 @@ class ArtifactStore:
                 "signals": classification.signals,
             },
             "policy_decision": policy,
-            "recorded_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "recorded_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
         }
         (incident_dir / "manifest.json").write_text(
             json.dumps(manifest, indent=2, sort_keys=True),
