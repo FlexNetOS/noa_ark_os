@@ -1,0 +1,28 @@
+{
+  "bundle": {
+    "name": "noa-cecca-stemcell-bundle-part9",
+    "version": "P9",
+    "created": "2025-09-16T00:00:00Z",
+    "style": "kernel-first • message-passing • async-only • no-globals • zero-bloat",
+    "entry": "kernel/bootstrap",
+    "modules": {
+      "merge/apply.js": {
+        "language": "javascript",
+        "code": "(function(){\n  'use strict';\n  function deepClone(o){ return JSON.parse(JSON.stringify(o)); }\n  function normalize(part){\n    if (!part || !part.bundle) return {bundle:{modules:{}}};\n    const b = part.bundle;\n    b.modules = b.modules || {};\n    return { bundle: { name: b.name||'unknown', version: b.version||'Px', entry: b.entry||'kernel/bootstrap', modules: b.modules } };\n  }\n  function merge(parts){\n    const out = { bundle: { name: \"noa-merged-all\", version: \"PALL\", entry: \"kernel/bootstrap\", modules: {} } };\n    const shadows = [];\n    for(const p of parts){\n      const n = normalize(p);\n      const mods = n.bundle.modules;\n      for(const id of Object.keys(mods)){\n        if(!out.bundle.modules[id]){\n          out.bundle.modules[id] = deepClone(mods[id]);\n        }else{\n          shadows.push({ id, note: \"duplicate from merge; keeping first\" });\n        }\n      }\n    }\n    out.bundle.modules[\"meta/merge_shadows.json\"] = { language: \"json\", code: JSON.stringify({shadows}, null, 2) };\n    return out;\n  }\n  if (typeof module !== 'undefined') module.exports = { merge };\n  return { merge };\n})();\n"
+      },
+      "integrity/selftest.js": {
+        "language": "javascript",
+        "code": "(function(){\n  'use strict';\n  function sha256(s){ if (typeof require==='function'){ try { const c=require('crypto'); return c.createHash('sha256').update(s).digest('hex'); } catch(_){} } return String(s).length.toString(16); }\n  async function validate(bundle){\n    const mods = (bundle && bundle.bundle && bundle.bundle.modules) || {};\n    const ids = Object.keys(mods);\n    const stats = { total: ids.length, byLang: {}, empty: [] };\n    for (const id of ids){\n      const m = mods[id]||{};\n      const lang = m.language || 'text';\n      stats.byLang[lang] = (stats.byLang[lang]||0) + 1;\n      const code = m.code || '';\n      if (!code) stats.empty.push(id);\n    }\n    return { ok: stats.empty.length===0, stats };\n  }\n  if (typeof module !== 'undefined') module.exports = { validate };\n  return { validate };\n})();\n"
+      },
+      "doc/README_packaging_part9.md": {
+        "language": "markdown",
+        "code": "# NOA Packaging — Part 9 (Validator & Merge Apply)\n\nThis part includes utilities to **merge parts 2–8** into a single bundle and to **self‑validate** the merged result:\n\n- `merge/apply.js` — merges part JSONs in-order, keeps the first occurrence of each module, and records any duplicates under `meta/merge_shadows.json`.\n- `integrity/selftest.js` — quick validation (counts modules, flags empty code).\n\n## Usage\n\n1. Load Parts 2–8 JSON (as JS objects) in your runtime.\n2. `const { merge } = require('merge/apply.js'); const merged = merge([p2,p3,p4,p5,p6,p7,p8]);`\n3. `const { validate } = require('integrity/selftest.js'); const res = await validate(merged);`\n4. If `res.ok === true`, feed `merged` to `kernel/bootstrap.main(merged, host)`.\n\nThis file is embedded in full. No placeholders except the `next` pointer.\n"
+      },
+      "ops/restore_examples.json": {
+        "language": "json",
+        "code": "{\n  \"steps\": [\n    \"Read part2..part8 JSON files into memory objects\",\n    \"Call merge(apply) to produce a single bundle\",\n    \"Run integrity/selftest.js validate(merged)\",\n    \"If ok, pass merged to kernel/bootstrap.main(merged, host)\"\n  ],\n  \"notes\": [\n    \"Order matters; earlier parts win on duplicate module IDs.\",\n    \"All documents were inlined as text or base64; no external references required.\"\n  ]\n}"
+      }
+    },
+    "next": "noa-part10.json"
+  }
+}

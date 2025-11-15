@@ -1,0 +1,11 @@
+{
+  "findings": [
+    {
+      "description": "dependency manifest detected in /tmp/.tmpK7ZdrO/Cargo.toml",
+      "file": "Cargo.toml",
+      "severity": "info"
+    }
+  ],
+  "generated_at": "2025-11-15T03:48:29.942089450Z",
+  "tool": "syft"
+}

@@ -14,6 +14,9 @@ RUST_ANALYZER_CHECK_COMMAND := $(shell if [ -f $(DEV_CONFIG_JSON) ]; then node t
 endif
 
 PNPM ?= pnpm
+CARGO ?= cargo
+CARGO_PORTABLE ?= tools/devshell/cargo-portable.sh
+UI_SCOPE ?= --filter vibe-kanban
 CARGO ?= ./tools/devshell/portable-cargo.sh
 PYTHON ?= python3
 
@@ -47,11 +50,41 @@ ifneq ($(RUST_ANALYZER_CHECK_COMMAND),)
 export RUST_ANALYZER_CHECK_COMMAND := $(RUST_ANALYZER_CHECK_COMMAND)
 endif
 
-.PHONY: build test digest run ci:local lint typecheck format
+.PHONY: build test digest run ci-local-full lint typecheck format
 .PHONY: pipeline.local world-verify world-fix kernel snapshot rollback verify publish-audit rollback-sim setup
-.PHONY: build test digest run ci:local lint typecheck format docs:check
+.PHONY: build test digest run ci-local-full lint typecheck format docs:check
 PYTHON ?= python3
 BASE_REF ?= origin/main
+
+ifneq ($(PNPM_REQUIRED_VERSION),)
+export NOA_PNPM_REQUIRED := $(PNPM_REQUIRED_VERSION)
+endif
+
+ifneq ($(PNPM_STORE_DIR_OVERRIDE),)
+export PNPM_STORE_DIR := $(PNPM_STORE_DIR_OVERRIDE)
+endif
+
+ifneq ($(DEV_PATH_PREFIX),)
+override PATH := $(DEV_PATH_PREFIX):$(PATH)
+export PATH
+endif
+
+ifneq ($(DEV_CARGO_HOME),)
+export CARGO_HOME := $(DEV_CARGO_HOME)
+endif
+
+ifneq ($(DEV_RUSTUP_HOME),)
+export RUSTUP_HOME := $(DEV_RUSTUP_HOME)
+endif
+
+ifneq ($(DEV_PNPM_HOME),)
+export PNPM_HOME := $(DEV_PNPM_HOME)
+override PATH := $(PNPM_HOME):$(PATH)
+endif
+
+ifneq ($(RUST_ANALYZER_CHECK_COMMAND),)
+export RUST_ANALYZER_CHECK_COMMAND := $(RUST_ANALYZER_CHECK_COMMAND)
+endif
 
 ACTIVATION_CHECK := \
 	@if [ -z "$$NOA_CARGO_ENV" ] || [ -z "$$NOA_NODE_ENV" ]; then \
@@ -59,7 +92,7 @@ ACTIVATION_CHECK := \
 		exit 1; \
 	fi
 
-.PHONY: deps build test digest run ci-local lint typecheck format
+.PHONY: deps build test digest run ci-local-full ci-local lint typecheck format
 
 # Snapshot configuration (retained from local-first pipeline additions)
 SNAPSHOT_ARCHIVE_ROOT ?= archive
@@ -68,6 +101,10 @@ SNAPSHOT_LEDGER_NAME ?= ledger.json
 SNAPSHOT_TAR_COMPRESS ?= --zstd
 SNAPSHOT_TAR_DECOMPRESS ?= --zstd
 SNAPSHOT_BUNDLE_EXT ?= tar.zst
+
+.PHONY: build test digest run ci-local ci\:local lint typecheck format \
+	cargo-build cargo-check cargo-test cargo-run \
+	ui-build ui-test ui-lint ui-typecheck ui-format ui-dev
 .PHONY: pipeline.local world-verify world-fix kernel snapshot rollback verify publish-audit setup
 .PHONY: provider-pointers archival-verify duplicate-check router-singleton conventional-commits export-roadmap
 .PHONY: record-local-pipeline
@@ -101,7 +138,7 @@ typecheck: deps
 docs:check:
 	$(PNPM) docs:lint
 
-ci:local: lint typecheck format docs:check test
+ci-local-full: lint typecheck format docs:check test
 ci-local: lint typecheck format test
 
 run: deps
@@ -116,8 +153,39 @@ run: deps
 	API_PID=$$!; \
 	wait $$UI_PID $$API_PID
 
+cargo-build:
+	$(CARGO_PORTABLE) build $(if $(ARGS),$(ARGS))
+
+cargo-check:
+	$(CARGO_PORTABLE) check $(if $(ARGS),$(ARGS))
+
+cargo-test:
+	$(CARGO_PORTABLE) test $(if $(ARGS),$(ARGS))
+
+cargo-run:
+	$(CARGO_PORTABLE) run $(if $(ARGS),$(ARGS))
+
+ui-build:
+	$(PNPM) $(UI_SCOPE) build $(if $(ARGS),$(ARGS))
+
+ui-test:
+	$(PNPM) $(UI_SCOPE) test $(if $(ARGS),$(ARGS))
+
+ui-lint:
+	$(PNPM) $(UI_SCOPE) lint $(if $(ARGS),$(ARGS))
+
+ui-typecheck:
+	$(PNPM) $(UI_SCOPE) typecheck $(if $(ARGS),$(ARGS))
+
+ui-format:
+	$(PNPM) $(UI_SCOPE) format $(if $(ARGS),$(ARGS))
+
+ui-dev:
+	$(PNPM) $(UI_SCOPE) dev $(if $(ARGS),$(ARGS))
+
 # Machine-First Pipeline (authoritative local pipeline)
 pipeline.local: world-verify build sbom test package sign verify scorekeeper publish-audit
+	@echo "✅ Pipeline complete"
 @echo "✅ Pipeline complete"
 pipeline.local: world-verify build provider-pointers archival-verify duplicate-check router-singleton ci-local sbom scorekeeper package sign conventional-commits export-roadmap record-local-pipeline
 	@echo "✅ Pipeline complete"
@@ -182,11 +250,13 @@ image: kernel
 
 # SBOM generation
 sbom:
-@echo "📋 Generating SBOM..."
-@$(PYTHON) -m tools.repro.audit_pipeline sbom
+	@echo "📋 Generating SBOM..."
+	@$(PYTHON) -m tools.repro.audit_pipeline sbom
 
 # Scorekeeper (trust calculation)
 scorekeeper:
+	@echo "🎯 Calculating trust scores..."
+	@$(PYTHON) -m tools.repro.audit_pipeline score
         @echo "🎯 Calculating trust scores..."
         @mkdir -p metrics
         @cargo run -p noa_workflow --bin reward_report -- --json > metrics/reward_summary.json
@@ -207,13 +277,13 @@ scorekeeper:
 
 # Package artifacts
 package:
-@echo "📦 Packaging artifacts..."
-@$(PYTHON) -m tools.repro.audit_pipeline package
+	@echo "📦 Packaging artifacts..."
+	@$(PYTHON) -m tools.repro.audit_pipeline package
 
 # Sign artifacts
 sign:
-@echo "✍️  Signing artifacts..."
-@$(PYTHON) -m tools.repro.audit_pipeline sign
+	@echo "✍️  Signing artifacts..."
+	@$(PYTHON) -m tools.repro.audit_pipeline sign
 
 # Snapshot creation
 snapshot:
@@ -225,13 +295,13 @@ snapshot:
 	ARCHIVE_DIR="$(SNAPSHOT_ARCHIVE_ROOT)/$$YEAR/$$MONTH"; \
 	SNAPSHOT_DIR="$$ARCHIVE_DIR/snapshots"; \
 	mkdir -p "$$SNAPSHOT_DIR"; \
-        BUNDLE_NAME="$(SNAPSHOT_BUNDLE_PREFIX)-$$TS_SAFE.$(SNAPSHOT_BUNDLE_EXT)"; \
-        BUNDLE_PATH="$$SNAPSHOT_DIR/$$BUNDLE_NAME"; \
-        echo "🧾 Bundling tracked files into $$BUNDLE_PATH"; \
-        git rev-parse HEAD >/dev/null; \
-        FILE_LIST="$$SNAPSHOT_DIR/.snapshot-files-$$TS_SAFE"; \
-        git ls-files -z > "$$FILE_LIST"; \
-        tar --force-local $(SNAPSHOT_TAR_COMPRESS) -cf "$$BUNDLE_PATH" --null -T "$$FILE_LIST"; \
+	BUNDLE_NAME="$(SNAPSHOT_BUNDLE_PREFIX)-$$TS_SAFE.$(SNAPSHOT_BUNDLE_EXT)"; \
+	BUNDLE_PATH="$$SNAPSHOT_DIR/$$BUNDLE_NAME"; \
+	echo "🧾 Bundling tracked files into $$BUNDLE_PATH"; \
+	git rev-parse HEAD >/dev/null; \
+	FILE_LIST="$$SNAPSHOT_DIR/.snapshot-files-$$TS_SAFE"; \
+	git ls-files -z > "$$FILE_LIST"; \
+	tar --force-local $(SNAPSHOT_TAR_COMPRESS) -cf "$$BUNDLE_PATH" --null -T "$$FILE_LIST"; \
 	rm -f "$$FILE_LIST"; \
 	SHA="$$(sha256sum "$$BUNDLE_PATH" | awk '{print $$1}')"; \
 	LEDGER="$$ARCHIVE_DIR/$(SNAPSHOT_LEDGER_NAME)"; \
@@ -243,34 +313,35 @@ snapshot:
 # Rollback to previous snapshot
 rollback:
 	@set -euo pipefail; \
-        echo "⏪ Rolling back to previous snapshot..."; \
-        BUNDLE_VALUE="$(BUNDLE)"; \
-        if [[ -z "$$BUNDLE_VALUE" ]]; then BUNDLE_VALUE="${BUNDLE:-}"; fi; \
-        if [[ -z "$$BUNDLE_VALUE" ]]; then echo "BUNDLE variable is required, e.g. make rollback BUNDLE=$(SNAPSHOT_ARCHIVE_ROOT)/YYYY/MM/snapshots/<file>.tar.zst" >&2; exit 2; fi; \
-        if [[ ! -f "$$BUNDLE_VALUE" ]]; then echo "Bundle $$BUNDLE_VALUE not found" >&2; exit 3; fi; \
-        SHA="$$(sha256sum "$$BUNDLE_VALUE" | awk '{print $$1}')"; \
-        TS="$$(date -u +%Y-%m-%dT%H:%M:%SZ)"; \
-        BUNDLE_DIR="$$(dirname "$$BUNDLE_VALUE")"; \
+	echo "⏪ Rolling back to previous snapshot..."; \
+	BUNDLE_VALUE="$(BUNDLE)"; \
+	if [[ -z "$$BUNDLE_VALUE" ]]; then BUNDLE_VALUE="${BUNDLE:-}"; fi; \
+	if [[ -z "$$BUNDLE_VALUE" ]]; then echo "BUNDLE variable is required, e.g. make rollback BUNDLE=$(SNAPSHOT_ARCHIVE_ROOT)/YYYY/MM/snapshots/<file>.tar.zst" >&2; exit 2; fi; \
+	if [[ ! -f "$$BUNDLE_VALUE" ]]; then echo "Bundle $$BUNDLE_VALUE not found" >&2; exit 3; fi; \
+	SHA="$$(sha256sum "$$BUNDLE_VALUE" | awk '{print $$1}')"; \
+	TS="$$(date -u +%Y-%m-%dT%H:%M:%SZ)"; \
+	BUNDLE_DIR="$$(dirname "$$BUNDLE_VALUE")"; \
 	MONTH_DIR="$$(dirname "$$BUNDLE_DIR")"; \
 	YEAR_DIR="$$(dirname "$$MONTH_DIR")"; \
 	MONTH="$$(basename "$$MONTH_DIR")"; \
 	YEAR="$$(basename "$$YEAR_DIR")"; \
 	LEDGER="$(SNAPSHOT_ARCHIVE_ROOT)/$$YEAR/$$MONTH/$(SNAPSHOT_LEDGER_NAME)"; \
 	if [[ ! -f "$$LEDGER" ]]; then echo "Ledger $$LEDGER not found for bundle" >&2; exit 4; fi; \
-        python3 tools/snapshot_ledger.py rollback "$$LEDGER" "$$BUNDLE_VALUE" "$$SHA" "$$TS"; \
-        TAR_DECOMPRESS="$(SNAPSHOT_TAR_DECOMPRESS)"; \
-        if [[ "$$TAR_DECOMPRESS" == "" ]]; then TAR_DECOMPRESS=""; fi; \
-        tar --force-local $$TAR_DECOMPRESS -xf "$$BUNDLE_VALUE"; \
-        echo "✅ Rollback complete from $$BUNDLE_VALUE"
+	python3 tools/snapshot_ledger.py rollback "$$LEDGER" "$$BUNDLE_VALUE" "$$SHA" "$$TS"; \
+	TAR_DECOMPRESS="$(SNAPSHOT_TAR_DECOMPRESS)"; \
+	if [[ "$$TAR_DECOMPRESS" == "" ]]; then TAR_DECOMPRESS=""; fi; \
+	tar --force-local $$TAR_DECOMPRESS -xf "$$BUNDLE_VALUE"; \
+	echo "✅ Rollback complete from $$BUNDLE_VALUE"
 
 # Verify build reproducibility
 verify:
-@echo "🔐 Verifying build reproducibility..."
-@$(PYTHON) -m tools.repro.audit_pipeline verify
+	@echo "🔐 Verifying build reproducibility..."
+	@$(PYTHON) -m tools.repro.audit_pipeline verify
 
 # Publish audit bundle
 publish-audit:
 	@echo "📤 Publishing audit bundle..."
+	@$(PYTHON) -m tools.repro.audit_pipeline publish
 	@mkdir -p audit
 	@cargo run --manifest-path cicd/Cargo.toml --bin publish_audit -- --repo . --output audit --ledger audit/ledger.jsonl
 	@latest=$$(ls -d audit/bundle-* 2>/dev/null | tail -n 1); \

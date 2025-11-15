@@ -65,7 +65,7 @@ impl proto::ui_schema_service_server::UiSchemaService for UiSchemaGrpc {
                 .ok_or_else(|| Status::unavailable("streaming disabled"))?
         };
 
-        let mut stream = bridge.subscribe();
+        let stream = bridge.subscribe();
         let output = async_stream::try_stream! {
             tokio::pin!(stream);
             while let Some(event) = stream.next().await {

@@ -31,6 +31,16 @@
     }
   },
 
+  "terminal.integrated.profiles.linux": {
+    "bash": {
+      "path": "/bin/bash",
+      "args": ["-l"]
+    }
+  },
+
+  // Explicitly pin bash for Linux/WSL tasks to avoid falling back to missing shells
+  "terminal.integrated.shell.linux": "/bin/bash",
+
   // ============================================
   // Rust Environment - Portable Cargo (Windows)
   // ============================================

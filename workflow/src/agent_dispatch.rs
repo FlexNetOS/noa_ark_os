@@ -104,16 +104,6 @@ impl AgentDispatcher {
     }
 
     pub fn dispatch(&self, task: &Task) -> Result<TaskDispatchReceipt, AgentDispatchError> {
-        let metadata = self
-            .registry
-            .get(&task.agent)
-            .or_else(|| {
-                self.registry
-                    .all()
-                    .into_iter()
-                    .find(|agent| agent.name == task.agent)
-            })
-            .ok_or_else(|| AgentDispatchError::AgentNotFound(task.agent.clone()))?;
         let (allowed_optional, directive) = compute_trust_guardrails(&task.tool_requirements);
         let mut optional_budget = allowed_optional;
         let metadata = self.resolve_agent_metadata(task)?;
@@ -229,6 +219,9 @@ impl AgentDispatcher {
         let mut metadata = self
             .find_agent(&mapping.agent_id)
             .ok_or_else(|| AgentDispatchError::AgentNotFound(mapping.agent_id.clone()))?;
+        if let Some(description) = &mapping.description {
+            metadata.description = description.clone();
+        }
         metadata.role = task.agent_role.clone().unwrap_or_else(|| role.to_string());
         Ok(metadata)
     }
@@ -369,5 +362,38 @@ mod tests {
             .expect("skipped tool should provide rationale");
         assert!(gated_message.contains("Optional capability"));
         assert!(gated_message.contains(&format!("{:?}", directive.status)));
+    }
+
+    #[test]
+    fn dispatch_resolves_role_metadata_description() {
+        let registry = AgentRegistry::new();
+        let mut metadata =
+            AgentMetadata::from_registry("PlanAgent".to_string(), "PlanAgent".to_string());
+        metadata
+            .capabilities
+            .push("workflow.taskDispatch".to_string());
+        registry
+            .upsert_metadata(metadata.clone())
+            .expect("register planner agent");
+        let dispatcher =
+            AgentDispatcher::with_handles(Arc::new(registry), Arc::new(AgentFactory::new()));
+
+        let task = Task {
+            agent: "role::planner".to_string(),
+            action: "noop".to_string(),
+            parameters: HashMap::new(),
+            agent_role: Some("planner".to_string()),
+            tool_requirements: Vec::new(),
+        };
+
+        let receipt = dispatcher.dispatch(&task).expect("role dispatch should succeed");
+        assert_eq!(receipt.agent_metadata.role, "planner");
+        assert!(
+            receipt
+                .agent_metadata
+                .description
+                .contains("Plans deployment sequences"),
+            "role mapping description should propagate to metadata"
+        );
     }
 }

@@ -1,0 +1,49 @@
+  "version": 1,
+  "source": "sot.md",
+  "generated_at": "2025-10-01T22:05:55.307258568+00:00",
+  "queues": [
+    {
+      "name": "Queue A — Workspace Bootstrapping",
+      "tasks": [
+        {
+          "id": "TASK-001",
+          "title": "TASK-001",
+          "layer": "foundation",
+          "queue": "Queue A — Workspace Bootstrapping",
+          "metadata": null
+        },
+        {
+          "id": "TASK-002",
+          "title": "TASK-002",
+          "layer": "foundation",
+          "queue": "Queue A — Workspace Bootstrapping",
+          "metadata": null
+        },
+        {
+          "id": "TASK-003",
+          "title": "TASK-003",
+          "layer": "foundation",
+          "queue": "Queue A — Workspace Bootstrapping",
+          "metadata": null
+        },
+        {
+          "id": "TASK-004",
+          "title": "TASK-004",
+          "layer": "foundation",
+          "queue": "Queue A — Workspace Bootstrapping",
+          "metadata": null
+        }
+      ],
+      "hooks": null
+    },
+    {
+      "name": "Queue B — Dependency Consolidation",
+      "tasks": [
+        {
+          "id": "TASK-006",
+          "title": "TASK-006",
+          "layer": "foundation",
+          "queue": "Queue B — Dependency Consolidation",
+          "metadata": null
+        },
+        {

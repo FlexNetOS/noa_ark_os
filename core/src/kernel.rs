@@ -29,7 +29,7 @@ fn active_profile_slot() -> &'static Mutex<Option<ActiveProfile>> {
 struct ActiveProfile {
     name: String,
     token: CapabilityToken,
-    source: PathBuf,
+    _source: PathBuf,
 }
 
 const DEFAULT_PROFILE_TOKEN_TTL_HOURS: u64 = 6;
@@ -269,7 +269,7 @@ pub fn load_profile(path: impl AsRef<Path>) -> Result<CapabilityToken, KernelErr
         *slot = Some(ActiveProfile {
             name: token.profile_name.clone(),
             token: token.clone(),
-            source: path_ref.to_path_buf(),
+            _source: path_ref.to_path_buf(),
         });
     }
 
