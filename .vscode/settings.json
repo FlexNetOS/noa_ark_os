@@ -36,15 +36,15 @@
   // ============================================
 
   "rust-analyzer.server.extraEnv": {
-    "CARGO_HOME": "D:\\dev\\workspaces\\noa_ark_os\\server\\tools\\cargo-portable",
-    "RUSTUP_HOME": "D:\\dev\\workspaces\\noa_ark_os\\server\\tools\\rustup-portable"
+    "CARGO_HOME": "${workspaceFolder}\\server\\tools\\cargo-portable",
+    "RUSTUP_HOME": "${workspaceFolder}\\server\\tools\\rustup-portable"
   },
 
   // Cargo Path (Windows portable installation)
-  "rust-analyzer.cargo.path": "D:\\dev\\workspaces\\noa_ark_os\\server\\tools\\cargo-portable\\bin\\cargo.exe",
+  "rust-analyzer.cargo.path": "${workspaceFolder}\\server\\tools\\cargo-portable\\bin\\cargo.exe",
 
   // Rustc Path (Windows portable installation)
-  "rust-analyzer.rustc.path": "D:\\dev\\workspaces\\noa_ark_os\\server\\tools\\cargo-portable\\bin\\rustc.exe",
+  "rust-analyzer.rustc.path": "${workspaceFolder}\\server\\tools\\cargo-portable\\bin\\rustc.exe",
 
   // ============================================
   // Environment Variables per Platform
@@ -52,9 +52,9 @@
 
   // Windows PowerShell environment
   "terminal.integrated.env.windows": {
-    "CARGO_HOME": "D:\\dev\\workspaces\\noa_ark_os\\server\\tools\\cargo-portable",
-    "RUSTUP_HOME": "D:\\dev\\workspaces\\noa_ark_os\\server\\tools\\rustup-portable",
-    "PATH": "D:\\dev\\workspaces\\noa_ark_os\\server\\tools\\cargo-portable\\bin;${env:PATH}"
+    "CARGO_HOME": "${workspaceFolder}\\server\\tools\\cargo-portable",
+    "RUSTUP_HOME": "${workspaceFolder}\\server\\tools\\rustup-portable",
+    "PATH": "${workspaceFolder}\\server\\tools\\cargo-portable\\bin;${env:PATH}"
   },
 
   // Linux/WSL environment (uses system Rust)
@@ -145,6 +145,8 @@
   // Prefer pnpm for this monorepo to avoid lockfile mismatch warnings
   "npm.packageManager": "pnpm",
   "githubPullRequests.assignCreated": "Co-Pilot",
+  // Shared command safety policy lives in tools/automation/policy.yaml.
+  // The VS Code settings mirror that policy for editor parity.
   "chat.tools.terminal.autoApprove": {
     // Read-only / navigation / inspection commands (auto-approved)
     "cd": true,
@@ -256,5 +258,8 @@
     "eval": false,
     "Invoke-Expression": false,
     "iex": false
-  }
+  },
+  "githubIssues.alwaysPromptForNewIssueRepo": true,
+  "githubPullRequests.experimental.useQuickChat": true,
+  "githubPullRequests.notifications": "pullRequests"
 }

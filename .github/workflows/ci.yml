@@ -25,6 +25,9 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
+      - name: Require local pipeline evidence
+        run: python tools/ci/require_local_pipeline.py --require-logs
       - name: Validate roadmap task index
         run: python tools/task_index_validator.py
 

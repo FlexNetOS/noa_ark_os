@@ -158,6 +158,41 @@ cargo test --workspace
 
 See [Getting Started Guide](docs/GETTING_STARTED.md) for detailed instructions.
 
+## Developer Environment (CLI-first)
+
+- Build and run the development container with the cross-platform scripts in [`scripts/dev-env.sh`](scripts/dev-env.sh) or [`scripts/dev-env.ps1`](scripts/dev-env.ps1).
+- Configuration details (base image, language runtimes, editor extensions) live in [`tools/devshell/dev-env.manifest.toml`](tools/devshell/dev-env.manifest.toml).
+- Usage guides, Visual Studio replacement workflow, and environment smoke tests are documented in [`docs/guides/dev-environment-cli.md`](docs/guides/dev-environment-cli.md).
+## Tool Registry & CLI Extensions
+
+- Discover cross-cutting tooling via `registry/tools.registry.json`, which
+  enumerates observability, automation, analysis, collaboration, and plugin
+  capabilities together with budgets, parameters, side effects, and CLI
+  mappings.
+- The `noa` CLI now surfaces structured output for these categories, for
+  example:
+
+  ```bash
+  noa observability metrics --target kernel --window 120
+  noa automation run --plan-id <uuid>
+  noa analysis security --scope services --since HEAD~3
+  noa collaboration review --workflow-id <id>
+  noa plugin describe --surface cli
+  ```
+
+- Plugin developers can import `noa-plugin-sdk` (see `plugins/sdk/`) to parse
+  the registry and bootstrap integrations.
+- REST and gRPC consumers can target `docs/api/noa-tools.openapi.yaml` and
+  `server/protos/noa_tools.proto`, which mirror the CLI signatures for remote
+  orchestration.
+## Local-First Merge Gate
+
+- Activate the portable toolchains each session (`source server/tools/activate-cargo.sh` and `source server/tools/activate-node.sh`).
+- Run `make pipeline.local` (or the VS Code task **Pipeline Local (Portable)**) before committing changes; this run is the source of truth.
+- The pipeline automatically refreshes `audit/local_pipeline_status.json`, which includes commit SHA, tool versions, and hashes of `build_output.txt`/`test_output.txt`; commit this file with your changes.
+- Configure git once with `git config core.hooksPath tools/git-hooks`; the bundled `pre-push` hook blocks pushes until the evidence file matches `HEAD`.
+- GitHub workflows now call `tools/ci/require_local_pipeline.py`, so remote CI simply confirms the recorded local run instead of replacing it.
+
 ## AI Assist for Kanban
 
 - The Vibe Kanban app now includes an **AI** button on every card that assembles an engineer-ready implementation prompt.

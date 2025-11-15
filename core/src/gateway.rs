@@ -2483,9 +2483,17 @@ mod tests {
         register_sample_symbol(&gateway, "analytics.primary");
         register_sample_symbol(&gateway, "analytics.secondary");
 
+        let provider_id = gateway
+            .connectors_read()
+            .expect("connectors accessible")
+            .values()
+            .next()
+            .map(|record| record.provider_id.clone())
+            .expect("connector provider available");
+
         gateway
             .update_reliability_feed(ReliabilityFeed {
-                provider_id: "analytics".into(),
+                provider_id,
                 probability_of_failure: 0.6,
                 maintenance_windows: vec![],
                 last_update: SystemTime::now(),
