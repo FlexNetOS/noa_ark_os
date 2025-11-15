@@ -12,6 +12,7 @@ if command -v node >/dev/null 2>&1 && [ -f "${APPLIER}" ]; then
   node "${APPLIER}" posix | jq -r 'to_entries[] | "export \(.key)=\(.value|@sh)"' | while read -r line; do
     eval "$line"
   done
+  eval "$(node "${APPLIER}" posix)"
 else
   echo "⚠️  Node.js is required to hydrate NOA Ark OS devshell environment" >&2
 fi

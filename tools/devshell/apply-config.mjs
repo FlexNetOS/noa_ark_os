@@ -18,6 +18,7 @@ function loadConfig() {
     console.error(`Error: Failed to parse config file at "${configPath}":\n${err.message}`);
     process.exit(1);
   }
+  return JSON.parse(fs.readFileSync(configPath, 'utf8'));
 }
 
 function resolveValue(value) {
@@ -141,6 +142,7 @@ function renderPwsh(config) {
     } else {
       lines.push(`function ${alias} { ${command} $args }`);
     }
+    lines.push(`Set-Alias -Name ${alias} -Value "${command}" -Force`);
   });
   return lines.join('\n');
 }

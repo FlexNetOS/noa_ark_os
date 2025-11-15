@@ -25,6 +25,8 @@
               { "type": "string" },
               { "type": "array", "items": { "type": "string" } }
             ]
+            "type": ["string", "array"],
+            "items": { "type": "string" }
           }
         },
         "posix": {
@@ -34,6 +36,8 @@
               { "type": "string" },
               { "type": "array", "items": { "type": "string" } }
             ]
+            "type": ["string", "array"],
+            "items": { "type": "string" }
           }
         },
         "windows": {
@@ -43,6 +47,8 @@
               { "type": "string" },
               { "type": "array", "items": { "type": "string" } }
             ]
+            "type": ["string", "array"],
+            "items": { "type": "string" }
           }
         }
       },

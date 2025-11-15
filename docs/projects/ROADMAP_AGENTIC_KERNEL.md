@@ -8,6 +8,7 @@
 * ⭐ Added Goal 18: CLI-First Interface
 * ⭐ Added Phase 0.5: CLI-First Foundation (CRITICAL PATH)
 * ⭐ Expanded Phase 4: CLI Expansion & Registry Completion (40+ commands)
+* ⭐ Routed inference provider failover + telemetry into `noa agent` / `noa query`
 * ⭐ Documented IDE extension deprecation strategy
 * ⭐ CLI-First Philosophy section added
 
@@ -37,6 +38,10 @@
 ---
 
 ## CLI-First Philosophy ⭐
+
+### Hermetic Execution Targets (NEW)
+
+To keep the CLI transformation self-contained, the dedicated checklist in [`docs/projects/HERMETIC_TARGETS.md`](HERMETIC_TARGETS.md) tracks the required portable toolchains, offline pipeline guarantees, gateway/profile enforcement, and Truth Gate evidence artifacts. Phase owners should update that catalog whenever Phase 0.5–P10 work lands so hermetic behavior stays measurable.
 
 **Core Principle:** The `noa` CLI is the **primary interface** for all system operations, designed for both human operators and AI agents.
 
@@ -79,7 +84,7 @@
 
 * **JSON by Default** – All output structured for parsing
 * **Human-Friendly Fallback** – Add `--tui` for interactive mode
-* **Streaming Support** – Real-time updates with `--watch`
+* **Streaming Support** – Real-time updates with `--watch` and inference router streaming
 * **Composability** – Commands pipe together (Unix philosophy)
 * **Self-Documenting** – `--help` and `--explain` on everything
 * **Token-Efficient** – Minimal output with `--minimal` flag
@@ -149,6 +154,8 @@
 
 * **P0.5-T3:** Add streaming and interactive capabilities
   * `noa agent spawn --watch` – Stream agent output live
+  * `noa agent invoke --stream` – Stream LLM completions via ProviderRouter
+  * `noa query --stream` – Stream NL query answers with telemetry to Evidence Ledger
   * `noa pipeline run --interactive` – Prompt for confirmations
   * `noa trust score --explain` – Show reasoning
   * `noa world graph --interactive` – Navigate graph in TUI

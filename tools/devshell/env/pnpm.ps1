@@ -21,6 +21,7 @@ if (Get-Command node -ErrorAction SilentlyContinue) {
       } catch {
         throw "Failed to parse environment variables from $applier output as JSON: $_"
       }
+      Invoke-Expression $result
     }
   }
 } else {
