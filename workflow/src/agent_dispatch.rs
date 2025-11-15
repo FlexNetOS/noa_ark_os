@@ -104,6 +104,16 @@ impl AgentDispatcher {
     }
 
     pub fn dispatch(&self, task: &Task) -> Result<TaskDispatchReceipt, AgentDispatchError> {
+        let metadata = self
+            .registry
+            .get(&task.agent)
+            .or_else(|| {
+                self.registry
+                    .all()
+                    .into_iter()
+                    .find(|agent| agent.name == task.agent)
+            })
+            .ok_or_else(|| AgentDispatchError::AgentNotFound(task.agent.clone()))?;
         let (allowed_optional, directive) = compute_trust_guardrails(&task.tool_requirements);
         let mut optional_budget = allowed_optional;
         let metadata = self.resolve_agent_metadata(task)?;
