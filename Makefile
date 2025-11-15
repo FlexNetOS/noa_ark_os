@@ -50,6 +50,7 @@ ifneq ($(RUST_ANALYZER_CHECK_COMMAND),)
 export RUST_ANALYZER_CHECK_COMMAND := $(RUST_ANALYZER_CHECK_COMMAND)
 endif
 
+.PHONY: build test digest run ci:local lint typecheck format notebooks-sync
 .PHONY: build test digest run ci-local-full lint typecheck format
 .PHONY: pipeline.local world-verify world-fix kernel snapshot rollback verify publish-audit rollback-sim setup
 .PHONY: build test digest run ci-local-full lint typecheck format docs:check
@@ -92,6 +93,7 @@ ACTIVATION_CHECK := \
 		exit 1; \
 	fi
 
+.PHONY: deps build test digest run ci-local lint typecheck format notebooks-sync
 .PHONY: deps build test digest run ci-local-full ci-local lint typecheck format
 
 # Snapshot configuration (retained from local-first pipeline additions)
@@ -136,7 +138,12 @@ typecheck: deps
 	$(PNPM) typecheck
 
 docs:check:
-	$(PNPM) docs:lint
+        $(PNPM) docs:lint
+
+notebooks-sync: deps
+        $(ACTIVATION_CHECK)
+        $(CARGO) run -p noa_symbol_graph --bin notebook_watcher -- --once .
+        $(PNPM) notebooks:sync
 
 ci-local-full: lint typecheck format docs:check test
 ci-local: lint typecheck format test
