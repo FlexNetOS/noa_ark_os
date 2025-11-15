@@ -111,16 +111,16 @@ verify:
 
 # Publish audit bundle
 publish-audit:
-        @echo "📤 Publishing audit bundle..."
-        @mkdir -p audit
-        @cargo run --manifest-path cicd/Cargo.toml --bin publish_audit -- --repo . --output audit --ledger audit/ledger.jsonl
-        @latest=$$(ls -d audit/bundle-* 2>/dev/null | tail -n 1); \
-        if [ -n "$$latest" ]; then \
-                echo "🔍 Verifying $$latest"; \
-                audit/verify.sh "$$latest"; \
-        else \
-                echo "⚠️  No bundle produced"; \
-        fi
+	@echo "📤 Publishing audit bundle..."
+	@mkdir -p audit
+	@cargo run --manifest-path cicd/Cargo.toml --bin publish_audit -- --repo . --output audit --ledger audit/ledger.jsonl
+	@latest=$$(ls -d audit/bundle-* 2>/dev/null | tail -n 1); \
+	if [ -n "$$latest" ]; then \
+		echo "🔍 Verifying $$latest"; \
+		audit/verify.sh "$$latest"; \
+	else \
+		echo "⚠️  No bundle produced"; \
+	fi
 
 # Run rollback simulation locally
 rollback-sim:
