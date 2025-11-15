@@ -1,0 +1,30 @@
+{
+  "$schema": "./registry.schema.json",
+  "registryVersion": "1.0.0",
+  "owners": [
+    {
+      "id": "crew-documentation",
+      "name": "Architecture & Docs Guild",
+      "description": "Keeps architecture references aligned with system behaviour.",
+      "contacts": ["docs@noa-ark.example"]
+    }
+  ],
+  "components": [
+    {
+      "id": "docs.architecture.registry",
+      "name": "Registry Knowledge Graph Reference",
+      "version": "0.1.0",
+      "description": "Narrative describing the registry graph, APIs, and consumer expectations.",
+      "files": [
+        "docs/architecture/registry-knowledge-graph.md",
+        ".workspace/sop/registry-onboarding.md"
+      ],
+      "dependencies": ["core.memory.graph", "core.fs.registry-sync"],
+      "owners": ["crew-documentation"],
+      "tags": ["docs", "architecture"],
+      "links": {
+        "issueTracker": "https://issues.noa-ark.example/registry"
+      }
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+# Llama.cpp Server Configuration - OPTIMIZED v1.1.0
+# Green Environment - Zero Downtime Deployment
+
+server:
+  host: 127.0.0.1
+  port: 8081  # Green environment port
+  threads: 32
+  gpu_layers: 99
+  gpu_split: "32000,32000"
+  main_gpu: 0
+  tensor_split: "1,1"
+
+models:
+  - name: default
+    path: ./models/
+    context_size: 16384
+    batch_size: 4096  # OPTIMIZED: 2x increase
+    n_parallel: 16    # OPTIMIZED: 2x increase
+
+inference:
+  temperature: 0.7
+  top_p: 0.9
+  top_k: 40
+  repeat_penalty: 1.1
+  max_tokens: 4096
+  
+  # OPTIMIZED settings
+  flash_attention: true
+  low_vram: false
+  use_mmap: false
+  use_mlock: true
+
+performance:
+  timeout: 600
+  max_upload_size: 100MB
+  max_concurrent: 16
+  queue_size: 100
+
+logging:
+  level: info
+  file: ./logs/server-green.log
+  rotation: daily
+
+monitoring:
+  enable_metrics: true
+  metrics_port: 8082  # Green metrics port
+  report_gpu_usage: true

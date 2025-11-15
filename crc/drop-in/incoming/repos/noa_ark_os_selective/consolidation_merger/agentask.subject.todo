@@ -1,0 +1,31 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  AgentTask Subject TODO (Inbox)
+#  Repository: task_exec_kit (post-inversion)
+#  Date: 2025-10-06
+#  Purpose: Capture raw subjects from chat and task completions
+#  Workflow: Capture here → Apply 4D → Promote to agentask.todo
+# ─────────────────────────────────────────────────────────────────────────────
+
+# This file captures:
+# - User chat requests
+# - Task completion recommendations
+# - Suggestions from next_actions.py
+# - Items pending further analysis
+
+# Once a subject is analyzed and scoped, promote it to agentask.todo
+
+[Inbox - New Subjects]
+# Raw subjects captured from chat/recommendations
+
+
+[Under Analysis]
+# Subjects being scoped with 4-D methodology
+
+
+[Ready for Promotion]
+# Subjects ready to move to agentask.todo
+
+
+[Archived Subjects]
+# Completed or declined subjects
+

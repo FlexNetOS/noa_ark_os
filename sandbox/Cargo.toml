@@ -1,0 +1,11 @@
+[package]
+name = "noa_sandbox"
+version = "0.1.0"
+edition = "2021"
+authors = ["NOA ARK OS Team"]
+description = "Multi-branch sandbox system with merge-to-integration workflow"
+license = "MIT"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"

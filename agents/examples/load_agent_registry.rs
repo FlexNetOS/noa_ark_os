@@ -1,0 +1,211 @@
+//! Agent Registry Demo
+//!
+//! Demonstrates loading the 928-agent directory embedded in the crate
+//!
+//! ## Layer Mapping
+//!
+//! The NOA ARK OS uses a 5-layer architecture. Historical layer names map to
+//! the new L1-L5 naming convention as follows:
+//!
+//! - **L1 (Autonomy)**: Executive layer - Root CECCA, Constitutional agents
+//! - **L2 (Reasoning)**: Board layer - Board & Executive decision-making agents
+//! - **L3 (Orchestration)**: Stack-Chief layer - Chief Commanders, Orchestrators
+//! - **L4 (Operations)**: Specialist layer - Specialists, Workers, domain experts
+//! - **L5 (Infrastructure)**: Micro layer - Micro agents, infrastructure services
+//!
+//! **Note:** The names "Executive", "Board", "Stack-Chief", "Specialist", and "Micro" are historical names from a previous version of the codebase. In the current code, these correspond to the following `AgentLayer` enum variants (see `unified_types.rs`):
+//! - `AgentLayer::L1Autonomy` (formerly Executive)
+//! - `AgentLayer::L2Reasoning` (formerly Board)
+//! - `AgentLayer::L3Orchestration` (formerly Stack-Chief)
+//! - `AgentLayer::L4Operations` (formerly Specialist)
+//! - `AgentLayer::L5Infrastructure` (formerly Micro)
+//! ## Layer Hierarchy
+//!
+//! NOA ARK OS organizes agents into a 5-layer technical hierarchy (L1-L5),
+//! which evolved from the original organizational naming:
+//!
+//! | Layer | Technical Name   | Original Name | Purpose                           |
+//! |-------|------------------|---------------|-----------------------------------|
+//! | L1    | L1Autonomy       | Executive     | Root governance, constitutional   |
+//! | L2    | L2Reasoning      | Board         | Strategic planning, policy        |
+//! | L3    | L3Orchestration  | Stack-Chief   | Cross-domain coordination         |
+//! | L4    | L4Operations     | Specialist    | Domain-specific operations        |
+//! | L5    | L5Infrastructure | Micro         | Task-specific micro agents        |
+//!
+//! The agent directory CSV uses the original names, but the registry automatically
+//! maps them to the L1-L5 system for consistency.
+//!
+//! ## Usage
+//!
+//!   cargo run --example load_agent_registry
+//!   cargo run --example load_agent_registry -- path\to\agent_directory.csv
+
+use noa_agents::{AgentLayer, AgentRegistry};
+use std::env;
+use std::path::Path;
+
+fn main() -> anyhow::Result<()> {
+    println!("🤖 NOA ARK OS - Agent Registry Demo\n");
+
+    // Create registry
+    let registry = AgentRegistry::new();
+    let args: Vec<String> = env::args().collect();
+
+    // Optional override: `cargo run --example load_agent_registry -- <csv_path>`
+    let load_result = if let Some(path) = args.get(1) {
+        let csv_path = Path::new(path);
+        println!("📂 Loading agent directory from: {}", csv_path.display());
+
+        if !csv_path.exists() {
+            eprintln!(
+                "❌ Error: Agent directory CSV not found at {}",
+                csv_path.display()
+            );
+            eprintln!("   Falling back to embedded copy bundled with the crate.\n");
+            registry.load_default()
+        } else {
+            registry.load_from_csv(csv_path)
+        }
+    } else {
+        println!("📦 Loading embedded agent directory bundled with the crate");
+        registry.load_default()
+    };
+
+    // Load agents
+    match load_result {
+        Ok(count) => {
+            println!("✓ Successfully loaded {} agents\n", count);
+
+            // Display statistics
+            let stats = registry.stats();
+            println!("📊 Registry Statistics:");
+            println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            println!("  Total agents:    {}", stats.total_agents);
+            println!(
+                "  Healthy:         {} ({:.1}%)",
+                stats.healthy_agents,
+                (stats.healthy_agents as f64 / stats.total_agents as f64) * 100.0
+            );
+            println!(
+                "  Needs repair:    {} ({:.1}%)",
+                stats.needs_repair,
+                (stats.needs_repair as f64 / stats.total_agents as f64) * 100.0
+            );
+            println!("  Unknown status:  {}", stats.unknown_status);
+            println!();
+
+            // Display agents by layer
+            println!("📋 Agents by Layer:");
+            println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            for (layer, count) in &stats.agents_by_layer {
+                println!("  {:20} {}", layer, count);
+            }
+            println!();
+
+            // Show sample agents from each layer
+            println!("🔍 Sample Agents by Layer:\n");
+
+            // NOA 5-Layer Architecture Mapping:
+            // L1Autonomy       ← Executive      (Root CECCA, Constitutional authority)
+            // L2Reasoning      ← Board          (Board decision-making agents)
+            // L3Orchestration  ← Stack-Chief    (Chief Commanders, Orchestrators)
+            // L4Operations     ← Specialist     (Domain specialists, Worker agents)
+            // L5Infrastructure ← Micro          (Micro agents, Subject domain tasks)
+            //
+            // This hierarchy reflects organizational structure: strategic governance (L1-L2),
+            // tactical coordination (L3), operational execution (L4), and infrastructure tasks (L5).
+            // NOA uses a 5-layer hierarchy (L1-L5) that maps from the original
+            // organizational naming (Executive/Board/Stack-Chief/Specialist/Micro):
+            //
+            // L1Autonomy (Executive)    → Root governance, constitutional oversight
+            // L2Reasoning (Board)       → Strategic planning, policy formation
+            // L3Orchestration (Stack-Chief) → Cross-domain coordination
+            // L4Operations (Specialist) → Domain-specific operations
+            // L5Infrastructure (Micro)  → Task-specific micro agents
+            //
+            // The registry automatically maps legacy names to the L1-L5 system.
+
+            for layer in [
+                AgentLayer::L1Autonomy,
+                AgentLayer::L2Reasoning,
+                AgentLayer::L3Orchestration,
+                AgentLayer::L4Operations,
+                AgentLayer::L5Infrastructure,
+            ] {
+                let agents = registry.by_layer(&layer);
+                if !agents.is_empty() {
+                    println!("  {} ({} agents)", layer.name(), agents.len());
+
+                    // Show first 3 agents
+                    for agent in agents.iter().take(3) {
+                        println!("    • {} - {}", agent.name, agent.role);
+                        if !agent.purpose.is_empty() {
+                            let purpose = if agent.purpose.len() > 60 {
+                                format!("{}...", &agent.purpose[..60])
+                            } else {
+                                agent.purpose.clone()
+                            };
+                            println!("      {}", purpose);
+                        }
+                    }
+
+                    if agents.len() > 3 {
+                        println!("    ... and {} more", agents.len() - 3);
+                    }
+                    println!();
+                }
+            }
+
+            // Show agents needing repair
+            let needs_repair = registry.agents_needing_repair();
+            if !needs_repair.is_empty() {
+                println!(
+                    "⚠️  Agents Needing Repair ({} total):\n",
+                    needs_repair.len()
+                );
+
+                for agent in needs_repair.iter().take(5) {
+                    println!("  {} - {}", agent.name, agent.role);
+
+                    if !agent.issues_identified.is_empty() {
+                        println!("    Issues:");
+                        for issue in &agent.issues_identified {
+                            if !issue.trim().is_empty() {
+                                println!("      • {}", issue.trim());
+                            }
+                        }
+                    }
+
+                    if !agent.repair_recommendations.is_empty() {
+                        println!("    Recommendations:");
+                        for rec in &agent.repair_recommendations {
+                            if !rec.trim().is_empty() {
+                                println!("      → {}", rec.trim());
+                            }
+                        }
+                    }
+                    println!();
+                }
+
+                if needs_repair.len() > 5 {
+                    println!(
+                        "  ... and {} more agents needing repair",
+                        needs_repair.len() - 5
+                    );
+                }
+            }
+
+            println!("\n✅ Registry loaded successfully!");
+            println!("💡 Use AgentRegistry API to query agents in your code");
+        }
+        Err(e) => {
+            eprintln!("❌ Error loading registry: {}", e);
+            eprintln!("\n💡 Troubleshooting:");
+            eprintln!("   • Check that the CSV file exists when providing a custom path");
+            eprintln!("   • Verify the CSV format (should have headers)");
+            eprintln!("   • Check file permissions if loading from disk");
+        }
+    }
+
+    Ok(())
+}

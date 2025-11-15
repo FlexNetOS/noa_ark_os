@@ -16,6 +16,24 @@ Thumbs.db
 # IDE and Editor Files
 # --------------------
 .vscode/
+# Build artifacts
+target/
+bin/
+obj/
+dist/
+*.exe
+*.dll
+*.so
+*.dylib
+*.rlib
+*.pdb
+
+# IDE & Editor
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
 .idea/
 *.swp
 *.swo
@@ -28,11 +46,45 @@ Thumbs.db
 
 # Python
 # ------
+.DS_Store
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Workspace indexes and temp files
+.workspace/
+.graphs/*
+!.graphs/metrics/
+!.graphs/metrics/**
+!.workspace/
+!.workspace/registry/
+!.workspace/registry/*.json
+!.workspace/sop/
+!.workspace/sop/*.md
+# .graphs/ handled by explicit allow-list below
+!.graphs/workflows/
+!.graphs/workflows/**
+
+# Rust
+**/*.rs.bk
+Cargo.lock
+
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+env/
+!tools/devshell/env/
+!tools/devshell/env/*.sh
+!tools/devshell/env/*.ps1
+venv/
+ENV/
 build/
 develop-eggs/
 dist/
@@ -40,6 +92,8 @@ downloads/
 eggs/
 .eggs/
 lib/
+!tools/offline_pr_queue/lib/
+!tools/offline_pr_queue/lib/**
 lib64/
 parts/
 sdist/
@@ -76,6 +130,8 @@ Cargo.lock
 
 # Node.js
 # -------
+
+# Node.js
 node_modules/
 npm-debug.log*
 yarn-debug.log*
@@ -142,6 +198,69 @@ test-results/
 
 # Temporary Files
 # ---------------
+package-lock.json
+ui/vibe-kanban/.data/
+
+# Go
+*.test
+*.out
+
+# Logs
+*.log
+logs/
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# Portable Tools (excluded from Git)
+server/tools/cargo-portable/
+server/tools/rustup-portable/*
+!server/tools/rustup-portable/
+!server/tools/rustup-portable/README.md
+!server/tools/rustup-portable/settings.toml
+server/tools/node-portable/
+
+# Runtime Data
+server/data/
+crc/temp/
+crc/archive/
+crc/sandboxes/*/active/
+crc/drop-in/incoming/stale/
+crc/drop-in/incoming/forks/*/
+
+# Devshell state snapshots
+tools/devshell/state/*
+!tools/devshell/state/.gitkeep
+
+# Models & Large Files
+*.bin
+*.gguf
+*.safetensors
+*.pt
+*.pth
+*.onnx
+models/
+*.model
+
+# Secrets
+.env
+.env.local
+.env.*.local
+*.key
+!audit/offline-dev-hmac.key
+*.pem
+*.crt
+secrets/
+credentials/
+
+# Test outputs
+test-results/
+coverage/
+*.profraw
+*.profdata
+
+# Temporary files
 tmp/
 temp/
 *.tmp
@@ -204,3 +323,17 @@ $RECYCLE.BIN/
 *.ear
 *.sar
 *.class
+*.backup
+*.cache
+
+# Documentation artifacts
+docs/build/
+site/
+
+# Workspace organization
+.workspace-backup-*/
+
+# Logs (keep structure, ignore files)
+logs/**/*.log
+logs/**/*.txt
+logs/**/!(.gitkeep|README.md)

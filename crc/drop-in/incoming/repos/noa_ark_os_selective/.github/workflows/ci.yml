@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+
+jobs:
+  rust-check:
+    name: Rust check (services/ark-ai-os-workspace)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/ark-ai-os-workspace
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            services/ark-ai-os-workspace
+
+      - name: Cargo check (quiet)
+        run: |
+          cargo check --all-targets --quiet
+
+  mono-metadata:
+    name: Rust metadata (mono workspace)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mono
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cargo metadata
+        run: |
+          cargo metadata --no-deps --format-version 1 > target/metadata.json
+          test -s target/metadata.json
+
+  node-env:
+    name: Node environment sanity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18.x'
+          cache: 'npm'
+
+      - name: Print versions
+        run: |
+          node --version
+          npm --version
+
+      - name: List package manifests (apps subset)
+        run: |
+          find apps -maxdepth 3 -name package.json | head -n 20 | sed 's/^/ - /' || true

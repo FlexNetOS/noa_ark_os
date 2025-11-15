@@ -1,0 +1,23 @@
+name: Change Budget
+on: [pull_request]
+jobs:
+  budget:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Enforce bounds
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=origin/${{ github.base_ref }}
+          files=$(git diff --name-only "$base"... | wc -l)
+          adds=$(git diff --numstat "$base"... | awk '{sum+=$1} END{print sum+0}')
+          echo "Files: $files, Adds: $adds"
+          test $files -le 40   || (echo "Too many files changed: $files (limit: 40)" >&2 && exit 1)
+          test $adds  -le 1200 || (echo "Too many lines added: $adds (limit: 1200)" >&2 && exit 1)
+          disallowed=$(git diff --name-only "$base"... | grep -Ev '^(crc/|server/|ui/|docs/|.github/(?!workflows/))') || true
+          if [ -n "$disallowed" ]; then
+            echo "Disallowed paths:\n$disallowed" >&2
+            exit 1
+          fi

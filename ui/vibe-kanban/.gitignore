@@ -1,0 +1,17 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.cjs
+
+# testing
+/coverage
+
+# production
+/.next
+/out
+
+# misc
+.DS_Store
+*.log
+.next.cache
+tsconfig.tsbuildinfo

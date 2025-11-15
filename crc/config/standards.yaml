@@ -1,0 +1,344 @@
+# Workspace Standards
+
+metadata:
+  version: 1
+  owners:
+    governance: crc-governance
+    automation: automation-observability
+
+# Language-specific standards
+languages:
+  rust:
+    edition: "2021"
+    toolchain: "stable"
+    lints:
+      - "clippy::all"
+      - "clippy::pedantic"
+      - "clippy::cargo"
+    allowed_lints:
+      - "clippy::module_name_repetitions"
+    format:
+      tool: "rustfmt"
+      config: "rustfmt.toml"
+    testing:
+      framework: "cargo test"
+      coverage_tool: "tarpaulin"
+      min_coverage: 80
+  
+  python:
+    version: "3.11"
+    environment: "embedded"
+    lints:
+      - "pylint"
+      - "mypy"
+      - "flake8"
+    format:
+      tool: "black"
+      line_length: 88
+    testing:
+      framework: "pytest"
+      coverage_tool: "coverage.py"
+      min_coverage: 80
+  
+  go:
+    version: "1.21"
+    lints:
+      - "golangci-lint"
+      - "staticcheck"
+    format:
+      tool: "gofmt"
+    testing:
+      framework: "go test"
+      coverage_tool: "go test -cover"
+      min_coverage: 80
+  
+  csharp:
+    version: "11"
+    framework: ".NET 7.0"
+    lints:
+      - "StyleCop"
+      - "FxCop"
+    format:
+      tool: "dotnet format"
+    testing:
+      framework: "xUnit"
+      coverage_tool: "coverlet"
+      min_coverage: 80
+
+# Project structure standards
+structure:
+  root:
+    required:
+      - "README.md"
+      - "LICENSE"
+      - "Cargo.toml"  # or equivalent
+    optional:
+      - "CHANGELOG.md"
+      - "CONTRIBUTING.md"
+  
+  source:
+    rust: "src/"
+    python: "src/" or "module_name/"
+    go: "."
+    csharp: "src/"
+  
+  tests:
+    rust: "tests/"
+    python: "tests/"
+    go: "*_test.go"
+    csharp: "tests/"
+  
+  docs:
+    location: "docs/"
+    format: "markdown"
+    required:
+      - "API.md"
+      - "ARCHITECTURE.md"
+  
+  examples:
+    location: "examples/"
+    required: true
+
+# Code quality standards
+quality:
+  complexity:
+    max_cyclomatic: 10
+    max_cognitive: 15
+  
+  documentation:
+    require_module_docs: true
+    require_function_docs: true
+    require_type_docs: true
+    doc_coverage_min: 90
+  
+  naming:
+    functions:
+      rust: "snake_case"
+      python: "snake_case"
+      go: "camelCase"
+      csharp: "PascalCase"
+    types:
+      rust: "PascalCase"
+      python: "PascalCase"
+      go: "PascalCase"
+      csharp: "PascalCase"
+    constants:
+      rust: "SCREAMING_SNAKE_CASE"
+      python: "SCREAMING_SNAKE_CASE"
+      go: "PascalCase or camelCase"
+      csharp: "PascalCase"
+  
+  line_length:
+    rust: 100
+    python: 88
+    go: 120
+    csharp: 120
+  
+  file_size:
+    max_lines: 500
+    warn_at: 300
+
+# Testing standards
+testing:
+  required_types:
+    - "unit"
+    - "integration"
+  optional_types:
+    - "e2e"
+    - "performance"
+    - "security"
+  
+  coverage:
+    min_line: 80
+    min_branch: 75
+    min_function: 85
+  
+  conventions:
+    test_files:
+      rust: "*_test.rs or tests/"
+      python: "test_*.py or *_test.py"
+      go: "*_test.go"
+      csharp: "*.Tests.cs"
+
+    test_naming:
+      rust: "test_*"
+      python: "test_*"
+      go: "Test*"
+      csharp: "Test*"
+
+# Automation Standards
+automation:
+  storage_playbooks:
+    require_checkpointing: true
+    rollback_window_minutes: 15
+    audit_log_channel: "storage-relocation"
+    verification_steps:
+      - "preflight_validation"
+      - "post_move_checksum"
+      - "business_owner_signoff"
+
+  documentation_playbooks:
+    enforce_styleguide: "docs/styleguide.md"
+    auto_archive_superseded: true
+    metrics_required:
+      - "update_cycle_time"
+      - "review_turnaround"
+      - "doc_coverage_delta"
+
+  incident_simulations:
+    sandbox_expectations:
+      - "capture_telemetry"
+      - "validate_recovery_plan"
+      - "publish_postmortem"
+
+  mocking:
+    prefer_dependency_injection: true
+    use_test_doubles: true
+
+# Security standards
+security:
+  secrets:
+    no_hardcoded: true
+    use_config_system: true
+    rotate_regularly: true
+  
+  input_validation:
+    validate_all_inputs: true
+    sanitize_output: true
+    use_type_system: true
+  
+  dependencies:
+    scan_vulnerabilities: true
+    update_regularly: true
+    vendor_critical: true
+  
+  sandboxing:
+    isolate_untrusted: true
+    limit_permissions: true
+    resource_quotas: true
+
+# Performance standards
+performance:
+  response_time:
+    p50: "< 50ms"
+    p95: "< 100ms"
+    p99: "< 200ms"
+  
+  resource_usage:
+    max_memory: "80%"
+    max_cpu: "70%"
+  
+  optimization:
+    profile_critical_paths: true
+    cache_expensive_ops: true
+    lazy_load_when_possible: true
+
+# Documentation standards
+documentation:
+  readme:
+    required_sections:
+      - "Overview"
+      - "Installation"
+      - "Usage"
+      - "API Reference"
+      - "Examples"
+      - "Contributing"
+      - "License"
+  
+  api_docs:
+    format: "rustdoc" or "docstrings"
+    include_examples: true
+    document_errors: true
+    document_panics: true
+  
+  architecture:
+    diagrams: "mermaid or ASCII"
+    decision_records: true
+    component_docs: true
+
+# Error handling standards
+errors:
+  rust:
+    prefer_result: true
+    avoid_panic: true
+    custom_error_types: true
+  
+  python:
+    use_exceptions: true
+    catch_specific: true
+    log_errors: true
+  
+  go:
+    return_errors: true
+    wrap_context: true
+    check_all_errors: true
+  
+  all:
+    provide_context: true
+    actionable_messages: true
+    log_for_debugging: true
+
+# Dependency standards
+dependencies:
+  philosophy: "self-contained"
+  
+  external:
+    minimize: true
+    vendor_critical: true
+    review_all: true
+  
+  internal:
+    prefer_workspace: true
+    avoid_circular: true
+    version_consistently: true
+  
+  updates:
+    check_regularly: true
+    test_before_update: true
+    document_changes: true
+
+# Version control standards
+git:
+  commits:
+    format: "type(scope): message"
+    types:
+      - "feat"
+      - "fix"
+      - "docs"
+      - "style"
+      - "refactor"
+      - "test"
+      - "chore"
+  
+  branches:
+    main: "main"
+    develop: "develop"
+    feature: "feature/*"
+    bugfix: "bugfix/*"
+    release: "release/*"
+  
+  pull_requests:
+    require_reviews: 2
+    require_tests: true
+    require_ci: true
+
+# CI/CD standards
+cicd:
+  build:
+    timeout: "15m"
+    cache_dependencies: true
+    parallel_when_possible: true
+  
+  test:
+    run_all: true
+    fail_on_error: true
+    generate_coverage: true
+  
+  deploy:
+    strategies:
+      - "blue-green"
+      - "canary"
+      - "rolling"
+    health_checks: true
+    auto_rollback: true
+    zero_downtime: true

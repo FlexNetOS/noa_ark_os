@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "capabilities": [
+    {
+      "id": "digestor.openapi",
+      "type": "digestor",
+      "semver": "1.0.0",
+      "requires": ["tree-sitter"],
+      "provides": ["openapi", "http"]
+    },
+    {
+      "id": "transformer.ast_refactor",
+      "type": "transformer",
+      "semver": "0.2.0",
+      "requires": ["rust", "wasm"],
+      "provides": ["ast", "refactor"]
+    },
+    {
+      "id": "verifier.test_gen",
+      "type": "verifier",
+      "semver": "0.1.0",
+      "requires": ["cargo", "wasmtime"],
+      "provides": ["tests", "coverage"]
+    },
+    {
+      "id": "ui.kanban.core",
+      "type": "ui",
+      "semver": "1.0.0",
+      "provides": ["kanban.manageColumns", "kanban.quickComposer"]
+    },
+    {
+      "id": "ui.kanban.metrics",
+      "type": "ui",
+      "semver": "1.0.0",
+      "requires": ["analytics.pipeline"],
+      "provides": ["kanban.metrics"]
+    },
+    {
+      "id": "ui.kanban.goal_insights",
+      "type": "ui",
+      "semver": "1.1.0",
+      "requires": ["ui.kanban.metrics"],
+      "provides": ["kanban.goalInsights"]
+    },
+    {
+      "id": "ui.kanban.assist",
+      "type": "ai",
+      "semver": "0.1.0",
+      "requires": ["digestor.openapi"],
+      "provides": ["kanban.assist"]
+    },
+    {
+      "id": "ui.kanban.autonomy",
+      "type": "ai",
+      "semver": "0.1.0",
+      "requires": ["ui.kanban.assist"],
+      "provides": ["kanban.autonomousRetry", "kanban.agentEscalation"]
+    },
+    {
+      "id": "ml.lifecycle.controller",
+      "type": "ml",
+      "semver": "0.1.0",
+      "requires": ["storage.artifacts"],
+      "provides": ["ml.training", "ml.evaluation", "ml.registry"]
+    }
+  ]
+}

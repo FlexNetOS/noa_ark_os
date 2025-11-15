@@ -1,0 +1,275 @@
+{
+  // ============================================
+  // Multi-Platform Terminal Configuration
+  // ============================================
+
+  // Windows: Default to PowerShell (for portable Cargo)
+  "terminal.integrated.defaultProfile.windows": "PowerShell",
+
+  // Linux/WSL: Default to bash
+  "terminal.integrated.defaultProfile.linux": "bash",
+
+  // Terminal profiles for all platforms
+  "terminal.integrated.profiles.windows": {
+    "PowerShell": {
+      "source": "PowerShell",
+      "icon": "terminal-powershell"
+    },
+    "Command Prompt": {
+      "path": [
+        "${env:windir}\\Sysnative\\cmd.exe",
+        "${env:windir}\\System32\\cmd.exe"
+      ],
+      "icon": "terminal-cmd"
+    },
+    "WSL": {
+      "path": "wsl.exe",
+      "icon": "terminal-ubuntu"
+    },
+    "Git Bash": {
+      "source": "Git Bash"
+    }
+  },
+
+  "terminal.integrated.profiles.linux": {
+    "bash": {
+      "path": "/bin/bash",
+      "args": ["-l"]
+    }
+  },
+
+  // Explicitly pin bash for Linux/WSL tasks to avoid falling back to missing shells
+  "terminal.integrated.shell.linux": "/bin/bash",
+
+  // ============================================
+  // Rust Environment - Portable Cargo (Windows)
+  // ============================================
+
+  "rust-analyzer.server.extraEnv": {
+    "CARGO_HOME": "${workspaceFolder}\\server\\tools\\cargo-portable",
+    "RUSTUP_HOME": "${workspaceFolder}\\server\\tools\\rustup-portable"
+  },
+
+  // Cargo Path (Windows portable installation)
+  "rust-analyzer.cargo.path": "${workspaceFolder}\\server\\tools\\cargo-portable\\bin\\cargo.exe",
+
+  // Rustc Path (Windows portable installation)
+  "rust-analyzer.rustc.path": "${workspaceFolder}\\server\\tools\\cargo-portable\\bin\\rustc.exe",
+
+  // ============================================
+  // Environment Variables per Platform
+  // ============================================
+
+  // Windows PowerShell environment
+  "terminal.integrated.env.windows": {
+    "CARGO_HOME": "${workspaceFolder}\\server\\tools\\cargo-portable",
+    "RUSTUP_HOME": "${workspaceFolder}\\server\\tools\\rustup-portable",
+    "PATH": "${workspaceFolder}\\server\\tools\\cargo-portable\\bin;${env:PATH}"
+  },
+
+  // Linux/WSL environment (uses system Rust)
+  "terminal.integrated.env.linux": {
+    "CARGO_HOME": "${env:HOME}/.cargo",
+    "RUSTUP_HOME": "${env:HOME}/.rustup"
+  },
+
+  // ============================================
+  // Rust-analyzer Configuration
+  // ============================================
+
+  "rust-analyzer.checkOnSave": true,
+  // FIXED: Use 'check' instead of 'clippy' for portable toolchain without clippy installed
+  "rust-analyzer.check.command": "check",
+  "rust-analyzer.cargo.allFeatures": true,
+  "rust-analyzer.diagnostics.enable": true,
+  "rust-analyzer.inlayHints.enable": true,
+
+  // ============================================
+  // File Explorer Settings
+  // ============================================
+
+  // Files to exclude from explorer
+  "files.exclude": {
+    "**/target": true,
+    "**/.git": true,
+    "**/.DS_Store": true,
+    "**/Thumbs.db": true
+  },
+
+  // Files to exclude from search
+  "search.exclude": {
+    "**/target": true,
+    "**/node_modules": true,
+    "**/.git": true,
+    "**/dist": true,
+    "**/build": true
+  },
+
+  // ============================================
+  // Additional Editor Settings
+  // ============================================
+
+  // Format on save for Rust files
+  "[rust]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "rust-lang.rust-analyzer"
+  },
+
+  // Git configuration
+  "git.enabled": true,
+  "git.autofetch": true,
+
+  // Terminal settings
+  "terminal.integrated.scrollback": 10000,
+  "terminal.integrated.copyOnSelection": true,
+
+  // File-specific settings
+  "[shellscript]": {
+    "files.eol": "\n"
+  },
+  "[bash]": {
+    "files.eol": "\n"
+  },
+  "[powershell]": {
+    "files.eol": "\r\n"
+  },
+  "chat.agent.maxRequests": 50000,
+  "chat.allowAnonymousAccess": true,
+  "chat.checkpoints.showFileChanges": true,
+  "chat.customAgentInSubagent.enabled": true,
+  "chat.editor.wordWrap": "on",
+  "chat.edits2.enabled": true,
+  "chat.emptyState.history.enabled": true,
+  "chat.extensionUnification.enabled": true,
+  "chat.mcp.discovery.enabled": {
+    "claude-desktop": true
+  },
+  "chat.mcp.assisted.nuget.enabled": true,
+  "chat.renderRelatedFiles": true,
+  "chat.tools.terminal.autoReplyToPrompts": true,
+  "chat.useNestedAgentsMdFiles": true,
+  "inlineChat.enableV2": true,
+  "inlineChat.finishOnType": true,
+  "inlineChat.lineEmptyHint": true,
+  "inlineChat.notebookAgent": true,
+  // Prefer pnpm for this monorepo to avoid lockfile mismatch warnings
+  "npm.packageManager": "pnpm",
+  "githubPullRequests.assignCreated": "Co-Pilot",
+  // Shared command safety policy lives in tools/automation/policy.yaml.
+  // The VS Code settings mirror that policy for editor parity.
+  "chat.tools.terminal.autoApprove": {
+    // Read-only / navigation / inspection commands (auto-approved)
+    "cd": true,
+    "echo": true,
+    "ls": true,
+    "pwd": true,
+    "cat": true,
+    "head": true,
+    "tail": true,
+    "findstr": true,
+    "wc": true,
+    "tr": true,
+    "cut": true,
+    "cmp": true,
+    "which": true,
+    "basename": true,
+    "dirname": true,
+    "realpath": true,
+    "readlink": true,
+    "stat": true,
+    "file": true,
+    "du": true,
+    "df": true,
+    "sleep": true,
+    "grep": true,
+
+    // Git read-only commands (auto-approved)
+    "git status": true,
+    "git log": true,
+    "git show": true,
+    "git diff": true,
+    "git grep": true,
+    "git branch": true,
+    "/^git branch\\b.*-(d|D|m|M|-delete|-force)\\b/": false,
+
+    // PowerShell read-only commands (auto-approved)
+    "Get-ChildItem": true,
+    "Get-Content": true,
+    "Get-Date": true,
+    "Get-Random": true,
+    "Get-Location": true,
+    "Write-Host": true,
+    "Write-Output": true,
+    "Split-Path": true,
+    "Join-Path": true,
+    "Start-Sleep": true,
+    "Where-Object": true,
+    "/^Select-[a-z0-9]/i": true,
+    "/^Measure-[a-z0-9]/i": true,
+    "/^Compare-[a-z0-9]/i": true,
+    "/^Format-[a-z0-9]/i": true,
+    "/^Sort-[a-z0-9]/i": true,
+
+    // Safe formatting / listing (auto-approved)
+    "column": true,
+    "/^column\\b.*-c\\s+[0-9]{4,}/": false,
+    "date": true,
+    "/^date\\b.*(-s|--set)\\b/": false,
+    "find": true,
+    "/^find\\b.*-(delete|exec|execdir|fprint|fprintf|fls|ok|okdir)\\b/": false,
+    "sort": true,
+    "/^sort\\b.*-(o|S)\\b/": false,
+    "tree": true,
+    "/^tree\\b.*-o\\b/": false,
+
+    // Block any use of subshell / grouping tricks
+    "/\\(.+\\)/s": {
+      "approve": false,
+      "matchCommandLine": true
+    },
+    "/\\{.+\\}/s": {
+      "approve": false,
+      "matchCommandLine": true
+    },
+    "/`.+`/s": {
+      "approve": false,
+      "matchCommandLine": true
+    },
+
+    // Destructive, network, or risky commands (never auto-approved)
+    "rm": false,
+    "rmdir": false,
+    "del": false,
+    "Remove-Item": false,
+    "ri": false,
+    "rd": false,
+    "erase": false,
+    "dd": false,
+    "kill": false,
+    "ps": false,
+    "top": false,
+    "Stop-Process": false,
+    "spps": false,
+    "taskkill": false,
+    "taskkill.exe": false,
+    "curl": false,
+    "wget": false,
+    "Invoke-RestMethod": false,
+    "Invoke-WebRequest": false,
+    "irm": false,
+    "iwr": false,
+    "chmod": false,
+    "chown": false,
+    "Set-ItemProperty": false,
+    "sp": false,
+    "Set-Acl": false,
+    "jq": false,
+    "xargs": false,
+    "eval": false,
+    "Invoke-Expression": false,
+    "iex": false
+  },
+  "githubIssues.alwaysPromptForNewIssueRepo": true,
+  "githubPullRequests.experimental.useQuickChat": true,
+  "githubPullRequests.notifications": "pullRequests"
+}

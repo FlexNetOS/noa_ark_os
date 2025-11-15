@@ -1,0 +1,191 @@
+# CRC Source Type Configuration
+
+metadata:
+  version: 1
+  owners:
+    intake: crc-intake
+    automation: automation-observability
+
+sources:
+  repos:
+    name: "Fresh Repositories"
+    description: "Recently updated or actively maintained repositories"
+    priority: high
+    auto_approve_threshold: 0.95
+    default_sandbox: model-a
+    max_parallel_workers: 4
+    validation:
+      min_confidence: 0.90
+      required_tests: true
+      security_scan: true
+    
+  forks:
+    name: "Forked Projects"
+    description: "Forked repositories with modifications"
+    priority: medium
+    auto_approve_threshold: 0.90
+    default_sandbox: model-b
+    max_parallel_workers: 3
+    validation:
+      min_confidence: 0.85
+      required_tests: true
+      security_scan: true
+      fork_comparison: true
+    
+  mirrors:
+    name: "Mirror Repositories"
+    description: "Mirror/clone repositories from different sources"
+    priority: medium
+    auto_approve_threshold: 0.85
+    default_sandbox: model-a
+    max_parallel_workers: 3
+    validation:
+      min_confidence: 0.80
+      required_tests: true
+      security_scan: true
+      source_verification: true
+    
+  stale:
+    name: "Stale/Abandoned Code"
+    description: "Outdated, unmaintained, or abandoned codebases"
+    priority: normal
+    auto_approve_threshold: 0.80
+    default_sandbox: model-c  # More scrutiny needed
+    max_parallel_workers: 2
+    validation:
+      min_confidence: 0.75
+      required_tests: true
+      security_scan: true
+      dependency_update: true
+      compatibility_check: true
+
+  storage_automation:
+    name: "Storage Relocation Playbooks"
+    description: "Infrastructure-as-code bundles for automated storage moves"
+    priority: high
+    auto_approve_threshold: 0.92
+    default_sandbox: model-relocation
+    max_parallel_workers: 2
+    validation:
+      min_confidence: 0.88
+      required_tests: true
+      security_scan: true
+      relocation_simulation: true
+      change_management_ticket: true
+
+  documentation_automation:
+    name: "Documentation Automation Pipelines"
+    description: "Templates and bots that generate and govern documentation"
+    priority: medium
+    auto_approve_threshold: 0.90
+    default_sandbox: model-documentation
+    max_parallel_workers: 3
+    validation:
+      min_confidence: 0.85
+      required_tests: true
+      security_scan: true
+      doc_style_enforced: true
+      stakeholder_signoff: true
+
+# Worker Configuration
+workers:
+  analysis:
+    count: 4
+    timeout: 300  # 5 minutes
+    retry_attempts: 2
+    
+  adaptation:
+    count: 4
+    timeout: 600  # 10 minutes
+    retry_attempts: 2
+    
+  validation:
+    count: 4  # Increased from 2
+    timeout: 300  # 5 minutes
+    retry_attempts: 1
+
+# File Watcher Configuration
+watcher:
+  enabled: true
+  poll_interval: 1  # seconds
+  debounce_delay: 2  # seconds
+  watch_paths:
+    - "crc/drop-in/incoming/repos"
+    - "crc/drop-in/incoming/forks"
+    - "crc/drop-in/incoming/mirrors"
+    - "crc/drop-in/incoming/stale"
+    - "crc/drop-in/incoming/storage_automation"
+    - "crc/drop-in/incoming/documentation_automation"
+  
+  file_filters:
+    include:
+      - "*.zip"
+      - "*.tar.gz"
+      - "*.tar.zst"
+      - "*.tar"
+      - "*.git"
+    exclude:
+      - "*.tmp"
+      - "*.partial"
+      - ".DS_Store"
+
+# Manifest Generation
+manifest:
+  auto_generate: true
+  version: "1.0"
+  required_fields:
+    - drop_id
+    - source_type
+    - source_path
+    - detected_at
+    - priority
+  
+  metadata_extraction:
+    enabled: true
+    extract:
+      - language
+      - dependencies
+      - last_commit_date
+      - file_count
+      - estimated_lines
+      - readme_exists
+
+# Archive Configuration
+archive:
+  by_date: true
+  by_source_type: true
+  by_confidence: true
+  
+  confidence_thresholds:
+    high: 0.95
+    medium: 0.80
+    low: 0.00
+  
+  compression: zstd
+  compression_level: 3
+  retention_days:
+    repos: 180
+    forks: 180
+    mirrors: 90
+    stale: 365
+
+# Notification Configuration
+notifications:
+  enabled: true
+  on_drop_received: true
+  on_processing_complete: true
+  on_sandbox_assigned: true
+  on_validation_complete: true
+  on_deployment: true
+  
+  channels:
+    - console
+    - log_file
+    - webhook  # For chat integration
+
+# Performance Limits
+limits:
+  max_concurrent_drops: 10
+  max_queue_size: 100
+  max_file_size_mb: 500
+  max_processing_time_minutes: 30

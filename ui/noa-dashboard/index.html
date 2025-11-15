@@ -1,0 +1,1937 @@
+<!DOCTYPE html>
+<html lang=\"en\">
+<head>
+    <meta charset=\"UTF-8\" />
+    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />
+    <title>NOA ARK OS – Unified Control Plane</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            --bg-gradient: linear-gradient(135deg, #1a1c2e 0%, #251d3a 100%);
+            --card-bg: rgba(32, 35, 58, 0.8);
+            --border: rgba(255, 255, 255, 0.08);
+            --accent: #38bdf8;
+            --accent-strong: #0ea5e9;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --muted: rgba(226, 232, 240, 0.72);
+            font-family: \"Inter\", \"Segoe UI\", Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 24px;
+            background: var(--bg-gradient);
+            color: #f3f4f6;
+        }
+
+        a {
+            color: inherit;
+        }
+
+        .container {
+            max-width: 1240px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        header {
+            border: 1px solid var(--border);
+            background: rgba(15, 23, 42, 0.65);
+            border-radius: 16px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+        }
+
+        header h1 {
+            font-size: clamp(2rem, 4vw, 3rem);
+            margin: 0;
+        }
+
+        header p {
+            margin: 0;
+            max-width: 70ch;
+            color: var(--muted);
+        }
+
+        .badge-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background: rgba(14, 165, 233, 0.15);
+            border: 1px solid rgba(14, 165, 233, 0.25);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            backdrop-filter: blur(12px);
+        }
+
+        .card.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .card h2, .card h3 {
+            margin: 0;
+            font-size: 1.1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .metric-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            font-size: 0.95rem;
+            color: var(--muted);
+        }
+
+        .metric strong {
+            color: #f8fafc;
+        }
+
+        section {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .section-heading {
+            font-size: 1.4rem;
+            font-weight: 600;
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 16px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.92rem;
+        }
+
+        th, td {
+            padding: 8px 10px;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+        }
+
+        th {
+            color: rgba(226, 232, 240, 0.7);
+            font-weight: 600;
+        }
+
+        tbody tr:hover {
+            background: rgba(148, 163, 184, 0.08);
+        }
+
+        button, .link-button {
+            border: none;
+            border-radius: 10px;
+            background: var(--accent);
+            color: #0f172a;
+            font-weight: 600;
+            padding: 8px 16px;
+            cursor: pointer;
+            transition: transform 0.1s ease, background 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+        }
+
+        button:hover, .link-button:hover {
+            background: var(--accent-strong);
+            transform: translateY(-1px);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        select, input[type=\"number\"], input[type=\"text\"], input[type=\"file\"], textarea {
+            border-radius: 10px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            background: rgba(15, 23, 42, 0.75);
+            color: inherit;
+            padding: 8px 12px;
+            font-size: 0.95rem;
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .chat-panel {
+            display: grid;
+            gap: 12px;
+        }
+
+        .chat-actions {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chat-actions select,
+        .chat-actions input[type=\"file\"] {
+            flex: 1 1 180px;
+            min-width: 160px;
+            color: var(--muted);
+        }
+
+        .chat-actions button {
+            flex-shrink: 0;
+        }
+
+        .chat-output {
+            border-radius: 12px;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            background: rgba(15, 23, 42, 0.75);
+            min-height: 120px;
+            padding: 12px 14px;
+            font-family: \"Fira Code\", \"SFMono-Regular\", Consolas, \"Liberation Mono\", monospace;
+            white-space: pre-wrap;
+        }
+
+        .event-log {
+            border-radius: 12px;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            background: rgba(15, 23, 42, 0.65);
+            padding: 12px;
+            max-height: 240px;
+            overflow-y: auto;
+            font-size: 0.9rem;
+            display: grid;
+            gap: 8px;
+        }
+
+        .event-log .event {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 8px 10px;
+            border-radius: 8px;
+            background: rgba(56, 189, 248, 0.08);
+            border: 1px solid rgba(56, 189, 248, 0.15);
+        }
+
+        .event-type {
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .muted {
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        .empty {
+            color: rgba(148, 163, 184, 0.6);
+            text-align: center;
+            padding: 12px 0;
+        }
+
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .filter-bar label {
+            display: flex;
+            flex-direction: column;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: rgba(148, 163, 184, 0.85);
+            gap: 6px;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+        }
+
+        .stat-card {
+            padding: 10px 12px;
+            border-radius: 12px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .stat-card span:first-child {
+            font-size: 0.75rem;
+            color: rgba(148, 163, 184, 0.8);
+        }
+
+        .stat-card strong {
+            font-size: 1.1rem;
+        }
+
+        .status-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .status-tag[data-status=\"running\"],
+        .status-tag[data-status=\"success\"],
+        .status-tag[data-status=\"active\"] {
+            background: rgba(34, 197, 94, 0.15);
+            border: 1px solid rgba(34, 197, 94, 0.35);
+            color: #bbf7d0;
+        }
+
+        .status-tag[data-status=\"pending\"],
+        .status-tag[data-status=\"standby\"],
+        .status-tag[data-status=\"queued\"],
+        .status-tag[data-status=\"attention\"],
+        .status-tag[data-status=\"running-validation\"],
+        .status-tag[data-status=\"starting\"] {
+            background: rgba(245, 158, 11, 0.2);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            color: #fef3c7;
+        }
+
+        .status-tag[data-status=\"failed\"],
+        .status-tag[data-status=\"degraded\"],
+        .status-tag[data-status=\"terminated\"],
+        .status-tag[data-status=\"retired\"],
+        .status-tag[data-status=\"error\"],
+        .status-tag[data-status=\"failing\"],
+        .status-tag[data-status=\"offline\"],
+        .status-tag[data-status=\"stopped\"] {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.35);
+            color: #fecaca;
+        }
+
+        .dag {
+            border-radius: 12px;
+            border: 1px dashed rgba(148, 163, 184, 0.3);
+            padding: 12px;
+            font-family: \"Fira Code\", \"SFMono-Regular\", Consolas, monospace;
+            font-size: 0.85rem;
+            white-space: pre-wrap;
+            color: rgba(226, 232, 240, 0.85);
+        }
+
+        .table-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .workflow-stage-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: grid;
+            gap: 6px;
+        }
+
+        .workflow-stage-list li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 10px;
+            padding: 6px 10px;
+            background: rgba(15, 23, 42, 0.5);
+        }
+
+        .override-form {
+            display: grid;
+            gap: 8px;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            align-items: end;
+        }
+
+        .override-form textarea {
+            grid-column: 1 / -1;
+            min-height: 80px;
+        }
+
+        .storage-plan ul {
+            list-style: none;
+            padding-left: 16px;
+            margin: 0;
+        }
+
+        .governance-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+        }
+
+        .score-pill {
+            font-size: clamp(2rem, 4vw, 2.8rem);
+            font-weight: 700;
+            padding: 10px 18px;
+            border-radius: 14px;
+            background: rgba(56, 189, 248, 0.18);
+            border: 1px solid rgba(56, 189, 248, 0.35);
+        }
+
+        .trend-bars {
+            display: flex;
+            align-items: flex-end;
+            gap: 6px;
+            height: 48px;
+        }
+
+        .trend-bar {
+            flex: 1;
+            border-radius: 6px 6px 0 0;
+            background: rgba(148, 163, 184, 0.25);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .trend-bar::after {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(180deg, rgba(56, 189, 248, 0.65), rgba(14, 165, 233, 0.9));
+            height: var(--height, 0%);
+        }
+
+        .compliance-score {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .compliance-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: grid;
+            gap: 10px;
+        }
+
+        .compliance-list li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            background: rgba(15, 23, 42, 0.55);
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 2px 10px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .status-pill[data-status="pass"],
+        .status-pill[data-status="healthy"],
+        .status-pill[data-status="stable"] {
+            background: rgba(34, 197, 94, 0.16);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            color: #86efac;
+        }
+
+        .status-pill[data-status="attention"],
+        .status-pill[data-status="warning"],
+        .status-pill[data-status="monitor"] {
+            background: rgba(245, 158, 11, 0.2);
+            border: 1px solid rgba(245, 158, 11, 0.35);
+            color: #fef3c7;
+        }
+
+        .status-pill[data-status="critical"],
+        .status-pill[data-status="breach"],
+        .status-pill[data-status="investigating"] {
+            background: rgba(239, 68, 68, 0.22);
+            border: 1px solid rgba(239, 68, 68, 0.35);
+            color: #fecaca;
+        }
+
+        .metric-stack {
+            display: grid;
+            gap: 8px;
+        }
+
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            font-size: 0.95rem;
+        }
+
+        .metric-row strong {
+            font-size: 1.05rem;
+        }
+
+        .sla-list,
+        .anomaly-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .sla-card,
+        .anomaly-card {
+            border-radius: 10px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            background: rgba(15, 23, 42, 0.55);
+            padding: 10px 12px;
+            display: grid;
+            gap: 4px;
+            font-size: 0.9rem;
+        }
+
+        .empty-data {
+            color: rgba(148, 163, 184, 0.6);
+            font-style: italic;
+        }
+
+        .storage-plan li::before {
+            content: '▸';
+            margin-right: 6px;
+            color: rgba(148, 163, 184, 0.6);
+        }
+
+        @media (max-width: 720px) {
+            body {
+                padding: 16px;
+            }
+
+            header {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class=\"container\">
+    <div id="root" class="container">
+    <div class="container">
+        <header>
+            <div class=\"badge-row\">
+                <span class=\"badge\" id=\"apiStatus\">Connecting to API…</span>
+                <span class=\"badge\">Unified Shell Preview</span>
+            </div>
+            <h1>NOA ARK OS Control Plane</h1>
+            <p>
+                Operate workflows, agents, CI/CD, storage, analytics, and llama.cpp inference from a single surface.
+                Every interaction below talks directly to the unified FastAPI gateway.
+            </p>
+        </header>
+
+        <section>
+            <div class=\"grid\">
+                <article class=\"card\">
+                    <h2>Analytics Spotlight <span id=\"roiValue\" class=\"muted\">—</span></h2>
+                    <div id=\"analyticsMetrics\" class=\"metric-list\"></div>
+                </article>
+                <article class=\"card\">
+                    <h2>Recent Workflow Runs</h2>
+                    <div id=\"workflowRuns\" class=\"metric-list\"></div>
+                </article>
+                <article class=\"card\">
+                    <h2>Live Events</h2>
+                    <div id=\"eventLog\" class=\"event-log\">
+                        <div class=\"empty\">Listening for events…</div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section id=\"governance\">
+            <div class=\"section-heading\">Governance &amp; Compliance Intelligence</div>
+            <div class=\"governance-grid\">
+                <article class=\"card full-width\">
+                    <h2>Compliance Posture <span class=\"muted\" id=\"complianceUpdated\">—</span></h2>
+                    <div class=\"compliance-score\">
+                        <span class=\"score-pill\" id=\"complianceScoreValue\">—</span>
+                        <div class=\"trend-bars\" id=\"complianceTrend\"></div>
+                    </div>
+                    <ul class=\"compliance-list\" id=\"complianceControlList\"></ul>
+                </article>
+                <article class=\"card\">
+                    <h2>SLA Adherence</h2>
+                    <div class=\"metric-stack\" id=\"slaSummary\"></div>
+                    <div class=\"sla-list\" id=\"slaBreaches\"></div>
+                </article>
+                <article class=\"card\">
+                    <h2>Anomaly Detection</h2>
+                    <div class=\"metric-stack\" id=\"anomalySummary\"></div>
+                    <div class=\"anomaly-list\" id=\"anomalyEvents\"></div>
+                </article>
+            </div>
+        </section>
+
+        <section>
+            <div class=\"section-heading\">Workflow Command Center</div>
+            <div id=\"workflowList\" class=\"two-column\"></div>
+            <article class=\"card\">
+                <h2>Run History &amp; Manual Overrides</h2>
+                <div id=\"workflowRunDeck\"></div>
+            </article>
+        </section>
+
+        <section class=\"two-column\">
+            <article class=\"card\">
+                <h2>Agent Hive Explorer</h2>
+                <div class=\"muted\">Scale agent families, filter the 360-node hive, and apply kill switches instantly.</div>
+                <div class=\"filter-bar\" id=\"agentFilters\">
+                    <label>Family
+                        <select id=\"agentFamilyFilter\">
+                            <option value=\"\">All</option>
+                        </select>
+                    </label>
+                    <label>Status
+                        <select id=\"agentStatusFilter\">
+                            <option value=\"\">All</option>
+                            <option value=\"running\">Running</option>
+                            <option value=\"idle\">Idle</option>
+                            <option value=\"degraded\">Degraded</option>
+                            <option value=\"terminated\">Terminated</option>
+                        </select>
+                    </label>
+                    <label>Region
+                        <select id=\"agentRegionFilter\">
+                            <option value=\"\">All</option>
+                            <option value=\"us-east\">US-East</option>
+                            <option value=\"us-west\">US-West</option>
+                            <option value=\"eu-central\">EU-Central</option>
+                        </select>
+                    </label>
+                </div>
+                <div id=\"agentStats\" class=\"stat-grid\"></div>
+                <div id=\"agentTable\"></div>
+            </article>
+            <article class=\"card\">
+                <h2>Sandbox &amp; CI Console</h2>
+                <div class=\"muted\">Orchestrate A/B/C → D merges, validations, and rollout health.</div>
+                <div id=\"pipelineTable\"></div>
+                <div class=\"muted\">Rollout Telemetry</div>
+                <div id=\"rolloutCards\" class=\"metric-list\"></div>
+                <div class=\"muted\">Active Merge Plans</div>
+                <div id=\"mergeTable\"></div>
+                <div class=\"muted\">Validations</div>
+                <div id=\"validationTable\"></div>
+            </article>
+        </section>
+
+        <section class=\"two-column\">
+            <article class=\"card\">
+                <h2>Model &amp; Inference Hub</h2>
+                <div class=\"muted\">Manage llama.cpp models, GPU allocation, and live inference sessions.</div>
+                <div id=\"modelTable\"></div>
+                <div class=\"muted\">GPU Utilization</div>
+                <div id=\"gpuTable\"></div>
+                <div class=\"muted\">Active Sessions</div>
+                <div id=\"sessionTable\"></div>
+                <form id=\"sessionCreateForm\" class=\"override-form\" style=\"margin-top: 8px;\">
+                    <label>Model
+                        <select id=\"sessionModel\"></select>
+                    </label>
+                    <label>GPU
+                        <select id=\"sessionGpu\"></select>
+                    </label>
+                    <label>Owner
+                        <input type=\"text\" id=\"sessionOwner\" placeholder=\"owner\" required />
+                    </label>
+                    <button type=\"submit\">Launch Session</button>
+                </form>
+            </article>
+            <article class=\"card\">
+                <h2>Storage &amp; Artifact Browser</h2>
+                <div class=\"muted\">VFS plan, artifact controls, downloads, retention, and audit logs.</div>
+                <div id=\"storagePlan\" class=\"storage-plan\"></div>
+                <div id=\"artifactTable\"></div>
+                <div class=\"muted\">Audit Log</div>
+                <div id=\"auditTable\"></div>
+            </article>
+        </section>
+
+        <section class=\"two-column\">
+            <article class=\"card chat-panel\">
+                <h2>AI Co-Developer Chat</h2>
+                <textarea id=\"chatInput\" placeholder=\"Ask NOA to trigger workflows, open modules, or explain capabilities.\"></textarea>
+                <div class=\"chat-actions\">
+                    <input type=\"file\" id=\"chatUpload\" aria-label=\"Upload file for NOA\" />
+                    <select id=\"chatUploadType\" aria-label=\"File type\">
+                        <option value=\"auto\">Auto Detect</option>
+                        <option value=\"workflow\">Workflow</option>
+                        <option value=\"dataset\">Dataset</option>
+                        <option value=\"document\">Document</option>
+                    </select>
+                    <button id=\"chatSend\">Send Message</button>
+                </div>
+                <div id=\"chatOutput\" class=\"chat-output\">Awaiting command…</div>
+            </article>
+        </section>
+    </div>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const DEFAULT_API_URL = 'http://localhost:8000';
+        const API_URL = params.get('api') || DEFAULT_API_URL;
+
+        const API_STATUS = document.getElementById('apiStatus');
+        const METRICS_CONTAINER = document.getElementById('analyticsMetrics');
+        const ROI_VALUE = document.getElementById('roiValue');
+        const WORKFLOW_LIST = document.getElementById('workflowList');
+        const WORKFLOW_RUNS = document.getElementById('workflowRuns');
+        const WORKFLOW_RUN_DECK = document.getElementById('workflowRunDeck');
+        const AGENT_STATS = document.getElementById('agentStats');
+        const AGENT_TABLE = document.getElementById('agentTable');
+        const PIPELINE_TABLE = document.getElementById('pipelineTable');
+        const MERGE_TABLE = document.getElementById('mergeTable');
+        const VALIDATION_TABLE = document.getElementById('validationTable');
+        const ROLLOUT_CARDS = document.getElementById('rolloutCards');
+        const MODEL_TABLE = document.getElementById('modelTable');
+        const GPU_TABLE = document.getElementById('gpuTable');
+        const SESSION_TABLE = document.getElementById('sessionTable');
+        const SESSION_MODEL = document.getElementById('sessionModel');
+        const SESSION_GPU = document.getElementById('sessionGpu');
+        const SESSION_OWNER = document.getElementById('sessionOwner');
+        const SESSION_CREATE_FORM = document.getElementById('sessionCreateForm');
+        const ARTIFACT_TABLE = document.getElementById('artifactTable');
+        const STORAGE_PLAN = document.getElementById('storagePlan');
+        const AUDIT_TABLE = document.getElementById('auditTable');
+        const CHAT_INPUT = document.getElementById('chatInput');
+        const CHAT_UPLOAD = document.getElementById('chatUpload');
+        const CHAT_UPLOAD_TYPE = document.getElementById('chatUploadType');
+        const CHAT_OUTPUT = document.getElementById('chatOutput');
+        const EVENT_LOG = document.getElementById('eventLog');
+        const AGENT_FAMILY_FILTER = document.getElementById('agentFamilyFilter');
+        const AGENT_STATUS_FILTER = document.getElementById('agentStatusFilter');
+        const AGENT_REGION_FILTER = document.getElementById('agentRegionFilter');
+        const COMPLIANCE_SCORE = document.getElementById('complianceScoreValue');
+        const COMPLIANCE_TREND = document.getElementById('complianceTrend');
+        const COMPLIANCE_CONTROLS = document.getElementById('complianceControlList');
+        const COMPLIANCE_UPDATED = document.getElementById('complianceUpdated');
+        const SLA_SUMMARY = document.getElementById('slaSummary');
+        const SLA_BREACHES = document.getElementById('slaBreaches');
+        const ANOMALY_SUMMARY = document.getElementById('anomalySummary');
+        const ANOMALY_EVENTS = document.getElementById('anomalyEvents');
+
+        const METRICS_BASE = '../../.graphs/metrics';
+
+        let eventSocket;
+        let allAgents = [];
+        let agentFilters = { family: '', status: '', region: '' };
+
+        const EMPTY_AGENT_STATS = {
+            total: 0,
+            by_status: {},
+            by_family: {},
+            average_load: 0,
+        };
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            if (Number.isNaN(date.getTime())) {
+                return dateString;
+            }
+            return date.toLocaleString();
+        }
+
+        function updateBadge(status, message) {
+            API_STATUS.textContent = message;
+            API_STATUS.style.background = status === 'ok' ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)';
+            API_STATUS.style.border = status === 'ok' ? '1px solid rgba(34,197,94,0.4)' : '1px solid rgba(239,68,68,0.4)';
+        }
+
+        async function fetchJson(url, options) {
+            const response = await fetch(url, options);
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(`${response.status}: ${text}`);
+            }
+            return response.json();
+        }
+
+        async function fetchLocalMetric(name) {
+            try {
+                const response = await fetch(`${METRICS_BASE}/${name}.json`, { cache: 'no-cache' });
+                if (!response.ok) {
+                    return null;
+                }
+                return await response.json();
+            } catch (error) {
+                console.warn(`Failed to load metric ${name}`, error);
+                return null;
+            }
+        }
+
+        function renderMetrics(metrics) {
+            METRICS_CONTAINER.innerHTML = '';
+            if (!metrics.length) {
+                METRICS_CONTAINER.innerHTML = '<div class=\"empty\">No analytics metrics available.</div>';
+                return;
+            }
+            for (const metric of metrics) {
+                const div = document.createElement('div');
+                div.className = 'metric';
+                div.innerHTML = `<span>${metric.label}</span><strong>${metric.value} ${metric.unit}</strong>`;
+                METRICS_CONTAINER.appendChild(div);
+            }
+        }
+
+        function renderComplianceMetrics(data) {
+            COMPLIANCE_TREND.innerHTML = '';
+            COMPLIANCE_CONTROLS.innerHTML = '';
+            if (!data) {
+                COMPLIANCE_SCORE.textContent = '—';
+                COMPLIANCE_UPDATED.textContent = 'No compliance telemetry';
+                COMPLIANCE_TREND.innerHTML = '<div class=\"empty-data\">No trend data.</div>';
+                COMPLIANCE_CONTROLS.innerHTML = '<li class=\"empty-data\">No control attestations recorded.</li>';
+                return;
+            }
+
+            const score = Number.isFinite(data.overall_score)
+                ? Math.round(data.overall_score * 100)
+                : null;
+            COMPLIANCE_SCORE.textContent = score !== null ? `${score}%` : '—';
+            COMPLIANCE_UPDATED.textContent = data.last_updated
+                ? `Updated ${formatDate(data.last_updated)}`
+                : '—';
+
+            const trend = Array.isArray(data.trend) ? data.trend : [];
+            if (!trend.length) {
+                COMPLIANCE_TREND.innerHTML = '<div class=\"empty-data\">No trend data.</div>';
+            } else {
+                trend.forEach((value) => {
+                    const percent = Math.max(0, Math.min(100, Math.round(value * 100)));
+                    const bar = document.createElement('div');
+                    bar.className = 'trend-bar';
+                    bar.style.setProperty('--height', `${percent}%`);
+                    bar.title = `${percent}%`;
+                    COMPLIANCE_TREND.appendChild(bar);
+                });
+            }
+
+            const controls = Array.isArray(data.control_status) ? data.control_status : [];
+            if (!controls.length) {
+                COMPLIANCE_CONTROLS.innerHTML = '<li class=\"empty-data\">No control attestations recorded.</li>';
+            } else {
+                controls.forEach((control) => {
+                    const item = document.createElement('li');
+                    const label = document.createElement('span');
+                    label.textContent = control.control || 'Unnamed control';
+                    const status = document.createElement('span');
+                    const statusValue = String(control.status || 'unknown').toLowerCase();
+                    status.className = 'status-pill';
+                    status.dataset.status = statusValue;
+                    status.textContent = statusValue;
+                    if (control.evidence) {
+                        status.title = control.evidence;
+                    }
+                    item.appendChild(label);
+                    item.appendChild(status);
+                    COMPLIANCE_CONTROLS.appendChild(item);
+                });
+            }
+        }
+
+        function renderSlaMetrics(data) {
+            SLA_SUMMARY.innerHTML = '';
+            SLA_BREACHES.innerHTML = '';
+            if (!data) {
+                SLA_SUMMARY.innerHTML = '<div class=\"empty-data\">No SLA telemetry available.</div>';
+                return;
+            }
+
+            const availability = Number.isFinite(data.availability)
+                ? `${data.availability.toFixed(3)}%`
+                : '—';
+            const availabilityTarget = Number.isFinite(data.availability_target)
+                ? `${data.availability_target.toFixed(3)}%`
+                : '—';
+            const response = Number.isFinite(data.average_response_ms)
+                ? `${data.average_response_ms} ms`
+                : '—';
+            const responseTarget = Number.isFinite(data.response_target_ms)
+                ? `${data.response_target_ms} ms`
+                : '—';
+
+            const rows = [
+                { label: 'Availability', value: availability },
+                { label: 'Target', value: availabilityTarget },
+                { label: 'Response Time', value: response },
+                { label: 'Response Target', value: responseTarget },
+            ];
+
+            rows.forEach((row) => {
+                const div = document.createElement('div');
+                div.className = 'metric-row';
+                div.innerHTML = `<span>${row.label}</span><strong>${row.value}</strong>`;
+                SLA_SUMMARY.appendChild(div);
+            });
+
+            if (data.last_reviewed) {
+                const reviewed = document.createElement('div');
+                reviewed.className = 'muted';
+                reviewed.textContent = `Last reviewed ${formatDate(data.last_reviewed)}`;
+                SLA_SUMMARY.appendChild(reviewed);
+            }
+
+            const breaches = Array.isArray(data.breaches) ? data.breaches : [];
+            if (!breaches.length) {
+                SLA_BREACHES.innerHTML = '<div class=\"empty-data\">No SLA breaches in the current window.</div>';
+            } else {
+                breaches.forEach((breach) => {
+                    const card = document.createElement('div');
+                    card.className = 'sla-card';
+
+                    const strong = document.createElement('strong');
+                    strong.textContent = (breach.type || 'breach').toString().toUpperCase();
+                    card.appendChild(strong);
+
+                    const timestampSpan = document.createElement('span');
+                    timestampSpan.textContent = formatDate(breach.timestamp);
+                    card.appendChild(timestampSpan);
+
+                    const detailsSpan = document.createElement('span');
+                    detailsSpan.className = 'muted';
+                    const duration = breach.duration_minutes || 0;
+                    const resolvedBy = breach.resolved_by || 'N/A';
+                    detailsSpan.textContent = `Duration: ${duration} minutes · Resolved by ${resolvedBy}`;
+                    card.appendChild(detailsSpan);
+                    SLA_BREACHES.appendChild(card);
+                });
+            }
+        }
+
+        function renderAnomalyMetrics(data) {
+            ANOMALY_SUMMARY.innerHTML = '';
+            ANOMALY_EVENTS.innerHTML = '';
+            if (!data) {
+                ANOMALY_SUMMARY.innerHTML = '<div class=\"empty-data\">No anomaly telemetry available.</div>';
+                return;
+            }
+
+            const rows = [
+                { label: 'Detections (24h)', value: data.detections_last_24h ?? '—' },
+                { label: 'Active Alerts', value: data.active_alerts ?? '—' },
+            ];
+
+            rows.forEach((row) => {
+                const div = document.createElement('div');
+                div.className = 'metric-row';
+                div.innerHTML = `<span>${row.label}</span><strong>${row.value}</strong>`;
+                ANOMALY_SUMMARY.appendChild(div);
+            });
+
+            const anomalies = Array.isArray(data.recent_anomalies) ? data.recent_anomalies : [];
+            if (!anomalies.length) {
+                ANOMALY_EVENTS.innerHTML = '<div class=\"empty-data\">No anomalies detected.</div>';
+            } else {
+                anomalies.forEach((anomaly) => {
+                    const card = document.createElement('div');
+                    card.className = 'anomaly-card';
+                    const status = String(anomaly.status || 'investigating').toLowerCase();
+                    
+                    // Create elements programmatically to prevent XSS
+                    const idElem = document.createElement('strong');
+                    idElem.textContent = anomaly.id || 'ANOM';
+                    card.appendChild(idElem);
+
+                    const metricElem = document.createElement('span');
+                    metricElem.textContent = 'Metric: ' + (anomaly.metric || 'unknown');
+                    card.appendChild(metricElem);
+
+                    const deltaElem = document.createElement('span');
+                    const delta = Number.isFinite(anomaly.delta) ? anomaly.delta : 0;
+                    deltaElem.textContent = 'Delta: ' + delta.toFixed(2);
+                    card.appendChild(deltaElem);
+
+                    const detectedElem = document.createElement('span');
+                    detectedElem.textContent = 'Detected: ' + formatDate(anomaly.detected);
+                    card.appendChild(detectedElem);
+
+                    const statusElem = document.createElement('span');
+                    statusElem.className = 'status-pill';
+                    statusElem.setAttribute('data-status', status);
+                    statusElem.textContent = status;
+                    card.appendChild(statusElem);
+                    
+                    ANOMALY_EVENTS.appendChild(card);
+                });
+            }
+        }
+
+        async function loadGovernanceMetrics() {
+            const [compliance, sla, anomalies] = await Promise.all([
+                fetchLocalMetric('compliance'),
+                fetchLocalMetric('sla'),
+                fetchLocalMetric('anomalies'),
+            ]);
+            renderComplianceMetrics(compliance);
+            renderSlaMetrics(sla);
+            renderAnomalyMetrics(anomalies);
+        }
+
+        function renderWorkflowRunsSummary(runs) {
+            WORKFLOW_RUNS.innerHTML = '';
+            if (!runs.length) {
+                WORKFLOW_RUNS.innerHTML = '<div class=\"empty\">No workflow runs yet.</div>';
+                return;
+            }
+            runs.slice(0, 4).forEach((run) => {
+                const div = document.createElement('div');
+                div.className = 'metric';
+                div.innerHTML = `<span>${run.workflow_id}</span><strong>${run.status}</strong><span class=\"muted\">${formatDate(run.triggered_at)}</span>`;
+                WORKFLOW_RUNS.appendChild(div);
+            });
+        }
+
+        function formatDag(workflow) {
+            if (!workflow.dag || !workflow.dag.length) {
+                return workflow.stages.map((stage) => stage.id).join(' → ');
+            }
+            return workflow.dag
+                .map((edge) => `${edge.source} → ${edge.target}${edge.kind && edge.kind !== 'sequential' ? ` (${edge.kind})` : ''}`)
+                .join('\n');
+        }
+
+        function renderWorkflows(workflows) {
+            WORKFLOW_LIST.innerHTML = '';
+            if (!workflows.length) {
+                WORKFLOW_LIST.innerHTML = '<div class=\"card\">No workflows registered.</div>';
+                return;
+            }
+            for (const workflow of workflows) {
+                const card = document.createElement('article');
+                card.className = 'card';
+                const stages = workflow.stages
+                    .map((stage) => `<li>${stage.label} – ${stage.description}</li>`)
+                    .join('');
+                card.innerHTML = `
+                    <h3>${workflow.label}</h3>
+                    <p class=\"muted\">${workflow.description}</p>
+                    <div class=\"dag\">${formatDag(workflow)}</div>
+                    <ul class=\"muted\" style=\"padding-left: 20px; line-height: 1.6;\">
+                        ${stages}
+                    </ul>
+                    <button data-workflow=\"${workflow.id}\">Run Workflow</button>
+                `;
+                const button = card.querySelector('button');
+                button.addEventListener('click', async () => {
+                    button.disabled = true;
+                    try {
+                        await fetchJson(`${API_URL}/api/workflows/${workflow.id}/trigger`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ payload: { source: 'dashboard' } }),
+                        });
+                        addEvent({ type: 'workflow_triggered', workflow_id: workflow.id, via: 'dashboard' });
+                        await refreshWorkflowRuns();
+                    } catch (error) {
+                        alert(`Failed to trigger workflow: ${error.message}`);
+                    } finally {
+                        button.disabled = false;
+                    }
+                });
+                WORKFLOW_LIST.appendChild(card);
+            }
+        }
+
+        function stageStatusTag(status) {
+            return `<span class=\"status-tag\" data-status=\"${status}\">${status}</span>`;
+        }
+
+        function renderWorkflowRunDeck(runs) {
+            WORKFLOW_RUN_DECK.innerHTML = '';
+            if (!runs.length) {
+                WORKFLOW_RUN_DECK.innerHTML = '<div class=\"empty\">Trigger a workflow to populate history.</div>';
+                return;
+            }
+            runs.slice(0, 3).forEach((run) => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                const stageList = run.stages
+                    .map((stage) => `<li><span>${stage.stage_id}</span>${stageStatusTag(stage.status)}</li>`)
+                    .join('');
+                const overrides = run.overrides
+                    .map((override) => `<div class=\"muted\">${override.stage_id} → ${override.status} (${override.timestamp})</div>`)
+                    .join('');
+                card.innerHTML = `
+                    <h3>${run.workflow_id} · <span class=\"muted\">${run.id}</span></h3>
+                    <div class=\"muted\">Triggered ${formatDate(run.triggered_at)} · Status ${stageStatusTag(run.status)}</div>
+                    <ul class=\"workflow-stage-list\">${stageList}</ul>
+                    <div class=\"muted\">Overrides</div>
+                    <div>${overrides || '<span class=\"muted\">None</span>'}</div>
+                `;
+                const form = document.createElement('form');
+                form.className = 'override-form';
+                const stageOptions = run.stages
+                    .map((stage) => `<option value=\"${stage.stage_id}\">${stage.stage_id}</option>`)
+                    .join('');
+                form.innerHTML = `
+                    <label>Stage
+                        <select name=\"stage\">${stageOptions}</select>
+                    </label>
+                    <label>Status
+                        <select name=\"status\">
+                            <option value=\"pending\">pending</option>
+                            <option value=\"running\">running</option>
+                            <option value=\"success\">success</option>
+                            <option value=\"failed\">failed</option>
+                            <option value=\"skipped\">skipped</option>
+                        </select>
+                    </label>
+                    <textarea name=\"notes\" placeholder=\"Override notes\"></textarea>
+                    <button type=\"submit\">Apply Override</button>
+                `;
+                form.addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    const data = new FormData(form);
+                    const payload = {
+                        stage_id: data.get('stage'),
+                        status: data.get('status'),
+                        notes: data.get('notes'),
+                    };
+                    const button = form.querySelector('button');
+                    button.disabled = true;
+                    try {
+                        await fetchJson(`${API_URL}/api/workflows/${run.workflow_id}/runs/${run.id}/override`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload),
+                        });
+                        addEvent({ type: 'workflow_override', workflow_id: run.workflow_id, run_id: run.id, stage_id: payload.stage_id, status: payload.status });
+                        await refreshWorkflowRuns();
+                    } catch (error) {
+                        alert(`Failed to override stage: ${error.message}`);
+                    } finally {
+                        button.disabled = false;
+                    }
+                });
+                card.appendChild(form);
+                WORKFLOW_RUN_DECK.appendChild(card);
+            });
+        }
+
+        function renderAgentStatistics(stats) {
+            AGENT_STATS.innerHTML = '';
+            const data = stats || EMPTY_AGENT_STATS;
+            const cards = [
+                { label: 'Agents', value: data.total },
+                { label: 'Average Load', value: `${Math.round(data.average_load * 100)}%` },
+            ];
+            for (const [status, count] of Object.entries(data.by_status || {})) {
+                cards.push({ label: `Status · ${status}`, value: count });
+            }
+            for (const card of cards) {
+                const div = document.createElement('div');
+                div.className = 'stat-card';
+                div.innerHTML = `<span>${card.label}</span><strong>${card.value}</strong>`;
+                AGENT_STATS.appendChild(div);
+            }
+        }
+
+        function applyAgentFilters() {
+            return allAgents.filter((agent) => {
+                if (agentFilters.family && agent.family !== agentFilters.family) {
+                    return false;
+                }
+                if (agentFilters.status && agent.status !== agentFilters.status) {
+                    return false;
+                }
+                if (agentFilters.region && agent.region !== agentFilters.region) {
+                    return false;
+                }
+                return true;
+            });
+        }
+
+        function renderAgents() {
+            const agents = applyAgentFilters();
+            if (!agents.length) {
+                AGENT_TABLE.innerHTML = '<div class=\"empty\">No agents match the current filters.</div>';
+                return;
+            }
+            const table = document.createElement('table');
+            table.innerHTML = `
+                <thead>
+                    <tr><th>ID</th><th>Family</th><th>Region</th><th>Status</th><th>Load</th><th>Tasks</th><th>Actions</th></tr>
+                </thead>
+                <tbody></tbody>
+            `;
+            const tbody = table.querySelector('tbody');
+            for (const agent of agents.slice(0, 30)) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${agent.id}</td>
+                    <td>${agent.family}</td>
+                    <td>${agent.region}</td>
+                    <td>${stageStatusTag(agent.status)}</td>
+                    <td>${(agent.load * 100).toFixed(0)}%</td>
+                    <td>${agent.tasks_active}</td>
+                    <td>
+                        <div class=\"table-actions\">
+                            <form data-agent=\"${agent.id}\" class=\"scale-form\" style=\"display:inline-flex; gap:6px; align-items:center;\">
+                                <input type=\"number\" min=\"0\" max=\"128\" value=\"${agent.status === 'terminated' ? 0 : 1}\" aria-label=\"replicas for ${agent.id}\" />
+                                <button type=\"submit\">Scale</button>
+                            </form>
+                            <button data-kill=\"${agent.id}\">Kill</button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            }
+            AGENT_TABLE.innerHTML = '';
+            AGENT_TABLE.appendChild(table);
+            for (const form of AGENT_TABLE.querySelectorAll('.scale-form')) {
+                form.addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    const agentId = form.dataset.agent;
+                    const input = form.querySelector('input');
+                    const replicas = Number.parseInt(input.value, 10);
+                    if (Number.isNaN(replicas)) {
+                        alert('Enter a replica count.');
+                        return;
+                    }
+                    const button = form.querySelector('button');
+                    button.disabled = true;
+                    try {
+                        await fetchJson(`${API_URL}/api/agents/${agentId}/scale`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ replicas }),
+                        });
+                        addEvent({ type: 'agent_scaled', agent_id: agentId, replicas });
+                    } catch (error) {
+                        alert(`Failed to scale agent: ${error.message}`);
+                    } finally {
+                        button.disabled = false;
+                    }
+                });
+            }
+            for (const button of AGENT_TABLE.querySelectorAll('button[data-kill]')) {
+                button.addEventListener('click', async () => {
+                    const agentId = button.dataset.kill;
+                    button.disabled = true;
+                    try {
+                        await fetchJson(`${API_URL}/api/agents/${agentId}/kill`, { method: 'POST' });
+                        addEvent({ type: 'agent_killed', agent_id: agentId });
+                        const updated = allAgents.map((agent) =>
+                            agent.id === agentId ? { ...agent, status: 'terminated', load: 0, tasks_active: 0 } : agent
+                        );
+                        allAgents = updated;
+                        renderAgents();
+                    } catch (error) {
+                        alert(`Failed to kill agent: ${error.message}`);
+                    } finally {
+                        button.disabled = false;
+                    }
+                });
+            }
+        }
+
+        function renderPipelines(pipelines) {
+            if (!pipelines.length) {
+                PIPELINE_TABLE.innerHTML = '<div class=\"empty\">No CI pipelines configured.</div>';
+                return;
+            }
+            const table = document.createElement('table');
+            table.innerHTML = `
+                <thead>
+                    <tr><th>ID</th><th>Branch</th><th>Status</th><th>Coverage</th><th>Health</th><th>Queued</th><th>Last Run</th><th>Actions</th></tr>
+                </thead>
+                <tbody></tbody>
+            `;
+            const tbody = table.querySelector('tbody');
+            for (const pipeline of pipelines) {
+                const status = pipeline.status.toLowerCase();
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${pipeline.id}</td>
+                    <td>${pipeline.branch}</td>
+                    <td>${stageStatusTag(status)}</td>
+                    <td>${pipeline.coverage.toFixed(1)}%</td>
+                    <td>${(pipeline.health_score * 100).toFixed(0)}%</td>
+                    <td>${pipeline.queued_runs}</td>
+                    <td>${formatDate(pipeline.last_run)}</td>
+                    <td><button data-pipeline=\"${pipeline.id}\">Re-run</button></td>
+                `;
+                tbody.appendChild(row);
+            }
+            PIPELINE_TABLE.innerHTML = '';
+            PIPELINE_TABLE.appendChild(table);
+            for (const button of PIPELINE_TABLE.querySelectorAll('button[data-pipeline]')) {
+                button.addEventListener('click', async () => {
+                    const pipelineId = button.dataset.pipeline;
+                    button.disabled = true;
+                    try {
+                        await fetchJson(`${API_URL}/api/ci/pipelines/${pipelineId}/rerun`, {
+                            method: 'POST',
+                        });
+                        addEvent({ type: 'ci_rerun', pipeline_id: pipelineId });
+                    } catch (error) {
+                        alert(`Failed to rerun pipeline: ${error.message}`);
+                    } finally {
+                        button.disabled = false;
+                    }
+                });
+            }
+        }
+
+        function renderRollouts(rollouts) {
+            ROLLOUT_CARDS.innerHTML = '';
+            if (!rollouts.length) {
+                ROLLOUT_CARDS.innerHTML = '<div class=\"empty\">No rollout metrics yet.</div>';
+                return;
+            }
+            for (const rollout of rollouts) {
+                const div = document.createElement('div');
+                div.className = 'metric';
+                div.innerHTML = `
+                    <span>${rollout.strategy.toUpperCase()} · ${rollout.environment}</span>
+                    <strong>${(rollout.success_rate * 100).toFixed(1)}% success</strong>
+                `;
+                ROLLOUT_CARDS.appendChild(div);
+            }
+        }
+
+        function renderMerges(merges) {
+            if (!merges.length) {
+                MERGE_TABLE.innerHTML = '<div class=\"empty\">No active merge plans.</div>';
+                return;
+            }
+            const table = document.createElement('table');
+            table.innerHTML = `
+                <thead>
+                    <tr><th>Plan</th><th>Sources</th><th>Target</th><th>Status</th><th>Approvals</th><th>Actions</th></tr>
+                </thead>
+                <tbody></tbody>
+            `;
+            const tbody = table.querySelector('tbody');
+            for (const merge of merges) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${merge.id}</td>
+                    <td>${merge.sources.join(', ')}</td>
+                    <td>${merge.target}</td>
+                    <td>${stageStatusTag(merge.status)}</td>
+                    <td>${merge.approvals}/${merge.required_approvals}</td>
+                    <td><button data-merge=\"${merge.id}\">Promote</button></td>
+                `;
+                tbody.appendChild(row);
+            }
+            MERGE_TABLE.innerHTML = '';
+            MERGE_TABLE.appendChild(table);
+            for (const button of MERGE_TABLE.querySelectorAll('button[data-merge]')) {
+                button.addEventListener('click', async () => {
+                    const mergeId = button.dataset.merge;
+                    button.disabled = true;
+                    try {
+                        await fetchJson(`${API_URL}/api/ci/merges/${mergeId}/promote`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ notes: 'Promoted via dashboard' }),
+                        });
+                        addEvent({ type: 'merge_promoted', merge_id: mergeId });
+                    } catch (error) {
+                        alert(`Failed to promote merge: ${error.message}`);
+                    } finally {
+                        button.disabled = false;
+                    }
+                });
+            }
+        }
+
+        function renderValidations(validations) {
+            if (!validations.length) {
+                VALIDATION_TABLE.innerHTML = '<div class=\"empty\">No validations tracked.</div>';
+                return;
+            }
+            const table = document.createElement('table');
+            table.innerHTML = `
+                <thead>
+                    <tr><th>ID</th><th>Description</th><th>Status</th><th>Report</th><th>Action</th></tr>
+                </thead>
+                <tbody></tbody>
+            `;
+            const tbody = table.querySelector('tbody');
+            for (const validation of validations) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${validation.id}</td>
+                    <td>${validation.description}</td>
+                    <td>${stageStatusTag(validation.status)}</td>
+                    <td><a href=\"${validation.report_url}\" class=\"link-button\" target=\"_blank\" rel=\"noopener\">Open</a></td>
+                    <td><button data-validation=\"${validation.id}\">Re-run</button></td>
+                `;
+                tbody.appendChild(row);
+            }
+            VALIDATION_TABLE.innerHTML = '';
+            VALIDATION_TABLE.appendChild(table);
+            for (const button of VALIDATION_TABLE.querySelectorAll('button[data-validation]')) {
+                button.addEventListener('click', async () => {
+                    const validationId = button.dataset.validation;
+                    button.disabled = true;
+                    try {
+                        await fetchJson(`${API_URL}/api/ci/validations/${validationId}/run`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ description: 'Manual rerun' }),
+                        });
+                        addEvent({ type: 'validation_requested', validation_id: validationId });
+                    } catch (error) {
+                        alert(`Failed to rerun validation: ${error.message}`);
+                    } finally {
+                        button.disabled = false;
+                    }
+                });
+            }
+        }
+
+        function renderModels(models) {
+            if (!models.length) {
+                MODEL_TABLE.innerHTML = '<div class=\"empty\">No models registered.</div>';
+                return;
+            }
+            const table = document.createElement('table');
+            table.innerHTML = `
+                <thead>
+                    <tr><th>ID</th><th>Name</th><th>Status</th><th>Format</th><th>Size</th><th>GPU</th><th>Actions</th></tr>
+                </thead>
+                <tbody></tbody>
+            `;
+            const tbody = table.querySelector('tbody');
+            for (const model of models) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${model.id}</td>
+                    <td>${model.name} ${model.version}</td>
+                    <td>${stageStatusTag(model.status)}</td>
+                    <td>${model.format}</td>
+                    <td>${model.size_gb.toFixed(1)} GB</td>
+                    <td>${model.gpu_requirement}</td>
+                    <td>
+                        <div class=\"table-actions\">
+                            <button data-model-action=\"deploy\" data-model=\"${model.id}\" ${model.status === 'active' ? 'disabled' : ''}>Deploy</button>
+                            <button data-model-action=\"retire\" data-model=\"${model.id}\" ${model.status === 'retired' ? 'disabled' : ''}>Retire</button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            }
+            MODEL_TABLE.innerHTML = '';
+            MODEL_TABLE.appendChild(table);
+            for (const button of MODEL_TABLE.querySelectorAll('button[data-model-action]')) {
+                button.addEventListener('click', async () => {
+                    const modelId = button.dataset.model;
+                    const action = button.dataset.modelAction;
+                    button.disabled = true;
+                    try {
+                        await fetchJson(`${API_URL}/api/inference/models/${modelId}/${action}`, {
+                            method: 'POST',
+                        });
+                        addEvent({ type: `model_${action}`, model_id: modelId });
+                        await loadData();
+                    } catch (error) {
+                        alert(`Failed to ${action} model: ${error.message}`);
+                    }
+                });
+            }
+        }
+
+        function renderGpuStatus(gpus) {
+            if (!gpus.length) {
+                GPU_TABLE.innerHTML = '<div class=\"empty\">No GPUs detected.</div>';
+                return;
+            }
+            const table = document.createElement('table');
+            table.innerHTML = `
+                <thead>
+                    <tr><th>ID</th><th>Name</th><th>Utilization</th><th>Memory</th><th>Sessions</th></tr>
+                </thead>
+                <tbody></tbody>
+            `;
+            const tbody = table.querySelector('tbody');
+            for (const gpu of gpus) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${gpu.id}</td>
+                    <td>${gpu.name}</td>
+                    <td>${(gpu.utilization * 100).toFixed(0)}%</td>
+                    <td>${gpu.memory_used_gb.toFixed(1)} / ${gpu.memory_total_gb.toFixed(1)} GB</td>
+                    <td>${gpu.running_sessions.join(', ') || '—'}</td>
+                `;
+                tbody.appendChild(row);
+            }
+            GPU_TABLE.innerHTML = '';
+            GPU_TABLE.appendChild(table);
+        }
+
+        function renderSessions(sessions) {
+            if (!sessions.length) {
+                SESSION_TABLE.innerHTML = '<div class=\"empty\">No active inference sessions.</div>';
+                return;
+            }
+            const table = document.createElement('table');
+            table.innerHTML = `
+                <thead>
+                    <tr><th>ID</th><th>Owner</th><th>Model</th><th>GPU</th><th>Status</th><th>Tokens</th><th>Started</th><th>Actions</th></tr>
+                </thead>
+                <tbody></tbody>
+            `;
+            const tbody = table.querySelector('tbody');
+            for (const session of sessions) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${session.id}</td>
+                    <td>${session.owner}</td>
+                    <td>${session.model_id}</td>
+                    <td>${session.gpu_id}</td>
+                    <td>${stageStatusTag(session.status)}</td>
+                    <td>${session.tokens_generated.toLocaleString()}</td>
+                    <td>${formatDate(session.started_at)}</td>
+                    <td><button data-session=\"${session.id}\">Stop</button></td>
+                `;
+                tbody.appendChild(row);
+            }
+            SESSION_TABLE.innerHTML = '';
+            SESSION_TABLE.appendChild(table);
+            for (const button of SESSION_TABLE.querySelectorAll('button[data-session]')) {
+                button.addEventListener('click', async () => {
+                    const sessionId = button.dataset.session;
+                    button.disabled = true;
+                    try {
+                        await fetchJson(`${API_URL}/api/inference/sessions/${sessionId}/stop`, {
+                            method: 'POST',
+                        });
+                        addEvent({ type: 'inference_session_stopped', session_id: sessionId });
+                        await loadData();
+                    } catch (error) {
+                        alert(`Failed to stop session: ${error.message}`);
+                    }
+                });
+            }
+        }
+
+        function renderStoragePlan(nodes) {
+            function renderNode(node) {
+                const hasChildren = node.children && node.children.length;
+                const li = document.createElement('li');
+                li.textContent = `${node.name} (${node.kind})`;
+                if (hasChildren) {
+                    const ul = document.createElement('ul');
+                    node.children.forEach((child) => ul.appendChild(renderNode(child)));
+                    li.appendChild(ul);
+                }
+                return li;
+            }
+            STORAGE_PLAN.innerHTML = '';
+            if (!nodes.length) {
+                STORAGE_PLAN.innerHTML = '<div class=\"empty\">No storage plan available.</div>';
+                return;
+            }
+            const root = document.createElement('ul');
+            nodes.forEach((node) => root.appendChild(renderNode(node)));
+            STORAGE_PLAN.appendChild(root);
+        }
+
+        function renderArtifacts(artifacts) {
+            if (!artifacts.length) {
+                ARTIFACT_TABLE.innerHTML = '<div class=\"empty\">No artifacts stored.</div>';
+                return;
+            }
+            const table = document.createElement('table');
+            table.innerHTML = `
+                <thead>
+                    <tr><th>Name</th><th>Size</th><th>Retention</th><th>Stored</th><th>Actions</th></tr>
+                </thead>
+                <tbody></tbody>
+            `;
+            const tbody = table.querySelector('tbody');
+            for (const artifact of artifacts) {
+                const sizeMb = (artifact.size_bytes / (1024 * 1024)).toFixed(2);
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${artifact.name}</td>
+                    <td>${sizeMb} MB</td>
+                    <td>${artifact.retention_policy} · ${artifact.retained ? 'Retained' : 'Ephemeral'}</td>
+                    <td>${formatDate(artifact.stored_at)}</td>
+                    <td>
+                        <div class=\"table-actions\">
+                            <a class=\"link-button\" href=\"${artifact.download_url}\" target=\"_blank\" rel=\"noopener\">Download</a>
+                            <button data-artifact=\"${artifact.id}\" data-action=\"retain\">Retain</button>
+                            <button data-artifact=\"${artifact.id}\" data-action=\"purge\">Release</button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            }
+            ARTIFACT_TABLE.innerHTML = '';
+            ARTIFACT_TABLE.appendChild(table);
+            for (const button of ARTIFACT_TABLE.querySelectorAll('button[data-artifact]')) {
+                button.addEventListener('click', async () => {
+                    const artifactId = button.dataset.artifact;
+                    const action = button.dataset.action;
+                    button.disabled = true;
+                    try {
+                        await fetchJson(`${API_URL}/api/storage/artifacts/${artifactId}/${action}`, {
+                            method: 'POST',
+                        });
+                        addEvent({ type: `artifact_${action}`, artifact_id: artifactId });
+                        await loadData();
+                    } catch (error) {
+                        alert(`Failed to ${action} artifact: ${error.message}`);
+                    }
+                });
+            }
+        }
+
+        function renderAuditLogs(entries) {
+            if (!entries.length) {
+                AUDIT_TABLE.innerHTML = '<div class=\"empty\">No audit activity recorded.</div>';
+                return;
+            }
+            const table = document.createElement('table');
+            table.innerHTML = `
+                <thead>
+                    <tr><th>Time</th><th>Action</th><th>Actor</th><th>Artifact</th><th>Notes</th></tr>
+                </thead>
+                <tbody></tbody>
+            `;
+            const tbody = table.querySelector('tbody');
+            for (const entry of entries) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${formatDate(entry.timestamp)}</td>
+                    <td>${entry.action}</td>
+                    <td>${entry.actor}</td>
+                    <td>${entry.artifact_id}</td>
+                    <td>${entry.notes}</td>
+                `;
+                tbody.appendChild(row);
+            }
+            AUDIT_TABLE.innerHTML = '';
+            AUDIT_TABLE.appendChild(table);
+        }
+
+        async function refreshWorkflowRuns() {
+            try {
+                const runs = await fetchJson(`${API_URL}/api/workflows/runs`);
+                renderWorkflowRunsSummary(runs);
+                renderWorkflowRunDeck(runs);
+            } catch (error) {
+                console.error('Failed to load workflow runs', error);
+            }
+        }
+
+        function populateAgentFilters() {
+            const families = Array.from(new Set(allAgents.map((agent) => agent.family))).sort();
+            AGENT_FAMILY_FILTER.innerHTML = '<option value=\"\">All</option>';
+            for (const family of families) {
+                const option = document.createElement('option');
+                option.value = family;
+                option.textContent = family;
+                AGENT_FAMILY_FILTER.appendChild(option);
+            }
+        }
+
+        async function loadData() {
+            try {
+                updateBadge('ok', `Connected to ${API_URL}`);
+                const [
+                    metrics,
+                    roi,
+                    workflows,
+                    agents,
+                    agentStats,
+                    pipelines,
+                    merges,
+                    validations,
+                    rollouts,
+                    artifacts,
+                    storagePlan,
+                    audit,
+                    models,
+                    sessions,
+                    gpus,
+                ] = await Promise.all([
+                    fetchJson(`${API_URL}/api/analytics/metrics`).catch(() => []),
+                    fetchJson(`${API_URL}/api/analytics/roi`).catch(() => ({ roi: null })),
+                    fetchJson(`${API_URL}/api/workflows/`).catch(() => []),
+                    fetchJson(`${API_URL}/api/agents/`).catch(() => []),
+                    fetchJson(`${API_URL}/api/agents/stats`).catch(() => EMPTY_AGENT_STATS),
+                    fetchJson(`${API_URL}/api/ci/pipelines`).catch(() => []),
+                    fetchJson(`${API_URL}/api/ci/merges`).catch(() => []),
+                    fetchJson(`${API_URL}/api/ci/validations`).catch(() => []),
+                    fetchJson(`${API_URL}/api/ci/rollouts`).catch(() => []),
+                    fetchJson(`${API_URL}/api/storage/artifacts`).catch(() => []),
+                    fetchJson(`${API_URL}/api/storage/plan`).catch(() => []),
+                    fetchJson(`${API_URL}/api/storage/audit`).catch(() => []),
+                    fetchJson(`${API_URL}/api/inference/models`).catch(() => []),
+                    fetchJson(`${API_URL}/api/inference/sessions`).catch(() => []),
+                    fetchJson(`${API_URL}/api/inference/gpus`).catch(() => []),
+                ]);
+                renderMetrics(metrics);
+                ROI_VALUE.textContent = roi.roi == null ? '—' : `${roi.roi}x ROI`;
+                renderWorkflows(workflows);
+                allAgents = agents;
+                populateAgentFilters();
+                AGENT_FAMILY_FILTER.value = agentFilters.family;
+                AGENT_STATUS_FILTER.value = agentFilters.status;
+                AGENT_REGION_FILTER.value = agentFilters.region;
+                renderAgentStatistics(agentStats);
+                renderAgents();
+                renderPipelines(pipelines);
+                renderMerges(merges);
+                renderValidations(validations);
+                renderRollouts(rollouts);
+                renderArtifacts(artifacts);
+                renderStoragePlan(storagePlan);
+                renderAuditLogs(audit);
+                renderModels(models);
+                renderGpuStatus(gpus);
+                renderSessions(sessions);
+                SESSION_MODEL.innerHTML = models
+                    .map((model) => `<option value=\"${model.id}\">${model.id}</option>`)
+                    .join('');
+                SESSION_GPU.innerHTML = gpus
+                    .map((gpu) => `<option value=\"${gpu.id}\">${gpu.id}</option>`)
+                    .join('');
+                await refreshWorkflowRuns();
+            } catch (error) {
+                updateBadge('error', `API unavailable (${error.message})`);
+            }
+        }
+
+        function addEvent(event) {
+            const entry = document.createElement('div');
+            entry.className = 'event';
+            const timestamp = new Date().toLocaleTimeString();
+            const details = JSON.stringify(event, null, 2);
+            entry.innerHTML = `<span class=\"event-type\">${event.type || 'event'}</span><span class=\"muted\">${timestamp}</span>`;
+            entry.title = details;
+            EVENT_LOG.prepend(entry);
+            while (EVENT_LOG.children.length > 10) {
+                EVENT_LOG.removeChild(EVENT_LOG.lastChild);
+            }
+            const emptyState = EVENT_LOG.querySelector('.empty');
+            if (emptyState) {
+                emptyState.remove();
+            }
+        }
+
+        function connectEvents() {
+            const wsUrl = API_URL.replace(/^http/, 'ws') + '/ws/events';
+            if (eventSocket) {
+                eventSocket.close();
+            }
+            try {
+                eventSocket = new WebSocket(wsUrl);
+                eventSocket.onmessage = (message) => {
+                    try {
+                        const payload = JSON.parse(message.data);
+                        addEvent(payload);
+                    } catch (error) {
+                        console.error('Failed to parse event payload', error);
+                    }
+                };
+                eventSocket.onclose = () => {
+                    setTimeout(connectEvents, 4000);
+                };
+            } catch (error) {
+                console.warn('WebSocket unavailable', error);
+            }
+        }
+
+        async function sendChat() {
+            const message = CHAT_INPUT.value.trim();
+            const file = CHAT_UPLOAD.files[0];
+            const uploadType = CHAT_UPLOAD_TYPE.value || 'auto';
+
+            if (!message && !file) {
+                CHAT_OUTPUT.textContent = 'Enter a prompt or choose a file to upload for the co-developer.';
+                return;
+            }
+
+            const feedback = [];
+
+            if (file) {
+                CHAT_OUTPUT.textContent = 'Uploading asset…';
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('type', uploadType);
+                if (message) {
+                    formData.append('message', message);
+                }
+                try {
+                    const response = await fetch(`${API_URL}/ui/drop-in/upload`, {
+                        method: 'POST',
+                        body: formData,
+                    });
+                    if (!response.ok) {
+                        const text = await response.text();
+                        throw new Error(`${response.status}: ${text}`);
+                    }
+                    let uploadFeedback = 'Upload completed.';
+                    const contentType = response.headers.get('content-type') || '';
+                    if (contentType.includes('application/json')) {
+                        const data = await response.json();
+                        uploadFeedback = data.message || data.status || JSON.stringify(data, null, 2);
+                    } else {
+                        const text = await response.text();
+                        uploadFeedback = text || uploadFeedback;
+                    }
+                    feedback.push(uploadFeedback);
+                    CHAT_UPLOAD.value = '';
+                    CHAT_UPLOAD_TYPE.value = 'auto';
+                } catch (error) {
+                    CHAT_OUTPUT.textContent = `Upload failed: ${error.message}`;
+                    return;
+                }
+            }
+
+            if (message) {
+                CHAT_OUTPUT.textContent = feedback.length ? `${feedback.join('\n')}\nSending chat…` : 'Sending…';
+                try {
+                    const response = await fetchJson(`${API_URL}/api/chat/message`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message }),
+                    });
+                    feedback.push(response.reply || 'No response received.');
+                    CHAT_INPUT.value = '';
+                } catch (error) {
+                    CHAT_OUTPUT.textContent = `Failed to send message: ${error.message}`;
+                    return;
+                }
+            }
+
+            if (feedback.length) {
+                CHAT_OUTPUT.textContent = feedback.join('\n');
+            } else {
+                CHAT_OUTPUT.textContent = 'Ready.';
+            }
+        }
+
+        SESSION_CREATE_FORM.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const modelId = SESSION_MODEL.value;
+            const gpuId = SESSION_GPU.value;
+            const owner = SESSION_OWNER.value.trim();
+            if (!modelId || !gpuId || !owner) {
+                alert('Model, GPU, and owner are required.');
+                return;
+            }
+            const button = SESSION_CREATE_FORM.querySelector('button[type=\"submit\"]');
+            button.disabled = true;
+            try {
+                await fetchJson(`${API_URL}/api/inference/sessions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model_id: modelId, gpu_id: gpuId, owner }),
+                });
+                addEvent({ type: 'inference_session_created', model_id: modelId });
+                SESSION_OWNER.value = '';
+                await loadData();
+            } catch (error) {
+                alert(`Failed to launch session: ${error.message}`);
+            } finally {
+                button.disabled = false;
+            }
+        });
+
+        document.getElementById('chatSend').addEventListener('click', sendChat);
+        CHAT_INPUT.addEventListener('keydown', (event) => {
+            if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+                event.preventDefault();
+                sendChat();
+            }
+        });
+
+        AGENT_FAMILY_FILTER.addEventListener('change', () => {
+            agentFilters.family = AGENT_FAMILY_FILTER.value;
+            renderAgents();
+        });
+        AGENT_STATUS_FILTER.addEventListener('change', () => {
+            agentFilters.status = AGENT_STATUS_FILTER.value;
+            renderAgents();
+        });
+        AGENT_REGION_FILTER.addEventListener('change', () => {
+            agentFilters.region = AGENT_REGION_FILTER.value;
+            renderAgents();
+        });
+
+        loadData();
+        loadGovernanceMetrics();
+        connectEvents();
+        setInterval(refreshWorkflowRuns, 12000);
+        setInterval(loadGovernanceMetrics, 60000);
+    </script>
+</body>
+</html>

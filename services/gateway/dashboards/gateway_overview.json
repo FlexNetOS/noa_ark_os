@@ -1,0 +1,32 @@
+{
+  "title": "Gateway health overview",
+  "panels": [
+    {
+      "id": "latency",
+      "title": "P95 latency",
+      "metric": "gateway_latency_ms_p95",
+      "thresholds": {
+        "warning": 250,
+        "critical": 500
+      }
+    },
+    {
+      "id": "policy-rejections",
+      "title": "Policy rejections",
+      "metric": "gateway_policy_rejections_total",
+      "thresholds": {
+        "warning": 5,
+        "critical": 20
+      }
+    },
+    {
+      "id": "rate-limit",
+      "title": "Rate limit events",
+      "metric": "gateway_rate_limit_total",
+      "thresholds": {
+        "warning": 10,
+        "critical": 30
+      }
+    }
+  ]
+}

@@ -1,0 +1,225 @@
+"App Research Agent
+"Backup & Restore Agent
+"Code Quality Agent
+"Cost Estimation Agent
+"Credentials & Env Agent
+"Dependency Resolver Agent
+"Deploy Specialized Agent
+"Deploy Sub-Agent
+"Digest Agent
+"Digest Everything Agent
+"Execution Planning Agent
+"ExecutiveCommanderChiefAgent
+"Knowledge-Base Agent
+"NOA - ExecutiveCommanderChiefAgent
+"Orchestrator Agent
+"Prompt Designer Agent
+"SafeStack Agent
+"Template Manager Agent
+"Test & Validation Agent
+"Test Case Generator Agent
+"UX/Accessibility Agent
+"Upgrade & Patch Agent
+A Board Agent
+A ModelSelectorAgent
+AI Model Chop Shop Agent
+Advanced capabilities were successfully implemented across the VoltAgent
+Agent Implementation Agent
+Agent Self-Upgrade/Retirement Agent
+Agent Supervisor/Heartbeat Agent
+AgentSelfUpgradeRetirementAgent
+AgentSupervisorHeartbeatAgent
+All agents were deployed strategically to cover various aspects of the VoltAgent
+Alternatives Comparison Agent
+AlternativesComparisonAgent
+App Research Agent
+Application Architecture Mining Agent
+As the Orchestrator Agent
+AuditBoardAgent
+AuditComplianceAgent
+Backup & Restore Agent
+BackupRestoreAgent
+Begin phased rollout of the VoltAgent
+Board Agent
+Board Agent or CommandChiefAgent
+Board Agent requests a ModelSelectorAgent
+By delegating model/tool choice to a dedicated ModelSelectorAgent
+CFO Agent
+CFO/FinOps Agent
+COO Agent
+Cache Manager Agent
+CacheManagerAgent
+Chief Deconstruction Engineer Agent
+Code Quality Agent
+CodeExecutorAgent
+CodeGen Agent
+CodeGenAgent
+CodeQualityAgent
+CommandChiefAgent
+CommanderChiefAgent
+Commission digestion tasks and consume the Digest Agent
+ComplianceEnforcementAgent
+Comprehensive security enhancements and hardening measures were implemented to protect the VoltAgent
+CompressionAgent
+Config Manager Agent
+ConfigManagerAgent
+Continuous optimization by the Performance Agent
+Cost Estimation Agent
+CostEstimationAgent
+Create VoltAgent
+Create Xata Agent
+Credentials & Env Agent
+CredentialsEnvAgent
+DataIngestionETLAgent
+DemoAgent
+Dependency Resolver Agent
+DependencyResolverAgent
+Digest Agent
+Digest Everything Agent
+Documentation Generator Agent
+Documentation Listener Agent
+DocumentationGeneratorAgent
+DocumentationListenerAgent
+Each Board Agent
+Each MicroAgentStack or Board Agent
+Each stack digests one or more sources and returns results to the Digest Agent
+Each stack has its own CommandChiefAgent
+Each stack operates autonomously but reports progress to its Board Agent
+Each stack reports to its Board Agent
+Enhanced Observability & Tracing Agent
+EnhancedObservabilityTracingAgent
+ErrorHandlingRetryHelperAgent
+EthicsAIAlignmentAgent
+EthicsBoardAgent
+Execution Planning Agent
+ExecutionPlanningAgent
+ExecutiveCommanderChiefAgent
+Feedback & Continuous Improvement Agent
+FeedbackContinuousImprovementAgent
+FinanceBoardAgent
+Firmware & Driver Extraction Agent
+Governance & Audit Agent
+GovernanceEthicsAgent
+Growth Agent
+Growth/Partnerships Agent
+HRBoardAgent
+If the Security Agent
+IngestAgent
+It gives the CommandChiefAgent
+Knowledge-Base Agent
+KnowledgeBaseAgent
+KnowledgeGraphAgent
+Legal Agent
+Legal/Compliance Agent
+LegalComplianceBoardAgent
+LoggingObservabilityHelperAgent
+ManifestEditorAgent
+MarketingBoardAgent
+MarketplaceComplianceAgent
+MarketplaceDiscoveryAgent
+MarketplaceMonetizationBillingAgent
+MarketplaceRatingFeedbackAgent
+MasterChiefIncidentResponseAgent
+Micro-Agent
+ModelSelectorAgent
+ModelSelectorAgents and Digest Agent
+Monitoring & Alerting Agent
+MonitoringAlertingAgent
+Multi-Tenant Isolation Agent
+MultiActionAgent
+MultiModalInterfaceAgent
+MultiTenantIsolationAgent
+NOA ExecutiveCommanderChiefAgent
+Network Protocol Chop Shop Agent
+On-demand work pods orchestrated by a CommandChiefAgent
+Open Policy Agent
+Operating System Deconstruction Agent
+OperationsBoardAgent
+OperatorAgent
+Orchestration Definition Agent
+OrchestrationDefinitionAgent
+Orchestrator Agent
+Orchestrator Federation Agent
+OrchestratorAgent
+OrchestratorFederationAgent
+Performance & Resource Agent
+Perhaps the Digest Agent
+PlanAgent
+PluginEvaluationAgent
+PluginLifecycleManagerAgent
+PluginSandboxSecurityAgent
+Policy Agent
+Policy Enforcement Agent
+Prompt Designer Agent
+PromptDesignerAgent
+RBACPolicyAgent
+Registry/Discovery Agent
+RegistryDiscoveryAgent
+ResearchAgent
+ReviewAgent
+SA as Specialized Agent
+SDK/Plugin Manager Agent
+SDKPluginManagerAgent
+SUB as Sub-Agent
+SafeStack Agent
+SafeStackAgent
+SearchAgent
+SearchAgent to fetch data and then the SummarizeAgent
+Secrets Crypto Agent
+SecretsCryptoAgent
+Security Agent
+Security Board Agent
+SecurityBoardAgent
+Significant performance improvements and optimizations were realized throughout the VoltAgent
+Simulation & Risk Analysis Agent
+SimulationRiskAnalysisAgent
+Software Ecosystem Chop Shop Agent
+Specialized Agent
+Strategy Agent
+Strategy/CTO Agent
+Strategy/CTO agent or the CommandChiefAgent
+StrategyBoardAgent
+Sub-Agent
+Sub-Agents per Specialized Agent
+SummarizeAgent
+TechnologyBoardAgent
+Telemetry Agent
+Template Manager Agent
+TemplateManagerAgent
+Test & Validation Agent
+Test Case Generator Agent
+TestCaseGeneratorAgent
+TestValidationAgent
+The CFO Agent
+The CodeGen Agent
+The CommandChiefAgent
+The Digest Agent
+The Embeddings service segments code and documentation into chunks and converts them into vector embeddings via models selected by a ModelSelectorAgent
+The ExecutiveCommanderChiefAgent
+The Legal Board Agent
+The Model Selector Agent
+The ModelSelectorAgent
+The NOA ExecutiveCommanderChiefAgent
+The Orchestrator Agent
+The Performance Agent
+The SearchAgent
+The Security Agent
+The Strategy Agent
+The Strategy Board Agent
+The Strategy/CTO Agent
+The Strategy/CTO Board Agent
+The VoltAgent
+The task involved creating a Xata Agent
+These prompts can be issued to a ModelSelectorAgent
+This is done by the CommandChiefAgent
+UX/Accessibility Agent
+UXAccessibilityAgent
+Upgrade & Patch Agent
+UpgradePatchAgent
+Used to parallelize large digests-each stack handles a set of sources and feeds results back to the Digest Agent
+Versioning & Rollback Agent
+VisionBoardAgent
+VoltAgent
+When a Board Agent
+When the Digest Agent
+Xata Agent

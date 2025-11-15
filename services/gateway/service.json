@@ -1,0 +1,5 @@
+{
+  "id": "gateway",
+  "version": "0.6.0",
+  "interfaces": ["gateway-api", "telemetry-export"]
+}

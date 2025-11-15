@@ -1,0 +1,8 @@
+version: 1
+name: security
+bounds:
+  secrets: disallow
+  licenses:
+    - MIT
+    - Apache-2.0
+  vulnerability_threshold: critical

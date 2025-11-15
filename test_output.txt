@@ -1,0 +1,350 @@
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+package:   D:\dev\workspaces\noa_ark_os\core\Cargo.toml
+workspace: D:\dev\workspaces\noa_ark_os\Cargo.toml
+   Compiling noa_agents v0.1.0 (D:\dev\workspaces\noa_ark_os\agents)
+warning: unused import: `Error`
+ --> agents\src\implementations\board\digest.rs:8:13
+  |
+8 | use crate::{Error, Result};
+  |             ^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `Error`
+ --> agents\src\implementations\board\finance.rs:7:13
+  |
+7 | use crate::{Error, Result};
+  |             ^^^^^
+
+warning: unused import: `Error`
+ --> agents\src\implementations\board\legal.rs:7:13
+  |
+7 | use crate::{Error, Result};
+  |             ^^^^^
+
+warning: unused import: `Error`
+ --> agents\src\implementations\board\operations.rs:7:13
+  |
+7 | use crate::{Error, Result};
+  |             ^^^^^
+
+warning: unused import: `Error`
+ --> agents\src\implementations\board\strategy.rs:7:13
+  |
+7 | use crate::{Error, Result};
+  |             ^^^^^
+
+warning: unused import: `Error`
+ --> agents\src\implementations\executive\noa.rs:8:13
+  |
+8 | use crate::{Error, Result};
+  |             ^^^^^
+
+warning: unused import: `Error`
+ --> agents\src\implementations\executive\emergency.rs:7:13
+  |
+7 | use crate::{Error, Result};
+  |             ^^^^^
+
+warning: unused import: `Error`
+ --> agents\src\implementations\executive\priority.rs:7:13
+  |
+7 | use crate::{Error, Result};
+  |             ^^^^^
+
+warning: unused import: `Error`
+ --> agents\src\implementations\executive\resources.rs:7:13
+  |
+7 | use crate::{Error, Result};
+  |             ^^^^^
+
+warning: unused import: `Error`
+ --> agents\src\implementations\executive\orchestrator.rs:7:13
+  |
+7 | use crate::{Error, Result};
+  |             ^^^^^
+
+warning: unused import: `Error`
+ --> agents\src\implementations\specialist\code_generation.rs:7:13
+  |
+7 | use crate::{Error, Result};
+  |             ^^^^^
+
+warning: unused import: `std::sync::Arc`
+ --> agents\src\implementations\specialist\data_analytics.rs:5:5
+  |
+5 | use std::sync::Arc;
+  |     ^^^^^^^^^^^^^^
+
+warning: unused import: `AgentId`
+ --> agents\src\implementations\model_selector.rs:1:28
+  |
+1 | use crate::{AgentMetadata, AgentId, Result, Error};
+  |                            ^^^^^^^
+
+warning: unused imports: `InferenceConfig` and `InferenceEngine`
+ --> agents\src\implementations\model_selector.rs:2:24
+  |
+2 | use crate::inference::{InferenceEngine, InferenceConfig};
+  |                        ^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^
+
+warning: unused variable: `kb`
+   --> agents\src\implementations\board\digest.rs:241:13
+    |
+241 |         let kb = self.knowledge_base.read().await;
+    |             ^^ help: if this is intentional, prefix it with an underscore: `_kb`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: unused variable: `context`
+   --> agents\src\implementations\executive\noa.rs:253:9
+    |
+253 |         context: serde_json::Value,
+    |         ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_context`
+
+warning: variable does not need to be mutable
+   --> agents\src\implementations\model_selector.rs:112:13
+    |
+112 |         let mut candidates: Vec<_> = models
+    |             ----^^^^^^^^^^
+    |             |
+    |             help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` on by default
+
+warning: type `UsageStats` is more private than the item `model_selector::ModelSelectorAgent::get_stats`
+   --> agents\src\implementations\model_selector.rs:190:5
+    |
+190 |     pub fn get_stats(&self, model_name: &str) -> Option<UsageStats> {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ method `model_selector::ModelSelectorAgent::get_stats` is reachable at visibility `pub`
+    |
+note: but type `UsageStats` is only usable at visibility `pub(self)`
+   --> agents\src\implementations\model_selector.rs:73:1
+    |
+ 73 | struct UsageStats {
+    | ^^^^^^^^^^^^^^^^^
+    = note: `#[warn(private_interfaces)]` on by default
+
+warning: field `config` is never read
+  --> agents\src\implementations\board\digest.rs:26:5
+   |
+22 | pub struct DigestAgent {
+   |            ----------- field in this struct
+...
+26 |     config: DigestAgentConfig,
+   |     ^^^^^^
+   |
+   = note: `#[warn(dead_code)]` on by default
+
+warning: fields `domain_id`, `name`, `description`, and `insights_count` are never read
+  --> agents\src\implementations\board\digest.rs:64:9
+   |
+63 | struct KnowledgeDomain {
+   |        --------------- fields in this struct
+64 |     pub domain_id: String,
+   |         ^^^^^^^^^
+65 |     pub name: String,
+   |         ^^^^
+66 |     pub description: String,
+   |         ^^^^^^^^^^^
+67 |     pub insights_count: usize,
+   |         ^^^^^^^^^^^^^^
+   |
+   = note: `KnowledgeDomain` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: fields `total_budget`, `allocated`, `spent`, and `remaining` are never read
+  --> agents\src\implementations\board\finance.rs:63:9
+   |
+62 | struct BudgetInfo {
+   |        ---------- fields in this struct
+63 |     pub total_budget: f64,
+   |         ^^^^^^^^^^^^
+64 |     pub allocated: f64,
+   |         ^^^^^^^^^
+65 |     pub spent: f64,
+   |         ^^^^^
+66 |     pub remaining: f64,
+   |         ^^^^^^^^^
+   |
+   = note: `BudgetInfo` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: field `audits` is never read
+  --> agents\src\implementations\board\legal.rs:31:5
+   |
+28 | struct ComplianceData {
+   |        -------------- field in this struct
+...
+31 |     audits: Vec<ComplianceAudit>,
+   |     ^^^^^^
+   |
+   = note: `ComplianceData` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: field `processes` is never read
+  --> agents\src\implementations\board\operations.rs:30:5
+   |
+28 | struct OperationsData {
+   |        -------------- field in this struct
+29 |     metrics: OperationalMetrics,
+30 |     processes: Vec<BusinessProcess>,
+   |     ^^^^^^^^^
+   |
+   = note: `OperationsData` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: field `assessments` is never read
+  --> agents\src\implementations\board\strategy.rs:31:5
+   |
+28 | struct StrategyData {
+   |        ------------ field in this struct
+...
+31 |     assessments: Vec<MarketAssessment>,
+   |     ^^^^^^^^^^^
+   |
+   = note: `StrategyData` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: field `config` is never read
+  --> agents\src\implementations\executive\noa.rs:28:5
+   |
+23 | pub struct NoaCommander {
+   |            ------------ field in this struct
+...
+28 |     config: CommanderConfig,
+   |     ^^^^^^
+
+warning: fields `protocol_id`, `emergency_type`, and `actions` are never read
+  --> agents\src\implementations\executive\emergency.rs:77:9
+   |
+76 | struct ResponseProtocol {
+   |        ---------------- fields in this struct
+77 |     pub protocol_id: String,
+   |         ^^^^^^^^^^^
+78 |     pub emergency_type: EmergencyType,
+   |         ^^^^^^^^^^^^^^
+79 |     pub actions: Vec<String>,
+   |         ^^^^^^^
+   |
+   = note: `ResponseProtocol` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: fields `rule_id`, `condition`, and `priority_boost` are never read
+  --> agents\src\implementations\executive\priority.rs:58:9
+   |
+57 | struct PriorityRule {
+   |        ------------ fields in this struct
+58 |     pub rule_id: String,
+   |         ^^^^^^^
+59 |     pub condition: String,
+   |         ^^^^^^^^^
+60 |     pub priority_boost: f64,
+   |         ^^^^^^^^^^^^^^
+   |
+   = note: `PriorityRule` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: field `high_priority_tasks` is never read
+  --> agents\src\implementations\executive\priority.rs:67:9
+   |
+65 | struct PriorityMetrics {
+   |        --------------- field in this struct
+66 |     pub total_tasks_prioritized: u64,
+67 |     pub high_priority_tasks: u64,
+   |         ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `PriorityMetrics` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: fields `pool_id`, `resource_type`, `total_capacity`, `allocated`, and `available` are never read
+  --> agents\src\implementations\executive\resources.rs:48:9
+   |
+47 | struct ResourcePool {
+   |        ------------ fields in this struct
+48 |     pub pool_id: String,
+   |         ^^^^^^^
+49 |     pub resource_type: String,
+   |         ^^^^^^^^^^^^^
+50 |     pub total_capacity: f64,
+   |         ^^^^^^^^^^^^^^
+51 |     pub allocated: f64,
+   |         ^^^^^^^^^
+52 |     pub available: f64,
+   |         ^^^^^^^^^
+   |
+   = note: `ResourcePool` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: field `templates` is never read
+  --> agents\src\implementations\specialist\code_generation.rs:22:5
+   |
+21 | struct GenerationData {
+   |        -------------- field in this struct
+22 |     templates: Vec<CodeTemplate>,
+   |     ^^^^^^^^^
+   |
+   = note: `GenerationData` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: field `metadata` is never read
+  --> agents\src\implementations\model_selector.rs:67:5
+   |
+66 | pub struct ModelSelectorAgent {
+   |            ------------------ field in this struct
+67 |     metadata: AgentMetadata,
+   |     ^^^^^^^^
+
+warning: `noa_agents` (lib test) generated 31 warnings (run `cargo fix --lib -p noa_agents --tests` to apply 15 suggestions)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.68s
+     Running unittests src\lib.rs (target\debug\deps\noa_agents-873d87f431d0733a.exe)
+
+running 55 tests
+test implementations::board::finance::tests::test_initialize ... ok
+test implementations::executive::orchestrator::tests::test_create_orchestrator_agent ... ok
+test implementations::executive::orchestrator::tests::test_initialize ... ok
+test implementations::board::digest::tests::test_create_digest_agent ... ok
+test implementations::specialist::code_generation::tests::test_generate ... ok
+test implementations::executive::emergency::tests::test_create_emergency_agent ... ok
+test implementations::board::finance::tests::test_generate_report ... ok
+test implementations::executive::resources::tests::test_allocate_resource ... ok
+test implementations::board::digest::tests::test_generate_digest ... ok
+test implementations::executive::resources::tests::test_initialize ... ok
+test implementations::board::strategy::tests::test_initialize ... ok
+test implementations::executive::priority::tests::test_prioritize_task ... ok
+test implementations::executive::emergency::tests::test_initialize ... ok
+test implementations::executive::noa::tests::test_create_commander ... ok
+test implementations::executive::emergency::tests::test_handle_emergency ... ok
+test implementations::executive::resources::tests::test_create_resource_agent ... ok
+test implementations::board::legal::tests::test_generate_report ... ok
+test implementations::board::operations::tests::test_generate_report ... ok
+test implementations::executive::noa::tests::test_system_status ... ok
+test implementations::executive::noa::tests::test_register_agent ... ok
+test implementations::board::operations::tests::test_initialize ... ok
+test implementations::board::legal::tests::test_create_legal_agent ... ok
+test implementations::executive::noa::tests::test_coordinate_task ... ok
+test implementations::specialist::deployment::tests::test_agent ... ok
+test implementations::board::digest::tests::test_initialize ... ok
+test implementations::board::operations::tests::test_create_operations_agent ... ok
+test implementations::specialist::code_generation::tests::test_create_agent ... ok
+test implementations::board::strategy::tests::test_create_strategy_agent ... ok
+test implementations::specialist::monitoring::tests::test_agent ... ok
+test implementations::specialist::data_analytics::tests::test_agent ... ok
+test implementations::model_selector::tests::test_model_selection ... ok
+test inference::tests::test_config_default ... ok
+test implementations::executive::noa::tests::test_initialize ... ok
+test implementations::executive::priority::tests::test_create_priority_agent ... ok
+test implementations::model_selector::tests::test_model_registration ... ok
+test implementations::specialist::testing::tests::test_agent ... ok
+test implementations::board::legal::tests::test_initialize ... ok
+test implementations::board::finance::tests::test_create_finance_agent ... ok
+test implementations::executive::noa::tests::test_make_decision ... ok
+test implementations::specialist::learning::tests::test_agent ... ok
+test implementations::executive::orchestrator::tests::test_create_workflow ... ok
+test implementations::executive::priority::tests::test_initialize ... ok
+test implementations::orchestrator::tests::list_tasks_returns_all_entries ... ok
+test implementations::board::digest::tests::test_add_insight ... ok
+test implementations::board::strategy::tests::test_generate_report ... ok
+test implementations::orchestrator::tests::submit_and_complete_task ... ok
+test implementations::specialist::security::tests::test_agent ... ok
+test implementations::specialist::integration::tests::test_agent ... ok
+test registry::tests::test_empty_registry ... ok
+test registry::tests::test_parse_layer ... ok
+test tests::test_create_agent ... ok
+test tests::test_disposable_agent ... ok
+test inference::tests::test_engine_creation ... ok
+test registry::tests::test_load_default_registry ... ok
+test registry::tests::test_with_default_data_constructor ... ok
+
+test result: ok. 55 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+

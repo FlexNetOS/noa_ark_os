@@ -1,0 +1,14 @@
+drop_id: drop_8e52ecea-befc-44bb-82c8-ba2f4cd08392
+profile: edge
+source_path: crc/temp/extracts/90cd9a57-aa11-43fa-9184-193fcb02b54e
+optimization_flags:
+- -C
+- opt-level=z
+- -C
+- lto=fat
+- -C
+- codegen-units=1
+feature_gates:
+- low-power
+- quantized-kernels
+timestamp: 1763178003

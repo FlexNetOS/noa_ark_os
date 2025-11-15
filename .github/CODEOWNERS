@@ -1,0 +1,17 @@
+# Default ownership for the repository
+* @noa-ark/maintainers
+
+# Policy and governance artifacts
+AGENT.md @noa-ark/policy-guardians
+
+# Critical services
+server/ai/* @noa-ark/ai-systems
+crc/src/* @noa-ark/crc-core
+server/ui_api/* @noa-ark/ui-platform
+
+# Shared UI telemetry helpers
+ui/shared/src/logging.ts @noa-ark/ui-platform
+
+# Build and workflow automation
+Makefile @noa-ark/build-system
+.github/workflows/* @noa-ark/maintainers

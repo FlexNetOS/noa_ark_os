@@ -1,0 +1,32 @@
+[package]
+name = "noa_cicd"
+version = "0.1.0"
+edition = "2021"
+authors = ["NOA ARK OS Team"]
+description = "CI/CD system with maximum focus on Continuous Delivery"
+license = "MIT"
+
+[dependencies]
+uuid = { version = "1.6", features = ["v4", "serde"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+noa_core = { path = "../core" }
+noa_workflow = { path = "../workflow" }
+noa_security_shim = { path = "../tools/security/shim" }
+sha2 = "0.10"
+time = { version = "0.3", features = ["formatting", "macros"] }
+
+[dev-dependencies]
+tempfile = "3"
