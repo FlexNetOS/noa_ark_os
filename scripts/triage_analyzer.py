@@ -292,8 +292,10 @@ class TriageService:
 
     async def run(self) -> None:
         loop = asyncio.get_running_loop()
-        loop.add_signal_handler(signal.SIGINT, self._stopped.set)
-        loop.add_signal_handler(signal.SIGTERM, self._stopped.set)
+        # Register signal handlers only on Unix platforms
+        if os.name == "posix":
+            loop.add_signal_handler(signal.SIGINT, self._stopped.set)
+            loop.add_signal_handler(signal.SIGTERM, self._stopped.set)
 
         async for event in self.event_source:
             if self._stopped.is_set():
