@@ -245,6 +245,8 @@ tools/devshell/state/*
 *.pth
 *.onnx
 models/
+!storage/analytics/models/
+!storage/analytics/models/*.sql
 *.model
 !storage/analytics/models/
 !storage/analytics/models/**/*.sql
