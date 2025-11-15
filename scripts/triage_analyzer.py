@@ -181,7 +181,7 @@ class ArtifactStore:
             if event.log_path.is_file():
                 shutil.copy2(event.log_path, target)
             else:
-                # If log path is a directory copy recursively.
+                # If log path is a directory, copy recursively.
                 shutil.copytree(event.log_path, target, dirs_exist_ok=True)
 
         return incident_dir
