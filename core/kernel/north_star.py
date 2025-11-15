@@ -170,10 +170,14 @@ def load_policy(path: Optional[Path] = None) -> NorthStarPolicy:
     if not metrics:
         raise NorthStarSchemaError("at least one metric definition is required")
 
-    policies = {
-        policy.id: policy
-        for policy in (_parse_policy(policy) for policy in data.get("escalation_policies", []))
-    }
+    policies = {}
+    policy_ids = set()
+    for policy_item in data.get("escalation_policies", []):
+        policy = _parse_policy(policy_item)
+        if policy.id in policy_ids:
+            raise NorthStarSchemaError(f"duplicate escalation policy id '{policy.id}' detected")
+        policy_ids.add(policy.id)
+        policies[policy.id] = policy
 
     metric_ids = set()
     for metric in metrics:
