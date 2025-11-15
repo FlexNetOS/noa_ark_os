@@ -1,5 +1,9 @@
-﻿# NOA ARK OS - Activate Portable Cargo
-# Usage: .\server\tools\activate-cargo.ps1
+﻿param(
+    [switch]$Silent
+)
+
+# NOA ARK OS - Activate Portable Cargo
+# Usage: .\server\tools\activate-cargo.ps1 [-Silent]
 
 # Get the script's directory to make it location-independent
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -8,8 +12,10 @@ $WORKSPACE_ROOT = Split-Path -Parent (Split-Path -Parent $ScriptDir)
 $CARGO_HOME = "$WORKSPACE_ROOT\server\tools\cargo-portable"
 $RUSTUP_HOME = "$WORKSPACE_ROOT\server\tools\rustup-portable"
 
-Write-Host "`n🔧 Activating Portable Cargo..." -ForegroundColor Cyan
-Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
+if (-not $Silent) {
+    Write-Host "`n🔧 Activating Portable Cargo..." -ForegroundColor Cyan
+    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
+}
 
 # Verify installation exists
 if (-not (Test-Path "$CARGO_HOME\bin\cargo.exe")) {
@@ -30,19 +36,23 @@ if ($env:Path -notlike "*$CARGO_HOME\bin*") {
     $env:Path = "$CARGO_HOME\bin;$env:Path"
 }
 
-Write-Host "`n✅ Portable Cargo Activated Successfully!" -ForegroundColor Green
-Write-Host "`nEnvironment:" -ForegroundColor Yellow
-Write-Host "  CARGO_HOME   = $CARGO_HOME" -ForegroundColor Cyan
-Write-Host "  RUSTUP_HOME  = $RUSTUP_HOME" -ForegroundColor Cyan
-Write-Host "  PATH         = [cargo-portable\bin prepended]" -ForegroundColor Cyan
+$env:NOA_CARGO_ENV = "1"
 
-Write-Host "`nVersions:" -ForegroundColor Yellow
-cargo --version
-rustc --version
+if (-not $Silent) {
+    Write-Host "`n✅ Portable Cargo Activated Successfully!" -ForegroundColor Green
+    Write-Host "`nEnvironment:" -ForegroundColor Yellow
+    Write-Host "  CARGO_HOME   = $CARGO_HOME" -ForegroundColor Cyan
+    Write-Host "  RUSTUP_HOME  = $RUSTUP_HOME" -ForegroundColor Cyan
+    Write-Host "  PATH         = [cargo-portable\bin prepended]" -ForegroundColor Cyan
 
-Write-Host "`n💡 Tips:" -ForegroundColor Gray
-Write-Host "  • Run 'cargo build' to build projects" -ForegroundColor Gray
-Write-Host "  • Run 'cargo run' to run projects" -ForegroundColor Gray
-Write-Host "  • Run 'cargo test' to run tests" -ForegroundColor Gray
-Write-Host "  • This activation is for the current PowerShell session only" -ForegroundColor Gray
-Write-Host ""
+    Write-Host "`nVersions:" -ForegroundColor Yellow
+    cargo --version
+    rustc --version
+
+    Write-Host "`n💡 Tips:" -ForegroundColor Gray
+    Write-Host "  • Run 'cargo build' to build projects" -ForegroundColor Gray
+    Write-Host "  • Run 'cargo run' to run projects" -ForegroundColor Gray
+    Write-Host "  • Run 'cargo test' to run tests" -ForegroundColor Gray
+    Write-Host "  • This activation is for the current PowerShell session only" -ForegroundColor Gray
+    Write-Host ""
+}
