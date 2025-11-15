@@ -124,8 +124,8 @@ publish-audit:
 
 # Run rollback simulation locally
 rollback-sim:
-        @echo "⏱️  Running rollback simulation..."
-        @cargo run --manifest-path cicd/Cargo.toml --bin rollback_simulation -- --repo . --ledger audit/ledger.jsonl --output audit/rollbacks
+	@echo "⏱️  Running rollback simulation..."
+	@cargo run --manifest-path cicd/Cargo.toml --bin rollback_simulation -- --repo . --ledger audit/ledger.jsonl --output audit/rollbacks
 
 # Setup toolchain
 setup:
