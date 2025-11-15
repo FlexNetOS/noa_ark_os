@@ -106,16 +106,6 @@ impl AgentDispatcher {
     pub fn dispatch(&self, task: &Task) -> Result<TaskDispatchReceipt, AgentDispatchError> {
         let (allowed_optional, directive) = compute_trust_guardrails(&task.tool_requirements);
         let mut optional_budget = allowed_optional;
-        let metadata = self
-            .registry
-            .get(&task.agent)
-            .or_else(|| {
-                self.registry
-                    .all()
-                    .into_iter()
-                    .find(|agent| agent.name == task.agent)
-            })
-            .ok_or_else(|| AgentDispatchError::AgentNotFound(task.agent.clone()))?;
         let metadata = self.resolve_agent_metadata(task)?;
 
         let instance_id = self
@@ -192,6 +182,56 @@ impl AgentDispatcher {
             task: task.clone(),
             output: overall_output,
             tool_receipts,
+        })
+    }
+
+    fn resolve_agent_metadata(&self, task: &Task) -> Result<AgentMetadata, AgentDispatchError> {
+        if let Some(role) = task
+            .agent_role
+            .as_ref()
+            .filter(|value| !value.trim().is_empty())
+        {
+            return self.resolve_agent_by_role(task, role);
+        }
+
+        if let Some(role) = task
+            .agent
+            .strip_prefix("role::")
+            .or_else(|| task.agent.strip_prefix("role:"))
+        {
+            return self.resolve_agent_by_role(task, role.trim());
+        }
+
+        self.find_agent(&task.agent)
+            .ok_or_else(|| AgentDispatchError::AgentNotFound(task.agent.clone()))
+    }
+
+    fn resolve_agent_by_role(
+        &self,
+        task: &Task,
+        role: &str,
+    ) -> Result<AgentMetadata, AgentDispatchError> {
+        let role_key = role.to_lowercase();
+        let mapping = role_directory()
+            .get(&role_key)
+            .ok_or_else(|| AgentDispatchError::AgentNotFound(format!("role::{role}")))?;
+
+        let mut metadata = self
+            .find_agent(&mapping.agent_id)
+            .ok_or_else(|| AgentDispatchError::AgentNotFound(mapping.agent_id.clone()))?;
+        if let Some(description) = &mapping.description {
+            metadata.description = description.clone();
+        }
+        metadata.role = task.agent_role.clone().unwrap_or_else(|| role.to_string());
+        Ok(metadata)
+    }
+
+    fn find_agent(&self, identifier: &str) -> Option<AgentMetadata> {
+        self.registry.get(identifier).or_else(|| {
+            let name = identifier.to_lowercase();
+            self.registry.all().into_iter().find(|agent| {
+                agent.agent_id.eq_ignore_ascii_case(identifier) || agent.name.to_lowercase() == name
+            })
         })
     }
 }
@@ -302,6 +342,7 @@ mod tests {
             agent: metadata.agent_id.clone(),
             action: "noop".to_string(),
             parameters: HashMap::new(),
+            agent_role: None,
             tool_requirements: requirements.clone(),
         };
 
@@ -321,51 +362,38 @@ mod tests {
             .expect("skipped tool should provide rationale");
         assert!(gated_message.contains("Optional capability"));
         assert!(gated_message.contains(&format!("{:?}", directive.status)));
-impl AgentDispatcher {
-    fn resolve_agent_metadata(&self, task: &Task) -> Result<AgentMetadata, AgentDispatchError> {
-        if let Some(role) = task
-            .agent_role
-            .as_ref()
-            .filter(|value| !value.trim().is_empty())
-        {
-            return self.resolve_agent_by_role(task, role);
-        }
-
-        if let Some(role) = task
-            .agent
-            .strip_prefix("role::")
-            .or_else(|| task.agent.strip_prefix("role:"))
-        {
-            return self.resolve_agent_by_role(task, role.trim());
-        }
-
-        self.find_agent(&task.agent)
-            .ok_or_else(|| AgentDispatchError::AgentNotFound(task.agent.clone()))
     }
 
-    fn resolve_agent_by_role(
-        &self,
-        task: &Task,
-        role: &str,
-    ) -> Result<AgentMetadata, AgentDispatchError> {
-        let role_key = role.to_lowercase();
-        let mapping = role_directory()
-            .get(&role_key)
-            .ok_or_else(|| AgentDispatchError::AgentNotFound(format!("role::{role}")))?;
+    #[test]
+    fn dispatch_resolves_role_metadata_description() {
+        let registry = AgentRegistry::new();
+        let mut metadata =
+            AgentMetadata::from_registry("PlanAgent".to_string(), "PlanAgent".to_string());
+        metadata
+            .capabilities
+            .push("workflow.taskDispatch".to_string());
+        registry
+            .upsert_metadata(metadata.clone())
+            .expect("register planner agent");
+        let dispatcher =
+            AgentDispatcher::with_handles(Arc::new(registry), Arc::new(AgentFactory::new()));
 
-        let mut metadata = self
-            .find_agent(&mapping.agent_id)
-            .ok_or_else(|| AgentDispatchError::AgentNotFound(mapping.agent_id.clone()))?;
-        metadata.role = task.agent_role.clone().unwrap_or_else(|| role.to_string());
-        Ok(metadata)
-    }
+        let task = Task {
+            agent: "role::planner".to_string(),
+            action: "noop".to_string(),
+            parameters: HashMap::new(),
+            agent_role: Some("planner".to_string()),
+            tool_requirements: Vec::new(),
+        };
 
-    fn find_agent(&self, identifier: &str) -> Option<AgentMetadata> {
-        self.registry.get(identifier).or_else(|| {
-            let name = identifier.to_lowercase();
-            self.registry.all().into_iter().find(|agent| {
-                agent.agent_id.eq_ignore_ascii_case(identifier) || agent.name.to_lowercase() == name
-            })
-        })
+        let receipt = dispatcher.dispatch(&task).expect("role dispatch should succeed");
+        assert_eq!(receipt.agent_metadata.role, "planner");
+        assert!(
+            receipt
+                .agent_metadata
+                .description
+                .contains("Plans deployment sequences"),
+            "role mapping description should propagate to metadata"
+        );
     }
 }

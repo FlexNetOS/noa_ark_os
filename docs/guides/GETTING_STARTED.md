@@ -15,12 +15,14 @@ For the bootstrap build (first time only):
 git clone <repository-url>
 cd noa_ark_os
 
-# Build the entire workspace
-cargo build --release
+# Build the entire workspace through the portable shim
+make cargo-build ARGS="--release"
 
-# Run the kernel
-cargo run --bin noa_kernel
+# Run the kernel via the same shim
+make cargo-run ARGS="--bin noa_kernel"
 ```
+
+> 💡 Need UI assets? Use `make ui-build`, `make ui-dev`, or `make ui-test` to invoke the `pnpm` scripts through discoverable make targets.
 
 ## Project Structure
 
@@ -58,8 +60,8 @@ sandbox create --name my-feature --type feature
 sandbox activate my-feature
 
 # Make changes
-# Test locally
-cargo test
+# Test locally (workspace default)
+make cargo-test
 
 # Validate
 sandbox validate
@@ -158,22 +160,22 @@ Following this workflow keeps the capability list authoritative, documents the i
 
 ```bash
 # Run all tests
-cargo test
+make cargo-test
 
 # Run specific component tests
-cargo test -p noa_core
-cargo test -p noa_agents
-cargo test -p noa_workflow
+make cargo-test ARGS="-p noa_core"
+make cargo-test ARGS="-p noa_agents"
+make cargo-test ARGS="-p noa_workflow"
 
 # Run integration tests
-cargo test --test integration_test
+make cargo-test ARGS="--test integration_test"
 ```
 
 ## Building for Production
 
 ```bash
 # Build optimized release
-cargo build --release --workspace
+make cargo-build ARGS="--release --workspace"
 
 # The binaries will be in target/release/
 ```

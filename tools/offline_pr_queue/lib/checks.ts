@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import crypto from "node:crypto";
 import { writeJson } from "./fs.ts";
+import { ensureCommandAllowed } from "../../automation/command_policy.ts";
 
 type CheckStatus = "passed" | "failed";
 
@@ -20,6 +21,7 @@ type LogPathResolver = (id: number, name: string) => string;
 const MAX_LOG_BUFFER = 10 * 1024 * 1024; // 10MB to capture verbose tool output
 
 function runCommand(name: string, command: string, args: string[], options: Record<string, unknown> = {}): CheckResult {
+  ensureCommandAllowed([command, ...args], { context: `offline-pr-check:${name}` });
   const result = spawnSync(command, args, {
     cwd: process.cwd(),
     stdio: ["ignore", "pipe", "pipe"],

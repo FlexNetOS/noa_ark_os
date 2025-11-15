@@ -416,7 +416,7 @@ mod tests {
                 trust_score: 0.82,
                 evidence_tags: vec!["ledger:docs".to_string()],
                 evidence_references: vec!["ledger://docs/123".to_string()],
-                recorded_at: Utc::now(),
+                recorded_at: Utc::now().timestamp() as u64,
             }],
             services: vec![ServiceDocumentation {
                 name: "API Gateway".to_string(),
