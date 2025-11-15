@@ -1,8 +1,8 @@
-use crate::{Stage, StageType, Task, TaskDispatchReceipt};
+use crate::reward::RewardError;
 use crate::reward::{
     AgentApprovalStatus, AgentStandingSummary, RewardAgentSnapshot, RewardInputs, RewardScorekeeper,
 };
-use crate::reward::RewardError;
+use crate::{Stage, StageType, Task, TaskDispatchReceipt};
 use chrono::Utc;
 use noa_core::security::{self, OperationKind, OperationRecord, SignedOperation};
 use noa_core::utils::{current_timestamp_millis, simple_hash};
@@ -626,6 +626,7 @@ pub enum EvidenceLedgerKind {
     TaskDispatch,
     AutoFixAction,
     BudgetDecision,
+    PipelineEvent,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -757,6 +758,27 @@ impl EvidenceLedgerEntry {
             timestamp: current_timestamp_millis(),
             reference: "GENESIS".to_string(),
             payload: json!({"message": "ledger initialised"}),
+            signed_operation: signed,
+        }
+    }
+
+    fn pipeline_event(
+        actor: &str,
+        subject: &str,
+        event_type: &str,
+        metadata: &Value,
+        signed: SignedOperation,
+    ) -> Self {
+        Self {
+            kind: EvidenceLedgerKind::PipelineEvent,
+            timestamp: current_timestamp_millis(),
+            reference: signed.signature.clone(),
+            payload: json!({
+                "actor": actor,
+                "subject": subject,
+                "event_type": event_type,
+                "metadata": metadata,
+            }),
             signed_operation: signed,
         }
     }
@@ -1222,6 +1244,8 @@ impl PipelineInstrumentation {
         metadata: Value,
     ) -> Result<SignedOperation, InstrumentationError> {
         let metadata_for_event = metadata.clone();
+        let metadata_for_record = metadata.clone();
+        let metadata_for_ledger = metadata;
         let event = PipelineLogEvent {
             event_type: event_type.to_string(),
             actor: actor.to_string(),
@@ -1234,8 +1258,16 @@ impl PipelineInstrumentation {
         let record =
             OperationRecord::new(OperationKind::Other, actor.to_string(), subject.to_string())
                 .with_context(Some(actor.to_string()), Some(subject.to_string()))
-                .with_metadata(metadata);
-        self.append_entry(PIPELINE_EVENT_LOG, event, record)
+                .with_metadata(metadata_for_record);
+        let signed = self.append_entry(PIPELINE_EVENT_LOG, event, record)?;
+        self.append_evidence_ledger(EvidenceLedgerEntry::pipeline_event(
+            actor,
+            subject,
+            event_type,
+            &metadata_for_ledger,
+            signed.clone(),
+        ))?;
+        Ok(signed)
     }
     pub fn record_deployment_outcome(
         &self,
