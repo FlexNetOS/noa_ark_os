@@ -40,6 +40,10 @@ def main() -> int:
     manifest = json.loads(manifest_path.read_text())
     for entry in manifest.get("files", []):
         artifact_path = bundle / entry["path"]
+        # Prevent path traversal: ensure artifact_path is within bundle
+        if not artifact_path.resolve().is_relative_to(bundle.resolve()):
+            print(f"Invalid artifact path (traversal): {entry['path']}", file=sys.stderr)
+            return 6
         if not artifact_path.exists():
             print(f"Missing artifact {entry['path']}", file=sys.stderr)
             return 4

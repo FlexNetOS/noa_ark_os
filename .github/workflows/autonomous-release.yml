@@ -24,6 +24,10 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Configure git
+        run: |
+          git config --global user.name "CI Bot"
+          git config --global user.email "ci@example.com"
       - name: Run CICD tests
         run: cargo test -p noa_cicd
 
@@ -31,7 +35,7 @@ jobs:
         run: cargo run --manifest-path cicd/Cargo.toml --bin rollback_simulation -- --repo . --ledger audit/ledger.jsonl --output audit/rollbacks
 
       - name: Publish audit bundle
-        run: make publish-audit
+        run: bash audit/publish.sh
 
       - name: Verify latest audit bundle
         run: |

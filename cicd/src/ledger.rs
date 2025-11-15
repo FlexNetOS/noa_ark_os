@@ -97,7 +97,8 @@ impl AuditLedger {
             .await?;
 
         let serialized =
-            serde_json::to_string(entry).expect("Ledger entries should always serialize correctly");
+            serde_json::to_string(entry)
+                .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
         file.write_all(serialized.as_bytes()).await?;
         file.write_all(b"\n").await?;
         file.flush().await

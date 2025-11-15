@@ -39,7 +39,9 @@ dist/
 !.workspace/registry/*.json
 !.workspace/sop/
 !.workspace/sop/*.md
-.graphs/
+# .graphs/ handled by explicit allow-list below
+!.graphs/workflows/
+!.graphs/workflows/**
 
 # Rust
 **/*.rs.bk
@@ -98,6 +100,7 @@ server/tools/rustup-portable/*
 !server/tools/rustup-portable/
 !server/tools/rustup-portable/README.md
 !server/tools/rustup-portable/settings.toml
+server/tools/node-portable/
 
 # Runtime Data
 server/data/
@@ -122,6 +125,7 @@ models/
 .env.local
 .env.*.local
 *.key
+!audit/offline-dev-hmac.key
 *.pem
 *.crt
 secrets/
