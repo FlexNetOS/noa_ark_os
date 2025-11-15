@@ -557,14 +557,19 @@ impl WorkflowEngine {
 
         let mut info = parameters_to_metadata(&task.parameters);
         info.insert("workflow".into(), workflow_id.to_string());
-        let _ = self.memory.record_session_only(
+        if let Err(err) = self.memory.record_session_only(
             workflow_id,
             &task.agent,
             MemoryRole::Observation,
             &format!("{}::{}", task.agent, task.action),
             info,
             vec![task.action.clone()],
-        );
+        ) {
+            eprintln!(
+                "[WORKFLOW] Failed to record session for {}::{}: {}",
+                workflow_id, task.agent, err
+            );
+        }
 
         Ok(())
     }
