@@ -179,10 +179,22 @@ impl GoalRunTracker {
         } else {
             (successes / total_runs).clamp(0.0, 1.0)
         };
-        let flake_rate = if total_runs.abs() < f64::EPSILON {
+        // Flake rate: proportion of agents that have both successes and failures (i.e., are flaky)
+        let mut agent_outcomes: HashMap<&str, (usize, usize)> = HashMap::new();
+        for result in &self.agents {
+            let entry = agent_outcomes.entry(result.agent.as_str()).or_insert((0, 0));
+            if result.success {
+                entry.0 += 1;
+            } else {
+                entry.1 += 1;
+            }
+        }
+        let total_agents = agent_outcomes.len() as f64;
+        let flaky_agents = agent_outcomes.values().filter(|(succ, fail)| *succ > 0 && *fail > 0).count() as f64;
+        let flake_rate = if total_agents.abs() < f64::EPSILON {
             0.0
         } else {
-            (1.0 - coverage).clamp(0.0, 1.0)
+            (flaky_agents / total_agents).clamp(0.0, 1.0)
         };
         let token_ratio = if self.token_samples == 0 {
             1.0
