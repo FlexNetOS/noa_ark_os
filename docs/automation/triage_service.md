@@ -99,7 +99,7 @@ manual handling.
 ## Restoring the Legacy Script Snapshot
 
 Binary archives are not committed to the repository. To inspect the previous
-`triage_analyzer.py`, restore the text-armoured snapshot and write it to a
+`triage_analyzer.py`, restore the text-armored snapshot and write it to a
 scratch location:
 
 ```bash

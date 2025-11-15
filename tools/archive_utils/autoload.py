@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Restore archived assets from text-armored snapshots.
 
-The loader understands the JSON snapshot created for `scripts/triage_analyzer.py`.
+The loader understands the JSON snapshot created for ``scripts/triage_analyzer.py``.
 It keeps the workflow offline-friendly by avoiding binary blobs in git history
 while still letting developers reconstruct the original artifact on demand.
 """
@@ -18,6 +18,8 @@ def _decode_payload(data: dict[str, Any]) -> bytes:
     encoding = data.get("encoding", "utf-8")
     raw = data["content"]
     if encoding == "base64":
+        if not isinstance(raw, str):
+            raise ValueError(f"Expected string content for {encoding} encoding, got {type(raw).__name__}")
         return base64.b64decode(raw.encode("ascii"))
     if encoding == "utf-8":
         return raw.encode("utf-8")

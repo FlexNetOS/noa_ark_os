@@ -8,7 +8,7 @@ performs the following steps:
 
 1. Classify the failure type (lint, type, flaky test, infrastructure, etc.).
 2. Persist an incident workspace under ``tools/offline_pr_queue/triage`` with
-   a JSON manifest, copied artefacts, and a policy decision trail.
+   a JSON manifest, copied artifacts, and a policy decision trail.
 3. Invoke the remediation CLI so the workflow automation stack can queue the
    appropriate auto-fixer agent.
 
@@ -33,7 +33,7 @@ import textwrap
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Iterable, Optional
+from typing import Any, Dict, Iterable, Optional, AsyncIterator
 
 INCIDENT_ROOT = Path("tools/offline_pr_queue/triage")
 SUPPORTED_EXTENSIONS = {".json", ".ndjson"}
@@ -140,7 +140,7 @@ class FailureClassifier:
 
 
 class ArtifactStore:
-    """Persist incident artefacts and manifests for offline review."""
+    """Persist incident artifacts and manifests for offline review."""
 
     def __init__(self, root: Path = INCIDENT_ROOT) -> None:
         self.root = root
@@ -169,7 +169,7 @@ class ArtifactStore:
                 "signals": classification.signals,
             },
             "policy_decision": policy,
-            "recorded_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "recorded_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
         }
         (incident_dir / "manifest.json").write_text(
             json.dumps(manifest, indent=2, sort_keys=True),
@@ -292,8 +292,10 @@ class TriageService:
 
     async def run(self) -> None:
         loop = asyncio.get_running_loop()
-        loop.add_signal_handler(signal.SIGINT, self._stopped.set)
-        loop.add_signal_handler(signal.SIGTERM, self._stopped.set)
+        # Register signal handlers only on Unix platforms
+        if os.name == "posix":
+            loop.add_signal_handler(signal.SIGINT, self._stopped.set)
+            loop.add_signal_handler(signal.SIGTERM, self._stopped.set)
 
         async for event in self.event_source:
             if self._stopped.is_set():
@@ -313,7 +315,13 @@ class TriageService:
         incident_dir = self.store.store(event, classification, policy)
 
         result = self.trigger.trigger(classification, incident_dir, event, dry_run=self.dry_run)
-        command_display = result.args if isinstance(result.args, str) else ' '.join(result.args)
+        command_display = (
+            result.args
+            if isinstance(result.args, str)
+            else ' '.join(result.args)
+            if isinstance(result.args, (list, tuple))
+            else str(result.args)
+        )
         (incident_dir / "remediation.log").write_text(
             textwrap.dedent(
                 f"""
@@ -345,7 +353,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--incident-root",
         type=Path,
         default=INCIDENT_ROOT,
-        help="Where to store incident artefacts.",
+        help="Where to store incident artifacts.",
     )
     parser.add_argument(
         "--remediation-cli",

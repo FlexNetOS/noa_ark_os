@@ -1,4 +1,8 @@
 use crate::{Stage, StageType, Task, TaskDispatchReceipt};
+use crate::reward::{
+    AgentApprovalStatus, AgentStandingSummary, RewardAgentSnapshot, RewardInputs, RewardScorekeeper,
+};
+use crate::reward::RewardError;
 use chrono::Utc;
 use noa_core::security::{self, OperationKind, OperationRecord, SignedOperation};
 use noa_core::utils::{current_timestamp_millis, simple_hash};
@@ -21,10 +25,14 @@ const AUTO_FIX_LOG: &str = "auto_fix_actions";
 const BUDGET_DECISION_LOG: &str = "budget_guardian";
 const AUTO_FIX_DIR: &str = "auto_fix";
 const BUDGET_GUARDIAN_DIR: &str = "budget_guardian";
+const INFERENCE_LOG: &str = "inference_metrics";
+const PIPELINE_EVENT_LOG: &str = "pipeline_events";
 const EVIDENCE_LEDGER_DIR: &str = "storage/db/evidence";
 const EVIDENCE_LEDGER_FILE: &str = "ledger.jsonl";
 const GOAL_ANALYTICS_DIR: &str = "storage/db/analytics";
 const GOAL_ANALYTICS_FILE: &str = "goal_kpis.json";
+const METRICS_DIR: &str = "metrics";
+const REWARD_HISTORY_FILE: &str = "reward_history.json";
 const DEPLOYMENT_REPORT_PATH: &str = "docs/reports/AGENT_DEPLOYMENT_OUTCOMES.md";
 
 #[derive(Debug)]
@@ -32,6 +40,7 @@ pub enum InstrumentationError {
     Io(std::io::Error),
     Serialization(serde_json::Error),
     Security(security::PolicyError),
+    Reward(RewardError),
 }
 
 impl std::fmt::Display for InstrumentationError {
@@ -40,6 +49,7 @@ impl std::fmt::Display for InstrumentationError {
             InstrumentationError::Io(err) => write!(f, "io error: {}", err),
             InstrumentationError::Serialization(err) => write!(f, "serialization error: {}", err),
             InstrumentationError::Security(err) => write!(f, "policy error: {}", err),
+            InstrumentationError::Reward(err) => write!(f, "reward error: {}", err),
         }
     }
 }
@@ -61,6 +71,12 @@ impl From<serde_json::Error> for InstrumentationError {
 impl From<security::PolicyError> for InstrumentationError {
     fn from(err: security::PolicyError) -> Self {
         Self::Security(err)
+    }
+}
+
+impl From<RewardError> for InstrumentationError {
+    fn from(err: RewardError) -> Self {
+        Self::Reward(err)
     }
 }
 
@@ -189,6 +205,8 @@ pub struct GoalOutcomeRecord {
     pub success: bool,
     #[serde(default)]
     pub agents: Vec<AgentExecutionResult>,
+    #[serde(default)]
+    pub reward_inputs: Option<RewardInputs>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -274,7 +292,7 @@ impl GoalAggregate {
         }
     }
 
-    fn to_snapshot(&self) -> GoalMetricSnapshot {
+    fn to_snapshot(&self, penalty: Option<ContextPenaltySummary>) -> GoalMetricSnapshot {
         let average_lead_time_ms = if self.total_runs == 0 {
             0.0
         } else {
@@ -296,7 +314,7 @@ impl GoalAggregate {
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
 
-        GoalMetricSnapshot {
+        let mut snapshot = GoalMetricSnapshot {
             goal_id: self.goal_id.clone(),
             workflow_id: self.workflow_id.clone(),
             total_runs: self.total_runs,
@@ -305,13 +323,144 @@ impl GoalAggregate {
             success_rate,
             agents,
             updated_at: Utc::now().to_rfc3339(),
+            context_penalty_score: 0.0,
+            context_p95_bytes: 0,
+            context_p95_latency_ms: 0,
+        };
+
+        if let Some(penalty) = penalty {
+            snapshot.context_penalty_score = penalty.penalty_score;
+            snapshot.context_p95_bytes = penalty.p95_bytes;
+            snapshot.context_p95_latency_ms = penalty.p95_latency_ms;
+        }
+
+        snapshot
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct ContextUsageSample {
+    agent: String,
+    context_bytes: usize,
+    penalty: f64,
+    retrieval_ms: u128,
+    timestamp: u128,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+struct ContextPenaltyAggregate {
+    workflow_id: String,
+    samples: Vec<ContextUsageSample>,
+}
+
+impl ContextPenaltyAggregate {
+    fn new(workflow_id: &str) -> Self {
+        Self {
+            workflow_id: workflow_id.to_string(),
+            samples: Vec::new(),
         }
     }
+
+    fn record(&mut self, agent: &str, context_bytes: usize, threshold: usize, retrieval_ms: u128) {
+        let penalty = if context_bytes > threshold {
+            (context_bytes.saturating_sub(threshold)) as f64 / threshold as f64
+        } else {
+            0.0
+        };
+
+        self.samples.push(ContextUsageSample {
+            agent: agent.to_string(),
+            context_bytes,
+            penalty,
+            retrieval_ms,
+            timestamp: current_timestamp_millis(),
+        });
+
+        self.trim();
+    }
+
+    fn push_summary(&mut self, penalty_score: f64, context_bytes: usize, retrieval_ms: u64) {
+        self.samples.push(ContextUsageSample {
+            agent: "scorekeeper/restore".into(),
+            context_bytes,
+            penalty: penalty_score,
+            retrieval_ms: retrieval_ms as u128,
+            timestamp: current_timestamp_millis(),
+        });
+        self.trim();
+    }
+
+    fn trim(&mut self) {
+        if self.samples.len() > 256 {
+            let overflow = self.samples.len() - 256;
+            self.samples.drain(0..overflow);
+        }
+    }
+
+    fn summary(&self) -> ContextPenaltySummary {
+        if self.samples.is_empty() {
+            return ContextPenaltySummary {
+                workflow_id: self.workflow_id.clone(),
+                penalty_score: 0.0,
+                p95_bytes: 0,
+                p95_latency_ms: 0,
+            };
+        }
+
+        let mut bytes: Vec<usize> = self
+            .samples
+            .iter()
+            .map(|sample| sample.context_bytes)
+            .collect();
+        bytes.sort_unstable();
+        let mut latency: Vec<u128> = self
+            .samples
+            .iter()
+            .map(|sample| sample.retrieval_ms)
+            .collect();
+        latency.sort_unstable();
+
+        // Use p95 as a standard metric for tail latency/usage. Change PERCENTILE to adjust.
+        const PERCENTILE: f64 = 0.95;
+        let percentile_index = |len: usize| -> usize {
+            if len == 0 {
+                return 0;
+            }
+            let raw = ((len as f64) * PERCENTILE).ceil() as usize;
+            raw.saturating_sub(1).min(len - 1)
+        };
+
+        let idx_bytes = percentile_index(bytes.len());
+        let idx_latency = percentile_index(latency.len());
+        let avg_penalty = self
+            .samples
+            .iter()
+            .map(|sample| sample.penalty)
+            .sum::<f64>()
+            / (self.samples.len() as f64);
+
+        ContextPenaltySummary {
+            workflow_id: self.workflow_id.clone(),
+            penalty_score: avg_penalty,
+            p95_bytes: bytes[idx_bytes],
+            p95_latency_ms: latency[idx_latency] as u64,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct ContextPenaltySummary {
+    workflow_id: String,
+    penalty_score: f64,
+    p95_bytes: usize,
+    p95_latency_ms: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 struct GoalMetricStore {
     goals: HashMap<String, GoalAggregate>,
+    #[serde(default)]
+    context: HashMap<String, ContextPenaltyAggregate>,
 }
 
 impl GoalMetricStore {
@@ -322,11 +471,31 @@ impl GoalMetricStore {
             .record(outcome);
     }
 
+    fn penalize_context(
+        &mut self,
+        workflow_id: &str,
+        agent: &str,
+        context_bytes: usize,
+        threshold: usize,
+        retrieval_ms: u128,
+    ) {
+        self.context
+            .entry(workflow_id.to_string())
+            .or_insert_with(|| ContextPenaltyAggregate::new(workflow_id))
+            .record(agent, context_bytes, threshold, retrieval_ms);
+    }
+
     fn snapshots(&self) -> Vec<GoalMetricSnapshot> {
         let mut entries: Vec<GoalMetricSnapshot> = self
             .goals
             .values()
-            .map(GoalAggregate::to_snapshot)
+            .map(|aggregate| {
+                let penalty = self
+                    .context
+                    .get(&aggregate.workflow_id)
+                    .map(ContextPenaltyAggregate::summary);
+                aggregate.to_snapshot(penalty)
+            })
             .collect();
         entries.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
         entries
@@ -351,6 +520,24 @@ pub struct GoalMetricSnapshot {
     pub success_rate: f64,
     pub agents: Vec<GoalAgentMetric>,
     pub updated_at: String,
+    #[serde(default)]
+    pub context_penalty_score: f64,
+    #[serde(default)]
+    pub context_p95_bytes: usize,
+    #[serde(default)]
+    pub context_p95_latency_ms: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InferenceMetric {
+    pub provider: String,
+    pub model: String,
+    pub status: String,
+    pub latency_ms: u128,
+    pub tokens_prompt: usize,
+    pub tokens_completion: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
 }
 
 impl StageReceipt {
@@ -575,6 +762,9 @@ pub struct PipelineInstrumentation {
     goal_metrics_path: PathBuf,
     deployment_report_path: PathBuf,
     goal_metrics: Mutex<GoalMetricStore>,
+    metrics_dir: PathBuf,
+    reward_history_path: PathBuf,
+    reward_scorekeeper: Mutex<RewardScorekeeper>,
 }
 
 impl PipelineInstrumentation {
@@ -583,6 +773,7 @@ impl PipelineInstrumentation {
         let mirror_dir = resolve_path(STORAGE_MIRROR_DIR);
         let evidence_dir = resolve_path(EVIDENCE_LEDGER_DIR);
         let analytics_dir = resolve_path(GOAL_ANALYTICS_DIR);
+        let metrics_dir = resolve_path(METRICS_DIR);
         fs::create_dir_all(&index_dir)?;
         fs::create_dir_all(&mirror_dir)?;
         fs::create_dir_all(&evidence_dir)?;
@@ -591,6 +782,7 @@ impl PipelineInstrumentation {
         let budget_guardian_dir = mirror_dir.join(BUDGET_GUARDIAN_DIR);
         fs::create_dir_all(&auto_fix_dir)?;
         fs::create_dir_all(&budget_guardian_dir)?;
+        fs::create_dir_all(&metrics_dir)?;
 
         let evidence_ledger_path = evidence_dir.join(EVIDENCE_LEDGER_FILE);
         let goal_metrics_path = analytics_dir.join(GOAL_ANALYTICS_FILE);
@@ -599,6 +791,8 @@ impl PipelineInstrumentation {
             fs::create_dir_all(parent)?;
         }
         let goal_metrics = Mutex::new(load_goal_metrics(&goal_metrics_path)?);
+        let reward_history_path = metrics_dir.join(REWARD_HISTORY_FILE);
+        let reward_scorekeeper = Mutex::new(RewardScorekeeper::new(reward_history_path.clone())?);
 
         let instrumentation = Self {
             index_dir,
@@ -610,6 +804,9 @@ impl PipelineInstrumentation {
             goal_metrics_path,
             deployment_report_path,
             goal_metrics,
+            metrics_dir,
+            reward_history_path,
+            reward_scorekeeper,
         };
 
         instrumentation.ensure_genesis(RELOCATION_LOG, OperationKind::FileMove)?;
@@ -619,8 +816,11 @@ impl PipelineInstrumentation {
         instrumentation.ensure_genesis(AUTO_FIX_LOG, OperationKind::Other)?;
         instrumentation.ensure_genesis(BUDGET_DECISION_LOG, OperationKind::Other)?;
         instrumentation.ensure_genesis(SECURITY_SCAN_LOG, OperationKind::SecurityScan)?;
+        instrumentation.ensure_genesis(INFERENCE_LOG, OperationKind::Other)?;
+        instrumentation.ensure_genesis(PIPELINE_EVENT_LOG, OperationKind::Other)?;
         instrumentation.ensure_evidence_ledger()?;
         instrumentation.ensure_goal_metrics()?;
+        instrumentation.ensure_reward_history()?;
         instrumentation.ensure_deployment_report()?;
 
         Ok(instrumentation)
@@ -1021,6 +1221,29 @@ impl PipelineInstrumentation {
         Ok(report)
     }
 
+    pub fn log_pipeline_event(
+        &self,
+        actor: &str,
+        subject: &str,
+        event_type: &str,
+        metadata: Value,
+    ) -> Result<SignedOperation, InstrumentationError> {
+        let metadata_for_event = metadata.clone();
+        let event = PipelineLogEvent {
+            event_type: event_type.to_string(),
+            actor: actor.to_string(),
+            scope: subject.to_string(),
+            source: Some(actor.to_string()),
+            target: Some(subject.to_string()),
+            metadata: metadata_for_event,
+            timestamp: current_timestamp_millis(),
+        };
+        let record =
+            OperationRecord::new(OperationKind::Other, actor.to_string(), subject.to_string())
+                .with_context(Some(actor.to_string()), Some(subject.to_string()))
+                .with_metadata(metadata);
+        self.append_entry(PIPELINE_EVENT_LOG, event, record)
+    }
     pub fn record_deployment_outcome(
         &self,
         record: DeploymentOutcomeRecord,
@@ -1062,12 +1285,102 @@ impl PipelineInstrumentation {
             let mut store = self.goal_metrics.lock().unwrap();
             store.record(&outcome);
         }
+        if let Some(inputs) = outcome.reward_inputs.clone() {
+            let agent_snapshots: Vec<RewardAgentSnapshot> = outcome
+                .agents
+                .iter()
+                .map(|agent| RewardAgentSnapshot {
+                    agent: agent.agent.clone(),
+                    success: agent.success,
+                })
+                .collect();
+            let mut keeper = self.reward_scorekeeper.lock().unwrap();
+            let delta = keeper.record(
+                &outcome.goal_id,
+                &outcome.workflow_id,
+                inputs,
+                &agent_snapshots,
+            );
+            self.persist_reward_history(&*keeper)?;
+            drop(keeper);
+            println!(
+                "[REWARD] {}::{} delta={:.2} coverage={:.2} flake={:.2} tokens={:.2} rollback={:.2}",
+                outcome.goal_id,
+                outcome.workflow_id,
+                delta.total_reward,
+                delta.coverage_delta,
+                delta.flake_delta,
+                delta.token_delta,
+                delta.rollback_delta
+            );
+        }
+        self.persist_goal_metrics()
+    }
+
+    pub fn record_context_usage(
+        &self,
+        workflow_id: &str,
+        agent: &str,
+        context_bytes: usize,
+        threshold: usize,
+        retrieval_ms: u128,
+    ) -> Result<(), InstrumentationError> {
+        {
+            let mut store = self.goal_metrics.lock().unwrap();
+            store.penalize_context(workflow_id, agent, context_bytes, threshold, retrieval_ms);
+        }
         self.persist_goal_metrics()
     }
 
     pub fn goal_metrics_snapshot(&self) -> Result<Vec<GoalMetricSnapshot>, InstrumentationError> {
         let store = self.goal_metrics.lock().unwrap();
         Ok(store.snapshots())
+    }
+
+    pub fn evaluate_agent_for_execution(&self, agent: &str) -> AgentApprovalStatus {
+        let keeper = self.reward_scorekeeper.lock().unwrap();
+        keeper.approval_status(agent)
+    }
+
+    pub fn flagged_agents(&self) -> Vec<AgentStandingSummary> {
+        let keeper = self.reward_scorekeeper.lock().unwrap();
+        keeper.flagged_agents()
+    }
+
+    pub fn log_inference_metric(
+        &self,
+        metric: InferenceMetric,
+    ) -> Result<(), InstrumentationError> {
+        let provider = metric.provider;
+        let model = metric.model;
+        let status = metric.status;
+        let latency_ms = metric.latency_ms;
+        let tokens_prompt = metric.tokens_prompt;
+        let tokens_completion = metric.tokens_completion;
+        let error = metric.error;
+        let metadata = json!({
+            "provider": provider,
+            "model": model,
+            "status": status,
+            "latency_ms": latency_ms,
+            "tokens_prompt": tokens_prompt,
+            "tokens_completion": tokens_completion,
+            "error": error,
+        });
+        let event = PipelineLogEvent {
+            event_type: "inference.metric".to_string(),
+            actor: provider.clone(),
+            scope: model.clone(),
+            source: None,
+            target: None,
+            metadata: metadata.clone(),
+            timestamp: current_timestamp_millis(),
+        };
+        let record =
+            OperationRecord::new(OperationKind::Other, provider, model).with_metadata(metadata);
+
+        self.append_entry(INFERENCE_LOG, event, record)?;
+        Ok(())
     }
 
     fn append_entry(
@@ -1127,6 +1440,17 @@ impl PipelineInstrumentation {
         })
     }
 
+    fn ensure_reward_history(&self) -> Result<(), InstrumentationError> {
+        with_log_lock(|| {
+            if self.reward_history_path.exists() {
+                return Ok(());
+            }
+            let keeper = self.reward_scorekeeper.lock().unwrap();
+            keeper.save()?;
+            Ok(())
+        })
+    }
+
     fn ensure_deployment_report(&self) -> Result<(), InstrumentationError> {
         with_log_lock(|| {
             if self.deployment_report_path.exists() {
@@ -1163,6 +1487,24 @@ impl PipelineInstrumentation {
                 .write(true)
                 .truncate(true)
                 .open(&self.goal_metrics_path)?;
+            file.write_all(payload.as_bytes())?;
+            file.flush()?;
+            file.sync_all()?;
+            Ok(())
+        })
+    }
+
+    fn persist_reward_history(
+        &self,
+        keeper: &RewardScorekeeper,
+    ) -> Result<(), InstrumentationError> {
+        let payload = serde_json::to_string_pretty(keeper.history())?;
+        with_log_lock(|| {
+            let mut file = OpenOptions::new()
+                .create(true)
+                .write(true)
+                .truncate(true)
+                .open(&self.reward_history_path)?;
             file.write_all(payload.as_bytes())?;
             file.flush()?;
             file.sync_all()?;
@@ -1296,6 +1638,7 @@ fn build_merkle_tree(
 impl Clone for PipelineInstrumentation {
     fn clone(&self) -> Self {
         let metrics = self.goal_metrics.lock().unwrap().clone();
+        let reward = self.reward_scorekeeper.lock().unwrap().clone();
         Self {
             index_dir: self.index_dir.clone(),
             mirror_dir: self.mirror_dir.clone(),
@@ -1306,6 +1649,9 @@ impl Clone for PipelineInstrumentation {
             goal_metrics_path: self.goal_metrics_path.clone(),
             deployment_report_path: self.deployment_report_path.clone(),
             goal_metrics: Mutex::new(metrics),
+            metrics_dir: self.metrics_dir.clone(),
+            reward_history_path: self.reward_history_path.clone(),
+            reward_scorekeeper: Mutex::new(reward),
         }
     }
 }
@@ -1351,6 +1697,18 @@ fn load_goal_metrics(path: &PathBuf) -> Result<GoalMetricStore, InstrumentationE
                     );
                 }
                 store.goals.insert(snapshot.goal_id.clone(), aggregate);
+                if snapshot.context_penalty_score > 0.0
+                    || snapshot.context_p95_bytes > 0
+                    || snapshot.context_p95_latency_ms > 0
+                {
+                    let mut context = ContextPenaltyAggregate::new(&snapshot.workflow_id);
+                    context.push_summary(
+                        snapshot.context_penalty_score,
+                        snapshot.context_p95_bytes,
+                        snapshot.context_p95_latency_ms,
+                    );
+                    store.context.insert(snapshot.workflow_id.clone(), context);
+                }
             }
             Ok(store)
         }
@@ -1362,18 +1720,30 @@ mod tests {
     use super::*;
     use serde_json::json;
     use std::collections::HashMap;
+    use std::sync::{Mutex, OnceLock};
     use tempfile::tempdir;
+
+    fn env_lock() -> &'static Mutex<()> {
+        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        LOCK.get_or_init(|| Mutex::new(()))
+    }
 
     struct EnvGuard {
         key: &'static str,
         prev: Option<std::ffi::OsString>,
+        lock: Option<std::sync::MutexGuard<'static, ()>>,
     }
 
     impl EnvGuard {
         fn set(key: &'static str, value: &PathBuf) -> Self {
+            let guard = env_lock().lock().expect("workflow env lock poisoned");
             let prev = std::env::var_os(key);
             std::env::set_var(key, value);
-            Self { key, prev }
+            Self {
+                key,
+                prev,
+                lock: Some(guard),
+            }
         }
     }
 
@@ -1384,6 +1754,7 @@ mod tests {
             } else {
                 std::env::remove_var(self.key);
             }
+            self.lock.take();
         }
     }
 
@@ -1396,8 +1767,8 @@ mod tests {
                 agent: "builder".to_string(),
                 action: "compile".to_string(),
                 parameters: HashMap::from([("target".to_string(), json!({"path": "src/main.rs"}))]),
+                tool_requirements: Vec::new(),
                 agent_role: None,
-                tool_requirements: vec![],
             }],
         }
     }

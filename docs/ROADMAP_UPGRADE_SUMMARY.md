@@ -137,7 +137,8 @@ Self-Hosted  Fallback Container
 docs/projects/
 ├── ROADMAP.md (traditional feature roadmap)
 ├── ROADMAP_AGENTIC_KERNEL.md (agentic evolution plan) ⭐ NEW
-└── roadmap_noa_ark_os.json (machine-readable spec) ⭐ NEW
+├── roadmap_noa_ark_os.json (machine-readable spec) ⭐ NEW
+└── HERMETIC_TARGETS.md (portable/offline target catalog) ⭐ NEW
 ```
 
 ### 2. CI/CD Integration
