@@ -31,7 +31,7 @@ jobs:
         run: cargo run --manifest-path cicd/Cargo.toml --bin rollback_simulation -- --repo . --ledger audit/ledger.jsonl --output audit/rollbacks
 
       - name: Publish audit bundle
-        run: make publish-audit
+        run: bash audit/publish.sh
 
       - name: Verify latest audit bundle
         run: |
