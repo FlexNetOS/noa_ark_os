@@ -1,4 +1,30 @@
-﻿# NOA ARK OS - Portable Development Tools
+# NOA ARK OS - Portable Development Tools
+
+## 🧭 CLI Overview
+
+The workspace ships with `server/tools/dev_env_cli.py`, a cross-platform utility that replaces
+editor-specific `.vscode` profiles. Run it from any terminal to inspect and activate the correct
+Rust toolchain configuration:
+
+```bash
+python server/tools/dev_env_cli.py summary
+```
+
+Use `--format json` when scripting or integrating with CI.
+
+Need to temporarily restore archived IDE assets? Use the CLI `archives`
+commands to list bundles and rebuild the legacy `.devcontainer/` or `.vscode/`
+packages:
+
+```bash
+python server/tools/dev_env_cli.py archives list
+python server/tools/dev_env_cli.py archives restore --bundle devcontainer --mode extract --output .devcontainer
+python server/tools/dev_env_cli.py archives restore --bundle vscode --mode extract --output .vscode
+```
+
+The restore commands write the files to `./.devcontainer` or `./.vscode` (or
+any custom path) so you can opt-in to the legacy experience before removing it
+again.
 
 ## 🌐 Multi-Platform Support
 
@@ -30,7 +56,8 @@ This will:
 **IMPORTANT**: Use PowerShell (not WSL/bash) for the portable Cargo installation.
 
 ```powershell
-# 1. Open PowerShell terminal in VS Code or Windows
+# 1. Review activation steps (optional)
+python server/tools/dev_env_cli.py activate --platform windows
 
 # 2. Navigate to workspace
 cd D:\dev\workspaces\noa_ark_os
@@ -47,8 +74,6 @@ cargo build
 # 6. Run
 cargo run --bin crc-server
 ```
-
-**VS Code Integration**: You can also use Tasks (Ctrl+Shift+P → "Tasks: Run Task" → "Cargo Build (Portable)")
 
 ---
 
@@ -70,6 +95,9 @@ cargo --version
 ### Option 2: Use Windows Portable Cargo
 
 ```bash
+# Inspect CLI guidance (optional)
+python server/tools/dev_env_cli.py activate --platform wsl
+
 # Run activation script
 source ./server/tools/activate-cargo.sh
 
@@ -91,9 +119,56 @@ server/tools/
 │   │   └── rustfmt.exe
 │   └── lib/
 ├── rustup-portable/         # Rustup data
+├── node-portable/           # Portable Node 20 + pnpm 8 toolchain (gitignored)
+│   ├── artifacts/           # Downloaded archives
+│   ├── current/             # Symlink to extracted Node release
+│   └── corepack/            # pnpm asset cache
+├── node-portable.manifest.json # Tracked manifest copy (versions + hashes)
 ├── setup-portable-cargo.ps1 # One-time setup script
+├── setup-portable-node.ps1  # One-time Node setup (Windows)
+├── setup-portable-node.sh   # One-time Node setup (Linux/WSL/macOS)
 └── activate-cargo.ps1       # Activation script (run every session)
+	activate-node.ps1        # Node activation (powershell)
+	activate-node.sh         # Node activation (bash/zsh)
 ```
+
+---
+
+## 🟢 Portable Node + pnpm (HT-01)
+
+Node.js v20.19.5 and pnpm v8.15.4 are mirrored locally so `pnpm`, `node`, and
+`npm` executions never depend on host-level installations.
+
+### Install / Refresh
+
+```bash
+# Linux/WSL/macOS
+./server/tools/setup-portable-node.sh
+```
+
+```powershell
+# Windows PowerShell
+./server/tools/setup-portable-node.ps1
+```
+
+Both scripts download the official Node + pnpm release artifacts, place them in
+`server/tools/node-portable/`, and generate `manifest.json` with SHA-256 hashes
+recorded for evidence tracking.
+
+### Activate per Shell Session
+
+```bash
+source ./server/tools/activate-node.sh
+```
+
+```powershell
+./server/tools/activate-node.ps1
+```
+
+Activation prepends `server/tools/node-portable/current/bin` to `PATH` and
+exports `NOA_NODE_HOME` / `COREPACK_HOME` so all Make targets resolve tooling
+from the hermetic bundle. Combine this with the cargo activation scripts before
+invoking `make`, `pnpm`, or the pipeline tasks.
 
 ---
 
@@ -128,17 +203,18 @@ Remove-Item rustup-init.exe
 
 ## ✅ Verification
 
+Use the CLI doctor command for a quick sanity check before building:
+
+```bash
+python server/tools/dev_env_cli.py doctor
+```
+
+You can still call the binaries directly:
+
 ```powershell
-# After activation, verify:
 cargo --version
-# Should show: cargo 1.75.0 (D:\dev\workspaces\noa_ark_os\server\tools\cargo-portable\bin\cargo.exe)
-
 rustc --version
-# Should show: rustc 1.75.0
-
-# Check location
 where.exe cargo
-# Should show: D:\dev\workspaces\noa_ark_os\server\tools\cargo-portable\bin\cargo.exe
 ```
 
 ---
@@ -160,6 +236,9 @@ We use minimal profile to save space.
 
 # Then update
 rustup update stable
+
+# Refresh CLI summary (optional)
+python server/tools/dev_env_cli.py summary
 ```
 
 ---
@@ -168,9 +247,10 @@ rustup update stable
 
 ### "Cargo not found"
 
-1. Make sure you ran `activate-cargo.ps1` in current session
-2. Check if `cargo.exe` exists at: `server\tools\cargo-portable\bin\cargo.exe`
-3. If missing, run `setup-portable-cargo.ps1` again
+1. Run `python server/tools/dev_env_cli.py doctor` to confirm the activation scripts exist.
+2. Make sure you ran `activate-cargo.ps1` in current session.
+3. Check if `cargo.exe` exists at: `server\tools\cargo-portable\bin\cargo.exe`.
+4. If missing, run `setup-portable-cargo.ps1` again.
 
 ### "Permission denied"
 
@@ -188,6 +268,9 @@ Remove-Item -Recurse -Force server\tools\rustup-portable
 
 # Run setup again
 .\server\tools\setup-portable-cargo.ps1
+
+# Verify with the CLI
+python server/tools/dev_env_cli.py doctor
 ```
 
 ---

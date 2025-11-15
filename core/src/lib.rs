@@ -12,16 +12,20 @@ pub mod config;
 pub mod fs;
 pub mod gateway;
 pub mod hardware;
+pub mod host_control;
 pub mod ipc;
 pub mod kernel;
 pub mod memory;
 pub mod metrics;
 pub mod process;
 pub mod runtime;
+pub mod scorekeeper;
 pub mod security;
 pub mod symbols;
 pub mod time;
+pub mod token;
 pub mod utils;
+pub mod world;
 
 /// Core OS version
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
