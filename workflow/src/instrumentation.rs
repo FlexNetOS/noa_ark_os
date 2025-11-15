@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::fs::{self, OpenOptions};
-use std::io::{ErrorKind, Write};
+use std::io::{BufRead, ErrorKind, Write};
 use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
 
@@ -34,6 +34,17 @@ const GOAL_ANALYTICS_FILE: &str = "goal_kpis.json";
 const METRICS_DIR: &str = "metrics";
 const REWARD_HISTORY_FILE: &str = "reward_history.json";
 const DEPLOYMENT_REPORT_PATH: &str = "docs/reports/AGENT_DEPLOYMENT_OUTCOMES.md";
+const LOG_CHANNELS: [&str; 9] = [
+    RELOCATION_LOG,
+    DOCUMENT_LOG,
+    STAGE_RECEIPT_LOG,
+    TASK_DISPATCH_LOG,
+    AUTO_FIX_LOG,
+    BUDGET_DECISION_LOG,
+    SECURITY_SCAN_LOG,
+    INFERENCE_LOG,
+    PIPELINE_EVENT_LOG,
+];
 
 #[derive(Debug)]
 pub enum InstrumentationError {
@@ -826,6 +837,10 @@ impl PipelineInstrumentation {
         Ok(instrumentation)
     }
 
+    pub fn log_channels() -> &'static [&'static str] {
+        &LOG_CHANNELS
+    }
+
     fn ensure_genesis(
         &self,
         log_name: &str,
@@ -833,64 +848,32 @@ impl PipelineInstrumentation {
     ) -> Result<(), InstrumentationError> {
         with_log_lock(|| {
             let path = self.log_path(log_name);
-            // Try to atomically create the file if it doesn't exist
-            let file_result = OpenOptions::new().write(true).create_new(true).open(&path);
-            match file_result {
-                Ok(mut file) => {
-                    // File was created, write genesis entry
-                    let event = PipelineLogEvent {
-                        event_type: format!("{}::genesis", log_name),
-                        actor: "system/bootstrap".to_string(),
-                        scope: "instrumentation".to_string(),
-                        source: None,
-                        target: None,
-                        metadata: json!({"message": "ledger initialised"}),
-                        timestamp: current_timestamp_millis(),
-                    };
-                    let record =
-                        OperationRecord::new(kind.clone(), "system/bootstrap", "instrumentation")
-                            .with_metadata(json!({"initialised": true}));
-                    let signed = security::enforce_operation(record)?;
-                    let entry = ImmutableLogEntry::new(event, signed, "GENESIS".to_string())?;
-                    // Write the entry directly to the new file
-                    let entry_str = serde_json::to_string(&entry)?;
-                    writeln!(file, "{}", entry_str)?;
-                    Ok(())
-                }
-                Err(ref e) if e.kind() == ErrorKind::AlreadyExists => {
-                    // File already exists, check if it is empty
-                    if let Ok(content) = fs::read_to_string(&path) {
-                        if !content.trim().is_empty() {
-                            return Ok(());
-                        }
-                    }
-                    // File exists but is empty, write genesis entry
-                    let event = PipelineLogEvent {
-                        event_type: format!("{}::genesis", log_name),
-                        actor: "system/bootstrap".to_string(),
-                        scope: "instrumentation".to_string(),
-                        source: None,
-                        target: None,
-                        metadata: json!({"message": "ledger initialised"}),
-                        timestamp: current_timestamp_millis(),
-                    };
-                    let record =
-                        OperationRecord::new(kind.clone(), "system/bootstrap", "instrumentation")
-                            .with_metadata(json!({"initialised": true}));
-                    let signed = security::enforce_operation(record)?;
-                    let entry = ImmutableLogEntry::new(event, signed, "GENESIS".to_string())?;
-                    // Open for appending and check again before writing
-                    let mut file = OpenOptions::new().append(true).open(&path)?;
-                    let content = fs::read_to_string(&path)?;
-                    if !content.trim().is_empty() {
-                        return Ok(());
-                    }
-                    let entry_str = serde_json::to_string(&entry)?;
-                    writeln!(file, "{}", entry_str)?;
-                    Ok(())
-                }
-                Err(e) => Err(InstrumentationError::Io(e)),
+            let needs_genesis = if path.exists() {
+                let content = fs::read_to_string(&path)?;
+                content.trim().is_empty()
+            } else {
+                true
+            };
+
+            if !needs_genesis {
+                return Ok(());
             }
+
+            let event = PipelineLogEvent {
+                event_type: format!("{}::genesis", log_name),
+                actor: "system/bootstrap".to_string(),
+                scope: "instrumentation".to_string(),
+                source: None,
+                target: None,
+                metadata: json!({"message": "ledger initialised"}),
+                timestamp: current_timestamp_millis(),
+            };
+            let record = OperationRecord::new(kind.clone(), "system/bootstrap", "instrumentation")
+                .with_metadata(json!({"initialised": true}));
+            let signed = security::enforce_operation(record)?;
+            let entry = ImmutableLogEntry::new(event, signed, "GENESIS".to_string())?;
+            self.write_entry(log_name, &entry)?;
+            Ok(())
         })
     }
 
@@ -1042,7 +1025,12 @@ impl PipelineInstrumentation {
         rewritten_plan: Option<Value>,
     ) -> Result<BudgetDecisionRecord, InstrumentationError> {
         let timestamp = current_timestamp_millis();
-        let filename = format!("{}-{}-{}-budget.json", timestamp, workflow_id, stage_id.replace('/', "_"));
+        let filename = format!(
+            "{}-{}-{}-budget.json",
+            timestamp,
+            workflow_id,
+            stage_id.replace('/', "_")
+        );
         let snapshot_path = self.budget_guardian_dir.join(filename);
         if let Some(parent) = snapshot_path.parent() {
             fs::create_dir_all(parent)?;
@@ -1070,15 +1058,19 @@ impl PipelineInstrumentation {
             metadata: manifest.clone(),
             timestamp,
         };
-        let record = OperationRecord::new(OperationKind::Other, workflow_id.to_string(), stage_id.to_string())
-            .with_metadata(json!({
-                "tokens_used": tokens_used,
-                "token_limit": token_limit,
-                "latency_ms": latency_ms,
-                "latency_limit": latency_limit,
-                "action": action,
-                "snapshot": snapshot_path.to_string_lossy(),
-            }));
+        let record = OperationRecord::new(
+            OperationKind::Other,
+            workflow_id.to_string(),
+            stage_id.to_string(),
+        )
+        .with_metadata(json!({
+            "tokens_used": tokens_used,
+            "token_limit": token_limit,
+            "latency_ms": latency_ms,
+            "latency_limit": latency_limit,
+            "action": action,
+            "snapshot": snapshot_path.to_string_lossy(),
+        }));
         let signed = self.append_entry(BUDGET_DECISION_LOG, event, record)?;
         let record = BudgetDecisionRecord {
             workflow_id: workflow_id.to_string(),
@@ -1142,12 +1134,13 @@ impl PipelineInstrumentation {
             metadata: manifest.clone(),
             timestamp,
         };
-        let record = OperationRecord::new(OperationKind::Other, fixer.to_string(), target.to_string())
-            .with_metadata(json!({
-                "snapshot": snapshot_path.to_string_lossy(),
-                "plan_digest": simple_hash(&plan_serialised),
-                "policy_digest": simple_hash(&policy_serialised),
-            }));
+        let record =
+            OperationRecord::new(OperationKind::Other, fixer.to_string(), target.to_string())
+                .with_metadata(json!({
+                    "snapshot": snapshot_path.to_string_lossy(),
+                    "plan_digest": simple_hash(&plan_serialised),
+                    "policy_digest": simple_hash(&policy_serialised),
+                }));
         let signed = self.append_entry(AUTO_FIX_LOG, event, record)?;
         let receipt = AutoFixActionReceipt {
             fixer: fixer.to_string(),
@@ -1570,6 +1563,147 @@ impl PipelineInstrumentation {
         }
         Ok(())
     }
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PipelineStorageLayout {
+    pub index_dir: PathBuf,
+    pub mirror_dir: PathBuf,
+}
+
+impl PipelineStorageLayout {
+    pub fn new() -> Self {
+        Self {
+            index_dir: resolve_path(INDEX_DIR),
+            mirror_dir: resolve_path(STORAGE_MIRROR_DIR),
+        }
+    }
+
+    pub fn log_pair(&self, log_name: &str) -> (PathBuf, PathBuf) {
+        let file = format!("{}.log", log_name);
+        (self.index_dir.join(&file), self.mirror_dir.join(&file))
+    }
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum StorageDoctorStatus {
+    Healthy,
+    Degraded,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct LogMirrorReport {
+    pub name: String,
+    pub index_path: String,
+    pub storage_path: String,
+    pub index_exists: bool,
+    pub storage_exists: bool,
+    pub index_genesis: Option<bool>,
+    pub storage_genesis: Option<bool>,
+    pub drift: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct StorageDoctorReport {
+    pub status: StorageDoctorStatus,
+    pub mirrors: Vec<LogMirrorReport>,
+    pub drift: Vec<String>,
+}
+
+impl StorageDoctorReport {
+    pub fn is_healthy(&self) -> bool {
+        self.status == StorageDoctorStatus::Healthy
+    }
+}
+
+pub fn run_storage_doctor() -> Result<StorageDoctorReport, InstrumentationError> {
+    let layout = PipelineStorageLayout::new();
+    let mut mirrors = Vec::new();
+    let mut drift_channels = Vec::new();
+    let mut healthy = true;
+
+    for log_name in PipelineInstrumentation::log_channels() {
+        let (index_path, storage_path) = layout.log_pair(log_name);
+        let index_exists = index_path.exists();
+        let storage_exists = storage_path.exists();
+
+        let index_genesis = if index_exists {
+            Some(first_entry_is_genesis(&index_path, log_name)?)
+        } else {
+            None
+        };
+        let storage_genesis = if storage_exists {
+            Some(first_entry_is_genesis(&storage_path, log_name)?)
+        } else {
+            None
+        };
+
+        let drift = if index_exists && storage_exists {
+            fs::read_to_string(&index_path)? != fs::read_to_string(&storage_path)?
+        } else {
+            false
+        };
+
+        if drift {
+            drift_channels.push(log_name.to_string());
+        }
+
+        if !index_exists
+            || !storage_exists
+            || index_genesis != Some(true)
+            || storage_genesis != Some(true)
+            || drift
+        {
+            healthy = false;
+        }
+
+        mirrors.push(LogMirrorReport {
+            name: log_name.to_string(),
+            index_path: index_path.to_string_lossy().to_string(),
+            storage_path: storage_path.to_string_lossy().to_string(),
+            index_exists,
+            storage_exists,
+            index_genesis,
+            storage_genesis,
+            drift,
+        });
+    }
+
+    Ok(StorageDoctorReport {
+        status: if healthy {
+            StorageDoctorStatus::Healthy
+        } else {
+            StorageDoctorStatus::Degraded
+        },
+        mirrors,
+        drift: drift_channels,
+    })
+}
+
+fn first_entry_is_genesis(path: &PathBuf, log_name: &str) -> Result<bool, InstrumentationError> {
+    let file = std::fs::File::open(path)?;
+    let reader = std::io::BufReader::new(file);
+    for line in reader.lines() {
+        let line = line?;
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        let value: serde_json::Value = serde_json::from_str(trimmed)?;
+        let event_type = value
+            .get("event")
+            .and_then(|event| event.get("event_type"))
+            .and_then(|v| v.as_str())
+            .unwrap_or_default();
+        let previous_hash = value
+            .get("previous_hash")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default();
+        let expected_event = format!("{}::genesis", log_name);
+        return Ok(event_type == expected_event && previous_hash == "GENESIS");
+    }
+    Ok(false)
 }
 
 fn log_write_lock() -> &'static Mutex<()> {

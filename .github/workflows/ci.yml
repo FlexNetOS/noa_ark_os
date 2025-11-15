@@ -55,6 +55,11 @@ jobs:
           node --version
           pnpm --version
 
+      - name: Run storage doctor
+        run: cargo run --bin noa -- storage doctor
+        env:
+          NOA_WORKFLOW_ROOT: ${{ github.workspace }}
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Verify provider instruction pointers
