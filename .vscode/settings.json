@@ -256,5 +256,8 @@
     "eval": false,
     "Invoke-Expression": false,
     "iex": false
-  }
+  },
+  "githubIssues.alwaysPromptForNewIssueRepo": true,
+  "githubPullRequests.experimental.useQuickChat": true,
+  "githubPullRequests.notifications": "pullRequests"
 }

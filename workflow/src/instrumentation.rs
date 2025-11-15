@@ -2,7 +2,6 @@ use crate::reward::{
     AgentApprovalStatus, AgentStandingSummary, RewardAgentSnapshot, RewardInputs, RewardScorekeeper,
 };
 use crate::{reward::RewardError, Stage, StageType, Task, TaskDispatchReceipt};
-use crate::{Stage, StageType, Task, TaskDispatchReceipt};
 use chrono::Utc;
 use noa_core::security::{self, OperationKind, OperationRecord, SignedOperation};
 use noa_core::utils::{current_timestamp_millis, simple_hash};
@@ -843,6 +842,7 @@ impl PipelineInstrumentation {
                 .with_context(Some(actor.to_string()), Some(subject.to_string()))
                 .with_metadata(metadata);
         self.append_entry(PIPELINE_EVENT_LOG, event, record)
+    }
     pub fn record_deployment_outcome(
         &self,
         record: DeploymentOutcomeRecord,
@@ -929,6 +929,8 @@ impl PipelineInstrumentation {
     pub fn flagged_agents(&self) -> Vec<AgentStandingSummary> {
         let keeper = self.reward_scorekeeper.lock().unwrap();
         keeper.flagged_agents()
+    }
+
     pub fn log_inference_metric(
         &self,
         metric: InferenceMetric,
@@ -1029,6 +1031,10 @@ impl PipelineInstrumentation {
             }
             let keeper = self.reward_scorekeeper.lock().unwrap();
             keeper.save()?;
+            Ok(())
+        })
+    }
+
     fn ensure_deployment_report(&self) -> Result<(), InstrumentationError> {
         with_log_lock(|| {
             if self.deployment_report_path.exists() {
@@ -1333,7 +1339,6 @@ mod tests {
                 parameters: HashMap::from([("target".to_string(), json!({"path": "src/main.rs"}))]),
                 tool_requirements: Vec::new(),
                 agent_role: None,
-                tool_requirements: vec![],
             }],
         }
     }

@@ -360,7 +360,8 @@ impl RewardScorekeeper {
 
     fn rebuild_standings(&mut self) {
         self.standings.clear();
-        for delta in &self.history {
+        let history = self.history.clone();
+        for delta in &history {
             self.update_standings(delta);
         }
     }
@@ -386,7 +387,7 @@ impl RewardScorekeeper {
 
     fn requires_manual_approval_for(&self, standing: &AgentStanding) -> bool {
         standing.total_reward < self.config.gating_threshold
-            || standing.recent_average() < self.config.gating_recent_threshold
+            && standing.recent_average() < self.config.gating_recent_threshold
     }
 }
 

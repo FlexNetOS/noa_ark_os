@@ -2483,28 +2483,13 @@ mod tests {
         register_sample_symbol(&gateway, "analytics.primary");
         register_sample_symbol(&gateway, "analytics.secondary");
 
-        let connectors = gateway.connectors_read().unwrap();
-        let provider = connectors
-            .values()
-            .next()
-            .map(|record| record.provider_id.clone())
-            .expect("connector provider available");
-        drop(connectors);
-
-        gateway
-            .update_reliability_feed(ReliabilityFeed {
-                provider_id: provider,
         let provider_id = gateway
             .connectors_read()
             .expect("connectors accessible")
             .values()
             .next()
-            .map(|record| record.provider_id.clone());
-        assert!(
-            provider_id.is_some(),
-            "Test requires at least one connector in the registry"
-        );
-        let provider_id = provider_id.unwrap();
+            .map(|record| record.provider_id.clone())
+            .expect("connector provider available");
 
         gateway
             .update_reliability_feed(ReliabilityFeed {
