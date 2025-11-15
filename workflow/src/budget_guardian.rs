@@ -223,26 +223,26 @@ impl BudgetGuardian {
     }
 
     fn extract_token_count(&self, map: &serde_json::Map<String, Value>) -> Option<f64> {
-        for (key, value) in map {
+        // Use find_map to return early on first match for "token" in key
+        map.iter().find_map(|(key, value)| {
             if key.to_lowercase().contains("token") {
-                if let Some(num) = numeric(value) {
-                    return Some(num);
-                }
+                numeric(value)
+            } else {
+                None
             }
-        }
-        None
+        })
     }
 
     fn extract_latency(&self, map: &serde_json::Map<String, Value>) -> Option<f64> {
-        for (key, value) in map {
+        // Use find_map to return early on first match for "latency" or "duration" in key
+        map.iter().find_map(|(key, value)| {
             let key_lower = key.to_lowercase();
             if key_lower.contains("latency") || key_lower.contains("duration") {
-                if let Some(num) = numeric(value) {
-                    return Some(num);
-                }
+                numeric(value)
+            } else {
+                None
             }
-        }
-        None
+        })
     }
 }
 
