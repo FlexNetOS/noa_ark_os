@@ -18,17 +18,36 @@ storage/analytics/
     crc_throughput.parquet
     deployment_frequency.parquet
     agent_efficiency.parquet
+    goal_metrics.jsonl
   models/
     crc_throughput.sql
     deployment_frequency.sql
     agent_efficiency.sql
   views/
     ui_value_stream.json
+  raw/
+    workflow_events.jsonl
 ```
 
-- **`pipelines/`**: materialized metric outputs produced by nightly and real-time aggregators.
+- **`pipelines/`**: materialized metric outputs produced by nightly and real-time aggregators (see refresh cadence below).
 - **`models/`**: SQL or DSL templates defining aggregations (dbt or kernel-native query syntax).
 - **`views/`**: UI composition metadata describing dashboard layouts, thresholds, and drill-down routes.
+- **`raw/`**: source workflow and telemetry events consumed by materializers.
+
+## Refresh Cadence
+
+The analytics surfaces are regenerated nightly by the `workflow/cron/analytics_materializer.py` job, fulfilling
+[`AGENTOS-3`](../../docs/plans/gap_remediation_tasks.md#task-agentos-3). The materializer reads
+`storage/analytics/raw/workflow_events.jsonl`, writes the canonical snapshot to
+`storage/db/analytics/goal_kpis.json`, and mirrors the same payload to
+`storage/analytics/pipelines/goal_metrics.jsonl` for downstream tools. Operators can re-run the job on-demand via:
+
+```bash
+python -m workflow.cron.analytics_materializer
+```
+
+When running manually, ensure fresh workflow events are available. Dashboards reference the resulting outputs with a
+24-hour SLA; if a refresh fails, update the gap remediation tracker with the root cause and next scheduled run.
 
 ## Aggregation Logic
 

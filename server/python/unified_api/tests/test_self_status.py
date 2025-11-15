@@ -39,6 +39,12 @@ def telemetry_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
             "successful_runs": 8,
             "average_lead_time_ms": 45_000,
             "success_rate": 0.8,
+            "context_penalty_score": 0.2,
+            "context_p95_bytes": 24_000,
+            "context_p95_latency_ms": 180,
+            "reward_total": 12.5,
+            "reward_average": 1.25,
+            "reward_recent": 1.0,
         },
         {
             "goal_id": "goal-2",
@@ -47,6 +53,12 @@ def telemetry_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
             "successful_runs": 1,
             "average_lead_time_ms": 150_000,
             "success_rate": 0.5,
+            "context_penalty_score": 0.4,
+            "context_p95_bytes": 64_000,
+            "context_p95_latency_ms": 240,
+            "reward_total": -1.0,
+            "reward_average": -0.5,
+            "reward_recent": -0.5,
         },
     ]
     (tmp_path / "storage/db/analytics/goal_kpis.json").write_text(
@@ -69,6 +81,10 @@ def test_aggregator_collects_status(telemetry_root: Path) -> None:
     assert len(status.drift) == 1
     assert any(offender.goal_id == "goal-2" for offender in status.budget_offenders)
     assert status.telemetry["gateway"]["total_requests"] == 4
+    metrics = status.telemetry["goal_metrics"]
+    assert metrics["goal_count"] == 2
+    assert metrics["total_reward"] == pytest.approx(11.5)
+    assert metrics["max_context_p95_bytes"] == 64_000
 
 
 def test_self_status_endpoint_uses_aggregator(telemetry_root: Path, monkeypatch: pytest.MonkeyPatch) -> None:
