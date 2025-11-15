@@ -50,9 +50,9 @@ ifneq ($(RUST_ANALYZER_CHECK_COMMAND),)
 export RUST_ANALYZER_CHECK_COMMAND := $(RUST_ANALYZER_CHECK_COMMAND)
 endif
 
-.PHONY: build test digest run ci-local lint typecheck format
+.PHONY: build test digest run ci-local-full lint typecheck format
 .PHONY: pipeline.local world-verify world-fix kernel snapshot rollback verify publish-audit rollback-sim setup
-.PHONY: build test digest run ci-local lint typecheck format docs:check
+.PHONY: build test digest run ci-local-full lint typecheck format docs:check
 PYTHON ?= python3
 BASE_REF ?= origin/main
 
@@ -92,7 +92,7 @@ ACTIVATION_CHECK := \
 		exit 1; \
 	fi
 
-.PHONY: deps build test digest run ci-local lint typecheck format
+.PHONY: deps build test digest run ci-local-full ci-local lint typecheck format
 
 # Snapshot configuration (retained from local-first pipeline additions)
 SNAPSHOT_ARCHIVE_ROOT ?= archive
@@ -138,8 +138,8 @@ typecheck: deps
 docs:check:
 	$(PNPM) docs:lint
 
-ci-local: lint typecheck format docs:check test
-ci-core: lint typecheck format test
+ci-local-full: lint typecheck format docs:check test
+ci-local: lint typecheck format test
 
 run: deps
 	@set -euo pipefail; \
