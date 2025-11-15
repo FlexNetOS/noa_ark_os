@@ -890,6 +890,8 @@ fn register_workflow_verifier(engine: &WorkflowEngine) {
 }
     #[test]
     fn test_workflow_creation() {
+        let dir = tempdir().unwrap();
+        let _guard = EnvGuard::set("NOA_WORKFLOW_ROOT", dir.path());
         let workflow = Workflow {
             name: "test".to_string(),
             version: "1.0".to_string(),
