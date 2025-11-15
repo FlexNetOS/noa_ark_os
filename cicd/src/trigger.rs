@@ -675,12 +675,20 @@ impl TriggerManager {
             .strip_prefix("refs/remotes/origin/")
             .unwrap_or(source_ref);
 
-        let _ = self
+        if self
             .run_git_command_optional(repo_root, &["fetch", "origin", integration_branch])
-            .await?;
-        let _ = self
+            .await?
+            .is_none()
+        {
+            warn!("Failed to fetch integration branch '{}'", integration_branch);
+        }
+        if self
             .run_git_command_optional(repo_root, &["fetch", "origin", source_short])
-            .await?;
+            .await?
+            .is_none()
+        {
+            warn!("Failed to fetch source branch '{}'", source_short);
+        }
 
         let base_commit = self
             .run_git_command(repo_root, &["merge-base", integration_branch, source_ref])
