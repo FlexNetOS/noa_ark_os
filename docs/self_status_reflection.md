@@ -28,6 +28,9 @@ GET /api/v1/self/status
   score falls below the configured threshold (default: `0.70`).
 * Every repair attempt writes an audit entry to
   `storage/logs/self_repair_audit.jsonl`, capturing trust signals and outcomes.
+* Scorekeeper trust evaluations are appended to
+  `storage/logs/trust_evaluations.jsonl`, keeping reward deltas aligned with the
+  recorded capability, integrity, and reversibility signals.
 * Snapshot directories under `storage/snapshots/self_repair/` are created before
   executing a plan so that rollbacks can restore previous state quickly.
 
@@ -57,6 +60,9 @@ asyncio.run(planner.run_once())
    `storage/db/analytics/goal_kpis.json`.
 3. **Gateway metrics** – Exported from `storage/telemetry/gateway_metrics.json`
    by the gateway telemetry sink.
+4. **Budget Guardian summary** – Maintained at
+   `storage/db/budget_guardian/rolling_summary.json` containing rolling token
+   and latency percentiles for quick budget regression detection.
 
 These artifacts already exist in the repository and the aggregator only reads
 them, keeping the new surfaces offline-first and auditable.

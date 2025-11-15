@@ -17,6 +17,9 @@ from typing import Any, Dict, List, Optional
 
 DRIFT_REPORT_PATH = Path("cicd/ml/reports/drift_report.jsonl")
 GOAL_METRICS_PATH = Path("storage/db/analytics/goal_kpis.json")
+BUDGET_GUARDIAN_SUMMARY_PATH = Path(
+    "storage/db/budget_guardian/rolling_summary.json"
+)
 GATEWAY_METRICS_PATH = Path("storage/telemetry/gateway_metrics.json")
 
 
@@ -79,6 +82,7 @@ class SelfStatusAggregator:
         telemetry = {
             "gateway": self._load_gateway_metrics(),
             "goal_metrics": self._summarise_goal_metrics(goal_metrics),
+            "budget_guardian": self._load_budget_guardian_summary(),
         }
         return SelfStatus(
             drift=drift,
@@ -146,6 +150,24 @@ class SelfStatusAggregator:
         if isinstance(payload, list):
             return [self._normalise_goal_snapshot(item) for item in payload]
         return []
+
+    def _load_budget_guardian_summary(self) -> Dict[str, Any]:
+        summary_path = self.repo_root / BUDGET_GUARDIAN_SUMMARY_PATH
+        if not summary_path.exists():
+            return {}
+        try:
+            raw = summary_path.read_text(encoding="utf-8")
+        except OSError:
+            return {}
+        if not raw.strip():
+            return {}
+        try:
+            payload = json.loads(raw)
+        except json.JSONDecodeError:
+            return {}
+        if isinstance(payload, dict):
+            return payload
+        return {"raw": payload}
 
     def _normalise_goal_snapshot(self, item: Dict[str, Any]) -> Dict[str, Any]:
         return {
