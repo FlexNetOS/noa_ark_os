@@ -351,7 +351,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--incident-root",
         type=Path,
         default=INCIDENT_ROOT,
-        help="Where to store incident artefacts.",
+        help="Where to store incident artifacts.",
     )
     parser.add_argument(
         "--remediation-cli",
