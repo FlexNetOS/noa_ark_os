@@ -130,7 +130,12 @@ function renderPwsh(config) {
   }
   const aliases = config.pnpm?.aliases || {};
   Object.entries(aliases).forEach(([alias, command]) => {
-    lines.push(`Set-Alias -Name ${alias} -Value "${command}" -Force`);
+    // If the command is a single word (no whitespace), use Set-Alias; otherwise, define a function
+    if (/^[\w.-]+$/.test(command)) {
+      lines.push(`Set-Alias -Name ${alias} -Value ${command} -Force`);
+    } else {
+      lines.push(`function ${alias} { ${command} $args }`);
+    }
   });
   return lines.join('\n');
 }
