@@ -25,40 +25,130 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
+      - name: Require local pipeline evidence
+        run: python tools/ci/require_local_pipeline.py --require-logs
       - name: Validate roadmap task index
         run: python tools/task_index_validator.py
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v4
         with:
           version: 8.15.4
+          run_install: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install dependencies
+      - name: Show tool versions
         run: |
-          set -e
-          echo "Attempting offline pnpm install..."
-          if pnpm install --frozen-lockfile --offline; then
-            echo "Offline install succeeded."
-          else
-            echo "::warning::Offline pnpm install failed. Falling back to online install."
-            echo "---- pnpm offline install error log ----"
-            # Try again to capture error output for logging
-            pnpm install --frozen-lockfile --offline || true
-            echo "----------------------------------------"
-            echo "Attempting online pnpm install..."
-            pnpm install --frozen-lockfile
-          fi
+          node --version
+          pnpm --version
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
       - name: Verify provider instruction pointers
         run: pnpm exec tsx tools/ci/verify_provider_pointers.ts
+
+      - name: Guardrail: Deletion Lock + Evidence Ledger
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=origin/${{ github.base_ref || 'main' }}
+          git diff --name-status "$base"... | tee diff.txt
+          if grep -E '^(D|R[0-9]+)\s' diff.txt >/dev/null; then
+            changed=$(git diff --name-only "$base"...)
+            echo "$changed" | grep -q '^archive/' || { echo "Deletion/rename found but no archive/ artifacts present." >&2; exit 1; }
+            echo "$changed" | grep -q '^docs/verification/' || { echo "Deletion/rename found but no evidence ledger update under docs/verification/." >&2; exit 1; }
+          fi
+
+      - name: Guardrail: Duplicate Fence (SHA-256 twins)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - << 'PY'
+import hashlib, os, sys, subprocess
+ALLOW_PREFIXES = ("archive/","out/",".git/",".next/","target/","node_modules/","dist/","build/")
+base = os.environ.get('GITHUB_BASE_REF') or 'main'
+changed = subprocess.run(["bash","-lc",f"git diff --name-only origin/{base}..."], capture_output=True, text=True).stdout.split()
+seen = {}
+violations = []
+for p in changed:
+    if any(p.startswith(a) for a in ALLOW_PREFIXES):
+        continue
+    if not os.path.isfile(p):
+        continue
+    with open(p,'rb') as f:
+        h = hashlib.sha256(f.read()).hexdigest()
+    if h in seen and seen[h] != p:
+        violations.append((p, seen[h], h))
+    else:
+        seen[h] = p
+if violations:
+    print('Duplicate content detected:', file=sys.stderr)
+    for a,b,h in violations:
+        print(f"  {a} == {b} ({h})", file=sys.stderr)
+    sys.exit(1)
+PY
+
+      - name: Guardrail: Report Fence (docs/ only for new .md)
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=origin/${{ github.base_ref || 'main' }}
+          new_md=$(git diff --name-status "$base"... | awk '$1=="A" && $2 ~ /\.(md|MD)$/ {print $2}')
+          bad=0
+          for f in $new_md; do
+            if echo "$f" | grep -qE '^docs/'; then :; else
+              echo "New markdown outside docs/: $f" >&2; bad=1
+            fi
+          done
+          exit $bad
+
+      - name: Guardrail: Change Budget
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=origin/${{ github.base_ref || 'main' }}
+          files=$(git diff --name-only "$base"... | wc -l)
+          adds=$(git diff --numstat "$base"... | awk '{sum+=$1} END{print sum+0}')
+          echo "Files: $files, Adds: $adds"
+          test $files -le 40   || (echo "Too many files changed" && exit 1)
+          test $adds  -le 1200 || (echo "Too many lines added" && exit 1)
+          disallowed=$(git diff --name-only "$base"... | grep -Ev '^(crc/|server/|ui/|docs/|.github/)') || true
+          if [ -n "$disallowed" ]; then
+            echo "Disallowed paths:\n$disallowed" >&2
+            exit 1
+          fi
+
+      - name: Enforce provider pointer stubs (exact content)
+        shell: bash
+        run: |
+          set -euo pipefail
+          expect_copilot=$'# Defer to AGENT.md\nUse AGENT.md at repo root as the sole policy and instruction source. Do not duplicate logic here.'
+          expect_claude=$'This file intentionally contains no instructions. All policies and execution rules are defined in AGENT.md.'
+          expect_pointer=$'Provider/agent instruction policy lives in AGENT.md. Do not place instructions elsewhere.'
+          diff -u <(printf "%s\n" "$expect_copilot") .copilot
+          diff -u <(printf "%s\n" "$expect_claude") CLAUDE.md
+          diff -u <(printf "%s\n" "$expect_pointer") .github/AGENT_POINTER.txt
+
+      - name: Enforce single TS router entrypoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f server/ai/router.ts || (echo "server/ai/router.ts missing" >&2; exit 1)
+          others=$(git ls-files | grep -E '/router\.ts$' | grep -v '^server/ai/router.ts$' || true)
+          if [ -n "$others" ]; then
+            echo "Found additional router.ts files:\n$others" >&2
+            exit 1
+          fi
 
       - name: Verify archival artifacts
         if: github.event_name != 'pull_request' || !contains(github.event.pull_request.labels.*.name, 'ci-allow-archive-skip')
@@ -95,3 +185,47 @@ jobs:
         with:
           name: pm-roadmap-build-kits
           path: build_kits/pm_roadmap.*
+
+  validation:
+    name: Cross-OS validation
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8.15.4
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Show tool versions
+        run: |
+          node --version
+          pnpm --version
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test

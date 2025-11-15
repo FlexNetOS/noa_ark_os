@@ -20,11 +20,7 @@ async fn dag_seed_produces_checkpoint_artifact() -> Result<()> {
     let mut snapshot_found = false;
     for entry in std::fs::read_dir(&checkpoint_dir)? {
         let entry = entry?;
-        if entry
-            .file_name()
-            .to_string_lossy()
-            .starts_with("snapshot-")
-        {
+        if entry.file_name().to_string_lossy().starts_with("snapshot-") {
             snapshot_found = true;
             break;
         }

@@ -1,6 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 
+import { logError, logInfo, logWarn } from "@noa-ark/shared-ui/logging";
 import {
   DEFAULT_CAPABILITY_REGISTRY,
   type CapabilityRegistry,
@@ -38,10 +39,13 @@ async function loadCapabilityRegistryFromDisk(): Promise<CapabilityRegistry> {
     return normalizeCapabilityRegistry(parsed);
   } catch (error) {
     if (!isNodeError(error) || error.code !== "ENOENT") {
-      console.warn(
-        `Failed to load capability registry from ${CAPABILITY_REGISTRY_PATH}:`,
-        error
-      );
+      logWarn({
+        component: "capability.registry",
+        event: "registry_load_failed",
+        message: `Failed to load capability registry from ${CAPABILITY_REGISTRY_PATH}`,
+        outcome: "fallback",
+        error,
+      });
     }
     return cloneDefaultRegistry();
   }
@@ -55,7 +59,13 @@ function ensureLoadPromise(): Promise<CapabilityRegistry> {
         return registry;
       })
       .catch((error) => {
-        console.error("Unexpected capability registry failure", error);
+        logError({
+          component: "capability.registry",
+          event: "registry_initialization_failed",
+          message: "Unexpected capability registry failure",
+          outcome: "fallback",
+          error,
+        });
         cachedRegistry = cloneDefaultRegistry();
         return cachedRegistry;
       });
@@ -88,5 +98,20 @@ export function __resetCapabilityRegistryCacheForTests(): void {
 
 // Log capability registry initialization status at module load time
 ensureLoadPromise()
-  .then(() => console.log('Capability registry loaded'))
-  .catch(() => console.warn('Capability registry initialization deferred'));
+  .then(() => {
+    logInfo({
+      component: "capability.registry",
+      event: "registry_ready",
+      message: "Capability registry loaded",
+      outcome: "success",
+    });
+  })
+  .catch((error) => {
+    logWarn({
+      component: "capability.registry",
+      event: "registry_deferred",
+      message: "Capability registry initialization deferred",
+      outcome: "degraded",
+      error,
+    });
+  });

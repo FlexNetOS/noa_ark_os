@@ -14,14 +14,13 @@ use noa_crc::engine::Engine;
 use noa_crc::graph::{CRCGraph, GraphNode, NodeKind};
 use noa_crc::ir::Lane;
 use noa_crc::parallel::ParallelDropProcessor;
+use noa_crc::telemetry;
 use noa_crc::transform::{execute_plan, DummyVerifier, FileReplacePlan, TransformPlan};
 use noa_crc::watcher::spawn_watcher;
 use noa_crc::{CRCConfig, CRCSystem};
 use serde::Deserialize;
 use serde_json::json;
 use tokio::fs as async_fs;
-use tracing::{error, info};
-use tracing_subscriber;
 use walkdir::WalkDir;
 
 #[derive(Parser)]
@@ -122,16 +121,7 @@ enum GraphCommand {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::from_default_env()
-                .add_directive("noa_crc=debug".parse()?)
-                .add_directive("info".parse()?),
-        )
-        .with_target(false)
-        .with_thread_ids(true)
-        .with_line_number(true)
-        .init();
+    telemetry::init();
 
     let cli = Cli::parse();
     match cli.command {
@@ -150,7 +140,18 @@ async fn cas_cli(args: CasArgs) -> Result<(), Box<dyn std::error::Error>> {
         CasCommand::Put { input } => {
             let bytes = async_fs::read(&input).await?;
             let hash = cas.put_bytes(&bytes)?;
-            println!("{hash}");
+            telemetry::info(
+                "crc.cas",
+                "put",
+                "Stored bytes in CAS",
+                "success",
+                None,
+                Some(json!({
+                    "input": input,
+                    "hash": hash,
+                    "size": bytes.len()
+                })),
+            );
         }
         CasCommand::Get { hash, output } => {
             let bytes = cas.get(&hash)?;
@@ -159,24 +160,56 @@ async fn cas_cli(args: CasArgs) -> Result<(), Box<dyn std::error::Error>> {
                     async_fs::create_dir_all(parent).await?;
                 }
                 async_fs::write(&path, &bytes).await?;
-                println!("{}", path.display());
+                telemetry::info(
+                    "crc.cas",
+                    "get_to_path",
+                    "Materialized CAS object to disk",
+                    "success",
+                    None,
+                    Some(json!({
+                        "hash": hash,
+                        "output": path,
+                        "size": bytes.len()
+                    })),
+                );
             } else {
                 use base64::engine::general_purpose::STANDARD_NO_PAD;
                 use base64::Engine;
-                println!("{}", STANDARD_NO_PAD.encode(&bytes));
+                let encoded = STANDARD_NO_PAD.encode(&bytes);
+                telemetry::info(
+                    "crc.cas",
+                    "get_to_stdout",
+                    "Returned CAS object as base64",
+                    "success",
+                    None,
+                    Some(json!({ "hash": hash, "base64": encoded })),
+                );
             }
         }
         CasCommand::Stat { hash } => {
             let entry = cas.stat(&hash)?;
-            let serialized = serde_json::to_string_pretty(&entry)?;
-            println!("{serialized}");
+            telemetry::info(
+                "crc.cas",
+                "stat",
+                "Reported CAS object metadata",
+                "success",
+                None,
+                Some(json!({ "hash": hash, "entry": entry })),
+            );
         }
     }
     Ok(())
 }
 
 async fn run_service() -> Result<(), Box<dyn std::error::Error>> {
-    info!("Starting CRC service");
+    let trace_id = telemetry::info(
+        "crc.cli",
+        "service_start",
+        "Starting CRC service",
+        "started",
+        None,
+        None,
+    );
     verify_directory_structure()?;
     let config = load_config();
     let crc_system = CRCSystem::new(config.clone());
@@ -185,21 +218,50 @@ async fn run_service() -> Result<(), Box<dyn std::error::Error>> {
 
     tokio::select! {
         result = watcher_handle => {
-            error!("File watcher stopped unexpectedly: {:?}", result);
+            telemetry::error(
+                "crc.cli",
+                "watcher_stopped",
+                "File watcher stopped unexpectedly",
+                "failed",
+                Some(&trace_id),
+                Some(json!({ "error": format!("{result:?}") })),
+            );
         }
         result = processor.start_processing() => {
-            error!("Processor stopped unexpectedly: {:?}", result);
+            telemetry::error(
+                "crc.cli",
+                "processor_stopped",
+                "Processor stopped unexpectedly",
+                "failed",
+                Some(&trace_id),
+                Some(json!({ "error": format!("{result:?}") })),
+            );
         }
         _ = tokio::signal::ctrl_c() => {
-            info!("Shutdown signal received");
+            telemetry::info(
+                "crc.cli",
+                "shutdown_signal",
+                "Shutdown signal received",
+                "pending",
+                Some(&trace_id),
+                None,
+            );
         }
     }
 
-    info!("CRC service stopped cleanly");
+    telemetry::info(
+        "crc.cli",
+        "service_stop",
+        "CRC service stopped cleanly",
+        "success",
+        Some(&trace_id),
+        None,
+    );
     Ok(())
 }
 
 async fn run_once(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
+    let trace_id = telemetry::new_trace_id();
     let mut graph = CRCGraph::new();
     let analyze = graph.add_node(GraphNode::new("analyze", NodeKind::Analyze, Lane::Fast));
     let decide = graph.add_node(GraphNode::new("decide", NodeKind::Decide, Lane::Fast));
@@ -212,16 +274,31 @@ async fn run_once(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
     let _ = graph.add_edge(&verify, &persist);
 
     if let Some(plan) = args.plan {
-        info!("Using plan hint: {}", plan.display());
+        telemetry::info(
+            "crc.cli",
+            "plan_hint",
+            "Using plan hint",
+            "observed",
+            Some(&trace_id),
+            Some(json!({ "plan": plan })),
+        );
     }
 
     let engine = Engine::new(graph);
     let summary = engine.run(&args.checkpoint).await?;
-    info!("Executed {} nodes", summary.executed.len());
+    telemetry::info(
+        "crc.cli",
+        "plan_executed",
+        "Executed plan nodes",
+        "success",
+        Some(&trace_id),
+        Some(json!({ "executed": summary.executed.len(), "checkpoint": args.checkpoint })),
+    );
     Ok(())
 }
 
 async fn ingest(args: IngestArgs) -> Result<(), Box<dyn std::error::Error>> {
+    let trace_id = telemetry::new_trace_id();
     let digestors: Vec<Box<dyn Digestor>> = vec![
         Box::new(GitDigestor::default()),
         Box::new(ConfigDigestor),
@@ -254,7 +331,16 @@ async fn ingest(args: IngestArgs) -> Result<(), Box<dyn std::error::Error>> {
         async_fs::create_dir_all(parent).await?;
     }
     async_fs::write(&args.report, serde_json::to_vec_pretty(&report)?).await?;
-    info!("Ingest report written to {}", args.report.display());
+    telemetry::info(
+        "crc.cli",
+        "ingest_report",
+        "Ingest report written",
+        "success",
+        Some(&trace_id),
+        Some(
+            json!({ "report_path": args.report, "asset_count": assets.len(), "coverage": coverage }),
+        ),
+    );
     Ok(())
 }
 
@@ -295,7 +381,18 @@ async fn migrate(args: MigrateArgs) -> Result<(), Box<dyn std::error::Error>> {
             transform.rollback(&args.root)?;
         }
     }
-    info!("migration outcomes: {}", outcomes.len());
+    let plan_ids: Vec<String> = outcomes.keys().cloned().collect();
+    telemetry::info(
+        "crc.migrate",
+        "plan_executed",
+        "Executed migration plans",
+        "success",
+        None,
+        Some(json!({
+            "count": outcomes.len(),
+            "plans": plan_ids
+        })),
+    );
     Ok(())
 }
 
@@ -313,28 +410,64 @@ async fn graph(args: GraphArgs) -> Result<(), Box<dyn std::error::Error>> {
 
     match args.command {
         GraphCommand::Ls => {
-            for node in graph.nodes() {
-                println!("{}\t{:?}\t{:?}", node.name, node.kind, node.lane);
-            }
+            let nodes: Vec<_> = graph
+                .nodes()
+                .map(|node| {
+                    json!({
+                        "name": node.name.clone(),
+                        "kind": format!("{:?}", node.kind),
+                        "lane": format!("{:?}", node.lane)
+                    })
+                })
+                .collect();
+            telemetry::info(
+                "crc.graph",
+                "list",
+                "Listed CRC graph nodes",
+                "success",
+                None,
+                Some(json!({ "nodes": nodes })),
+            );
         }
         GraphCommand::Show { node } => {
-            for graph_node in graph.nodes() {
-                if graph_node.name == node {
-                    println!(
-                        "Node {} => kind={:?} lane={:?}",
-                        graph_node.name, graph_node.kind, graph_node.lane
-                    );
-                }
+            if let Some(graph_node) = graph.nodes().find(|n| n.name == node) {
+                telemetry::info(
+                    "crc.graph",
+                    "show",
+                    "Displayed CRC graph node",
+                    "success",
+                    None,
+                    Some(json!({
+                        "name": graph_node.name.clone(),
+                        "kind": format!("{:?}", graph_node.kind),
+                        "lane": format!("{:?}", graph_node.lane)
+                    })),
+                );
+            } else {
+                telemetry::warn(
+                    "crc.graph",
+                    "show_missing",
+                    "Requested node not found",
+                    "not_found",
+                    None,
+                    Some(json!({ "node": node })),
+                );
             }
         }
         GraphCommand::Trace { node } => {
             let topo = graph.topo_order()?;
-            println!("trace for {}", node);
-            for id in topo {
-                if let Some(graph_node) = graph.node(&id) {
-                    println!(" - {}", graph_node.name);
-                }
-            }
+            let trace: Vec<_> = topo
+                .into_iter()
+                .filter_map(|id| graph.node(&id).map(|graph_node| graph_node.name.clone()))
+                .collect();
+            telemetry::info(
+                "crc.graph",
+                "trace",
+                "Generated CRC graph trace",
+                "success",
+                None,
+                Some(json!({ "target": node, "trace": trace })),
+            );
         }
     }
     Ok(())

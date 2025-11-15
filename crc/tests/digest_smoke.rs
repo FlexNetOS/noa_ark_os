@@ -32,7 +32,10 @@ fn seed_repository(root: &Path) -> Result<()> {
         "{\"openapi\":\"3.0.0\",\"info\":{}}",
     )?;
 
-    std::fs::write(root.join("component.sbom.json"), "{\"bomFormat\":\"CycloneDX\"}")?;
+    std::fs::write(
+        root.join("component.sbom.json"),
+        "{\"bomFormat\":\"CycloneDX\"}",
+    )?;
 
     std::fs::create_dir_all(root.join("bin"))?;
     std::fs::write(root.join("bin/tool.bin"), [0_u8, 1, 2, 3])?;

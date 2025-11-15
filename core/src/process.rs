@@ -28,7 +28,9 @@ fn process_table() -> &'static Mutex<HashMap<ProcessId, Process>> {
 
 fn next_pid() -> ProcessId {
     static NEXT_PID: OnceLock<AtomicU64> = OnceLock::new();
-    NEXT_PID.get_or_init(|| AtomicU64::new(1)).fetch_add(1, Ordering::SeqCst)
+    NEXT_PID
+        .get_or_init(|| AtomicU64::new(1))
+        .fetch_add(1, Ordering::SeqCst)
 }
 
 /// Initialize process management

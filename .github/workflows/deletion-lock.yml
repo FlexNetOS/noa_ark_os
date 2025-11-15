@@ -1,0 +1,50 @@
+name: Deletion Lock
+on: [pull_request]
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Fail on deletion/rename without archive proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=origin/${{ github.base_ref }}
+          git diff --name-status "$base"... | tee diff.txt
+          if grep -E '^(D|R[0-9]+)\s' diff.txt >/dev/null; then
+            # Get list of deleted and renamed files (old paths)
+            deleted_files=$(awk '/^D\s/ {print $2} /^R[0-9]+\s/ {print $2}' diff.txt)
+            # Get list of added/modified files in archive/ and docs/verification/
+            archive_files=$(git diff --name-status "$base" | awk '/^(A|M)\sarchive\// {print $2}')
+            verification_files=$(git diff --name-status "$base" | awk '/^(A|M)\sdocs\/verification\// {print $2}')
+            missing_archive=0
+            missing_verification=0
+            for f in $deleted_files; do
+              found_archive=0
+              for af in $archive_files; do
+                if git show "$GITHUB_SHA:$af" 2>/dev/null | grep -Fq "$f"; then
+                  found_archive=1
+                  break
+                fi
+              done
+              if [ $found_archive -eq 0 ]; then
+                echo "Deleted/renamed file '$f' is not referenced in any archive/ artifact." >&2
+                missing_archive=1
+              fi
+              found_verification=0
+              for vf in $verification_files; do
+                if git show "$GITHUB_SHA:$vf" 2>/dev/null | grep -Fq "$f"; then
+                  found_verification=1
+                  break
+                fi
+              done
+              if [ $found_verification -eq 0 ]; then
+                echo "Deleted/renamed file '$f' is not referenced in any docs/verification/ ledger." >&2
+                missing_verification=1
+              fi
+            done
+            if [ $missing_archive -ne 0 ] || [ $missing_verification -ne 0 ]; then
+              exit 1
+            fi
+          fi

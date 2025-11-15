@@ -36,11 +36,32 @@
       "provides": ["kanban.metrics"]
     },
     {
+      "id": "ui.kanban.goal_insights",
+      "type": "ui",
+      "semver": "1.1.0",
+      "requires": ["ui.kanban.metrics"],
+      "provides": ["kanban.goalInsights"]
+    },
+    {
       "id": "ui.kanban.assist",
       "type": "ai",
       "semver": "0.1.0",
       "requires": ["digestor.openapi"],
       "provides": ["kanban.assist"]
+    },
+    {
+      "id": "ui.kanban.autonomy",
+      "type": "ai",
+      "semver": "0.1.0",
+      "requires": ["ui.kanban.assist"],
+      "provides": ["kanban.autonomousRetry", "kanban.agentEscalation"]
+    },
+    {
+      "id": "ml.lifecycle.controller",
+      "type": "ml",
+      "semver": "0.1.0",
+      "requires": ["storage.artifacts"],
+      "provides": ["ml.training", "ml.evaluation", "ml.registry"]
     }
   ]
 }

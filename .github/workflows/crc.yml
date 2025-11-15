@@ -17,10 +17,17 @@ jobs:
       OFFLINE_FIRST: "true"
       AI_PROVIDER: llama.cpp
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
         with:
-          toolchain: stable
+          workspaces: |
+            .
       - name: Build CRC
         run: cargo build -p noa_crc
       - name: Run CRC smoke tests
@@ -29,6 +36,8 @@ jobs:
         run: cargo test -p noa_crc
       - name: Run Adapter SDK tests
         run: cargo test -p crc_adapter_sdk
+      - name: Prepare ingest artifact directory
+        run: mkdir -p out/ci
       - name: Generate CRC ingest report
         run: cargo run -p noa_crc -- ingest --root . --report out/ci/ingest.json
       - name: Archive artifacts

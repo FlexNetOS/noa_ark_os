@@ -8,12 +8,12 @@ use tokio::sync::RwLock;
 use uuid::Uuid;
 
 /// string
-pub struct String {
+pub struct StringAgent {
     metadata: AgentMetadata,
     state: RwLock<AgentState>,
 }
 
-impl String {
+impl StringAgent {
     pub fn new() -> Self {
         let metadata = AgentMetadata {
             id: Uuid::new_v4(),
@@ -69,7 +69,7 @@ impl String {
     }
 }
 
-impl Default for String {
+impl Default for StringAgent {
     fn default() -> Self {
         Self::new()
     }
@@ -81,13 +81,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_agent_creation() {
-        let agent = String::new();
+        let agent = StringAgent::new();
         assert_eq!(agent.metadata().name, "string");
     }
 
     #[tokio::test]
     async fn test_agent_initialization() {
-        let mut agent = String::new();
+        let mut agent = StringAgent::new();
         agent.initialize().await.unwrap();
         assert_eq!(agent.state().await, AgentState::Ready);
     }

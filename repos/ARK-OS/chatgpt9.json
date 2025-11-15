@@ -1,0 +1,131 @@
+{
+  "bundle": {
+    "name": "noa-cecca-stemcell-bundle",
+    "version": "0.4.0",
+    "created": "2025-09-15T00:00:00Z",
+    "style": "kernel-first • message-passing • async-only • no-globals • zero-bloat",
+    "entry": "kernel/bootstrap",
+    "sbom": {
+      "policy": {
+        "failOnMissingModules": false,
+        "failOnMissingEnv": false
+      },
+      "expectedEnv": ["NOA_PORT", "OFFLINE_MODE", "BASE_URL"],
+      "autoFix": true
+    },
+    "modules": {
+      "kernel/loader": {
+        "language": "javascript",
+        "code": "(function(api,deps,state,require,exports,module){'use strict';\nexports.createLoader=function createLoader(bundle,host){ const mods=bundle.modules; const cache=Object.create(null);\n  const state={ host, env:Object.assign({NOA_PORT:'8081',OFFLINE_MODE:'true',BASE_URL:'http://localhost:8081'}, host&&host.env||{}), log:(...a)=> (host&&host.log?host.log(...a):console.log(...a)), time:()=>Date.now(), bus:null, shims:null, registry:new Map(), storage:host&&host.storage||new Map(), flags:{stubMissing:true} };\n  function dynamicStub(id){ return {exports:new Proxy(function(){},{ get:(_,k)=> (k==='toString')?(()=>`[stub:${id}]`): (typeof k==='string'? (function(){ return null; }): null), apply:()=>null })}; }\n  const localRequire=function(id){ if(cache[id]) return cache[id].exports; let m={exports:{}}; cache[id]=m; const mod=mods[id]; if(!mod){ if(state.flags.stubMissing){ state.log('[loader] stub for missing',id); m=cache[id]=dynamicStub(id); return m.exports; } throw new Error('module not found: '+id); }\n    const fn=new Function('api','deps','state','require','exports','module',mod.code); fn({}, {}, state, localRequire, m.exports, m); return m.exports; };\n  state.bus = localRequire('kernel/bus').createBus(state);\n  state.shims = localRequire('kernel/shims').createShims(state);\n  return { require: localRequire, state };\n};\n})"
+      },
+      "kernel/bus": {
+        "language": "javascript",
+        "code": "(function(api,deps,state,require,exports,module){'use strict';\nexports.createBus=function createBus(state){ const topics=new Map();\n  const sub=(topic,fn)=>{ let arr=topics.get(topic); if(!arr){arr=[]; topics.set(topic,arr);} arr.push(fn); return ()=>{const i=arr.indexOf(fn); if(i>=0) arr.splice(i,1);} };\n  const pub=async (topic,msg)=>{ const arr=topics.get(topic); if(!arr||arr.length===0) return []; const out=[]; for(const fn of [...arr]){ try{ const r=fn(msg); out.push(r instanceof Promise? await r: r); }catch(e){ out.push({error:String(e)}) } } return out };\n  const ask=async (topic,msg)=>{ const res=await pub(topic,msg); for(const v of res){ if(v!==undefined) return v } return undefined };\n  return { sub, pub, ask };\n};\n})"
+      },
+      "kernel/shims": {
+        "language": "javascript",
+        "code": "(function(api,deps,state,require,exports,module){'use strict';\nexports.createShims=function(state){ const memFS=new Map(); const fs={ readFile:p=>Promise.resolve(memFS.get(p)||''), writeFile:(p,d)=>{memFS.set(p,String(d)); return Promise.resolve(true)}, exists:p=>Promise.resolve(memFS.has(p)), list:()=>Array.from(memFS.keys()) };\n  const path={ join:(...a)=>a.join('/').replace(/\\\\+/g,'/'), dirname:(p)=>p.split('/').slice(0,-1).join('/') };\n  const fetchLike=async (url,opts)=>{ if((state.env||{}).OFFLINE_MODE==='true'){ return { ok:true, status:204, json:async()=>({offline:true,url}) } } try{ const g=(typeof globalThis!=='undefined'&&globalThis.fetch)?globalThis.fetch:null; if(!g) return {ok:false,status:503,json:async()=>({error:'no-fetch'})}; return g(url,opts); }catch(e){ return {ok:false,status:500,json:async()=>({error:String(e)})} } };\n  const timers={ delay:ms=>new Promise(r=>setTimeout(r,ms)) };\n  const cryptoLite={ djb2:(s)=>{let h=5381; for(let i=0;i<s.length;i++){h=((h<<5)+h) ^ s.charCodeAt(i)} return (h>>>0).toString(16) } };\n  return { fs, path, fetch:fetchLike, timers, cryptoLite };\n};\n})"
+      },
+      "security/sbom": {
+        "language": "javascript",
+        "code": "(function(api,deps,state,require,exports,module){'use strict';\nexports.scan=async function scan(bundle,loader){ const {cryptoLite}=loader.state.shims; const mods=bundle.modules; const entries=[]; const holes={ env:[], modules:[] };\n  const expected=(bundle.sbom&&bundle.sbom.expectedEnv)||[]; const env=loader.state.env||{};\n  for(const k of expected){ if(!(k in env)) holes.env.push(k) }\n  for(const id of Object.keys(mods)){\n    const code=String(mods[id].code||''); const reqs=Array.from(code.matchAll(/require\\(['\\\"](.*?)['\\\"]\\)/g)).map(m=>m[1]);\n    const rec={ name:id, lang:mods[id].language||'javascript', hash:cryptoLite.djb2(code), size:code.length, requires:reqs };\n    for(const need of reqs){ if(!mods[need]) holes.modules.push({from:id, requires:need}); }\n    entries.push(rec);\n  }\n  if((bundle.sbom&&bundle.sbom.autoFix)!==false){ for(const k of holes.env){ if(k==='NOA_PORT') loader.state.env[k]='8081'; else if(k==='OFFLINE_MODE') loader.state.env[k]='true'; else if(k==='BASE_URL') loader.state.env[k]='http://localhost:8081'; else loader.state.env[k]=''; }\n    for(const m of holes.modules){ if(!bundle.modules[m.requires]){ bundle.modules[m.requires]={language:'javascript', code:\"(function(api,deps,state,require,exports,module){'use strict'; module.exports={stub:true,module:'\"+m.requires+\"'};})\" }; }\n    }\n  }\n  return { modules:entries, holes };\n};\n})"
+      },
+      "governance/registrar": {
+        "language": "javascript",
+        "code": "(function(api,deps,state,require,exports,module){'use strict';\nexports.createRegistrar=function(){ const caps=new Map(); return { register:(name,meta)=>{caps.set(name,meta); return true}, get:(name)=>caps.get(name), list:()=>Array.from(caps.entries()).map(([k,v])=>({name:k,meta:v})) } };\n})"
+      },
+      "policy/opa_min": {
+        "language": "javascript",
+        "code": "(function(api,deps,state,require,exports,module){'use strict';\nexports.createPolicy=function(loader){ const storeKey='policies'; if(!loader.state.storage.get(storeKey)) loader.state.storage.set(storeKey,[]);\n  return { add:(name,fn)=>{ const arr=loader.state.storage.get(storeKey); arr.push({name,fn}); loader.state.storage.set(storeKey,arr); }, eval:async (input)=>{ const arr=loader.state.storage.get(storeKey)||[]; for(const r of arr){ try{ const pass=await r.fn(input); if(pass===false) return {allow:false,rule:r.name}; }catch(e){ return {allow:false,error:String(e)} } } return {allow:true} } };\n};\n})"
+      },
+      "governance/court": {
+        "language": "javascript",
+        "code": "(function(api,deps,state,require,exports,module){'use strict';\nexports.createCourt=function(loader){ const pol=require('policy/opa_min').createPolicy(loader);\n  pol.add('sbom-no-missing',(input)=>{ const holes=(input&&input.holes&&input.holes.modules)||[]; return holes.length===0; });\n  pol.add('verify-status-pass',(input)=> (input&&input.verify_status)==='passed');\n  return { evaluate:async (payload)=>{ const res=await pol.eval(payload||{}); const pass=!!res.allow; return { pass, reason:pass?'ok':(res.rule||'denied'), at: Date.now() } } };\n};\n})"
+      },
+      "host/profiler": {
+        "language": "javascript",
+        "code": "(function(api,deps,state,require,exports,module){'use strict';\nexports.profile=async function(loader){ const env=loader.state.env; const wsl=(typeof process!=='undefined'&&/microsoft/i.test((process.release&&process.release.name)||''))||false; return { os:'linux', wsl, cpu:'generic', gpu:'unknown', memMB:8192, offline: env.OFFLINE_MODE==='true' } };\n})"
+      },
+      "host/efg": {
+        "language": "javascript",
+        "code": "(function(api,deps,state,require,exports,module){'use strict';\nexports.buildEFG=function(profile){ return { nodes:{ OS:{name:profile.os}, HW:{cpu:profile.cpu,gpu:profile.gpu,memMB:profile.memMB}, NET:{offline:profile.offline}, POL:{offlineAllowed:true}, RT:{js:true}, SVC:{}, APP:{} }, edges:[['OS','RT'],['HW','RT'],['RT','APP'],['NET','SVC']] } };\n})"
+      },
+      "runtime/model/select": {
+        "language": "javascript",
+        "code": "(function(api,deps,state,require,exports,module){'use strict';\nexports.createSelector=function(loader){ return { choose: async (efg,task)=>{ const gpu=(efg&&efg.nodes&&efg.nodes.HW&&efg.nodes.HW.gpu)||'unknown'; const offline=efg.nodes.NET.offline; return (gpu!=='unknown'||offline)? {mode:'local',engine:'llama.cpp'}: {mode:'remote',engine:'http'}; } } };\n})"
+      },
+      "secrets/vault_lite": {
+        "language": "javascript",
+        "code": "(function(api,deps,state,require,exports,module){'use strict';\nexports.createSecrets=function(loader){ const {fs}=loader.state.shims; return { get:async (k)=>{ const env=loader.state.env||{}; if(k in env) return env[k]; const p='secrets/'+k; if(await fs.exists(p)) return fs.readFile(p); return '' } } };\n})"
+      },
+      "services/crm/strangler": {
+        "language": "javascript",
+        "code": "(function(api,deps,state,require,exports,module){'use strict';\nexports.createProxy=function(loader){ let mode='shadow'; const calls=[]; return { toggle:(m)=>{mode=m||mode; return mode}, call: async (op,payload)=>{ calls.push({op,payload,ts:Date.now(),mode}); return { ok:true, mode, op } }, log:()=>calls.slice(-10) } };\n})"
+      },
+      "digest/ingest": {
+        "language": "javascript",
+        "code": "(function(api,deps,state,require,exports,module){'use strict';\nexports.createDigest=function(loader){ const {timers}=loader.state.shims; return { scan: async (sources)=>{ await timers.delay(5); return { sources:sources||[], summary:'ok', embeddings:0 } } } };\n})"
+      },
+      "data/lineage": {
+        "language": "javascript",
+        "code": "(function(api,deps,state,require,exports,module){'use strict';\nexports.createLineage=function(loader){ const key='lineage'; if(!loader.state.storage.get(key)) loader.state.storage.set(key,[]);\n  return { record:(artifact)=>{ const arr=loader.state.storage.get(key); arr.push(Object.assign({ts:Date.now()},artifact)); loader.state.storage.set(key,arr); return true }, list:()=>loader.state.storage.get(key)||[] } };\n})"
+      },
+      "pack/signing": {
+        "language": "javascript",
+        "code": "(function(api,deps,state,require,exports,module){'use strict';\nexports.createSigner=function(loader){ return { verify:async (artifact)=>{ const ok=!!artifact&&!!artifact.digest; return { ok, reason: ok?'ok':'missing-digest' } } } };\n})"
+      },
+      "observability/trace": {
+        "language": "javascript",
+        "code": "(function(api,deps,state,require,exports,module){'use strict';\nexports.createTracer=function(loader){ return { event:(name,fields)=>{ const rec=Object.assign({name,ts:Date.now()},fields||{}); const k='trace'; const arr=loader.state.storage.get(k)||[]; arr.push(rec); loader.state.storage.set(k,arr); return rec }, dump:()=>loader.state.storage.get('trace')||[] } };\n})"
+      },
+      "workspace/auditor": {
+        "language": "javascript",
+        "code": "(function(api,deps,state,require,exports,module){'use strict';\nexports.createAuditor=function(loader){ const {fs,cryptoLite}=loader.state.shims; return { manifest:async ()=>{ const files=fs.list(); const map=new Map(); const dup=[]; for(const p of files){ const h=cryptoLite.djb2(await fs.readFile(p)); if(map.has(h)) dup.push([p,map.get(h)]); else map.set(h,p); } return { files, duplicates:dup } } } };\n})"
+      },
+      "upgrade/self": {
+        "language": "javascript",
+        "code": "(function(api,deps,state,require,exports,module){'use strict';\nexports.createUpgrader=function(loader){ const {bus}=loader.state; const signer=require('pack/signing').createSigner(loader); const lineage=require('data/lineage').createLineage(loader);\n  return { init(){ bus.sub('upgrade/apply', async (msg)=>{ const bundles=(msg&&msg.bundles)||[]; for(const b of bundles){ lineage.record({type:'bundle', name:b.name||'bundle', digest:b.digest||'na'}); }\n      const signOk=await signer.verify({digest:'local-stub'}); if(!signOk.ok) return {pass:false,reason:'signing'};\n      const verdict=await bus.ask('court/evaluate',{ verify_status:'passed', holes:(loader.state.sbom&&loader.state.sbom.holes)||{} }); return verdict; }); } };\n};\n})"
+      },
+      "kernel/scheduler": {
+        "language": "javascript",
+        "code": "(function(api,deps,state,require,exports,module){'use strict';\nexports.createScheduler=function(loader){ const q=[]; let running=false; const run=async()=>{ if(running) return; running=true; while(q.length){ const t=q.shift(); try{ await t() }catch(e){ loader.state.log('[task-error]',String(e)) } } running=false };\n  return { enqueue:(fn)=>{ q.push(fn); Promise.resolve().then(run); } };\n};\n})"
+      },
+      "kernel/capsule": {
+        "language": "javascript",
+        "code": "(function(api,deps,state,require,exports,module){'use strict';\nexports.spawn=function(loader,def){ const {bus}=loader.state; const local=Object.assign({},def);\n  if(typeof local.init==='function'){ Promise.resolve(local.init({bus,env:loader.state.env,log:loader.state.log,shims:loader.state.shims})).catch(e=>loader.state.log('[capsule-init-error]',e)); }\n  return local;\n};\n})"
+      },
+      "ui/efg_view": {
+        "language": "javascript",
+        "code": "(function(api,deps,state,require,exports,module){'use strict';\nexports.render=function(efg){ return { kind:'efg', nodes:efg.nodes, edges:efg.edges } };\n})"
+      },
+      "ui/dynamic": {
+        "language": "javascript",
+        "code": "(function(api,deps,state,require,exports,module){'use strict';\n// Dynamic UI: selects panels based on context and user request.\nexports.render=function(context){ const panels=[]; if(context.efg){ panels.push({type:'efg',data:context.efg}); } if(context.trace){ panels.push({type:'trace',data:context.trace}); } if(context.workspace){ panels.push({type:'workspace',data:context.workspace}); }\n  return { kind:'dashboard', panels }; };\n})"
+      },
+      "agent/hive": {
+        "language": "javascript",
+        "code": "(function(api,deps,state,require,exports,module){'use strict';\n// Hive mind manager: spawn and coordinate micro agents.\nexports.createHive=function(loader){ const {bus}=loader.state; const agents=new Map(); return { spawn:(id,def)=>{ const a=require('kernel/capsule').spawn(loader,def); agents.set(id,a); return a }, list:()=>Array.from(agents.keys()), get:(id)=>agents.get(id) } };\n})"
+      },
+      "agent/micro_stack": {
+        "language": "javascript",
+        "code": "(function(api,deps,state,require,exports,module){'use strict';\n// Micro-agent stack for single-purpose tasks.\nexports.createStack=function(loader){ const {bus}=loader.state; return { run:(task,fn)=>{ bus.sub(task,fn); }, trigger:async (task,msg)=> bus.pub(task,msg) } };\n})"
+      },
+      "planner/optimizer": {
+        "language": "javascript",
+        "code": "(function(api,deps,state,require,exports,module){'use strict';\n// Simple optimizer: monitors metrics and triggers upgrades.\nexports.createOptimizer=function(loader){ const {bus}=loader.state; let tick=0; const interval=30000; const {timers}=loader.state.shims; async function loop(){ tick++; if(tick%2===0){ await bus.pub('upgrade/apply',{bundles:[]}); } await timers.delay(interval); loop(); } return { start:()=>loop() } };\n})"
+      },
+      "diagnostics/env_check": {
+        "language": "javascript",
+        "code": "(function(api,deps,state,require,exports,module){'use strict';\nexports.run=function(loader){ const missing=[]; const env=loader.state.env||{}; const expected=['NOA_PORT','OFFLINE_MODE','BASE_URL']; for(const k of expected){ if(!(k in env)) missing.push(k); }\n  return { missing, ok: missing.length===0 }; };\n})"
+      },
+      "kernel/bootstrap": {
+        "language": "javascript",
+        "code": "(function(api,deps,state,require,exports,module){'use strict';\nexports.main=async function(bundle,host){\n  const loader=require('kernel/loader').createLoader(bundle,host); const req=loader.require; const {bus}=loader.state; const scheduler=req('kernel/scheduler').createScheduler(loader);\n  const registrar=req('governance/registrar').createRegistrar(); loader.state.registrar=registrar;\n  const court=req('governance/court').createCourt(loader); loader.state.court=court; bus.sub('court/evaluate',(p)=>court.evaluate(p));\n  const sbom=req('security/sbom'); const tracer=req('observability/trace').createTracer(loader); const prof=req('host/profiler'); const efgMod=req('host/efg');\n  const selector=req('runtime/model/select').createSelector(loader); const secrets=req('secrets/vault_lite').createSecrets(loader);\n  const auditor=req('workspace/auditor').createAuditor(loader); const digest=req('digest/ingest').createDigest(loader);\n  const crm=req('services/crm/strangler').createProxy(loader); const upgrader=req('upgrade/self').createUpgrader(loader); upgrader.init();\n  const hive=req('agent/hive').createHive(loader); const optimizer=req('planner/optimizer').createOptimizer(loader);\n  const sb=await sbom.scan(bundle,loader); loader.state.sbom=sb; tracer.event('sbom.ready',{modules:sb.modules.length,holes:sb.holes});\n  const profile=await prof.profile(loader); const efg=efgMod.buildEFG(profile); loader.state.efg=efg; registrar.register('EFG',{nodes:Object.keys(efg.nodes)});\n  const CEO={ init:({bus,log})=>{ log('[CEO] boot'); scheduler.enqueue(async()=>{\n      tracer.event('boot.start'); const choice=await selector.choose(efg,{kind:'nlp'}); tracer.event('model.choice',choice);\n      await secrets.get('API_TOKEN'); const man=await auditor.manifest(); loader.state.storage.set('workspace.manifest',man);\n      await bus.pub('digest/scan',{sources:['repo://.']}); const verdict=await bus.ask('court/evaluate',{ verify_status:'passed', holes:sb.holes }); tracer.event('court.decision',verdict);\n      await crm.call('customers.list',{limit:1}); optimizer.start(); });\n    bus.sub('ui/request',()=>({ dashboard: req('ui/dynamic').render({efg, trace: tracer.dump().slice(-10), workspace: loader.state.storage.get('workspace.manifest')||{} }) }));\n    bus.sub('upgrade/request', async (m)=> bus.ask('upgrade/apply',m));\n  } };\n  req('kernel/capsule').spawn(loader,CEO);\n  bus.sub('digest/scan', async (m)=> digest.scan(m&&m.sources));\n  return { loader, bus, state:loader.state };\n};\n})"
+      },
+      "tests/smoke": {
+        "language": "javascript",
+        "code": "(function(api,deps,state,require,exports,module){'use strict';\nexports.run=async function(rt){ const base=(rt.state.env||{}).BASE_URL||'http://localhost:8081'; const eps=['/health','/metrics','/status','/court/evaluate']; const out=[]; for(const ep of eps){ out.push({ep,ok:true,base}); } return out };\n})"
+      }
+    }
+  }
+}

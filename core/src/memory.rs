@@ -571,7 +571,7 @@ mod tests {
         .unwrap();
 
         load_registry(dir.path()).unwrap();
-        let snapshot = registry_snapshot();
+        let snapshot = registry_snapshot().expect("registry snapshot should be available");
         assert_eq!(snapshot.components().len(), 1);
         assert_eq!(snapshot.owners().len(), 1);
     }

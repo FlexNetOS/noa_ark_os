@@ -9,7 +9,7 @@ use wasi_common::pipe::WritePipe;
 use wasmtime::ResourceLimiter;
 use wasmtime::{Config, Engine, Linker, Module, Store};
 use wasmtime_wasi::sync::{add_to_linker, WasiCtxBuilder};
-use wasmtime_wasi::WasiCtx;
+use wasmtime_wasi::{I32Exit, WasiCtx};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WasmProbeConfig {
@@ -105,7 +105,25 @@ impl WasmProbeRunner {
             let start_fn = func
                 .typed::<(), ()>(&mut store)
                 .map_err(WasmProbeError::Wasmtime)?;
-            start_fn.call(&mut store, ())?;
+            if let Err(err) = start_fn.call(&mut store, ()) {
+                if let Some(exit) = err.downcast_ref::<I32Exit>() {
+                    if exit.0 != 0 {
+                        return Err(WasmProbeError::Wasi(format!(
+                            "probe exited with status {}",
+                            exit.0
+                        )));
+                    }
+                } else {
+                    match err.downcast::<wasmtime::Error>() {
+                        Ok(wasmtime_err) => {
+                            return Err(WasmProbeError::Wasmtime(wasmtime_err));
+                        }
+                        Err(other) => {
+                            return Err(WasmProbeError::Wasi(other.to_string()));
+                        }
+                    }
+                }
+            }
         }
         let duration = start.elapsed();
 
@@ -154,13 +172,27 @@ impl WasmProbeRunner {
 
         for dir in &self.config.allowed_directories {
             // Canonicalize the directory to prevent path traversal and ensure absolute path
-            let canonical_dir = std::fs::canonicalize(dir)
-                .map_err(|err| WasmProbeError::Wasi(format!("Failed to canonicalize directory '{}': {}", dir.display(), err)))?;
+            let canonical_dir = std::fs::canonicalize(dir).map_err(|err| {
+                WasmProbeError::Wasi(format!(
+                    "Failed to canonicalize directory '{}': {}",
+                    dir.display(),
+                    err
+                ))
+            })?;
             if !canonical_dir.is_dir() {
-                return Err(WasmProbeError::Wasi(format!("Allowed directory '{}' is not a directory", canonical_dir.display())));
+                return Err(WasmProbeError::Wasi(format!(
+                    "Allowed directory '{}' is not a directory",
+                    canonical_dir.display()
+                )));
             }
-            let cap_dir = Dir::open_ambient_dir(&canonical_dir, ambient_authority())
-                .map_err(|err| WasmProbeError::Wasi(format!("Failed to open directory '{}': {}", canonical_dir.display(), err)))?;
+            let cap_dir =
+                Dir::open_ambient_dir(&canonical_dir, ambient_authority()).map_err(|err| {
+                    WasmProbeError::Wasi(format!(
+                        "Failed to open directory '{}': {}",
+                        canonical_dir.display(),
+                        err
+                    ))
+                })?;
             builder
                 .preopened_dir(cap_dir, &canonical_dir)
                 .map_err(|err| WasmProbeError::Wasi(err.to_string()))?;

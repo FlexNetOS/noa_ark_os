@@ -4,10 +4,12 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
 import { Readable } from "node:stream";
+import { ReadableStream as WebReadableStream } from "node:stream/web";
 
 import { assertUser } from "@/app/lib/session";
 import { getWorkspace, recordUploadReceipt, recordWorkspaceNotification } from "@/server/workspace-store";
 import { workspaceEventHub } from "@/server/workspace-events";
+import { ensureTraceId, logError, logInfo } from "@noa-ark/shared-ui/logging";
 
 export const runtime = "nodejs";
 
@@ -22,12 +24,23 @@ function sanitizeFilename(name: string | undefined) {
 
 export async function POST(request: Request) {
   const user = assertUser();
+  const traceSource = typeof request.headers?.get === "function" ? request.headers.get("x-trace-id") : null;
+  const traceId = ensureTraceId(traceSource);
+  const component = "api.uploads";
 
   let formData: FormData;
   try {
     formData = await request.formData();
   } catch (error) {
-    console.error("uploads.invalid_form_data", error);
+    logError({
+      component,
+      event: "invalid_form_data",
+      message: "Uploads API rejected malformed form data",
+      outcome: "rejected",
+      traceId,
+      context: {},
+      error,
+    });
     return NextResponse.json({ error: "Invalid form data payload." }, { status: 400 });
   }
 
@@ -60,10 +73,18 @@ export async function POST(request: Request) {
   const tempPath = path.join(uploadDir, `${Date.now()}-${safeName}`);
 
   try {
-    const readable = Readable.fromWeb(file.stream());
+    const readable = Readable.fromWeb(file.stream() as unknown as WebReadableStream);
     await pipeline(readable, createWriteStream(tempPath));
   } catch (error) {
-    console.error("uploads.persist_failed", error);
+    logError({
+      component,
+      event: "persist_failed",
+      message: "Failed to persist incoming upload",
+      outcome: "failure",
+      traceId,
+      context: { workspaceId, dropType },
+      error,
+    });
     await fs.rm(tempPath, { force: true }).catch(() => undefined);
     return NextResponse.json({ error: "Failed to persist upload." }, { status: 500 });
   }
@@ -76,7 +97,15 @@ export async function POST(request: Request) {
     const buffer = await fs.readFile(tempPath);
     forwardForm.append("file", new Blob([buffer]), safeName);
   } catch (error) {
-    console.error("uploads.read_failed", error);
+    logError({
+      component,
+      event: "read_failed",
+      message: "Failed to read temporary upload before forwarding",
+      outcome: "failure",
+      traceId,
+      context: { workspaceId, dropType },
+      error,
+    });
     await fs.rm(tempPath, { force: true }).catch(() => undefined);
     return NextResponse.json({ error: "Unable to read temporary upload." }, { status: 500 });
   }
@@ -87,7 +116,15 @@ export async function POST(request: Request) {
   try {
     bridgeResponse = await fetch(endpoint, { method: "POST", body: forwardForm });
   } catch (error) {
-    console.error("uploads.bridge_unreachable", error);
+    logError({
+      component,
+      event: "bridge_unreachable",
+      message: "Upload bridge is unreachable",
+      outcome: "failure",
+      traceId,
+      context: { endpoint, workspaceId, dropType },
+      error,
+    });
     await fs.rm(tempPath, { force: true }).catch(() => undefined);
     return NextResponse.json({ error: "Upload bridge unavailable." }, { status: 502 });
   }
@@ -96,7 +133,14 @@ export async function POST(request: Request) {
 
   if (!bridgeResponse.ok) {
     const errorBody = await bridgeResponse.text();
-    console.error("uploads.bridge_error", errorBody);
+    logError({
+      component,
+      event: "bridge_error",
+      message: "Upload bridge rejected the request",
+      outcome: "failure",
+      traceId,
+      context: { endpoint, workspaceId, dropType, status: bridgeResponse.status, errorBody },
+    });
     return NextResponse.json({ error: "Bridge rejected upload." }, { status: bridgeResponse.status });
   }
 
@@ -110,7 +154,15 @@ export async function POST(request: Request) {
   try {
     payload = (await bridgeResponse.json()) as typeof payload;
   } catch (error) {
-    console.error("uploads.bridge_invalid_json", error);
+    logError({
+      component,
+      event: "bridge_invalid_json",
+      message: "Upload bridge returned invalid JSON",
+      outcome: "failure",
+      traceId,
+      context: { endpoint, workspaceId, dropType },
+      error,
+    });
     return NextResponse.json({ error: "Invalid response from upload bridge." }, { status: 502 });
   }
 
@@ -141,6 +193,21 @@ export async function POST(request: Request) {
   });
 
   workspaceEventHub.publishNotification(workspaceId, notification);
+
+  logInfo({
+    component,
+    event: "upload_forwarded",
+    message: "Upload successfully forwarded to bridge",
+    outcome: payload.status ?? "success",
+    traceId,
+    context: {
+      workspaceId,
+      dropType,
+      dropId: payload.drop_id,
+      boardId,
+      casKeys,
+    },
+  });
 
   return NextResponse.json({
     dropId: payload.drop_id,

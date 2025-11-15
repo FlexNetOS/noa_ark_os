@@ -152,11 +152,8 @@ mod tests {
 
     #[test]
     fn graphql_routing_delegates_known_services() {
-        let router = ProgrammableRouter::new(
-            vec!["serviceA".into(), "serviceB".into()],
-            vec![],
-            vec![],
-        );
+        let router =
+            ProgrammableRouter::new(vec!["serviceA".into(), "serviceB".into()], vec![], vec![]);
         let payload = json!({
             "query": "{ serviceA { id } }",
             "federation": { "services": ["serviceA", "serviceZ"] },

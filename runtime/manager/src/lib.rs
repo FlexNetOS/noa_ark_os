@@ -589,9 +589,11 @@ mod tests {
         let wasm_bytes = parse_str(
             r#"(module
                 (import "wasi_snapshot_preview1" "proc_exit" (func $__wasi_proc_exit (param i32)))
+                (memory (export "memory") 1)
                 (func $_start
                     i32.const 0
-                    call $__wasi_proc_exit))"#,
+                    call $__wasi_proc_exit)
+                (export "_start" (func $_start)))"#,
         )
         .unwrap();
         fs::write(&module_path, wasm_bytes).unwrap();
@@ -611,5 +613,74 @@ mod tests {
         assert!(report.duration_ms < 1_000);
         assert!(report.stdout.is_empty());
         assert!(report.stderr.is_empty());
+    }
+
+    #[test]
+    fn wasm_probe_respects_timeout_budget() {
+        let dir = tempdir().unwrap();
+        let module_path = dir.path().join("timeout.wasm");
+        let wasm_bytes = parse_str(
+            r#"(module
+                (import "wasi_snapshot_preview1" "proc_exit" (func $__wasi_proc_exit (param i32)))
+                (memory (export "memory") 1)
+                (func $_start
+                    (loop
+                        br 0))
+                (export "_start" (func $_start)))"#,
+        )
+        .unwrap();
+        fs::write(&module_path, wasm_bytes).unwrap();
+
+        let mut policy = RuntimePolicy::default();
+        policy.enable_wasm_probes = true;
+        policy.wasm_probe_config = WasmProbeConfig {
+            max_execution_time_ms: 1,
+            ..WasmProbeConfig::default()
+        };
+
+        let controller = AdaptiveRuntimeController::new(policy, runtime_graph());
+        let result = controller.run_wasm_probe(&module_path, &[]);
+        assert!(matches!(
+            result,
+            Err(RuntimeSelectionError::WasmProbe { .. })
+        ));
+    }
+
+    #[test]
+    fn wasm_probe_enforces_memory_limits() {
+        let dir = tempdir().unwrap();
+        let module_path = dir.path().join("memory.wasm");
+        let wasm_bytes = parse_str(
+            r#"(module
+                (import "wasi_snapshot_preview1" "proc_exit" (func $__wasi_proc_exit (param i32)))
+                (memory (export "memory") 1)
+                (func $_start
+                    i32.const 0
+                    loop
+                        i32.const 1
+                        memory.grow
+                        drop
+                        br 0
+                    end
+                    i32.const 0
+                    call $__wasi_proc_exit)
+                (export "_start" (func $_start)))"#,
+        )
+        .unwrap();
+        fs::write(&module_path, wasm_bytes).unwrap();
+
+        let mut policy = RuntimePolicy::default();
+        policy.enable_wasm_probes = true;
+        policy.wasm_probe_config = WasmProbeConfig {
+            max_memory_mb: 1,
+            ..WasmProbeConfig::default()
+        };
+
+        let controller = AdaptiveRuntimeController::new(policy, runtime_graph());
+        let result = controller.run_wasm_probe(&module_path, &[]);
+        assert!(matches!(
+            result,
+            Err(RuntimeSelectionError::WasmProbe { .. })
+        ));
     }
 }

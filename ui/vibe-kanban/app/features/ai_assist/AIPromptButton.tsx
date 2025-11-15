@@ -1,12 +1,14 @@
 "use client";
 /**
  * Renders an AI assist button that calls the backend to generate engineer prompts.
- * Embedded inside Kanban cards and orchestrates loading, preview, and copy states.
+ * Embedded inside Kanban goals and orchestrates loading, preview, and copy states.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import type { VibeCard } from "../../components/board-types";
+import { ensureTraceId, logError } from "@noa-ark/shared-ui/logging";
+
+import type { Goal } from "../../components/board-types";
 import { buildPromptPayload } from "./cardPrompt";
 
 type FetchState = {
@@ -19,10 +21,11 @@ type FetchState = {
 };
 
 type AIPromptButtonProps = {
-  card: VibeCard;
+  goal: Goal;
 };
 
-export function AIPromptButton({ card }: AIPromptButtonProps) {
+export function AIPromptButton({ goal }: AIPromptButtonProps) {
+  const traceIdRef = useRef<string>(ensureTraceId());
   const [state, setState] = useState<FetchState>({
     prompt: null,
     completion: null,
@@ -42,7 +45,7 @@ export function AIPromptButton({ card }: AIPromptButtonProps) {
     return () => clearTimeout(timeout);
   }, [state.copied]);
 
-  const payload = useMemo(() => buildPromptPayload(card), [card]);
+  const payload = useMemo(() => buildPromptPayload(goal), [goal]);
 
   const fetchPrompt = useCallback(async () => {
     setState((current) => ({ ...current, loading: true, error: null, copied: false }));
@@ -67,16 +70,22 @@ export function AIPromptButton({ card }: AIPromptButtonProps) {
         showPreview: true,
       }));
     } catch (error) {
-      console.error(
-        JSON.stringify({ type: "ai_button.error", cardId: card.id, message: error instanceof Error ? error.message : error })
-      );
+      logError({
+        component: "ai.prompt_button",
+        event: "prompt_generation_failed",
+        message: "Failed to generate AI prompt",
+        outcome: "failure",
+        traceId: traceIdRef.current,
+        context: { goalId: goal.id },
+        error,
+      });
       setState((current) => ({
         ...current,
         loading: false,
         error: error instanceof Error ? error.message : "Failed to reach AI service.",
       }));
     }
-  }, [card.id, payload]);
+  }, [goal.id, payload]);
 
   const copyPrompt = useCallback(async () => {
     if (!state.prompt) {
@@ -86,12 +95,18 @@ export function AIPromptButton({ card }: AIPromptButtonProps) {
       await navigator.clipboard.writeText(state.prompt);
       setState((current) => ({ ...current, copied: true }));
     } catch (error) {
-      console.error(
-        JSON.stringify({ type: "ai_button.copy_error", cardId: card.id, message: error instanceof Error ? error.message : error })
-      );
+      logError({
+        component: "ai.prompt_button",
+        event: "prompt_copy_failed",
+        message: "Failed to copy generated prompt",
+        outcome: "failure",
+        traceId: traceIdRef.current,
+        context: { goalId: goal.id },
+        error,
+      });
       setState((current) => ({ ...current, error: "Unable to copy prompt. Please copy manually." }));
     }
-  }, [card.id, state.prompt]);
+  }, [goal.id, state.prompt]);
 
   const togglePreview = useCallback(() => {
     setState((current) => ({ ...current, showPreview: !current.showPreview }));

@@ -3,13 +3,13 @@ use std::env;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
+use anyhow::{Context, Result};
 use axum::extract::ws::{Message, WebSocket};
 use axum::extract::{Multipart, Path as AxumPath, State, WebSocketUpgrade};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{Json, Router};
-use anyhow::{Context, Result};
 use bytes::Bytes;
 use chrono::Utc;
 use flate2::read::GzDecoder;
@@ -18,16 +18,18 @@ use noa_crc::engine::Engine;
 use noa_crc::graph::{CRCGraph, GraphNode, NodeKind};
 use noa_crc::ir::Lane;
 use noa_crc::{CRCState, CRCSystem, DropManifest, OriginalArtifact, Priority, SourceType};
+use noa_workflow::{StageState, Workflow, WorkflowEngine, WorkflowState};
 use serde::{Deserialize, Serialize};
+use serde_json::Value as JsonValue;
 use tokio::fs;
 use tokio::sync::RwLock;
 use tokio::task;
 use tokio_stream::StreamExt;
-use zip::ZipArchive;
 use uuid::Uuid;
+use zip::ZipArchive;
 
-use crate::schema::PageEnvelope;
-use crate::session::SessionBridge;
+use crate::schema::{PageEnvelope, ResumeToken};
+use crate::session::{default_resume_token, SessionBridge};
 
 pub trait DropRegistry: Send + Sync {
     fn register(
@@ -65,6 +67,7 @@ pub struct UiApiState {
     session: Arc<Mutex<Option<SessionBridge>>>,
     drop_registry: Arc<dyn DropRegistry>,
     drop_root: PathBuf,
+    workflow_engine: Arc<WorkflowEngine>,
 }
 
 impl UiApiState {
@@ -74,11 +77,15 @@ impl UiApiState {
             .map(PathBuf::from)
             .unwrap_or_else(|_| PathBuf::from("D:/dev/workspaces/noa_ark_os/crc/drop-in/incoming"));
 
+        let workflow_engine = Arc::new(WorkflowEngine::new());
+        let stream = workflow_engine.enable_streaming(128);
+
         Self {
             pages: Arc::new(RwLock::new(HashMap::new())),
-            session: Arc::new(Mutex::new(None)),
+            session: Arc::new(Mutex::new(Some(SessionBridge::new(stream)))),
             drop_registry,
             drop_root,
+            workflow_engine,
         }
     }
 
@@ -112,6 +119,10 @@ impl UiApiState {
 
     pub fn drop_root(&self) -> &PathBuf {
         &self.drop_root
+    }
+
+    pub fn workflow_engine(&self) -> Arc<WorkflowEngine> {
+        Arc::clone(&self.workflow_engine)
     }
 }
 
@@ -154,8 +165,46 @@ impl UiApiServer {
         Router::new()
             .route("/ui/pages/:page_id", get(Self::get_page))
             .route("/ui/pages/:page_id/events", get(Self::stream_events))
+            .route("/ui/workflows", post(Self::start_workflow))
+            // Upload → Digest
             .route("/ui/drop-in/upload", post(Self::upload_drop))
+            .route("/api/uploads", post(Self::upload_drop))
+            .route("/ui/drop-in/panel", get(Self::upload_panel))
+            // Capabilities surfacing
+            .route("/api/capabilities", get(Self::get_capabilities))
             .with_state(self.state.clone())
+    }
+
+    async fn upload_panel() -> impl IntoResponse {
+        const HTML: &str = r#"<!doctype html><html><head><meta charset=\"utf-8\"><title>Upload → Digest</title></head>
+<body style=\"font-family: system-ui; margin:2rem;\">
+<h2>Upload → Digest</h2>
+<form id=\"f\" method=\"post\" action=\"/ui/drop-in/upload\" enctype=\"multipart/form-data\">
+  <label>Type:
+    <select name=\"type\">
+      <option value=\"repos\">Repo</option>
+      <option value=\"forks\">Fork</option>
+      <option value=\"mirrors\">Mirror</option>
+      <option value=\"stale\">Stale</option>
+    </select>
+  </label>
+  <br/><br/>
+  <input type=\"file\" name=\"file\" required />
+  <button type=\"submit\">Upload</button>
+</form>
+<pre id=\"out\"></pre>
+<script>
+const f=document.getElementById('f');
+f.addEventListener('submit', async e=>{
+  e.preventDefault();
+  const fd=new FormData(f);
+  const r=await fetch(f.action,{method:'POST',body:fd});
+  const t=await r.text();
+  document.getElementById('out').textContent=t;
+});
+</script>
+</body></html>"#;
+        ([("content-type", "text/html; charset=utf-8")], HTML)
     }
 
     async fn get_page(
@@ -170,6 +219,22 @@ impl UiApiServer {
         Json(envelope)
     }
 
+    async fn get_capabilities() -> Result<Json<JsonValue>, (StatusCode, Json<ErrorResponse>)> {
+        let path = std::path::Path::new("registry/capabilities.json");
+        match fs::read(path).await {
+            Ok(bytes) => {
+                let value: Result<JsonValue, _> = serde_json::from_slice(&bytes);
+                match value {
+                    Ok(v) => Ok(Json(v)),
+                    Err(err) => Err(internal_error(format!(
+                        "invalid JSON in capabilities.json: {err}"
+                    ))),
+                }
+            }
+            Err(_) => Ok(Json(serde_json::json!({ "capabilities": [] }))),
+        }
+    }
+
     async fn stream_events(
         ws: WebSocketUpgrade,
         State(state): State<UiApiState>,
@@ -181,6 +246,57 @@ impl UiApiServer {
         } else {
             (StatusCode::NOT_FOUND, "workflow streaming disabled").into_response()
         }
+    }
+
+    async fn start_workflow(
+        State(state): State<UiApiState>,
+        Json(request): Json<WorkflowStartRequest>,
+    ) -> Result<Json<WorkflowStartResponse>, (StatusCode, Json<ErrorResponse>)> {
+        if request.workflow.name.trim().is_empty() {
+            return Err(bad_request("workflow name cannot be empty".into()));
+        }
+        if request.workflow.stages.is_empty() {
+            return Err(bad_request("workflow requires at least one stage".into()));
+        }
+
+        let workflow = request.workflow;
+        let workflow_id = workflow.name.clone();
+        let engine = state.workflow_engine();
+
+        engine
+            .load_workflow(workflow.clone())
+            .map_err(|err| bad_request(format!("failed to load workflow: {err}")))?;
+
+        let first_stage_id = workflow
+            .stages
+            .first()
+            .map(|stage| slugify_stage(&stage.name))
+            .unwrap_or_else(|| workflow_id.clone());
+
+        let resume_token = Some(default_resume_token(&workflow_id, &first_stage_id));
+        let stages = workflow
+            .stages
+            .iter()
+            .map(|stage| WorkflowStageSnapshot {
+                id: slugify_stage(&stage.name),
+                name: stage.name.clone(),
+                state: StageState::Pending,
+            })
+            .collect();
+
+        let spawned_engine = engine.clone();
+        let execution_id = workflow_id.clone();
+        task::spawn(async move {
+            let _ = spawned_engine.execute(&execution_id);
+        });
+
+        Ok(Json(WorkflowStartResponse {
+            workflow_id,
+            state: WorkflowState::Pending,
+            resume_token,
+            stages,
+            started_at: Utc::now().to_rfc3339(),
+        }))
     }
 
     async fn upload_drop(
@@ -292,6 +408,28 @@ struct DropUploadResponse {
 }
 
 #[derive(Serialize, Deserialize)]
+struct WorkflowStartRequest {
+    workflow: Workflow,
+}
+
+#[derive(Serialize, Deserialize)]
+struct WorkflowStageSnapshot {
+    id: String,
+    name: String,
+    state: StageState,
+}
+
+#[derive(Serialize, Deserialize)]
+struct WorkflowStartResponse {
+    workflow_id: String,
+    state: WorkflowState,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    resume_token: Option<ResumeToken>,
+    stages: Vec<WorkflowStageSnapshot>,
+    started_at: String,
+}
+
+#[derive(Serialize, Deserialize)]
 struct ErrorResponse {
     message: String,
 }
@@ -325,6 +463,21 @@ fn sanitize_file_name(file_name: Option<&str>) -> String {
         .filter(|name| !name.is_empty())
         .map(|name| name.to_string())
         .unwrap_or_else(|| format!("upload-{}.bin", Uuid::new_v4()))
+}
+
+/// Slugifies a stage name for use in URLs or identifiers.
+///
+/// This implementation **must** stay in sync with the TypeScript `slugifyStage` function.
+/// It lowercases, replaces non-alphanumerics with hyphens, and collapses consecutive hyphens.
+fn slugify_stage(name: &str) -> String {
+    name.to_lowercase()
+        .chars()
+        .map(|ch| if ch.is_ascii_alphanumeric() { ch } else { '-' })
+        .collect::<String>()
+        .split('-')
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<_>>()
+        .join("-")
 }
 
 fn format_crc_state(state: &CRCState) -> String {
@@ -383,7 +536,9 @@ async fn prepare_upload_receipt(
 
     let mut cas_objects = Vec::new();
 
-    let original_hash = cas.put_bytes(original_bytes).context("storing upload in CAS")?;
+    let original_hash = cas
+        .put_bytes(original_bytes)
+        .context("storing upload in CAS")?;
     let original_meta = fs::metadata(file_path)
         .await
         .context("reading upload metadata")?;
@@ -416,7 +571,11 @@ async fn prepare_upload_receipt(
     }
 
     let mut graph = CRCGraph::new();
-    graph.add_node(GraphNode::new(format!("digest::{}", drop_id), NodeKind::Analyze, Lane::Fast));
+    graph.add_node(GraphNode::new(
+        format!("digest::{}", drop_id),
+        NodeKind::Analyze,
+        Lane::Fast,
+    ));
     let engine = Engine::new(graph);
     let digest_dir = drop_root.join("receipts").join(drop_id).join("digest");
     fs::create_dir_all(&digest_dir)
@@ -497,9 +656,8 @@ async fn extract_archive(
 }
 
 fn extract_zip(archive_path: &Path, target: &Path) -> Result<Vec<PathBuf>> {
-    let file = std::fs::File::open(archive_path).with_context(|| {
-        format!("opening zip archive {}", archive_path.display())
-    })?;
+    let file = std::fs::File::open(archive_path)
+        .with_context(|| format!("opening zip archive {}", archive_path.display()))?;
     let mut archive = ZipArchive::new(file).context("parsing zip archive")?;
     let mut extracted = Vec::new();
     for index in 0..archive.len() {
@@ -539,10 +697,7 @@ fn extract_tar(archive_path: &Path, target: &Path, gz: bool) -> Result<Vec<PathB
         if entry.header().entry_type().is_dir() {
             continue;
         }
-        let relative = entry
-            .path()
-            .context("reading tar entry path")?
-            .into_owned();
+        let relative = entry.path().context("reading tar entry path")?.into_owned();
         if relative
             .components()
             .any(|component| matches!(component, std::path::Component::ParentDir))
@@ -596,10 +751,11 @@ mod tests {
     use axum::body::Body;
     use axum::http::{Request, StatusCode as HttpStatus};
     use http_body_util::BodyExt;
-    use serde::Deserialize;
+    use noa_workflow::{Stage, StageType, Task, Workflow};
+    use serde::{Deserialize, Serialize};
+    use serde_json::Value;
     use std::sync::Mutex as StdMutex;
     use tower::ServiceExt;
-    use serde_json::Value;
 
     #[derive(Clone)]
     struct MockRegistry {
@@ -637,6 +793,38 @@ mod tests {
 
         fn recorded_manifest(&self) -> Option<DropManifest> {
             self.registered_manifest.lock().unwrap().clone()
+        }
+    }
+
+    #[derive(Serialize)]
+    struct WorkflowStartRequestPayload<'a> {
+        #[serde(borrow)]
+        workflow: &'a Workflow,
+    }
+
+    impl<'a> WorkflowStartRequestPayload<'a> {
+        fn new(workflow: &'a Workflow) -> Self {
+            Self { workflow }
+        }
+
+        fn into_body(&self) -> Vec<u8> {
+            serde_json::to_vec(self).expect("serialize workflow request")
+        }
+    }
+
+    #[derive(Deserialize)]
+    struct WorkflowStartResponsePayload {
+        #[serde(flatten)]
+        response: WorkflowStartResponse,
+    }
+
+    impl WorkflowStartResponsePayload {
+        fn from_slice(bytes: &[u8]) -> Self {
+            serde_json::from_slice(bytes).expect("parse workflow response")
+        }
+
+        fn into_inner(self) -> WorkflowStartResponse {
+            self.response
         }
     }
 
@@ -703,6 +891,44 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn start_workflow_returns_initial_state() {
+        let server = UiApiServer::new();
+        let router = server.router();
+
+        let workflow = Workflow {
+            name: "plan-test".into(),
+            version: "1.0".into(),
+            stages: vec![Stage {
+                name: "Assess".into(),
+                stage_type: StageType::Sequential,
+                depends_on: vec![],
+                tasks: Vec::<Task>::new(),
+            }],
+        };
+
+        let request = Request::builder()
+            .method("POST")
+            .uri("/ui/workflows")
+            .header("content-type", "application/json")
+            .body(Body::from(
+                WorkflowStartRequestPayload::new(&workflow).into_body(),
+            ))
+            .unwrap();
+
+        let response = router.oneshot(request).await.unwrap();
+        assert_eq!(response.status(), HttpStatus::OK);
+
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let payload = WorkflowStartResponsePayload::from_slice(&bytes).into_inner();
+
+        assert_eq!(payload.workflow_id, "plan-test");
+        assert_eq!(payload.state, WorkflowState::Pending);
+        assert_eq!(payload.stages.len(), 1);
+        assert_eq!(payload.stages[0].id, slugify_stage("Assess"));
+        assert!(payload.resume_token.is_some());
+    }
+
+    #[tokio::test]
     async fn upload_drop_persists_and_registers() {
         let boundary = "TESTBOUNDARY";
         let temp_dir = tempfile::tempdir().unwrap();
@@ -735,14 +961,20 @@ mod tests {
 
         let receipt_path = PathBuf::from(&parsed.receipt_path);
         assert!(receipt_path.exists());
-        let receipt: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&receipt_path).unwrap()).unwrap();
-        assert_eq!(receipt.get("drop_id").and_then(|v| v.as_str()), Some("drop-123"));
-        assert!(receipt
-            .get("cas_objects")
-            .and_then(|v| v.as_array())
-            .map(|arr| arr.len())
-            .unwrap_or(0)
-            >= 1);
+        let receipt: Value =
+            serde_json::from_str(&std::fs::read_to_string(&receipt_path).unwrap()).unwrap();
+        assert_eq!(
+            receipt.get("drop_id").and_then(|v| v.as_str()),
+            Some("drop-123")
+        );
+        assert!(
+            receipt
+                .get("cas_objects")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.len())
+                .unwrap_or(0)
+                >= 1
+        );
 
         let saved_path = drop_root.join("repos").join("example.txt");
         let saved = fs::read(&saved_path).await.unwrap();

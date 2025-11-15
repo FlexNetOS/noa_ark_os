@@ -1,0 +1,17 @@
+{
+  "hash": "sha256_1a",
+  "archive_path": "crc/archive/repos/drop_db0293d2-8d05-49c5-9c5e-8ba93bfc32e4_repo_1763178249.tar.zst",
+  "created": 1763178249,
+  "size": 26,
+  "index": {
+    "files": [
+      {
+        "path": "placeholder.rs",
+        "hash": "abc123",
+        "size": 1024
+      }
+    ],
+    "symbols": [],
+    "dependencies": []
+  }
+}

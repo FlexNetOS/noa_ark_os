@@ -4,10 +4,12 @@ use std::path::Path;
 
 use chrono::{DateTime, Utc};
 use noa_agents::implementations::documentation::{
-    DocumentationAgent, DocumentationPipelineOutput, ServiceDocumentation, SopDocumentation,
-    WorkflowDocumentation,
+    AgentApprovalRequirement, DocumentationAgent, DocumentationPipelineOutput,
+    ServiceDocumentation, SopDocumentation, WorkflowDocumentation,
 };
 use uuid::Uuid;
+
+use noa_core::kernel::{self, AiControlLoop};
 
 fn main() {
     if let Err(err) = run() {
@@ -35,6 +37,15 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let pipeline_path = pipeline_path.ok_or("--pipeline-output is required")?;
     let payload = fs::read_to_string(&pipeline_path)?;
 
+    let directive = kernel::handle()
+        .map(|handle| handle.machine_directive())
+        .unwrap_or_default();
+
+    println!(
+        "[documentation_sync] machine remediation in effect (confidence {:.2}): {}",
+        directive.confidence, directive.rationale
+    );
+
     let output = DocumentationPipelineOutput::from_json_str(&payload)
         .unwrap_or_else(|_| build_output_from_diff(&payload));
 
@@ -54,7 +65,18 @@ fn build_output_from_diff(diff_summary: &str) -> DocumentationPipelineOutput {
         run_id: format!("doc-sync-{}", Uuid::new_v4()),
         generated_at,
         diff_summary: diff_summary.trim().to_string(),
-        approvals_required: vec!["doc-lead".to_string(), "release-manager".to_string()],
+        approvals_required: vec![
+            AgentApprovalRequirement {
+                role: "doc-lead".to_string(),
+                minimum_trust_score: 0.7,
+                required_evidence_tags: vec!["ledger:docs".to_string()],
+            },
+            AgentApprovalRequirement {
+                role: "release-manager".to_string(),
+                minimum_trust_score: 0.8,
+                required_evidence_tags: vec!["ledger:release".to_string()],
+            },
+        ],
         approvals_granted: Vec::new(),
         services,
         sops,
