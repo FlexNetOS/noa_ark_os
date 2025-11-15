@@ -10,3 +10,8 @@ Notebook automation runs now emit dedicated telemetry in `notebook_gateway_autom
 - `status` and optional `throttle_reason` when rate limits engage.
 
 Files are generated automatically at runtime. It is safe to clean the directory between test runs.
+
+For offline development and tests, synthetic examples are checked into
+`gateway_metrics.json` and `gateway_events.log`. The
+`server.python.autonomy.telemetry_loader` helpers load these samples so gateway
+traffic can be replayed deterministically during unit tests and local demos.

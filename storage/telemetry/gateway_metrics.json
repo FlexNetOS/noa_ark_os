@@ -1,0 +1,21 @@
+{
+  "total_requests": 128,
+  "per_protocol": {
+    "http": 64,
+    "ws": 24,
+    "cli": 40
+  },
+  "latency_ms": {
+    "p50": 118.0,
+    "p90": 295.0,
+    "p99": 702.0
+  },
+  "token_usage": {
+    "prompt": 18234,
+    "completion": 9132,
+    "total": 27366
+  },
+  "active_clients": 12,
+  "updated_at": "2024-03-15T12:00:00Z",
+  "notes": "Synthetic sample metrics for offline gateway telemetry replay."
+}

@@ -2,6 +2,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use thiserror::Error;
@@ -11,6 +12,7 @@ use crate::Stage;
 
 const DEFAULT_SAMPLE_SIZE: usize = 50;
 const DEFAULT_TELEMETRY_PATH: &str = "storage/telemetry/gateway_events.log";
+const DEFAULT_SUMMARY_PATH: &str = "storage/db/budget_guardian/rolling_summary.json";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BudgetLimits {
@@ -32,6 +34,21 @@ pub struct BudgetUsage {
     pub tokens: f64,
     pub average_latency_ms: f64,
     pub samples: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct PercentileSnapshot {
+    pub p50: f64,
+    pub p90: f64,
+    pub p99: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct BudgetSummary {
+    pub generated_at: String,
+    pub sample_count: usize,
+    pub tokens: PercentileSnapshot,
+    pub latency_ms: PercentileSnapshot,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -71,6 +88,8 @@ pub enum BudgetGuardianError {
     Instrumentation(String),
     #[error("serialization error: {0}")]
     Serialization(String),
+    #[error("summary persistence error: {0}")]
+    SummaryPersist(String),
 }
 
 pub struct BudgetGuardian {
@@ -78,6 +97,7 @@ pub struct BudgetGuardian {
     limits: BudgetLimits,
     telemetry_path: PathBuf,
     sample_size: usize,
+    summary_path: PathBuf,
 }
 
 impl BudgetGuardian {
@@ -87,6 +107,7 @@ impl BudgetGuardian {
             limits: BudgetLimits::default(),
             telemetry_path: PathBuf::from(DEFAULT_TELEMETRY_PATH),
             sample_size: DEFAULT_SAMPLE_SIZE,
+            summary_path: PathBuf::from(DEFAULT_SUMMARY_PATH),
         }
     }
 
@@ -105,6 +126,11 @@ impl BudgetGuardian {
         self
     }
 
+    pub fn with_summary_path(mut self, path: impl Into<PathBuf>) -> Self {
+        self.summary_path = path.into();
+        self
+    }
+
     pub fn limits(&self) -> &BudgetLimits {
         &self.limits
     }
@@ -114,7 +140,10 @@ impl BudgetGuardian {
         workflow_id: &str,
         stage: &Stage,
     ) -> Result<BudgetDecision, BudgetGuardianError> {
-        let usage = self.collect_usage()?;
+        let (usage, summary) = self.collect_usage()?;
+        if let Some(summary) = summary {
+            self.persist_summary(&summary)?;
+        }
         let mut action = BudgetAction::Proceed;
         let mut resulting_stage = stage.clone();
         let mut rewritten_plan: Option<Value> = None;
@@ -178,11 +207,12 @@ impl BudgetGuardian {
         }
     }
 
-    fn collect_usage(&self) -> Result<BudgetUsage, BudgetGuardianError> {
+    fn collect_usage(&self) -> Result<(BudgetUsage, Option<BudgetSummary>), BudgetGuardianError> {
         let mut usage = BudgetUsage::default();
+        let mut samples = TelemetrySamples::default();
         let path = &self.telemetry_path;
         let Ok(raw) = fs::read_to_string(path) else {
-            return Ok(usage);
+            return Ok((usage, None));
         };
 
         for line in raw.lines().rev().take(self.sample_size) {
@@ -191,35 +221,75 @@ impl BudgetGuardian {
             }
             let event: Value = serde_json::from_str(line)
                 .map_err(|err| BudgetGuardianError::TelemetryParse(err.to_string()))?;
-            self.accumulate_usage(&event, &mut usage);
+            self.accumulate_usage(&event, &mut usage, &mut samples);
         }
 
         if usage.samples > 0 {
             usage.average_latency_ms /= usage.samples as f64;
         }
 
-        Ok(usage)
+        let summary = self.compute_summary(&samples, usage.samples);
+        Ok((usage, summary))
     }
 
-    fn accumulate_usage(&self, event: &Value, usage: &mut BudgetUsage) {
+    fn accumulate_usage(
+        &self,
+        event: &Value,
+        usage: &mut BudgetUsage,
+        samples: &mut TelemetrySamples,
+    ) {
         if let Some(obj) = event.as_object() {
             if let Some(tokens) = self.extract_token_count(obj) {
                 usage.tokens += tokens;
+                samples.tokens.push(tokens);
             }
             if let Some(latency) = self.extract_latency(obj) {
                 usage.average_latency_ms += latency;
                 usage.samples += 1;
+                samples.latency.push(latency);
             }
             if let Some(span) = obj.get("otel_span").and_then(|value| value.as_object()) {
                 if let Some(tokens) = self.extract_token_count(span) {
                     usage.tokens += tokens;
+                    samples.tokens.push(tokens);
                 }
                 if let Some(latency) = self.extract_latency(span) {
                     usage.average_latency_ms += latency;
                     usage.samples += 1;
+                    samples.latency.push(latency);
                 }
             }
         }
+    }
+
+    fn compute_summary(
+        &self,
+        samples: &TelemetrySamples,
+        sample_count: usize,
+    ) -> Option<BudgetSummary> {
+        if sample_count == 0 {
+            return None;
+        }
+
+        let token_percentiles = compute_percentiles(&samples.tokens);
+        let latency_percentiles = compute_percentiles(&samples.latency);
+        Some(BudgetSummary {
+            generated_at: Utc::now().to_rfc3339(),
+            sample_count,
+            tokens: token_percentiles,
+            latency_ms: latency_percentiles,
+        })
+    }
+
+    fn persist_summary(&self, summary: &BudgetSummary) -> Result<(), BudgetGuardianError> {
+        if let Some(parent) = self.summary_path.parent() {
+            fs::create_dir_all(parent)
+                .map_err(|err| BudgetGuardianError::SummaryPersist(err.to_string()))?;
+        }
+        let payload = serde_json::to_string_pretty(summary)
+            .map_err(|err| BudgetGuardianError::Serialization(err.to_string()))?;
+        fs::write(&self.summary_path, payload)
+            .map_err(|err| BudgetGuardianError::SummaryPersist(err.to_string()))
     }
 
     fn extract_token_count(&self, map: &serde_json::Map<String, Value>) -> Option<f64> {
@@ -262,6 +332,50 @@ fn numeric(value: &Value) -> Option<f64> {
     None
 }
 
+#[derive(Default)]
+struct TelemetrySamples {
+    tokens: Vec<f64>,
+    latency: Vec<f64>,
+}
+
+fn compute_percentiles(values: &[f64]) -> PercentileSnapshot {
+    if values.is_empty() {
+        return PercentileSnapshot::default();
+    }
+    let mut sorted: Vec<f64> = values
+        .iter()
+        .copied()
+        .filter(|value| value.is_finite())
+        .collect();
+    if sorted.is_empty() {
+        return PercentileSnapshot::default();
+    }
+    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    PercentileSnapshot {
+        p50: percentile(&sorted, 0.5),
+        p90: percentile(&sorted, 0.9),
+        p99: percentile(&sorted, 0.99),
+    }
+}
+
+fn percentile(sorted: &[f64], fraction: f64) -> f64 {
+    if sorted.is_empty() {
+        return 0.0;
+    }
+    if sorted.len() == 1 {
+        return sorted[0];
+    }
+    let clamped = fraction.clamp(0.0, 1.0);
+    let rank = clamped * ((sorted.len() - 1) as f64);
+    let lower = rank.floor() as usize;
+    let upper = rank.ceil() as usize;
+    if lower == upper {
+        return sorted[lower];
+    }
+    let weight = rank - lower as f64;
+    sorted[lower] + (sorted[upper] - sorted[lower]) * weight
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -269,6 +383,7 @@ mod tests {
     use serde_json::{json, Value};
     use std::collections::HashMap;
     use std::io::Write;
+    use std::path::PathBuf;
     use std::sync::Arc;
     use tempfile::{NamedTempFile, TempDir};
 
@@ -290,7 +405,7 @@ mod tests {
         (instrumentation, temp_root)
     }
 
-    fn guardian_with_events(lines: &[Value]) -> (BudgetGuardian, TempDir) {
+    fn guardian_with_events(lines: &[Value]) -> (BudgetGuardian, TempDir, PathBuf) {
         let mut temp = NamedTempFile::new().expect("telemetry file");
         for line in lines {
             writeln!(temp, "{}", line).expect("write telemetry");
@@ -299,10 +414,14 @@ mod tests {
         let path_buf = path.to_path_buf();
         path.keep().expect("persist telemetry");
         let (instrumentation, temp_root) = instrumentation_with_temp_root();
+        let summary_path = temp_root
+            .path()
+            .join("storage/db/budget_guardian/rolling_summary.json");
         let guardian = BudgetGuardian::new(instrumentation)
             .with_telemetry_path(path_buf)
+            .with_summary_path(summary_path.clone())
             .with_sample_size(lines.len().max(1));
-        (guardian, temp_root)
+        (guardian, temp_root, summary_path)
     }
 
     fn sample_stage() -> Stage {
@@ -334,7 +453,7 @@ mod tests {
 
     #[test]
     fn rewrites_budget_sensitive_tasks_when_threshold_exceeded() {
-        let (guardian, _temp_dir) = guardian_with_events(&[
+        let (guardian, _temp_dir, _summary_path) = guardian_with_events(&[
             json!({"otel_span": {"tokens_total": 5000, "latency_ms": 2400}}),
         ]);
         let stage = sample_stage();
@@ -348,7 +467,7 @@ mod tests {
 
     #[test]
     fn proceeds_when_usage_within_limits() {
-        let (guardian, _temp_dir) = guardian_with_events(&[
+        let (guardian, _temp_dir, _summary_path) = guardian_with_events(&[
             json!({"otel_span": {"tokens_total": 10, "latency_ms": 20}}),
         ]);
         let stage = sample_stage();
@@ -357,5 +476,26 @@ mod tests {
             .expect("budget decision");
         assert_eq!(decision.action, BudgetAction::Proceed);
         assert_eq!(decision.stage.tasks.len(), stage.tasks.len());
+    }
+
+    #[test]
+    fn persists_summary_snapshot_with_percentiles() {
+        let (guardian, _temp_dir, summary_path) = guardian_with_events(&[
+            json!({"otel_span": {"tokens_total": 100.0, "latency_ms": 10.0}}),
+            json!({"otel_span": {"tokens_total": 200.0, "latency_ms": 20.0}}),
+            json!({"otel_span": {"tokens_total": 300.0, "latency_ms": 30.0}}),
+        ]);
+        let stage = sample_stage();
+        guardian
+            .assess_stage("workflow", &stage)
+            .expect("budget decision");
+
+        assert!(summary_path.exists());
+        let raw = std::fs::read_to_string(summary_path).expect("summary persisted");
+        let summary: BudgetSummary = serde_json::from_str(&raw).expect("summary json");
+        assert_eq!(summary.sample_count, 3);
+        assert!((summary.latency_ms.p50 - 20.0).abs() < f64::EPSILON);
+        assert!(summary.latency_ms.p90 > summary.latency_ms.p50);
+        assert!(summary.tokens.p99 >= summary.tokens.p90);
     }
 }

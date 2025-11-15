@@ -211,6 +211,7 @@ ui/vibe-kanban/.data/
 
 # Logs
 *.log
+!storage/telemetry/gateway_events.log
 logs/
 
 # OS
