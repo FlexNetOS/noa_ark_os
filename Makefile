@@ -1,7 +1,51 @@
 SHELL := /bin/bash
 
+DEV_CONFIG_JSON := tools/devshell/config.json
+NODE_AVAILABLE := $(shell command -v node >/dev/null 2>&1 && echo 1)
+
+ifeq ($(NODE_AVAILABLE),1)
+PNPM_REQUIRED_VERSION := $(shell if [ -f $(DEV_CONFIG_JSON) ]; then node tools/devshell/read-config.cjs pnpm.requiredVersion; fi)
+PNPM_STORE_DIR_OVERRIDE := $(shell if [ -f $(DEV_CONFIG_JSON) ]; then node tools/devshell/read-config.cjs pnpm.defaultStoreDir; fi)
+DEV_PATH_PREFIX := $(shell if [ -f $(DEV_CONFIG_JSON) ]; then node tools/devshell/read-config.cjs env.pathPrefix --mode posix; fi)
+DEV_CARGO_HOME := $(shell if [ -f $(DEV_CONFIG_JSON) ]; then node tools/devshell/read-config.cjs env.CARGO_HOME --mode posix; fi)
+DEV_RUSTUP_HOME := $(shell if [ -f $(DEV_CONFIG_JSON) ]; then node tools/devshell/read-config.cjs env.RUSTUP_HOME --mode posix; fi)
+DEV_PNPM_HOME := $(shell if [ -f $(DEV_CONFIG_JSON) ]; then node tools/devshell/read-config.cjs env.PNPM_HOME --mode posix; fi)
+RUST_ANALYZER_CHECK_COMMAND := $(shell if [ -f $(DEV_CONFIG_JSON) ]; then node tools/devshell/read-config.cjs rustAnalyzer.checkCommand; fi)
+endif
+
 PNPM ?= pnpm
-CARGO ?= cargo
+CARGO ?= ./tools/devshell/portable-cargo.sh
+PYTHON ?= python3
+
+ifneq ($(PNPM_REQUIRED_VERSION),)
+export NOA_PNPM_REQUIRED := $(PNPM_REQUIRED_VERSION)
+endif
+
+ifneq ($(PNPM_STORE_DIR_OVERRIDE),)
+export PNPM_STORE_DIR := $(PNPM_STORE_DIR_OVERRIDE)
+endif
+
+ifneq ($(DEV_PATH_PREFIX),)
+override PATH := $(DEV_PATH_PREFIX):$(PATH)
+export PATH
+endif
+
+ifneq ($(DEV_CARGO_HOME),)
+export CARGO_HOME := $(DEV_CARGO_HOME)
+endif
+
+ifneq ($(DEV_RUSTUP_HOME),)
+export RUSTUP_HOME := $(DEV_RUSTUP_HOME)
+endif
+
+ifneq ($(DEV_PNPM_HOME),)
+export PNPM_HOME := $(DEV_PNPM_HOME)
+override PATH := $(PNPM_HOME):$(PATH)
+endif
+
+ifneq ($(RUST_ANALYZER_CHECK_COMMAND),)
+export RUST_ANALYZER_CHECK_COMMAND := $(RUST_ANALYZER_CHECK_COMMAND)
+endif
 
 .PHONY: build test digest run ci:local lint typecheck format
 .PHONY: pipeline.local world-verify world-fix kernel snapshot rollback verify publish-audit rollback-sim setup

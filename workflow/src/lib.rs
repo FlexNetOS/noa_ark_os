@@ -932,21 +932,34 @@ mod tests {
     fn task_dispatch_events_logged_with_tool_requirements() {
         let dir = tempdir().unwrap();
         let _guard = EnvGuard::set("NOA_WORKFLOW_ROOT", dir.path());
-        let engine = WorkflowEngine::new();
-        let registry = engine.dispatcher.registry();
-        let mut metadata = AgentMetadata::from_registry(
+        let mut engine = WorkflowEngine::new();
+        let registry = AgentRegistry::new();
+        let mut workflow_verifier = AgentMetadata::from_registry(
             "WorkflowVerifier".to_string(),
             "WorkflowVerifier".to_string(),
         );
-        metadata
+        workflow_verifier
             .capabilities
             .push("workflow.taskDispatch".to_string());
         registry
-            .upsert_metadata(metadata)
+            .upsert_metadata(workflow_verifier)
             .expect("stub workflow verifier registration");
-        assert!(
-            registry.get("WorkflowVerifier").is_some(),
-            "workflow verifier not registered"
+
+        let mut model_selector = AgentMetadata::from_registry(
+            "ModelSelectorAgent".to_string(),
+            "ModelSelectorAgent".to_string(),
+        );
+        model_selector
+            .capabilities
+            .push("workflow.taskDispatch".to_string());
+        registry
+            .upsert_metadata(model_selector)
+            .expect("stub model selector registration");
+        engine.dispatcher = Arc::new(AgentDispatcher::new(registry, AgentFactory::new()));
+        assert_eq!(
+            engine.dispatcher.registry().all().len(),
+            2,
+            "dispatcher registry should include stub agents"
         );
         let now = Utc::now();
         let fallback_nanos = now.timestamp_micros() * 1_000;
@@ -1031,6 +1044,22 @@ mod tests {
         let dir = tempdir().unwrap();
         let _guard = EnvGuard::set("NOA_WORKFLOW_ROOT", dir.path());
         let engine = WorkflowEngine::new();
+        let registry = engine.dispatcher.registry();
+        let mut metadata = AgentMetadata::minimal(
+            "WorkflowVerifier".to_string(),
+            "Workflow Verifier".to_string(),
+            AgentCategory::Other,
+        );
+        metadata
+            .capabilities
+            .push("workflow.taskDispatch".to_string());
+        registry
+            .upsert_metadata(metadata)
+            .expect("register workflow verifier agent");
+        assert!(
+            registry.get("WorkflowVerifier").is_some(),
+            "workflow verifier metadata should exist"
+        );
         let now = Utc::now();
         let fallback_nanos = now.timestamp_micros() * 1_000;
         let workflow_name = format!(
