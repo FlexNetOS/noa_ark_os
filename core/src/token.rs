@@ -204,16 +204,20 @@ impl CapabilityTokenService {
         }
 
         let now = current_timestamp_millis();
-        let ttl_ceiling = unique_scopes
+        // Find the scope with the minimum TTL (ttl_ceiling)
+        let (ttl_ceiling, ttl_scope) = unique_scopes
             .iter()
-            .filter_map(|scope| store.policies.get(scope).map(|policy| policy.ttl_seconds))
-            .min()
+            .filter_map(|scope| {
+                store.policies.get(scope).map(|policy| (policy.ttl_seconds, scope))
+            })
+            .min_by_key(|(ttl, _scope)| *ttl)
+            .map(|(ttl, scope)| (ttl, scope.clone()))
             .expect("at least one scope should be present");
 
         if let Some(requested_ttl) = request.ttl_override {
             if requested_ttl > ttl_ceiling {
                 return Err(TokenError::TtlExceedsPolicy {
-                    scope: unique_scopes[0].clone(),
+                    scope: ttl_scope,
                     requested: requested_ttl,
                     policy: ttl_ceiling,
                 });
