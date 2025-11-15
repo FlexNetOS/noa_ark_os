@@ -18,6 +18,7 @@ pub mod memory;
 pub mod metrics;
 pub mod process;
 pub mod runtime;
+pub mod scorekeeper;
 pub mod security;
 pub mod symbols;
 pub mod time;
