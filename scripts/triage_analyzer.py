@@ -140,7 +140,7 @@ class FailureClassifier:
 
 
 class ArtifactStore:
-    """Persist incident artefacts and manifests for offline review."""
+    """Persist incident artifacts and manifests for offline review."""
 
     def __init__(self, root: Path = INCIDENT_ROOT) -> None:
         self.root = root
