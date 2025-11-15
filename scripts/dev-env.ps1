@@ -171,22 +171,38 @@ function Ensure-Image {
     }
 }
 
+function Is-NativeWindows {
+    # Returns $true if running on native Windows, $false if in WSL or Linux/macOS
+    return -not $env:WSL_DISTRO_NAME
+}
+
 function Invoke-Run {
     Ensure-Image
     $runtime = Get-Runtime
     $tag = Get-ImageTag
     $cmd = if ($Remaining -and $Remaining.Count -gt 0) { $Remaining } else { @("bash") }
-    $uid = [System.Environment]::GetEnvironmentVariable("UID")
-    if (-not $uid) { $uid = "1000" }
-    $gid = [System.Environment]::GetEnvironmentVariable("GID")
-    if (-not $gid) { $gid = "1000" }
+    $isNativeWindows = Is-NativeWindows
+    if (-not $isNativeWindows) {
+        $uid = [System.Environment]::GetEnvironmentVariable("UID")
+        if (-not $uid) { $uid = "1000" }
+        $gid = [System.Environment]::GetEnvironmentVariable("GID")
+        if (-not $gid) { $gid = "1000" }
+    }
     Write-Host "[dev-env] Starting container from $tag"
-    & $runtime run --rm -it `
-        -v "$RepoRoot:/workspace:Z" `
-        -w /workspace `
-        -e HOST_UID=$uid `
-        -e HOST_GID=$gid `
-        $tag @cmd
+    if ($isNativeWindows) {
+        Write-Host "[dev-env] Note: Running on native Windows. UID/GID environment variables will not be set (not applicable)."
+        & $runtime run --rm -it `
+            -v "$RepoRoot:/workspace:Z" `
+            -w /workspace `
+            $tag @cmd
+    } else {
+        & $runtime run --rm -it `
+            -v "$RepoRoot:/workspace:Z" `
+            -w /workspace `
+            -e HOST_UID=$uid `
+            -e HOST_GID=$gid `
+            $tag @cmd
+    }
 }
 
 function Invoke-Smoke {
