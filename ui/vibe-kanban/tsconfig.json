@@ -23,9 +23,6 @@
         "name": "next"
       }
     ],
-    "typeRoots": [
-      "./node_modules/@types"
-    ],
     "paths": {
       "@/*": [
         "ui/vibe-kanban/*"
@@ -46,10 +43,14 @@
         "ui/vibe-kanban/node_modules/zod"
       ]
     },
+    "types": [
+      "vitest/globals"
+    ],
     "esModuleInterop": true
   },
   "include": [
     "next-env.d.ts",
+    "**/*.d.ts",
     "**/*.ts",
     "**/*.tsx",
     "**/*.js",

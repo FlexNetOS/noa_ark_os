@@ -18,9 +18,12 @@ function computeFlow(board: WorkspaceBoard | null) {
     };
   }
   const doneColumn = board.columns.find((column) => /done|complete/i.test(column.title));
-  const throughput = doneColumn?.cards.length ?? 0;
-  const workInProgress = board.columns.reduce((count, column) => count + column.cards.length, 0) - throughput;
-  const vibeMomentum = board.metrics?.vibeMomentum ?? Math.min(100, 40 + workInProgress * 5 - throughput * 3);
+  const throughput = doneColumn?.goals.length ?? 0;
+  const workInProgress = board.columns.reduce((count, column) => count + column.goals.length, 0) - throughput;
+  const vibeMomentum =
+    typeof board.metrics?.goalMomentum === "number"
+      ? board.metrics.goalMomentum
+      : Math.min(100, 40 + workInProgress * 5 - throughput * 3);
   const goalLeadTime = typeof board.metrics?.goalLeadTimeHours === "number" ? board.metrics.goalLeadTimeHours : null;
   const goalSuccessRate = typeof board.metrics?.goalSuccessRate === "number" ? board.metrics.goalSuccessRate : null;
   return { throughput, workInProgress, vibeMomentum, goalLeadTime, goalSuccessRate };

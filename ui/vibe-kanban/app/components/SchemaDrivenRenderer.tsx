@@ -16,6 +16,7 @@ import { PlannerPanel } from "./PlannerPanel";
 import { UploadPanel } from "./UploadPanel";
 import { AnalyticsPanel } from "./AnalyticsPanel";
 import { ActivityTimeline } from "./ActivityTimeline";
+import { AutomationPanel } from "./AutomationPanel";
 import { isFeatureEnabled } from "./featureFlags";
 import type { BoardState } from "./useBoardState";
 import type { SessionState } from "./useSession";
@@ -160,21 +161,6 @@ const widgetRegistry = {
       </WidgetSurface>
     );
   },
-  "workspace.planner": ({ context }: ComponentRenderProps) => {
-    const { boardState } = context.data as SchemaDrivenRendererProps["context"]["data"];
-    const resume = context.resumeWorkflow;
-    return (
-      <WidgetSurface>
-        <PlannerPanel
-          planner={boardState.planner}
-          onResume={(token) => {
-            boardState.resumePlan(token);
-            resume?.(token);
-          }}
-        />
-      </WidgetSurface>
-    );
-  },
   "workspace.analytics": ({ context }: ComponentRenderProps) => {
     const { boardState } = context.data as SchemaDrivenRendererProps["context"]["data"];
     const enableGoalInsights =
@@ -197,7 +183,7 @@ const widgetRegistry = {
   },
   "workspace.automation": ({ context }: ComponentRenderProps) => {
     const { boardState } = context.data as SchemaDrivenRendererProps["context"]["data"];
-    const cards = boardState.snapshot?.columns.flatMap((column) => column.cards) ?? [];
+    const cards = boardState.snapshot?.columns.flatMap((column) => column.goals) ?? [];
     return (
       <WidgetSurface>
         <AutomationPanel cards={cards} onRetry={boardState.retryAutomation} />

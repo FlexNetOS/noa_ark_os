@@ -159,7 +159,7 @@ export async function recordWorkspaceSnapshot(workspace: Workspace): Promise<voi
   const store = await readStore();
   const workspaceMemory = findWorkspace(store, workspace.id);
   const cardCount = workspace.boards.reduce(
-    (count, board) => count + board.columns.reduce((acc, column) => acc + column.cards.length, 0),
+    (count, board) => count + board.columns.reduce((acc, column) => acc + column.goals.length, 0),
     0
   );
   const snapshot: WorkspaceSnapshot = {
@@ -212,17 +212,6 @@ export async function recordWorkspaceSnapshot(workspace: Workspace): Promise<voi
     });
   }
 
-  // Re-export for CJS interop if necessary
-  module.exports = {
-    appendGoalTrace,
-    listGoalTraces,
-    summarizeGoalMemory,
-    recordWorkspaceSnapshot,
-    getWorkspaceSnapshots,
-    getGoalMemoryInsights,
-  };
-
-  throw error;
 }
 
 export async function getWorkspaceSnapshots(workspaceId: string): Promise<WorkspaceSnapshot[]> {

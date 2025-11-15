@@ -11,6 +11,7 @@ import type {
   PlannerState,
   PresenceUser,
   UploadReceiptSummary,
+  VibeCard,
   VibeColumn,
   Workspace,
   WorkspaceBoard,
@@ -26,6 +27,8 @@ import {
   normalizeCapabilityRegistry,
 } from "@/shared/capabilities";
 import { logError } from "@noa-ark/shared-ui/logging";
+import type { RealTimeEvent, ResumeToken } from "@noa-ark/shared-ui/schema";
+import { SessionContinuityClient } from "@noa-ark/shared-ui/session";
 import { isFeatureEnabled } from "./featureFlags";
 
 const accentPalette = [
@@ -70,6 +73,7 @@ type WorkspaceHookState = {
   assist: AssistState;
   autonomy: AutonomyState;
   goalInsights: GoalMemoryInsights | null;
+  planner: PlannerState;
   capabilities: {
     loading: boolean;
     registry: CapabilityRegistry;
@@ -119,6 +123,12 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     summary: null,
   });
   const [goalInsights, setGoalInsights] = useState<GoalMemoryInsights | null>(null);
+  const [planner, setPlanner] = useState<PlannerState>({
+    status: "idle",
+    plans: [],
+    activePlanId: null,
+    lastError: null,
+  });
   const [capabilityRegistry, setCapabilityRegistry] = useState<CapabilityRegistry>(() => ({
     version: DEFAULT_CAPABILITY_REGISTRY.version,
     capabilities: [],
@@ -135,10 +145,12 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     signature: null,
   });
   const goalInsightsRef = useRef<GoalMemoryInsights | null>(null);
+  const continuityRef = useRef<SessionContinuityClient | null>(null);
 
   useEffect(() => {
     goalInsightsRef.current = goalInsights;
   }, [goalInsights]);
+
 
   const logBoardError = useCallback(
     (event: string, error: unknown, context?: Record<string, unknown>) => {
@@ -261,6 +273,49 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     setHydrated(true);
     void fetchGoalInsights();
   }, [workspaceId, boardId, fetchGoalInsights]);
+
+  useEffect(() => {
+    if (!user) {
+      continuityRef.current?.disconnect();
+      continuityRef.current = null;
+      return;
+    }
+    const endpoint = process.env.NEXT_PUBLIC_WORKFLOW_STREAM ?? "ws://localhost:8787/ui/session";
+    const client = new SessionContinuityClient({ workflowEndpoint: endpoint });
+    const handleUpdate = (event: RealTimeEvent) => {
+      setPlanner((prev) => reducePlannerFromEvent(prev, event));
+      const eventType = getEventType(event as ContinuityEvent);
+      const payload = event.payload ?? {};
+      if (eventType === "workflow/state") {
+        const state = normalizeWorkflowState(payload.state);
+        if (state === "completed" || state === "failed") {
+          fetchBoard().catch((error) =>
+            logBoardError("planner_refresh_failed", error, { workflowId: event.workflowId })
+          );
+        }
+      }
+    };
+    const handleResume = (token: ResumeToken) => {
+      setPlanner((prev) => ({
+        ...prev,
+        plans: prev.plans.map((plan) =>
+          plan.workflowId === token.workflowId ? { ...plan, resumeToken: token, updatedAt: new Date().toISOString() } : plan
+        ),
+      }));
+    };
+    client.on("workflow:update", handleUpdate);
+    client.on("workflow:resume", handleResume);
+    client.connectWebSocket();
+    continuityRef.current = client;
+    return () => {
+      client.off("workflow:update", handleUpdate);
+      client.off("workflow:resume", handleResume);
+      client.disconnect();
+      if (continuityRef.current === client) {
+        continuityRef.current = null;
+      }
+    };
+  }, [user, fetchBoard, logBoardError]);
 
   const fetchIntegrations = useCallback(async () => {
     if (!workspaceId) return;
@@ -388,8 +443,8 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
           ...prev,
           columns: prev.columns.map((column) => ({
             ...column,
-            cards: column.cards.map((card) =>
-              card.id === payload.cardId ? { ...card, automation: payload.automation } : card
+            goals: column.goals.map((goal) =>
+              goal.id === payload.cardId ? { ...goal, automation: payload.automation } : goal
             ),
           })),
         };
@@ -419,7 +474,15 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     return () => {
       clearInterval(interval);
       presenceIntervalRef.current = null;
-      fetch(`/api/workspaces/${workspaceId}/presence`, { method: "DELETE" }).catch(() => undefined);
+      if (typeof fetch === "function") {
+        const presenceRequest = fetch(`/api/workspaces/${workspaceId}/presence`, { method: "DELETE" });
+        if (!presenceRequest) {
+          return;
+        }
+        if (typeof (presenceRequest as { catch?: unknown }).catch === "function") {
+          (presenceRequest as Promise<Response>).catch(() => undefined);
+        }
+      }
     };
   }, [workspaceId, boardId, user]);
 
@@ -644,6 +707,19 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     [ensureBoard, persistBoard]
   );
 
+  const resumePlan = useCallback(
+    (token: ResumeToken) => {
+      continuityRef.current?.requestResume(token);
+      setPlanner((prev) => ({
+        ...prev,
+        status: "planning",
+        activePlanId: token.workflowId,
+        lastError: null,
+      }));
+    },
+    []
+  );
+
   const createBoardMutation = useCallback(
     async (projectName: string) => {
       if (!workspaceId) return;
@@ -724,6 +800,25 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     [workspaceId, boardId]
   );
 
+  const retryAutomation = useCallback(
+    async (cardId: string) => {
+      if (!workspaceId || !boardId) {
+        throw new Error("Workspace and board required");
+      }
+      const response = await fetch(`/api/workspaces/${workspaceId}/boards/${boardId}/automation`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cardId, action: "retry" }),
+      });
+      if (!response.ok) {
+        const message = await response.text().catch(() => "Failed to retry automation");
+        logBoardError("automation_retry_failed", new Error(message), { workspaceId, boardId, cardId });
+        throw new Error(message);
+      }
+    },
+    [workspaceId, boardId, logBoardError]
+  );
+
   const requestAssist = useCallback(async () => {
     if (!workspaceId || !boardId) {
       setAssist(null);
@@ -731,6 +826,11 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     }
 
     try {
+      setPlanner((prev) => ({
+        ...prev,
+        status: "planning",
+        lastError: null,
+      }));
       const response = await fetch(`/api/workspaces/${workspaceId}/boards/${boardId}/assist`, { method: "POST" });
       if (!response.ok) {
         throw new Error("Assist request failed");
@@ -744,6 +844,18 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
       if (payload.memory && memory) {
         setGoalInsights(memory);
       }
+      const planPayload = normalizePlannerPlan(payload.plan);
+      if (planPayload) {
+        setPlanner((prev) => {
+          const existing = prev.plans.filter((plan) => plan.workflowId !== planPayload.workflowId);
+          return {
+            status: "planning",
+            plans: [planPayload, ...existing].slice(0, 5),
+            activePlanId: planPayload.goalId,
+            lastError: null,
+          };
+        });
+      }
       setAssist({
         suggestions: payload.suggestions ?? [],
         focusCard: payload.focusCard ?? null,
@@ -753,6 +865,11 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
       });
     } catch (error) {
       logBoardError("assist_request_failed", error, { workspaceId, boardId });
+      setPlanner((prev) => ({
+        ...prev,
+        status: "error",
+        lastError: error instanceof Error ? error.message : "Assist request failed",
+      }));
       throw error;
     }
   }, [workspaceId, boardId, logBoardError]);
@@ -763,7 +880,8 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
       return;
     }
 
-    requestAssist().catch((error) =>
+    const pending = requestAssist();
+    pending?.catch((error) =>
       logBoardError("assist_bootstrap_failed", error, { workspaceId, boardId })
     );
   }, [workspaceId, boardId, requestAssist, logBoardError]);
@@ -805,7 +923,8 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
       if (snapshot.metrics.goalSuccessRate < 60) {
         replanTriggered = true;
         summary = `Autonomous retry scheduled at ${snapshot.metrics.goalSuccessRate}% success rate.`;
-        requestAssist().catch((error) =>
+        const attempt = requestAssist();
+        attempt?.catch((error) =>
           logBoardError("autonomous_retry_failed", error, {
             boardId: snapshot.id,
             successRate: snapshot.metrics?.goalSuccessRate,
@@ -895,6 +1014,7 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     assist,
     autonomy,
     goalInsights,
+    planner,
     capabilities: {
       loading: capabilitiesLoading,
       registry: capabilityRegistry,
@@ -927,34 +1047,69 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
 function pickFocusCard(board: WorkspaceBoard | null): VibeCard | null {
   if (!board) return null;
   const inProgress = board.columns.find((column) => column.title.toLowerCase().includes("progress"));
-  if (inProgress && inProgress.cards.length) {
-    return [...inProgress.cards].sort(
+  if (inProgress && inProgress.goals.length) {
+    return [...inProgress.goals].sort(
       (a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt)
     )[0];
   }
   for (const column of board.columns) {
-    if (column.cards.length) {
-      return column.cards[0];
+    if (column.goals.length) {
+      return column.goals[0];
     }
   }
   return null;
 }
 
 function buildGoalSignals(board: WorkspaceBoard): Record<string, unknown>[] {
-  const totalCards = board.columns.reduce((count, column) => count + column.cards.length, 0);
-  const hypeCards = board.columns.reduce(
-    (count, column) => count + column.cards.filter((card) => card.mood === "hype").length,
+  const totalGoals = board.columns.reduce((count, column) => count + column.goals.length, 0);
+  const hypeGoals = board.columns.reduce(
+    (count, column) => count + column.goals.filter((goal) => goal.mood === "hype").length,
     0
   );
-  const staleCards = board.columns
-    .flatMap((column) => column.cards)
-    .filter((card) => Date.now() - Date.parse(card.createdAt) > 1000 * 60 * 60 * 24 * 7).length;
+  const staleGoals = board.columns
+    .flatMap((column) => column.goals)
+    .filter((goal) => Date.now() - Date.parse(goal.createdAt) > 1000 * 60 * 60 * 24 * 7).length;
 
   return [
-    { name: "totalCards", value: totalCards },
-    { name: "hypeCards", value: hypeCards },
-    { name: "staleCards", value: staleCards },
+    { name: "totalCards", value: totalGoals },
+    { name: "hypeCards", value: hypeGoals },
+    { name: "staleCards", value: staleGoals },
   ];
+}
+
+function normalizePlannerPlan(input: unknown): PlannerPlan | null {
+  if (!input || typeof input !== "object") {
+    return null;
+  }
+  const value = input as Record<string, unknown>;
+  const workflowId = typeof value.workflowId === "string" ? value.workflowId : undefined;
+  if (!workflowId) {
+    return null;
+  }
+  const goalId = typeof value.goalId === "string" ? value.goalId : workflowId;
+  const goalTitle = typeof value.goalTitle === "string" ? value.goalTitle : goalId;
+  const status = normalizeWorkflowState((value.state ?? value.status) as string) ?? "pending";
+  const stagesRaw = Array.isArray(value.stages) ? value.stages : [];
+  const stages: PlannerPlan["stages"] = stagesRaw.map((stage) => {
+    const stageRecord = stage as Record<string, unknown>;
+    const id = typeof stageRecord.id === "string" ? stageRecord.id : cryptoRandom();
+    const name = typeof stageRecord.name === "string" ? stageRecord.name : id;
+    return {
+      id,
+      name,
+      state: normalizeStageState(stageRecord.state) ?? "pending",
+    };
+  });
+  return {
+    goalId,
+    goalTitle,
+    workflowId,
+    status,
+    stages,
+    startedAt: typeof value.startedAt === "string" ? value.startedAt : new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    resumeToken: value.resumeToken as ResumeToken | undefined,
+  };
 }
 
 type ContinuityEvent = RealTimeEvent & { event_type?: string; workflow_id?: string; payload: Record<string, unknown> };
@@ -1124,7 +1279,7 @@ function reducePlannerFromEvent(prev: PlannerState, event: RealTimeEvent): Plann
           (plan) =>
             plan.workflowId !== workflowId &&
             (plan.status === "running" || plan.status === "pending" || plan.status === "paused")
-        )?.goalId;
+        )?.goalId ?? null;
       }
       if (updatedPlan.status === "failed") {
         plannerStatus = "error";
@@ -1162,7 +1317,10 @@ function normalizeGoalMemory(payload: unknown): GoalMemoryInsights {
       id: String((trace as { id?: unknown }).id ?? cryptoRandom()),
       goalId: String((trace as { goalId?: unknown }).goalId ?? ""),
       workspaceId: String((trace as { workspaceId?: unknown }).workspaceId ?? ""),
-      boardId: (trace as { boardId?: unknown }).boardId ?? null,
+      boardId:
+        (trace as { boardId?: unknown }).boardId && typeof (trace as { boardId?: unknown }).boardId === "string"
+          ? String((trace as { boardId?: unknown }).boardId)
+          : null,
       actorId: (trace as { actorId?: unknown }).actorId ? String((trace as { actorId?: unknown }).actorId) : null,
       actorName: (trace as { actorName?: unknown }).actorName ? String((trace as { actorName?: unknown }).actorName) : null,
       action: String((trace as { action?: unknown }).action ?? "unknown"),

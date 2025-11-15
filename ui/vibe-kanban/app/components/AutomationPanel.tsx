@@ -5,11 +5,17 @@ import type { VibeCard, AgentAutomationRun } from "./board-types";
 import { tokens } from "@noa-ark/shared-ui/tokens";
 
 const STATUS_COLORS: Record<AgentAutomationRun["status"], string> = {
-  queued: tokens.colors["status/info"],
+  queued: tokens.colors["border/subtle"],
   running: tokens.colors["status/warning"],
   completed: tokens.colors["status/success"],
   failed: tokens.colors["status/danger"],
 };
+
+const SURFACE_SECONDARY = "rgba(255, 255, 255, 0.05)";
+const SURFACE_GLOW = "rgba(79, 70, 229, 0.12)";
+const TEXT_MUTED = "rgba(226, 232, 240, 0.6)";
+const BORDER_STRONG = "rgba(255, 255, 255, 0.24)";
+const TEXT_PRIMARY = tokens.colors["text/strong"];
 
 export interface AutomationPanelProps {
   cards: VibeCard[];
@@ -70,7 +76,7 @@ export function AutomationPanel({ cards, onRetry }: AutomationPanelProps) {
               padding: tokens.spacing.md,
               background:
                 latestRun?.status === "running"
-                  ? tokens.colors["surface/glow"]
+                  ? SURFACE_GLOW
                   : tokens.colors["surface/primary"],
               display: "flex",
               flexDirection: "column",
@@ -89,7 +95,7 @@ export function AutomationPanel({ cards, onRetry }: AutomationPanelProps) {
                     borderRadius: tokens.radii.full,
                     fontSize: "0.75rem",
                     fontWeight: 600,
-                    color: tokens.colors["text/inverse"],
+                    color: tokens.colors["background/base"],
                     background: STATUS_COLORS[latestRun?.status ?? "queued"],
                   }}
                 >
@@ -112,7 +118,7 @@ export function AutomationPanel({ cards, onRetry }: AutomationPanelProps) {
                         justifyContent: "space-between",
                         alignItems: "center",
                         borderRadius: tokens.radii.sm,
-                        background: tokens.colors["surface/secondary"],
+                        background: SURFACE_SECONDARY,
                         padding: `${tokens.spacing.xs} ${tokens.spacing.sm}`,
                       }}
                     >
@@ -123,7 +129,7 @@ export function AutomationPanel({ cards, onRetry }: AutomationPanelProps) {
                           <p style={{ fontSize: "0.75rem", color: tokens.colors["status/danger"] }}>{tool.error}</p>
                         )}
                         {tool.output && !tool.error && (
-                          <p style={{ fontSize: "0.75rem", color: tokens.colors["text/muted"] }}>{tool.output}</p>
+                          <p style={{ fontSize: "0.75rem", color: TEXT_MUTED }}>{tool.output}</p>
                         )}
                       </div>
                       <span style={{ fontSize: "0.75rem", textTransform: "capitalize" }}>{tool.status}</span>
@@ -143,11 +149,11 @@ export function AutomationPanel({ cards, onRetry }: AutomationPanelProps) {
                 disabled={pending.has(card.id) || (!automation.retryAvailable && !hasFailure)}
                 style={{
                   borderRadius: tokens.radii.full,
-                  border: `1px solid ${tokens.colors["border/strong"]}`,
+                  border: `1px solid ${BORDER_STRONG}`,
                   padding: `${tokens.spacing.xs} ${tokens.spacing.md}`,
                   fontSize: "0.8rem",
                   fontWeight: 600,
-                  color: hasFailure ? tokens.colors["status/danger"] : tokens.colors["text/primary"],
+                  color: hasFailure ? tokens.colors["status/danger"] : TEXT_PRIMARY,
                   background: "transparent",
                   opacity: pending.has(card.id) ? 0.6 : 1,
                   cursor: pending.has(card.id) ? "progress" : "pointer",

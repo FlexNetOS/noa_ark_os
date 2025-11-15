@@ -52,6 +52,15 @@ vi.mock("@noa-ark/shared-ui/session", async () => {
 const fetchMock = vi.fn();
 
 global.fetch = fetchMock as unknown as typeof fetch;
+(globalThis as { EventSource?: typeof EventSource }).EventSource = class MockEventSource {
+  url: string;
+  constructor(url: string) {
+    this.url = url;
+  }
+  addEventListener() {}
+  removeEventListener() {}
+  close() {}
+} as unknown as typeof EventSource;
 
 const getLastClient = () =>
   (sessionModule as unknown as { __getLastClient?: () => any }).__getLastClient?.();
@@ -66,7 +75,7 @@ describe("useBoardState planner integration", () => {
         id: "todo",
         title: "To Do",
         accent: "from-indigo-500 via-purple-500 to-blue-500",
-        cards: [
+        goals: [
           {
             id: "card-1",
             title: "Prototype kanban drag",
@@ -80,13 +89,13 @@ describe("useBoardState planner integration", () => {
         id: "in-progress",
         title: "In Progress",
         accent: "from-sky-500 via-cyan-400 to-emerald-400",
-        cards: [],
+        goals: [],
       },
       {
         id: "done",
         title: "Done",
         accent: "from-violet-500 via-indigo-400 to-fuchsia-500",
-        cards: [],
+        goals: [],
       },
     ],
     lastUpdated: new Date().toISOString(),
@@ -96,10 +105,33 @@ describe("useBoardState planner integration", () => {
     fetchMock.mockImplementation(async (input: RequestInfo) => {
       const url = typeof input === "string" ? input : input.url;
       if (url.endsWith("/api/workspaces")) {
-        return { ok: true, json: async () => ({ workspaces: [{ ...board, boards: [board] }] }) } as Response;
+        return {
+          ok: true,
+          json: async () => ({
+            workspaces: [
+              {
+                id: "studio",
+                name: "Studio",
+                accent: "from-indigo-500 via-purple-500 to-blue-500",
+                createdAt: new Date().toISOString(),
+                billingPlan: "starter",
+                members: [],
+                boards: [board],
+                activity: [],
+                notifications: [],
+                uploadReceipts: [],
+              },
+            ],
+          }),
+        } as Response;
       }
       if (url.endsWith("/api/workspaces/studio")) {
-        return { ok: true, json: async () => ({ workspace: { id: "studio", members: [], boards: [board] } }) } as Response;
+        return {
+          ok: true,
+          json: async () => ({
+            workspace: { id: "studio", members: [], boards: [board], activity: [], notifications: [], uploadReceipts: [] },
+          }),
+        } as Response;
       }
       if (url.endsWith("/api/workspaces/studio/boards/launchpad")) {
         return { ok: true, json: async () => ({ board }) } as Response;
@@ -115,7 +147,7 @@ describe("useBoardState planner integration", () => {
           ok: true,
           json: async () => ({
             suggestions: [],
-            focusCard: board.columns[0].cards[0],
+            focusCard: board.columns[0].goals[0],
             plan: {
               goalId: "goal-1",
               goalTitle: "Prototype kanban drag",

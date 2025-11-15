@@ -2,11 +2,13 @@ import { promises as fs } from "fs";
 import path from "path";
 
 import { recordWorkspaceSnapshot } from "./memory-store";
+import { workspaceEventHub } from "./workspace-events";
 
 import type {
   ActivityEvent,
   AgentAutomationRun,
   GoalAutomationState,
+  Goal,
   NotificationEvent,
   ToolExecutionTelemetry,
   UploadReceiptSummary,
@@ -14,6 +16,7 @@ import type {
   Workspace,
   WorkspaceBoard,
   WorkspaceMember,
+  BoardMetrics,
 } from "../app/components/board-types";
 import { findGoalMetric } from "./goal-analytics";
 
@@ -48,20 +51,34 @@ function ensureAutomationState(
   };
 }
 
+function getColumnGoals(column: VibeColumn | { cards?: Goal[]; goals?: Goal[] }): Goal[] {
+  if (Array.isArray((column as { goals?: Goal[] }).goals)) {
+    return ((column as { goals?: Goal[] }).goals ?? []).map((goal) => ({ ...goal }));
+  }
+  if (Array.isArray((column as { cards?: Goal[] }).cards)) {
+    return ((column as { cards?: Goal[] }).cards ?? []).map((goal) => ({ ...goal }));
+  }
+  return [];
+}
+
 function normaliseBoard(board: WorkspaceBoard): WorkspaceBoard {
   return {
     ...board,
-    columns: board.columns.map((column) => ({
-      ...column,
-      cards: column.cards.map((card) => ({
-        ...card,
+    columns: board.columns.map((column) => {
+      const goals = getColumnGoals(column).map((goal) => ({
+        ...goal,
         automation: ensureAutomationState(
-          card.id,
-          card.automation as GoalAutomationState | null | undefined,
-          card.createdAt ?? new Date().toISOString()
+          goal.id,
+          goal.automation as GoalAutomationState | null | undefined,
+          goal.createdAt ?? new Date().toISOString()
         ),
-      })),
-    })),
+      }));
+      return {
+        ...column,
+        goals,
+        cards: undefined,
+      };
+    }),
   };
 }
 
@@ -181,43 +198,43 @@ async function readStore(): Promise<WorkspaceStore> {
   await ensureDataFile();
   const raw = await fs.readFile(DATA_FILE, "utf-8");
   const parsed = JSON.parse(raw) as WorkspaceStore;
-  const migrateBoard = (board: WorkspaceBoard): WorkspaceBoard => {
-    const migratedColumns = board.columns.map((column) => {
-      const goals = Array.isArray((column as unknown as { goals?: Goal[] }).goals)
-        ? (column as unknown as { goals: Goal[] }).goals
-        : Array.isArray((column as unknown as { cards?: Goal[] }).cards)
-          ? (column as unknown as { cards: Goal[] }).cards
-          : [];
-      return {
-        ...column,
-        goals,
-      } satisfies VibeColumn;
-    });
+  const migrateBoard = async (board: WorkspaceBoard): Promise<WorkspaceBoard> => {
+    const migratedColumns: VibeColumn[] = board.columns.map((column) => ({
+      ...column,
+      goals: getColumnGoals(column),
+    }));
 
-    const baseMetrics = board.metrics ?? computeBoardMetrics({ columns: migratedColumns });
-    const normalizedMetrics = {
+    const baseMetrics =
+      board.metrics ??
+      (await computeBoardMetrics({
+        id: board.id,
+        goalId: board.goalId,
+        columns: migratedColumns,
+      }));
+    const normalizedMetrics: BoardMetrics = {
       completedGoals: baseMetrics.completedGoals ?? (baseMetrics as { completedCards?: number }).completedCards ?? 0,
       activeGoals: baseMetrics.activeGoals ?? (baseMetrics as { activeCards?: number }).activeCards ?? 0,
       goalMomentum: baseMetrics.goalMomentum ?? (baseMetrics as { vibeMomentum?: number }).vibeMomentum ?? 0,
       cycleTimeDays: baseMetrics.cycleTimeDays,
       flowEfficiency: baseMetrics.flowEfficiency,
-    } satisfies BoardMetrics;
+    };
 
-    return {
+    return normaliseBoard({
       ...board,
       columns: migratedColumns,
       metrics: normalizedMetrics,
-    };
+    });
   };
 
   return {
-    workspaces: parsed.workspaces.map((workspace) => ({
-      ...workspace,
-      boards: workspace.boards.map((board) => normaliseBoard(board as WorkspaceBoard)),
-      notifications: workspace.notifications ?? [],
-      uploadReceipts: workspace.uploadReceipts ?? [],
-      boards: workspace.boards.map(migrateBoard),
-    })),
+    workspaces: await Promise.all(
+      parsed.workspaces.map(async (workspace) => ({
+        ...workspace,
+        boards: await Promise.all(workspace.boards.map((board) => migrateBoard(board as WorkspaceBoard))),
+        notifications: workspace.notifications ?? [],
+        uploadReceipts: workspace.uploadReceipts ?? [],
+      }))
+    ),
   };
 }
 
@@ -293,7 +310,7 @@ export async function saveBoard(
   let normalisedBoard = normaliseBoard(nextBoard);
   normalisedBoard = {
     ...normalisedBoard,
-    metrics: computeBoardMetrics(normalisedBoard),
+    metrics: await computeBoardMetrics(normalisedBoard),
   };
   if (boardIndex === -1) {
     workspace.boards.push(normalisedBoard);
@@ -388,12 +405,12 @@ export async function recordGoalAutomationProgress(
     throw new Error(`Board ${boardId} not found in workspace ${workspaceId}`);
   }
 
-  const column = board.columns.find((entry) => entry.cards.some((card) => card.id === cardId));
+  const column = board.columns.find((entry) => getColumnGoals(entry).some((card) => card.id === cardId));
   if (!column) {
     throw new Error(`Card ${cardId} not found in workspace ${workspaceId}`);
   }
 
-  const card = column.cards.find((entry) => entry.id === cardId);
+  const card = getColumnGoals(column).find((entry) => entry.id === cardId);
   if (!card) {
     throw new Error(`Card ${cardId} not found`);
   }
@@ -507,14 +524,15 @@ export async function removeBoard(workspaceId: string, boardId: string, actor: W
 
 async function computeBoardMetrics(
   board: Pick<WorkspaceBoard, "columns" | "goalId" | "id">
-): Promise<WorkspaceBoard["metrics"]> {
-  const completed = board.columns.find((col) => col.title.toLowerCase().includes("done"))?.cards.length ?? 0;
-  const active = board.columns.reduce((count, column) => count + column.cards.length, 0) - completed;
+): Promise<BoardMetrics> {
+  const completedColumn = board.columns.find((col) => col.title.toLowerCase().includes("done"));
+  const completed = completedColumn ? getColumnGoals(completedColumn).length : 0;
+  const active = board.columns.reduce((count, column) => count + getColumnGoals(column).length, 0) - completed;
   const vibeMomentum = Math.min(100, Math.max(0, 40 + active * 5 - completed * 3));
-  const metrics: WorkspaceBoard["metrics"] = {
-    completedCards: completed,
-    activeCards: active,
-    vibeMomentum,
+  const metrics: BoardMetrics = {
+    completedGoals: completed,
+    activeGoals: active,
+    goalMomentum: vibeMomentum,
   };
   if (board.goalId) {
     const analytics = await findGoalMetric(board.goalId);

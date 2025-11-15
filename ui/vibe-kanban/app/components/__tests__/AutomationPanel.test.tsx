@@ -1,3 +1,4 @@
+import "@testing-library/jest-dom";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -15,7 +16,7 @@ const baseCard: VibeCard = {
 describe("AutomationPanel", () => {
   it("renders placeholder when no automation data is present", () => {
     render(<AutomationPanel cards={[{ ...baseCard, automation: null }]} onRetry={vi.fn()} />);
-    expect(screen.getByText(/No automation telemetry/i)).toBeInTheDocument();
+    expect(screen.getByText(/No automation telemetry/i)).toBeTruthy();
   });
 
   it("displays latest run and tool results with retry button", async () => {
@@ -51,8 +52,8 @@ describe("AutomationPanel", () => {
 
     render(<AutomationPanel cards={cards} onRetry={retry} />);
 
-    expect(screen.getByText(/Registry\s+Scout/i)).toBeInTheDocument();
-    expect(screen.getByText(/Capability Scan/)).toBeInTheDocument();
+    expect(screen.getByText(/Registry\s+Scout/i)).toBeTruthy();
+    expect(screen.getByText(/Capability Scan/)).toBeTruthy();
     const retryButton = screen.getByRole("button", { name: /retry automation/i });
     fireEvent.click(retryButton);
     await waitFor(() => expect(retry).toHaveBeenCalledWith("card-1"));

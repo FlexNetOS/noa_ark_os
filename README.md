@@ -105,10 +105,10 @@ noa_ark_os/
    ```
 
 3. **Run unified services**
-   ```bash
-   # Use the main orchestration script (to be created)
-   ./scripts/start-all-services.sh
-   ```
+  ```bash
+  # Launch UI API + Vibe Kanban UI with health checks
+  ./scripts/dev/full_system_launch.sh
+  ```
 
 ## 🔄 Development Workflow
 

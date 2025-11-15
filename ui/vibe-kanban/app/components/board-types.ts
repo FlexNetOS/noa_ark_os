@@ -55,6 +55,7 @@ export type VibeColumn = {
   title: string;
   accent: string;
   goals: Goal[];
+  cards?: Goal[];
 };
 
 export type BoardMoodSample = {
@@ -223,4 +224,28 @@ export type GoalMemoryInsights = {
   similarGoals: GoalMemorySimilarGoal[];
   insightSummary?: string;
   updatedAt: string;
+};
+
+export type PlannerStage = {
+  id: string;
+  name: string;
+  state: "pending" | "running" | "completed" | "failed" | "paused" | "skipped";
+};
+
+export type PlannerPlan = {
+  goalId: string;
+  goalTitle: string;
+  workflowId: string;
+  status: "pending" | "running" | "completed" | "failed" | "paused";
+  stages: PlannerStage[];
+  startedAt: string;
+  updatedAt: string;
+  resumeToken?: ResumeToken;
+};
+
+export type PlannerState = {
+  status: "idle" | "ready" | "planning" | "error";
+  plans: PlannerPlan[];
+  activePlanId: string | null;
+  lastError: string | null;
 };

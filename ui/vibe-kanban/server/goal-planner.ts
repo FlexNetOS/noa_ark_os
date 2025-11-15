@@ -172,7 +172,7 @@ export async function planGoal(goal: GoalPayload, options: PlannerOptions = {}):
         dependsOn: [],
         tasks: [],
       }
-    );
+    ) as WorkflowStageDefinition;
   });
 
   return {

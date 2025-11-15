@@ -36,7 +36,8 @@ export default function Page() {
   }, []);
 
   const plannerResumeToken = state.planner.plans.find((plan) => plan.resumeToken)?.resumeToken;
-  const effectiveResumeToken = plannerResumeToken ?? resumeToken;
+  const envelopeResumeToken = typeof resumeToken === "string" ? undefined : resumeToken;
+  const effectiveResumeToken: ResumeToken | undefined = plannerResumeToken ?? envelopeResumeToken;
 
   const schemaRenderer = useMemo(() => {
     return ready
@@ -44,7 +45,17 @@ export default function Page() {
           <SchemaDrivenRenderer
             schema={envelope.schema}
             context={{
-              resumeWorkflow: (token) => {
+              resumeWorkflow: (tokenOrWorkflowId: ResumeToken | string, stageId?: string) => {
+                const token: ResumeToken =
+                  typeof tokenOrWorkflowId === "string"
+                    ? {
+                      workflowId: tokenOrWorkflowId,
+                      stageId,
+                      checkpoint: stageId ?? "checkpoint://manual",
+                      issuedAt: new Date().toISOString(),
+                      expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+                    }
+                    : tokenOrWorkflowId;
                 logInfo({
                   component: "vibe.page",
                   event: "workflow_resume_requested",
