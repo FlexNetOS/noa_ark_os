@@ -126,6 +126,8 @@ tools/devshell/state/*
 *.onnx
 models/
 *.model
+!storage/analytics/models/
+!storage/analytics/models/**/*.sql
 
 # Secrets
 .env
