@@ -1,0 +1,245 @@
+
+{
+    "agents": {
+        "ExecutiveCommanderChiefAgent": {
+            "purpose": "Global CEO agent; consults dynamic executive board, receives directives from human owner, issues strategy to CommanderChiefAgents.",
+            "functionality": "def execute_strategy(self, intent): ...",
+            "paired_llm": "llama3-70b",
+            "board_agents": [
+                "LegalComplianceBoardAgent",
+                "FinanceBoardAgent",
+                "OperationsBoardAgent",
+                "SecurityBoardAgent",
+                "HRBoardAgent",
+                "MarketingBoardAgent",
+                "TechnologyBoardAgent",
+                "AuditBoardAgent",
+                "EthicsBoardAgent",
+                "StrategyBoardAgent",
+                "VisionBoardAgent"
+            ],
+            "model_selector": "ModelSelectorAgent_CEO",
+            "reports_to": "human_owner",
+            "oversees": [
+                "CommanderChiefAgent_DataStack",
+                "CommanderChiefAgent_DevOps"
+            ],
+            "escalation_path": "human_owner",
+            "requires_human": true,
+            "approval_status": "approved"
+        },
+        "LegalComplianceBoardAgent": {
+            "purpose": "Oversees legal and compliance issues; ensures all actions and policies meet regulatory requirements.",
+            "model_selector": "ModelSelectorAgent_LegalCompliance",
+            "paired_llm": null,
+            "can_finetune": true,
+            "reports_to": "ExecutiveCommanderChiefAgent",
+            "approval_status": "approved"
+        },
+        "FinanceBoardAgent": {
+            "purpose": "Handles all finance, accounting, and budget planning tasks.",
+            "model_selector": "ModelSelectorAgent_Finance",
+            "paired_llm": null,
+            "can_finetune": true,
+            "reports_to": "ExecutiveCommanderChiefAgent",
+            "approval_status": "approved"
+        },
+        "OperationsBoardAgent": {
+            "purpose": "Oversees business operations, process optimization, and resource allocation.",
+            "model_selector": "ModelSelectorAgent_Operations",
+            "paired_llm": null,
+            "can_finetune": true,
+            "reports_to": "ExecutiveCommanderChiefAgent",
+            "approval_status": "approved"
+        },
+        "SecurityBoardAgent": {
+            "purpose": "Handles all information, infrastructure, and cybersecurity matters.",
+            "model_selector": "ModelSelectorAgent_Security",
+            "paired_llm": null,
+            "can_finetune": true,
+            "reports_to": "ExecutiveCommanderChiefAgent",
+            "approval_status": "approved"
+        },
+        "HRBoardAgent": {
+            "purpose": "Handles HR, onboarding, training, and workforce policies.",
+            "model_selector": "ModelSelectorAgent_HR",
+            "paired_llm": null,
+            "can_finetune": true,
+            "reports_to": "ExecutiveCommanderChiefAgent",
+            "approval_status": "approved"
+        },
+        "MarketingBoardAgent": {
+            "purpose": "Manages marketing, sales, and communication strategies.",
+            "model_selector": "ModelSelectorAgent_Marketing",
+            "paired_llm": null,
+            "can_finetune": true,
+            "reports_to": "ExecutiveCommanderChiefAgent",
+            "approval_status": "approved"
+        },
+        "TechnologyBoardAgent": {
+            "purpose": "Oversees technical strategy, code review, and infrastructure.",
+            "model_selector": "ModelSelectorAgent_Technology",
+            "paired_llm": null,
+            "can_finetune": true,
+            "reports_to": "ExecutiveCommanderChiefAgent",
+            "approval_status": "approved"
+        },
+        "AuditBoardAgent": {
+            "purpose": "Responsible for compliance, audit trails, and reporting to external regulators.",
+            "model_selector": "ModelSelectorAgent_Audit",
+            "paired_llm": null,
+            "can_finetune": true,
+            "reports_to": "ExecutiveCommanderChiefAgent",
+            "approval_status": "approved"
+        },
+        "EthicsBoardAgent": {
+            "purpose": "Monitors for bias, hallucination, and ethical alignment in agent outputs and actions.",
+            "model_selector": "ModelSelectorAgent_Ethics",
+            "paired_llm": null,
+            "can_finetune": true,
+            "reports_to": "ExecutiveCommanderChiefAgent",
+            "approval_status": "approved"
+        },
+        "StrategyBoardAgent": {
+            "purpose": "Focuses on strategic direction, risk assessment, and high-level planning.",
+            "model_selector": "ModelSelectorAgent_Strategy",
+            "paired_llm": null,
+            "can_finetune": true,
+            "reports_to": "ExecutiveCommanderChiefAgent",
+            "approval_status": "approved"
+        },
+        "VisionBoardAgent": {
+            "purpose": "Handles multimodal reasoning, visual data, and document/image understanding.",
+            "model_selector": "ModelSelectorAgent_Vision",
+            "paired_llm": null,
+            "can_finetune": true,
+            "reports_to": "ExecutiveCommanderChiefAgent",
+            "approval_status": "approved"
+        },
+        // Example ModelSelector structure for dynamic, best-model picking (extend for all board seats)
+        "ModelSelectorAgent_LegalCompliance": {
+            "purpose": "Selects the best model for legal/compliance tasks from available options.",
+            "llm_options": [
+                "qwen2:72b",
+                "mixtral:8x22b",
+                "llama3-70b",
+                "gemma:7b"
+            ],
+            "selection_criteria": "Recency, accuracy, performance, fine-tuned tags",
+            "auto_update": true,
+            "approval_status": "approved"
+        },
+        "ModelSelectorAgent_Finance": {
+            "purpose": "Selects the best model for finance/accounting tasks from available options.",
+            "llm_options": [
+                "llama3-70b",
+                "mixtral:8x22b",
+                "qwen2:72b"
+            ],
+            "selection_criteria": "Accuracy, resource usage, fine-tuning",
+            "auto_update": true,
+            "approval_status": "approved"
+        },
+        "ModelSelectorAgent_Operations": {
+            "purpose": "Selects best model for operations/process management.",
+            "llm_options": [
+                "llama3-70b",
+                "phi3",
+                "mixtral:8x22b"
+            ],
+            "selection_criteria": "Task speed, reliability",
+            "auto_update": true,
+            "approval_status": "approved"
+        },
+        "ModelSelectorAgent_Security": {
+            "purpose": "Selects best security/infrastructure model.",
+            "llm_options": [
+                "deepseek-coder:33b",
+                "codellama:70b",
+                "qwen2:72b",
+                "llama3-70b"
+            ],
+            "selection_criteria": "Security benchmarks, code audit performance",
+            "auto_update": true,
+            "approval_status": "approved"
+        },
+        "ModelSelectorAgent_HR": {
+            "purpose": "Selects best model for HR/onboarding.",
+            "llm_options": [
+                "phi3",
+                "llama3-8b",
+                "gemma:7b"
+            ],
+            "selection_criteria": "Empathy, conversation quality",
+            "auto_update": true,
+            "approval_status": "approved"
+        },
+        "ModelSelectorAgent_Marketing": {
+            "purpose": "Selects best model for marketing/sales tasks.",
+            "llm_options": [
+                "llama3-70b",
+                "mixtral:8x22b",
+                "phi3"
+            ],
+            "selection_criteria": "Creativity, tone, engagement metrics",
+            "auto_update": true,
+            "approval_status": "approved"
+        },
+        "ModelSelectorAgent_Technology": {
+            "purpose": "Selects best model for tech/code/devops.",
+            "llm_options": [
+                "deepseek-coder:33b",
+                "codellama:70b",
+                "llama3-70b",
+                "qwen2:72b"
+            ],
+            "selection_criteria": "Code quality, static analysis, CI/CD test pass rate",
+            "auto_update": true,
+            "approval_status": "approved"
+        },
+        "ModelSelectorAgent_Audit": {
+            "purpose": "Selects best model for audit/compliance/reporting.",
+            "llm_options": [
+                "mixtral:8x22b",
+                "qwen2:72b",
+                "llama3-70b"
+            ],
+            "selection_criteria": "Report clarity, compliance audit accuracy",
+            "auto_update": true,
+            "approval_status": "approved"
+        },
+        "ModelSelectorAgent_Ethics": {
+            "purpose": "Selects best model for ethics/alignment review.",
+            "llm_options": [
+                "mixtral:8x22b",
+                "llama3-70b",
+                "gemma:7b"
+            ],
+            "selection_criteria": "Bias, hallucination minimization",
+            "auto_update": true,
+            "approval_status": "approved"
+        },
+        "ModelSelectorAgent_Strategy": {
+            "purpose": "Selects best model for strategic/boardroom tasks.",
+            "llm_options": [
+                "llama3-70b",
+                "mixtral:8x22b",
+                "qwen2:72b"
+            ],
+            "selection_criteria": "Reasoning, long-context planning",
+            "auto_update": true,
+            "approval_status": "approved"
+        },
+        "ModelSelectorAgent_Vision": {
+            "purpose": "Selects best multimodal/vision model.",
+            "llm_options": [
+                "llava:34b",
+                "bakllava",
+                "mllm-vision"
+            ],
+            "selection_criteria": "OCR, vision benchmarks, document/image QA",
+            "auto_update": true,
+            "approval_status": "approved"
+        }
+    }
+}
