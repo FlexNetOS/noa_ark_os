@@ -53,6 +53,36 @@ endif
 PYTHON ?= python3
 BASE_REF ?= origin/main
 
+ifneq ($(PNPM_REQUIRED_VERSION),)
+export NOA_PNPM_REQUIRED := $(PNPM_REQUIRED_VERSION)
+endif
+
+ifneq ($(PNPM_STORE_DIR_OVERRIDE),)
+export PNPM_STORE_DIR := $(PNPM_STORE_DIR_OVERRIDE)
+endif
+
+ifneq ($(DEV_PATH_PREFIX),)
+override PATH := $(DEV_PATH_PREFIX):$(PATH)
+export PATH
+endif
+
+ifneq ($(DEV_CARGO_HOME),)
+export CARGO_HOME := $(DEV_CARGO_HOME)
+endif
+
+ifneq ($(DEV_RUSTUP_HOME),)
+export RUSTUP_HOME := $(DEV_RUSTUP_HOME)
+endif
+
+ifneq ($(DEV_PNPM_HOME),)
+export PNPM_HOME := $(DEV_PNPM_HOME)
+override PATH := $(PNPM_HOME):$(PATH)
+endif
+
+ifneq ($(RUST_ANALYZER_CHECK_COMMAND),)
+export RUST_ANALYZER_CHECK_COMMAND := $(RUST_ANALYZER_CHECK_COMMAND)
+endif
+
 ACTIVATION_CHECK := \
 	@if [ -z "$$NOA_CARGO_ENV" ] || [ -z "$$NOA_NODE_ENV" ]; then \
 		echo "❌ Portable toolchain not activated. Run 'source ./server/tools/activate-cargo.sh' and 'source ./server/tools/activate-node.sh' first." >&2; \

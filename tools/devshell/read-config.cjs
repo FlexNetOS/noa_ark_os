@@ -27,6 +27,13 @@ if (!fs.existsSync(configPath)) {
   process.exit(0);
 }
 
+let config;
+try {
+  config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+} catch (err) {
+  console.error(`Error: Failed to parse config file at "${configPath}": ${err.message}`);
+  process.exit(1);
+}
 const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 
 function resolveValue(value) {
