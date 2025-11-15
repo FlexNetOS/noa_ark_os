@@ -26,6 +26,8 @@ name = "noa_kernel"
 path = "src/bin/kernel.rs"
 
 [[bin]]
+name = "noa_host_control"
+path = "src/bin/host_control.rs"
 name = "noa_scorekeeper"
 path = "src/bin/scorekeeper.rs"
 name = "noa_world"

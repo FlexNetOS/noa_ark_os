@@ -12,6 +12,7 @@ pub mod config;
 pub mod fs;
 pub mod gateway;
 pub mod hardware;
+pub mod host_control;
 pub mod ipc;
 pub mod kernel;
 pub mod memory;
@@ -22,6 +23,7 @@ pub mod scorekeeper;
 pub mod security;
 pub mod symbols;
 pub mod time;
+pub mod token;
 pub mod utils;
 pub mod world;
 
