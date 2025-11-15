@@ -171,15 +171,24 @@ fn map_scan_status(status: &ScanStatus) -> SecurityScanStatus {
 #[cfg(test)]
 pub struct EnvGuard {
     key: &'static str,
-    prev: Option<String>,
+    prev: Option<std::ffi::OsString>,
+    lock: Option<std::sync::MutexGuard<'static, ()>>,
+}
+
+#[cfg(test)]
+fn env_lock() -> &'static std::sync::Mutex<()> {
+    use std::sync::{Mutex, OnceLock};
+    static LOCK: OnceLock<Mutex<()> > = OnceLock::new();
+    LOCK.get_or_init(|| Mutex::new(()))
 }
 
 #[cfg(test)]
 impl EnvGuard {
     fn set(key: &'static str, value: &Path) -> Self {
-        let prev = std::env::var(key).ok();
+        let guard = env_lock().lock().expect("cicd env lock poisoned");
+        let prev = std::env::var_os(key);
         std::env::set_var(key, value);
-        Self { key, prev }
+        Self { key, prev, lock: Some(guard) }
     }
 }
 
@@ -191,6 +200,8 @@ impl Drop for EnvGuard {
         } else {
             std::env::remove_var(self.key);
         }
+        // Release the lock
+        self.lock.take();
     }
 }
 
@@ -410,6 +421,7 @@ impl CICDSystem {
         let recorded_at = OffsetDateTime::now_utc()
             .format(&Rfc3339)
             .unwrap_or_else(|_| "1970-01-01T00:00:00Z".to_string());
+                
         let record = DeploymentOutcomeRecord {
             workflow_id: format!("deployment::{}", deployment_id),
             stage_id,
@@ -1332,8 +1344,8 @@ impl CICDSystem {
         let deployment = Deployment {
             id: id.clone(),
             environment: environment.clone(),
-            strategy,
-            version,
+            strategy: strategy.clone(),
+            version: version.clone(),
             status: PipelineStatus::Running,
             health_metrics: HealthMetrics::default(),
             auto_approved,
@@ -1361,12 +1373,35 @@ impl CICDSystem {
             }),
         )?;
 
+        // Record deployment outcome
+        let outcome = DeploymentOutcomeRecord {
+            workflow_id: "cicd".to_string(),
+            stage_id: "deployment".to_string(),
+            agent_role: "deploy".to_string(),
+            agent_id: "cicd-system".to_string(),
+            action: "create".to_string(),
+            status: "created".to_string(),
+            notes: json!({
+                "deployment_id": id,
+                "environment": environment,
+                "version": version,
+                "strategy": strategy,
+                "auto_approved": auto_approved,
+            }),
+                recorded_at: OffsetDateTime::now_utc()
+                    .format(&Rfc3339)
+                    .unwrap_or_else(|_| "1970-01-01T00:00:00Z".to_string()),
+        };
+        self.instrumentation
+            .record_deployment_outcome(outcome)
+            .map_err(|err| format!("deployment outcome recording failed: {}", err))?;
+
         Ok(id)
     }
 
     /// Monitor deployment health with auto-rollback
     pub fn monitor_deployment(&self, deployment_id: &str) -> Result<bool, String> {
-        let (environment, metrics) = {
+        let (environment, metrics, version, strategy) = {
             let deployments = self.deployments.lock().unwrap();
             let deployment = deployments
                 .get(deployment_id)
@@ -1374,6 +1409,8 @@ impl CICDSystem {
             (
                 deployment.environment.clone(),
                 deployment.health_metrics.clone(),
+                deployment.version.clone(),
+                deployment.strategy.clone(),
             )
         };
 
@@ -1402,6 +1439,30 @@ impl CICDSystem {
             }),
         )?;
 
+        // Record deployment outcome
+        let outcome = DeploymentOutcomeRecord {
+            workflow_id: "cicd".to_string(),
+            stage_id: "deployment".to_string(),
+            agent_role: "monitor".to_string(),
+            agent_id: "cicd-system".to_string(),
+            action: "monitor".to_string(),
+            status: if is_healthy { "healthy" } else { "unhealthy" }.to_string(),
+            notes: json!({
+                "deployment_id": deployment_id,
+                "environment": environment,
+                "version": version,
+                "strategy": strategy,
+                "metrics": metrics,
+                "baseline": baseline,
+            }),
+            recorded_at: OffsetDateTime::now_utc()
+                .format(&Rfc3339)
+                .unwrap_or_else(|_| "1970-01-01T00:00:00Z".to_string()),
+        };
+        self.instrumentation
+            .record_deployment_outcome(outcome)
+            .map_err(|err| format!("deployment outcome recording failed: {}", err))?;
+
         Ok(is_healthy)
     }
 
@@ -1425,6 +1486,29 @@ impl CICDSystem {
                     "version": version,
                 }),
             )?;
+
+            // Record deployment outcome
+            let outcome = DeploymentOutcomeRecord {
+                workflow_id: "cicd".to_string(),
+                stage_id: "deployment".to_string(),
+                agent_role: "rollback".to_string(),
+                agent_id: "cicd-system".to_string(),
+                action: "rollback".to_string(),
+                status: "rolled_back".to_string(),
+                notes: json!({
+                    "deployment_id": deployment_id,
+                    "environment": environment,
+                    "version": version,
+                    "strategy": strategy,
+                }),
+                recorded_at: OffsetDateTime::now_utc()
+                    .format(&Rfc3339)
+                    .unwrap_or_else(|_| "1970-01-01T00:00:00Z".to_string()),
+            };
+            self.instrumentation
+                .record_deployment_outcome(outcome)
+                .map_err(|err| format!("deployment outcome recording failed: {}", err))?;
+
             Ok(())
         } else {
             Err(format!("Deployment not found: {}", deployment_id))

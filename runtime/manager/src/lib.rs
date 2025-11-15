@@ -1,4 +1,6 @@
 use std::collections::{HashMap, HashSet};
+use std::fs::File;
+use std::io::Read;
 use std::path::Path;
 
 use noa_core::hardware::{AcceleratorKind, HardwareProfile};
@@ -140,6 +142,22 @@ impl KernelRuntimeGraph {
         self.services.iter().find(|service| service.id == id)
     }
 
+    /// Load a kernel runtime graph from a YAML reader and validate it.
+    pub fn from_reader(mut reader: impl Read) -> std::result::Result<Self, GraphLoadError> {
+        let mut yaml = String::new();
+        reader.read_to_string(&mut yaml)?;
+        let graph: KernelRuntimeGraph = serde_yaml::from_str(&yaml)?;
+        graph.validate()?;
+        Ok(graph)
+    }
+
+    /// Load a kernel runtime graph from the provided file path and validate it.
+    pub fn load_from_path(path: impl AsRef<Path>) -> std::result::Result<Self, GraphLoadError> {
+        let file = File::open(path.as_ref())?;
+        let graph = Self::from_reader(file)?;
+        Ok(graph)
+    }
+
     /// Validate the runtime graph to ensure dependencies are resolvable and acyclic.
     pub fn validate(&self) -> std::result::Result<(), GraphValidationError> {
         let mut known = HashSet::new();
@@ -254,6 +272,17 @@ fn dfs<'a>(
     Ok(())
 }
 
+/// Errors raised when loading kernel runtime graphs from storage.
+#[derive(Debug, Error)]
+pub enum GraphLoadError {
+    #[error("unable to read kernel runtime graph: {0}")]
+    Io(#[from] std::io::Error),
+    #[error("unable to parse kernel runtime graph: {0}")]
+    Parse(#[from] serde_yaml::Error),
+    #[error(transparent)]
+    Validation(#[from] GraphValidationError),
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CapabilityAssessment {
     pub classification: HostClassification,
@@ -263,6 +292,20 @@ pub struct CapabilityAssessment {
     pub fallback_notes: Vec<String>,
 }
 
+/// Errors reported when a suitable backend cannot be selected.
+#[derive(Debug, Error)]
+pub enum RuntimeSelectionError {
+    #[error("no backend available for {component:?}")]
+    NoBackend { component: RuntimeComponent },
+    #[error("wasm probe failed: {source}")]
+    WasmProbe {
+        #[from]
+        source: WasmProbeError,
+    },
+}
+
+pub type Result<T> = std::result::Result<T, RuntimeSelectionError>;
+
 pub struct AdaptiveRuntimeController {
     policy: RuntimePolicy,
     graph: KernelRuntimeGraph,
@@ -271,6 +314,15 @@ pub struct AdaptiveRuntimeController {
 impl AdaptiveRuntimeController {
     pub fn new(policy: RuntimePolicy, graph: KernelRuntimeGraph) -> Self {
         Self { policy, graph }
+    }
+
+    /// Construct a controller using a graph loaded from disk.
+    pub fn from_graph_file(
+        policy: RuntimePolicy,
+        path: impl AsRef<Path>,
+    ) -> std::result::Result<Self, GraphLoadError> {
+        let graph = KernelRuntimeGraph::load_from_path(path)?;
+        Ok(Self::new(policy, graph))
     }
 
     pub fn detect(&self, profile: &HardwareProfile, workloads: &[String]) -> CapabilitySignal {
@@ -362,20 +414,6 @@ impl AdaptiveRuntimeController {
         Ok(Some(report))
     }
 }
-/// Errors reported when a suitable backend cannot be selected.
-#[derive(Debug, Error)]
-pub enum RuntimeSelectionError {
-    #[error("no backend available for {component:?}")]
-    NoBackend { component: RuntimeComponent },
-    #[error("wasm probe failed: {source}")]
-    WasmProbe {
-        #[from]
-        source: WasmProbeError,
-    },
-}
-
-pub type Result<T> = std::result::Result<T, RuntimeSelectionError>;
-
 /// Select execution backends for the supplied hardware profile.
 pub fn select_execution_plan(
     profile: &HardwareProfile,
@@ -621,7 +659,13 @@ mod tests {
 
     fn runtime_graph() -> KernelRuntimeGraph {
         KernelRuntimeGraph {
-            boot_order: vec!["kernel".into(), "runtime-manager".into(), "gateway".into()],
+            // Updated boot order to include 'observability' before dependent services.
+            boot_order: vec![
+                "kernel".into(),
+                "observability".into(),
+                "runtime-manager".into(),
+                "gateway".into(),
+            ],
             services: vec![
                 KernelRuntimeService {
                     id: "kernel".into(),
@@ -693,6 +737,48 @@ mod tests {
 
         let err = graph.validate().unwrap_err();
         assert!(matches!(err, GraphValidationError::CyclicDependency { .. }));
+    }
+
+    #[test]
+    fn loads_graph_from_yaml_file() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("graph.yaml");
+        let yaml = r#"
+boot_order:
+  - kernel
+  - gateway
+services:
+  - id: kernel
+    requires: []
+    optional: []
+    supported_classes: [minimal, standard]
+  - id: gateway
+    requires: ["kernel"]
+    optional: []
+    supported_classes: [standard]
+"#;
+        std::fs::write(&path, yaml).unwrap();
+        let graph = KernelRuntimeGraph::load_from_path(&path).unwrap();
+        assert_eq!(graph.boot_order.len(), 2);
+        assert_eq!(graph.services.len(), 2);
+    }
+
+    #[test]
+    fn rejects_invalid_graphs_on_load() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("graph.yaml");
+        let yaml = r#"
+boot_order:
+  - unknown
+services:
+  - id: kernel
+    requires: []
+    optional: []
+    supported_classes: [minimal]
+"#;
+        std::fs::write(&path, yaml).unwrap();
+        let err = KernelRuntimeGraph::load_from_path(&path).unwrap_err();
+        assert!(matches!(err, GraphLoadError::Validation(_)));
     }
 
     #[test]

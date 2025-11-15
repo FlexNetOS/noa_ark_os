@@ -1287,19 +1287,17 @@ impl PipelineInstrumentation {
             record.status,
             sanitized_notes
         );
-        with_log_lock(|| {
-            if let Some(parent) = self.deployment_report_path.parent() {
-                fs::create_dir_all(parent)?;
-            }
-            let mut file = OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open(&self.deployment_report_path)?;
-            writeln!(file, "{}", row)?;
-            file.flush()?;
-            file.sync_all()?;
-            Ok(())
-        })
+        if let Some(parent) = self.deployment_report_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        let mut file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&self.deployment_report_path)?;
+        writeln!(file, "{}", row)?;
+        file.flush()?;
+        file.sync_all()?;
+        Ok(())
     }
 
     pub fn record_goal_outcome(
@@ -1477,28 +1475,26 @@ impl PipelineInstrumentation {
     }
 
     fn ensure_deployment_report(&self) -> Result<(), InstrumentationError> {
-        with_log_lock(|| {
-            if self.deployment_report_path.exists() {
-                let content = fs::read_to_string(&self.deployment_report_path)?;
-                if !content.trim().is_empty() {
-                    return Ok(());
-                }
+        if self.deployment_report_path.exists() {
+            let content = fs::read_to_string(&self.deployment_report_path)?;
+            if !content.trim().is_empty() {
+                return Ok(());
             }
+        }
 
-            if let Some(parent) = self.deployment_report_path.parent() {
-                fs::create_dir_all(parent)?;
-            }
+        if let Some(parent) = self.deployment_report_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
 
-            let mut file = OpenOptions::new()
-                .create(true)
-                .write(true)
-                .truncate(true)
-                .open(&self.deployment_report_path)?;
-            file.write_all(b"# Agent Deployment Outcomes\n\n| Timestamp | Workflow | Stage | Agent Role | Agent ID | Action | Status | Notes |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n")?;
-            file.flush()?;
-            file.sync_all()?;
-            Ok(())
-        })
+        let mut file = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(&self.deployment_report_path)?;
+        file.write_all(b"# Agent Deployment Outcomes\n\n| Timestamp | Workflow | Stage | Agent Role | Agent ID | Action | Status | Notes |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n")?;
+        file.flush()?;
+        file.sync_all()?;
+        Ok(())
     }
 
     fn persist_goal_metrics(&self) -> Result<(), InstrumentationError> {

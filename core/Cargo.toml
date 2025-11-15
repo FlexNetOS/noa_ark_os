@@ -37,3 +37,4 @@ path = "src/bin/world.rs"
 
 [dev-dependencies]
 tempfile = "3.8"
+proptest = "1.0"

@@ -344,11 +344,17 @@ impl OidcValidator {
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct OidcClaims {
-    _iss: String,
-    _aud: String,
-    _exp: u64,
-    _sub: Option<String>,
+    #[serde(alias = "iss", alias = "_iss")]
+    iss: String,
+    #[serde(alias = "aud", alias = "_aud")]
+    aud: String,
+    #[serde(alias = "exp", alias = "_exp")]
+    exp: u64,
+    #[serde(default)]
+    #[serde(alias = "sub", alias = "_sub")]
+    sub: Option<String>,
 }
 
 #[cfg(test)]

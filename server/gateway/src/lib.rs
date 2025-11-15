@@ -20,7 +20,7 @@ mod telemetry;
 pub use auth::{AuthCredentials, UnifiedAuthenticator};
 pub use partner::{GatewaySdk, OnboardingRequest, OnboardingResponse, PartnerApi};
 pub use policy::{EnforcementContext, GatewayPolicy, PolicyEnforcer};
-pub use rate_limit::{RateLimiter, RateLimiterConfig};
+pub use rate_limit::{RateLimiter, RateLimiterConfig, RateMetricsSnapshot, RatePersistence};
 pub use router::{ProgrammableRouter, Protocol, RoutePlan};
 pub use telemetry::{GatewayMetrics, TelemetryEvent, TelemetrySink};
 
@@ -84,7 +84,7 @@ impl Gateway {
         let authenticator = UnifiedAuthenticator::default();
         let policy = PolicyEnforcer::new();
         let router = ProgrammableRouter::default();
-        let rate_limiter = RateLimiter::new(RateLimiterConfig::default(), registry);
+        let rate_limiter = RateLimiter::new(RateLimiterConfig::default(), registry)?;
         Self::new(authenticator, policy, router, rate_limiter, telemetry)
     }
 
@@ -111,6 +111,10 @@ impl Gateway {
         self.rate_limiter
             .check(&request.agent_id)
             .context("rate limit exceeded")?;
+        let rate_metrics = self.rate_limiter.metrics_snapshot();
+        self.telemetry
+            .record_rate_limits(rate_metrics)
+            .context("failed to export rate-limit telemetry")?;
 
         // Step 4 - compute programmable route plan
         let route_plan = self.router.route(&request.protocol, &request.payload)?;
@@ -231,9 +235,11 @@ mod tests {
             RateLimiterConfig {
                 refill_interval: Duration::from_secs(60),
                 layer_limits,
+                ..Default::default()
             },
             registry,
-        );
+        )
+        .expect("limiter");
 
         let agent_id = Some(agent.agent_id.clone());
         assert!(limiter.check(&agent_id).is_ok());
