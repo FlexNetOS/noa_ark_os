@@ -122,14 +122,51 @@ fn build_node(
 }
 
 fn flatten_use_tree(tree: &syn::UseTree) -> Vec<String> {
-    match tree {
-        syn::UseTree::Path(path) => flatten_use_tree(&path.tree)
-            .into_iter()
-            .map(|segment| format!("{}::{}", path.ident, segment))
-            .collect(),
-        syn::UseTree::Name(name) => vec![name.ident.to_string()],
-        syn::UseTree::Rename(rename) => vec![rename.ident.to_string()],
-        syn::UseTree::Glob(_) => vec!["*".into()],
-        syn::UseTree::Group(group) => group.items.iter().flat_map(flatten_use_tree).collect(),
+    // Iterative approach to avoid stack overflow on deep/circular use trees
+    use syn::UseTree;
+    let mut result = Vec::new();
+    // Stack holds (current tree, accumulated path prefix)
+    let mut stack = vec![(tree, String::new())];
+    while let Some((node, prefix)) = stack.pop() {
+        match node {
+            UseTree::Path(path) => {
+                let new_prefix = if prefix.is_empty() {
+                    path.ident.to_string()
+                } else {
+                    format!("{}::{}", prefix, path.ident)
+                };
+                stack.push((&path.tree, new_prefix));
+            }
+            UseTree::Name(name) => {
+                let full = if prefix.is_empty() {
+                    name.ident.to_string()
+                } else {
+                    format!("{}::{}", prefix, name.ident)
+                };
+                result.push(full);
+            }
+            UseTree::Rename(rename) => {
+                let full = if prefix.is_empty() {
+                    rename.ident.to_string()
+                } else {
+                    format!("{}::{}", prefix, rename.ident)
+                };
+                result.push(full);
+            }
+            UseTree::Glob(_) => {
+                let full = if prefix.is_empty() {
+                    "*".to_string()
+                } else {
+                    format!("{}::*", prefix)
+                };
+                result.push(full);
+            }
+            UseTree::Group(group) => {
+                for item in group.items.iter().rev() {
+                    stack.push((item, prefix.clone()));
+                }
+            }
+        }
     }
+    result
 }
