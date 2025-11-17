@@ -11,6 +11,7 @@ pub enum LedgerAction {
     Approval,
     Rollback,
     RollbackSimulation,
+    AuditBundle,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

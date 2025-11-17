@@ -347,9 +347,8 @@ verify:
 # Publish audit bundle
 publish-audit:
 	@echo "📤 Publishing audit bundle..."
-	@$(PYTHON) -m tools.repro.audit_pipeline publish
 	@mkdir -p audit
-	@$(CARGO) run --manifest-path cicd/Cargo.toml --bin publish_audit -- --repo . --output audit --ledger audit/ledger.jsonl
+	@bash audit/publish.sh
 	@latest=$$(ls -d audit/bundle-* 2>/dev/null | tail -n 1); \
 	if [ -n "$$latest" ]; then \
 		echo "🔍 Verifying $$latest"; \
@@ -361,7 +360,7 @@ publish-audit:
 # Run rollback simulation locally
 rollback-sim:
 	@echo "⏱️  Running rollback simulation..."
-	@$(CARGO) run --manifest-path cicd/Cargo.toml --bin rollback_simulation -- --repo . --ledger audit/ledger.jsonl --output audit/rollbacks
+	@cargo run --manifest-path cicd/Cargo.toml --bin rollback_simulation -- --repo . --ledger audit/ledger.jsonl --output audit/rollbacks
 
 # Setup toolchain
 setup:

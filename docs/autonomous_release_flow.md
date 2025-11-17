@@ -8,8 +8,7 @@ branch. The flow is composed of four cooperating capabilities:
    confidence threshold and the historical trust average. Each preview produces a
    reproducible diff artifact in `audit/merges/` and persists an approval entry to the
    ledger.
-2. **Rollback drills** – _(Planned: will use)_ `cargo run --manifest-path cicd/Cargo.toml --bin rollback_simulation`
-   _(Note: The `rollback_simulation` binary is not yet implemented. This command will fail until it is added to the codebase.)_
+2. **Rollback drills** – `cargo run --manifest-path cicd/Cargo.toml --bin rollback_simulation -- --repo . --ledger audit/ledger.jsonl --output audit/rollbacks`
    This step will perform a scheduled checkout of the previous commit in an isolated worktree. Results are
    stored under `audit/rollbacks/` and the ledger captures the simulation outcome to support
    audits.

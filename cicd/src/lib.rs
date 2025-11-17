@@ -178,7 +178,7 @@ pub struct EnvGuard {
 #[cfg(test)]
 fn env_lock() -> &'static std::sync::Mutex<()> {
     use std::sync::{Mutex, OnceLock};
-    static LOCK: OnceLock<Mutex<()> > = OnceLock::new();
+    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
     LOCK.get_or_init(|| Mutex::new(()))
 }
 
@@ -188,7 +188,11 @@ impl EnvGuard {
         let guard = env_lock().lock().expect("cicd env lock poisoned");
         let prev = std::env::var_os(key);
         std::env::set_var(key, value);
-        Self { key, prev, lock: Some(guard) }
+        Self {
+            key,
+            prev,
+            lock: Some(guard),
+        }
     }
 }
 
@@ -421,7 +425,7 @@ impl CICDSystem {
         let recorded_at = OffsetDateTime::now_utc()
             .format(&Rfc3339)
             .unwrap_or_else(|_| "1970-01-01T00:00:00Z".to_string());
-                
+
         let record = DeploymentOutcomeRecord {
             workflow_id: format!("deployment::{}", deployment_id),
             stage_id,
@@ -1388,9 +1392,9 @@ impl CICDSystem {
                 "strategy": strategy,
                 "auto_approved": auto_approved,
             }),
-                recorded_at: OffsetDateTime::now_utc()
-                    .format(&Rfc3339)
-                    .unwrap_or_else(|_| "1970-01-01T00:00:00Z".to_string()),
+            recorded_at: OffsetDateTime::now_utc()
+                .format(&Rfc3339)
+                .unwrap_or_else(|_| "1970-01-01T00:00:00Z".to_string()),
         };
         self.instrumentation
             .record_deployment_outcome(outcome)

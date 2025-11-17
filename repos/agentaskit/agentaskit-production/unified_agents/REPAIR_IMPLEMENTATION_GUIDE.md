@@ -279,22 +279,24 @@ python3 monitoring/health_monitor.py --interval 60
 
 ## Rollback Procedures
 
-If issues are encountered during deployment:
+Use the Rust-native CI/CD workflow to keep evidence in sync with `audit/ledger.jsonl`.
 
-1. **Immediate Rollback**
-   ```bash
-   python3 tools/rollback.py --to-backup backups/$(ls -t backups/ | head -1)
-   ```
+1. **Simulated Rollback Drill (ledger evidence)**
+    ```bash
+    cargo run --manifest-path cicd/Cargo.toml --bin rollback_simulation -- --repo . --ledger audit/ledger.jsonl --output audit/rollbacks
+    ```
 
-2. **Selective Agent Rollback**
-   ```bash
-   python3 tools/rollback_agent.py --agent-name <agent_name> --to-version <version>
-   ```
+2. **Workspace Rollback from Snapshot**
+    ```bash
+    make rollback BUNDLE=archive/YYYY/MM/snapshots/<snapshot>.tar.zst
+    ```
 
-3. **Health-Based Rollback**
-   ```bash
-   python3 tools/auto_rollback.py --health-threshold critical
-   ```
+3. **Makefile Shortcut for Local Drills**
+    ```bash
+    make rollback-sim
+    ```
+
+These commands replace the deprecated Python helpers and ensure every rollback event is captured by the ledger + audit bundle pipeline.
 
 ## Maintenance Procedures
 

@@ -37,6 +37,47 @@ CRC automatically adapts external code (repos, forks, mirrors, stale codebases) 
 - 📊 **Cross-Reference**: Fast lookups without decompression
 - 🚀 **Zero-Touch**: Complete automation from drop to deploy
 
+## Operational Commands & Scripts
+
+### Portable Cargo Activation & Workspace Builds
+
+Every CRC workflow starts from the workspace root with portable Cargo enabled:
+
+```powershell
+cd D:\dev\workspaces\noa_ark_os
+.\server\tools\activate-cargo.ps1
+cargo build --workspace          # full build
+cargo build --workspace --release
+cargo check --workspace          # fast validation
+cargo test --workspace           # run all tests
+cargo fmt --all                  # format tree
+```
+
+> ℹ️ When using WSL/Linux shells, invoke the same commands with `pwsh -File` or run them inside Windows Terminal to ensure the portable toolchain stays active.
+
+### CRC Fork Processing Script
+
+The `crc/detect-forks.ps1` helper centralizes fork ingestion tasks. Run it from the workspace root after activating Cargo:
+
+```powershell
+.\crc\detect-forks.ps1 -Mode process -ForkName "fork-name"   # adapt a specific drop
+.\crc\detect-forks.ps1 -Mode list                            # show all tracked forks
+.\crc\detect-forks.ps1 -Mode watch -IntervalSeconds 60       # continuous watch mode
+```
+
+These commands mirror the manual workflow documented in `DROP_IN_QUICKSTART.md`: drop code under `crc/drop-in/incoming/`, process it, and let CRC move it through processing → ready → archive.
+
+### CRC Demo Entrypoints
+
+Use the provided examples to rehearse CRC + CI/CD flows end-to-end:
+
+```powershell
+cargo run --example crc_cicd_demo
+cargo run --example full_system_demo
+```
+
+Both demos rely on the same ledger + fork automation that production CRC uses, so they are a quick regression check before larger changes.
+
 ## Local Smoke Tests
 
 Quickly validate core CRC workflows before submitting a change:

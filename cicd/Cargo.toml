@@ -27,6 +27,7 @@ noa_workflow = { path = "../workflow" }
 noa_security_shim = { path = "../tools/security/shim" }
 sha2 = "0.10"
 time = { version = "0.3", features = ["formatting", "macros"] }
+clap = { version = "4.5", features = ["derive"] }
 
 [dev-dependencies]
 tempfile = "3"

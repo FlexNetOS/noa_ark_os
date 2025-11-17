@@ -313,6 +313,88 @@ Before marking a task complete:
 * Record SHA-256 hashes: `sha256sum <file>` (capture in Evidence Ledger)
 * Run duplicate check before commit: mirror CI job locally where available
 
+### D) Environment & Workflow Quick Reference
+
+* **Primary execution context:** Windows 11 + PowerShell 7 with portable Cargo/Node under `server/tools/`; WSL/Linux acceptable for parity as long as you do not mix environments mid-session. Always run `./server/tools/activate-cargo.ps1` (or `source server/tools/activate-cargo-wsl.sh`) before any Rust command and `./server/tools/activate-node.ps1|.sh` before pnpm.
+* **Build/Test cadence:**
+  * `cargo build --workspace`, `cargo test --workspace`, `cargo clippy --workspace -- -D warnings`, `cargo fmt --all`
+  * pnpm targets: `pnpm install --frozen-lockfile`, `pnpm build`, `pnpm lint`, `pnpm typecheck`, `pnpm test`
+* **Feature workflow:** create `feature/<name>` branch → edit → run full build/test matrix above → commit using Conventional Commits → push. Archive any replaced assets under `archive/YYYY/MM/` with ledger updates before merging.
+* **Fork processing (CRC):** place incoming fork under `crc/drop-in/incoming/forks/<name>/`, run `crc/detect-forks.ps1 -Mode process -ForkName "<name>"`, review generated branch `fork/<name>`, integrate, then archive originals when done.
+* **Agent restoration pattern:** inspect backup in `agents/src/implementations/_backup/`, bring implementation back to `agents/src/implementations/`, register via `agents/src/registry.rs` and factory, add tests (`cargo test -p noa_agents`), update docs.
+* **Security checklist:** no secrets in repo, prefer async I/O, no `unwrap()` in production paths, enforce gateway-managed env vars, scan forks before execution, honor duplicate/deletion/report guardrails.
+* **Support & troubleshooting:** if Cargo/Node not found, re-run activation scripts; for CI parity use `make pipeline.local` and capture evidence artifacts under `audit/`. Use documentation files listed in Appendix A whenever deeper architectural guidance is required.
+
+### E) Component Snapshot & Status
+
+* **Agents (`agents/`):** 928 agents cataloged in `agents/src/registry.rs`; 26 placeholder integrations live, 902 pending restoration. Factory lives in `agents/src/factory.rs`; original implementations preserved under `agents/src/implementations/_backup/` and must be archived before replacement.
+* **CRC (`crc/`):** Continuous ReCode system managing fork ingestion via `crc/drop-in/incoming/forks/` and archival via `crc/archive/forks/`. `crc/detect-forks.ps1` plus `crc/FORK_PROCESSING_SYSTEM.md` detail automation.
+* **Core (`core/`):** Kernel + core services in Rust; treat manifests as authoritative for Phase 1 gating.
+* **CI/CD (`cicd/`):** Pipeline assets tuned for <20 min commit→prod loops; wired into CRC for fork validation.
+* **Workflow (`workflow/`), Sandbox (`sandbox/`), UI (`ui/`), Server (`server/`):** Multi-language orchestration, integration sandboxes (Pattern A/B/C→D), multi-surface shell targets, and the unified MCP/API server with portable tools under `server/tools/`.
+* **Phase tracking:** Phase 1 complete (registry, fork infra, build verification); Phase 2 in progress (fork testing, CRC AI design, agent trait, DigestAgent); Phase 3 planned (runtime integration, AI engine, server hardening, mass agent restoration).
+
+### F) Command & Toolchain Reference
+
+```
+# Rust workspace
+cargo build --workspace
+cargo build --workspace --release
+cargo test --workspace
+cargo check --workspace
+cargo clean
+cargo fmt --all
+cargo clippy --workspace -- -D warnings
+cargo fix --workspace --allow-dirty
+
+# CRC fork automation
+./crc/detect-forks.ps1 -Mode process -ForkName "fork-name"
+./crc/detect-forks.ps1 -Mode list
+./crc/detect-forks.ps1 -Mode watch -IntervalSeconds 60
+
+# Examples
+cargo run --example agent_registry_demo
+cargo run --example full_system_demo
+cargo run --example crc_cicd_demo
+```
+
+*When PowerShell is unavailable, call the paired `.sh` wrappers; always source the activation script beforehand.*
+
+### G) Coding & Documentation Standards
+
+* **Error handling:** Binaries favor `anyhow::{Result, Context}` with `.context()` on each fallible hop; libraries define typed errors via `thiserror::Error` to encode IO/operation failures.
+* **Async model:** `tokio` runtime (`use tokio::{fs, time};`) is the default for I/O-heavy flows; avoid blocking calls inside async contexts.
+* **Agent traits:** Agents implement metadata accessors plus async `initialize/execute_task/shutdown` operations returning structured `TaskResult` types; keep them `Send + Sync` ready for swarm orchestration.
+* **Module hygiene:** Use `mod.rs` (or inline modules) for hierarchy clarity, keep public APIs documented with Rustdoc (`///` blocks describing args/returns/errors/examples).
+* **Dependency governance:** Prefer workspace-level versions for `tokio`, `anyhow`, `thiserror`, `serde`, `serde_json`, `tracing`, and document new crates (purpose, license, verification run) inside the Evidence Ledger.
+* **Documentation cadence:** Every new public API increments inline docs plus relevant `README`s; large features warrant entries in `docs/` (architecture/operations) and updates to `WORKSPACE_MEMORY.md`.
+
+### H) Workflow Playbooks
+
+* **Feature development:** `git checkout -b feature/<slug>` → implement → `cargo build/test/clippy` (and pnpm equivalents when touching JS) → Conventional Commit with archival notes → push branch.
+* **Fork processing:** Stage fork under `crc/drop-in/incoming/forks/<name>/`, run `detect-forks.ps1 -Mode process`, review `fork/<name>` branch, run workspace build/tests, merge, then compress originals into `crc/archive/forks/` with ledger updates.
+* **Agent restoration:** Inspect `_backup` implementation, port into live `agents/src/implementations/`, register modules + factory, run `cargo test -p noa_agents`, document behavior, and ensure Evidence Ledger references the restored agent.
+* **AI assistant prompts:** When asked to build, test, process forks, add agents, or fix builds, follow the command snippets above and capture outputs for Truth Gate evidence.
+
+### I) Security, Quality & Metrics
+
+* **Always:** activate portable Cargo, run full workspace builds/tests pre-commit, document APIs, follow Rust 2021, prefer async I/O, add `.context()`, keep `cargo clippy` clean.
+* **Never:** mix Windows/WSL paths in a single session, skip builds before commits, leave commented dead code, use `.unwrap()` in production, commit `target/`, retain live fork code post-archive, block async loops with sync I/O, ignore warnings.
+* **Fork security:** scan for malware/secrets, verify licenses, audit dependencies, isolate tests, never auto-run external code, and compress/archive originals immediately after integration.
+* **Code review checklist:** no secrets, validate inputs, no panics in prod, safe error propagation, guard against injection, trust-only dependencies, license compatibility.
+* **Quality/perf targets:** coverage >80%, full build <5 min, tests <10 min, deploy <5 min, CI-to-prod <20 min, p95 response <100 ms, change failure rate <5%, MTTR <5 min.
+
+### J) Troubleshooting & Support
+
+* **Common fixes:**
+  * `cargo: command not found` → re-run activation script.
+  * Language tooling unavailable → reactivate portable Cargo and rely on built-in commands (no VS Code extensions such as rust-analyzer are used here).
+  * Build/test failures → run `cargo build --workspace --verbose` or `cargo test --workspace -- --nocapture` to capture context.
+  * Fork not detected → re-run `detect-forks.ps1 -Mode process -ForkName "name"` to initialize metadata.
+* **Debug helpers:** `cargo check -p <crate> --verbose`, `cargo tree`, `cargo outdated`.
+* **Support path:** consult this policy, `WORKSPACE_MEMORY.md`, component READMEs, documentation map, then escalate via task comments with exact command, error, cwd, tool versions, and expectation vs. outcome.
+
+
 ## Testing
 
 ⚠️ Tests not run (documentation-only change).
