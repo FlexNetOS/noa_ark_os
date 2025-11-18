@@ -125,10 +125,7 @@ export function BoardHeader({
       )}
 
       {hasCapabilitySummary && (
-        <CapabilitySummaryPanel
-          items={capabilitySummary}
-          loading={capabilitiesLoading}
-        />
+        <CapabilitySummaryPanel items={capabilitySummary} loading={capabilitiesLoading} />
       )}
     </div>
   );
@@ -155,11 +152,7 @@ function CapabilitySummaryPanel({ items, loading }: CapabilitySummaryPanelProps)
       </div>
       <ul className="mt-4 space-y-3">
         {items.map((item) => {
-          const statusLabel = loading
-            ? "Pending"
-            : item.available
-              ? "Available"
-              : "Unavailable";
+          const statusLabel = loading ? "Pending" : item.available ? "Available" : "Unavailable";
           const badgeClasses = loading
             ? "border-white/20 bg-white/5 text-white/50"
             : item.available
@@ -181,11 +174,13 @@ function CapabilitySummaryPanel({ items, loading }: CapabilitySummaryPanelProps)
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold text-white">{item.label}</span>
-                  <span className={`text-xs font-semibold uppercase tracking-[0.2em] ${loading
-                      ? "text-white/60"
-                      : item.available
-                        ? "text-emerald-200"
-                        : "text-amber-200"
+                  <span
+                    className={`text-xs font-semibold uppercase tracking-[0.2em] ${
+                      loading
+                        ? "text-white/60"
+                        : item.available
+                          ? "text-emerald-200"
+                          : "text-amber-200"
                     }`}
                   >
                     {statusLabel}

@@ -3,12 +3,16 @@ export type ColorToken =
   | "background/elevated"
   | "surface/primary"
   | "surface/glass"
+  | "surface/overlay"
   | "accent/primary"
   | "accent/secondary"
   | "accent/tertiary"
   | "text/strong"
   | "text/subtle"
+  | "text/muted"
+  | "text/inverted"
   | "border/subtle"
+  | "border/strong"
   | "status/success"
   | "status/warning"
   | "status/danger";
@@ -33,7 +37,7 @@ export interface DesignTokens {
   readonly colors: Record<ColorToken, string>;
   readonly typography: Record<TypographyToken, { fontSize: string; lineHeight: string; fontWeight: number }>;
   readonly spacing: Record<"xxs" | "xs" | "sm" | "md" | "lg" | "xl" | "xxl", string>;
-  readonly radii: Record<"xs" | "sm" | "md" | "lg" | "pill" | "full", string>;
+  readonly radii: Record<"xs" | "sm" | "md" | "lg" | "xl" | "pill" | "full", string>;
   readonly shadows: Record<"level-0" | "level-1" | "level-2", ElevationToken>;
   readonly motion: Record<MotionToken, string>;
 }
@@ -44,12 +48,16 @@ export const tokens: DesignTokens = {
     "background/elevated": "#0E0A19",
     "surface/primary": "#141126",
     "surface/glass": "rgba(31, 20, 63, 0.6)",
+    "surface/overlay": "rgba(20, 17, 38, 0.8)",
     "accent/primary": "#6366F1",
     "accent/secondary": "#A855F7",
     "accent/tertiary": "#22D3EE",
     "text/strong": "#F8FAFC",
     "text/subtle": "rgba(226, 232, 240, 0.64)",
+    "text/muted": "rgba(203, 213, 225, 0.72)",
+    "text/inverted": "#040109",
     "border/subtle": "rgba(99, 102, 241, 0.24)",
+    "border/strong": "rgba(148, 163, 184, 0.64)",
     "status/success": "#34D399",
     "status/warning": "#FBBF24",
     "status/danger": "#F87171",
@@ -75,6 +83,7 @@ export const tokens: DesignTokens = {
     sm: "0.5rem",
     md: "0.75rem",
     lg: "1.5rem",
+    xl: "2rem",
     pill: "9999px",
     full: "50%",
   },

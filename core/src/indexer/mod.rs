@@ -16,6 +16,19 @@ use thiserror::Error;
 
 use crate::memory::RegistryError;
 
+/// Directories containing generated artifacts or imported repositories that are
+/// not part of the first-party workspace code we want to index.
+const SKIP_PREFIXES: &[&str] = &[
+    "archive",
+    "build_output",
+    "repos",
+    "tools/.pnpm-home",
+    ".workspace/indexes",
+    // Portable Cargo registry mirrors third-party crates (including malformed test fixtures)
+    // that should not block indexing.
+    "server/tools/cargo-portable/registry",
+];
+
 const DEFAULT_OUTPUT_DIR: &str = ".workspace/indexes";
 const AST_INDEX: &str = "ast_graph.json";
 const OWNERSHIP_INDEX: &str = "ownership_graph.json";
@@ -94,6 +107,10 @@ fn write_json(path: PathBuf, value: &impl Serialize) -> Result<(), IndexerError>
     let writer = BufWriter::new(file);
     serde_json::to_writer_pretty(writer, value)?;
     Ok(())
+}
+
+pub(crate) fn should_skip(path: &Path) -> bool {
+    SKIP_PREFIXES.iter().any(|prefix| path.starts_with(prefix))
 }
 
 #[cfg(test)]

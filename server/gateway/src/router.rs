@@ -4,17 +4,12 @@ use std::collections::HashMap;
 use thiserror::Error;
 
 /// Supported protocols by the programmable router.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 pub enum Protocol {
+    #[default]
     GraphQl,
     Grpc,
     WebSocket,
-}
-
-impl Default for Protocol {
-    fn default() -> Self {
-        Protocol::GraphQl
-    }
 }
 
 /// Routing plan describing downstream targets and behaviour.

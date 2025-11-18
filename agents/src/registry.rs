@@ -209,13 +209,13 @@ impl AgentRegistry {
             // Index by layer
             by_layer_write
                 .entry(agent.layer.clone())
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(agent.agent_id.clone());
 
             // Index by category
             by_category_write
                 .entry(agent.category.clone())
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(agent.agent_id.clone());
 
             // Update stats

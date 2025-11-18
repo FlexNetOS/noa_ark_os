@@ -271,8 +271,5 @@
   },
   "githubIssues.alwaysPromptForNewIssueRepo": true,
   "githubPullRequests.experimental.useQuickChat": true,
-  "githubPullRequests.notifications": "pullRequests",
-
-  // PHP validation uses installed CLI binary
-  "php.validate.executablePath": "/usr/bin/php"
+  "githubPullRequests.notifications": "pullRequests"
 }

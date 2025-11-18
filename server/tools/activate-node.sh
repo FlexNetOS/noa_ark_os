@@ -8,6 +8,7 @@ set -euo pipefail
 NOA_ACTIVATE_SILENT="${NOA_ACTIVATE_SILENT:-0}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+WORKSPACE_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 NODE_HOME_ROOT="$SCRIPT_DIR/node-portable"
 CURRENT_LINK="$NODE_HOME_ROOT/current"
 COREPACK_DIR="$NODE_HOME_ROOT/corepack"
@@ -34,6 +35,44 @@ export COREPACK_HOME="$COREPACK_DIR"
 export PATH="$NOA_NODE_HOME/bin:$PATH"
 export NOA_NODE_ENV=1
 export NOA_DEV_ENV=1
+
+detect_pnpm_required() {
+    local reader="$WORKSPACE_ROOT/tools/devshell/read-config.cjs"
+    local package_json="$WORKSPACE_ROOT/package.json"
+    local node_bin="$NOA_NODE_HOME/bin/node"
+    local version=""
+    if [[ -x "$node_bin" && -f "$reader" ]]; then
+        version="$($node_bin "$reader" pnpm.requiredVersion 2>/dev/null || true)"
+    elif command -v node >/dev/null 2>&1 && -f "$reader"; then
+        version="$(node "$reader" pnpm.requiredVersion 2>/dev/null || true)"
+    fi
+    if [[ -z "$version" && -f "$package_json" ]]; then
+        version="$(python3 - "$package_json" <<'PY'
+import json, re, sys
+package_path = sys.argv[1]
+try:
+    with open(package_path, 'r', encoding='utf-8') as handle:
+        data = json.load(handle)
+    manager = data.get('packageManager') or ''
+    if manager.startswith('pnpm@'):
+        print(manager.split('@', 1)[1])
+except Exception:
+    pass
+PY
+)"
+    fi
+    echo "$version"
+}
+
+PNPM_REQUIRED="$(detect_pnpm_required)"
+if [[ -n "$PNPM_REQUIRED" ]]; then
+    export NOA_PNPM_REQUIRED="$PNPM_REQUIRED"
+    export npm_config_user_agent="pnpm/$PNPM_REQUIRED"
+    if command -v corepack >/dev/null 2>&1; then
+        corepack prepare "pnpm@$PNPM_REQUIRED" --activate >/dev/null 2>&1 || \
+            echo "⚠️  corepack failed to activate pnpm@$PNPM_REQUIRED" >&2
+    fi
+fi
 
 if command -v hash >/dev/null 2>&1; then
     hash -r 2>/dev/null || true

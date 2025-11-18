@@ -752,7 +752,7 @@ impl WorkflowEngine {
             let mut stage_states = self.stage_states.lock().unwrap();
             stage_states
                 .entry(workflow_id.to_string())
-                .or_insert_with(HashMap::new)
+                .or_default()
                 .insert(stage_name.to_string(), state);
         }
 

@@ -2,6 +2,26 @@ import { runGit } from "../offline_pr_queue/lib/git.ts";
 
 const CONVENTIONAL_PATTERN = /^(build|ci|docs|feat|fix|perf|refactor|style|test|chore|revert)(\([^)]+\))?!?: .+/;
 
+function shouldEnforce(message: string): boolean {
+  if (!message) {
+    return false;
+  }
+  const normalized = message.trim();
+  if (normalized.length === 0) {
+    return false;
+  }
+  if (normalized.startsWith("Merge ")) {
+    return false;
+  }
+  if (normalized.startsWith("Revert ")) {
+    return false;
+  }
+  if (/^dependabot/i.test(normalized)) {
+    return false;
+  }
+  return true;
+}
+
 async function loadProvider() {
   const module = await import("../../server/ai/router.ts");
   return module.getProvider();
@@ -9,6 +29,9 @@ async function loadProvider() {
 
 export function enforceLatestCommit(): void {
   const message = runGit(["log", "-1", "--pretty=%B"]).split("\n")[0]?.trim() ?? "";
+  if (!shouldEnforce(message)) {
+    return;
+  }
   if (!CONVENTIONAL_PATTERN.test(message)) {
     throw new Error(`Latest commit message is not Conventional Commits compliant: "${message}"`);
   }

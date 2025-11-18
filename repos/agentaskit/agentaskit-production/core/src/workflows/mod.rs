@@ -372,7 +372,7 @@ impl EnhancedWorkflowProcessor {
     }
 
     /// Process using enhanced workflow (original implementation)
-    async fn process_enhanced_workflow(&self, request: ChatRequest) -> Result<TaskSubject> { {
+    async fn process_enhanced_workflow(&self, request: ChatRequest) -> Result<TaskSubject> {
         // Store pending request
         {
             let mut pending = self.pending_requests.write().await;

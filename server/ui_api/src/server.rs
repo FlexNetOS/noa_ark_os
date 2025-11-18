@@ -126,6 +126,12 @@ impl UiApiState {
     }
 }
 
+impl Default for UiApiState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Clone)]
 pub struct UiApiServer {
     state: UiApiState,
@@ -397,6 +403,12 @@ f.addEventListener('submit', async e=>{
     }
 }
 
+impl Default for UiApiServer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Serialize)]
 struct DropUploadResponse {
     drop_id: String,
@@ -532,7 +544,7 @@ async fn prepare_upload_receipt(
     drop_id: &str,
     original_bytes: &[u8],
 ) -> Result<UploadProcessingResult> {
-    let cas = Cas::default().context("initializing CAS")?;
+    let cas = Cas::from_env().context("initializing CAS")?;
 
     let mut cas_objects = Vec::new();
 
@@ -807,8 +819,8 @@ mod tests {
             Self { workflow }
         }
 
-        fn into_body(&self) -> Vec<u8> {
-            serde_json::to_vec(self).expect("serialize workflow request")
+        fn into_body(self) -> Vec<u8> {
+            serde_json::to_vec(&self).expect("serialize workflow request")
         }
     }
 

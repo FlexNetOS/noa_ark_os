@@ -30,7 +30,7 @@ type WorkspaceStore = {
 function ensureAutomationState(
   cardId: string,
   automation: GoalAutomationState | null | undefined,
-  fallbackDate: string
+  fallbackDate: string,
 ): GoalAutomationState | null {
   if (automation === null) {
     return null;
@@ -70,7 +70,7 @@ function normaliseBoard(board: WorkspaceBoard): WorkspaceBoard {
         automation: ensureAutomationState(
           goal.id,
           goal.automation as GoalAutomationState | null | undefined,
-          goal.createdAt ?? new Date().toISOString()
+          goal.createdAt ?? new Date().toISOString(),
         ),
       }));
       return {
@@ -97,7 +97,7 @@ async function ensureDataFile(): Promise<void> {
       members: [
         { id: "ava", name: "Ava", role: "owner", avatarHue: 265 },
         { id: "kai", name: "Kai", role: "member", avatarHue: 190 },
-        { id: "sol", name: "Sol", role: "member", avatarHue: 20 }
+        { id: "sol", name: "Sol", role: "member", avatarHue: 20 },
       ],
       boards: [
         {
@@ -117,7 +117,8 @@ async function ensureDataFile(): Promise<void> {
                 {
                   id: "goal-1",
                   title: "Ideate hero motion",
-                  notes: "Sketch the flowing hero animation that loops smoothly across the dashboard.",
+                  notes:
+                    "Sketch the flowing hero animation that loops smoothly across the dashboard.",
                   createdAt: now,
                   mood: "flow",
                   automation: ensureAutomationState("card-1", null, now),
@@ -129,8 +130,8 @@ async function ensureDataFile(): Promise<void> {
                   createdAt: now,
                   mood: "focus",
                   automation: ensureAutomationState("card-2", null, now),
-                }
-              ]
+                },
+              ],
             },
             {
               id: "in-progress",
@@ -144,8 +145,8 @@ async function ensureDataFile(): Promise<void> {
                   createdAt: now,
                   mood: "hype",
                   automation: ensureAutomationState("card-3", null, now),
-                }
-              ]
+                },
+              ],
             },
             {
               id: "done",
@@ -159,20 +160,18 @@ async function ensureDataFile(): Promise<void> {
                   createdAt: now,
                   mood: "chill",
                   automation: ensureAutomationState("card-4", null, now),
-                }
-              ]
-            }
+                },
+              ],
+            },
           ],
           metrics: {
             completedGoals: 1,
             activeGoals: 3,
-            goalMomentum: 72
+            goalMomentum: 72,
           },
           archived: false,
-          moodSamples: [
-            { recordedAt: now, focus: 0.4, flow: 0.3, chill: 0.1, hype: 0.2 }
-          ]
-        }
+          moodSamples: [{ recordedAt: now, focus: 0.4, flow: 0.3, chill: 0.1, hype: 0.2 }],
+        },
       ],
       activity: [
         {
@@ -182,11 +181,11 @@ async function ensureDataFile(): Promise<void> {
           actorName: "Ava",
           boardId: "launchpad",
           description: "Ava spawned the Launchpad board",
-          createdAt: now
-        }
+          createdAt: now,
+        },
       ],
       notifications: [],
-      uploadReceipts: []
+      uploadReceipts: [],
     };
 
     const initial: WorkspaceStore = { workspaces: [defaultWorkspace] };
@@ -212,9 +211,14 @@ async function readStore(): Promise<WorkspaceStore> {
         columns: migratedColumns,
       }));
     const normalizedMetrics: BoardMetrics = {
-      completedGoals: baseMetrics.completedGoals ?? (baseMetrics as { completedCards?: number }).completedCards ?? 0,
-      activeGoals: baseMetrics.activeGoals ?? (baseMetrics as { activeCards?: number }).activeCards ?? 0,
-      goalMomentum: baseMetrics.goalMomentum ?? (baseMetrics as { vibeMomentum?: number }).vibeMomentum ?? 0,
+      completedGoals:
+        baseMetrics.completedGoals ??
+        (baseMetrics as { completedCards?: number }).completedCards ??
+        0,
+      activeGoals:
+        baseMetrics.activeGoals ?? (baseMetrics as { activeCards?: number }).activeCards ?? 0,
+      goalMomentum:
+        baseMetrics.goalMomentum ?? (baseMetrics as { vibeMomentum?: number }).vibeMomentum ?? 0,
       cycleTimeDays: baseMetrics.cycleTimeDays,
       flowEfficiency: baseMetrics.flowEfficiency,
     };
@@ -230,10 +234,12 @@ async function readStore(): Promise<WorkspaceStore> {
     workspaces: await Promise.all(
       parsed.workspaces.map(async (workspace) => ({
         ...workspace,
-        boards: await Promise.all(workspace.boards.map((board) => migrateBoard(board as WorkspaceBoard))),
+        boards: await Promise.all(
+          workspace.boards.map((board) => migrateBoard(board as WorkspaceBoard)),
+        ),
         notifications: workspace.notifications ?? [],
         uploadReceipts: workspace.uploadReceipts ?? [],
-      }))
+      })),
     ),
   };
 }
@@ -242,20 +248,22 @@ async function writeStore(store: WorkspaceStore): Promise<void> {
   await ensureDataFile();
   await fs.writeFile(DATA_FILE, JSON.stringify(store, null, 2), "utf-8");
   const snapshotResults = await Promise.allSettled(
-    store.workspaces.map((workspace) => recordWorkspaceSnapshot(workspace))
+    store.workspaces.map((workspace) => recordWorkspaceSnapshot(workspace)),
   );
   snapshotResults.forEach((result, idx) => {
     if (result.status === "rejected") {
       console.error(
         `Failed to record snapshot for workspace "${store.workspaces[idx]?.id ?? idx}":`,
-        result.reason
+        result.reason,
       );
     }
   });
 }
 
 function getInMemoryStore(): { data: WorkspaceStore } {
-  const globalAny = globalThis as typeof globalThis & { __workspaceStore?: { data: WorkspaceStore } };
+  const globalAny = globalThis as typeof globalThis & {
+    __workspaceStore?: { data: WorkspaceStore };
+  };
   if (!globalAny.__workspaceStore) {
     globalAny.__workspaceStore = { data: { workspaces: [] } };
   }
@@ -272,7 +280,9 @@ async function hydrateStore(): Promise<WorkspaceStore> {
 
 export async function listWorkspacesForUser(userId: string): Promise<Workspace[]> {
   const store = await hydrateStore();
-  return store.workspaces.filter((workspace) => workspace.members.some((member) => member.id === userId));
+  return store.workspaces.filter((workspace) =>
+    workspace.members.some((member) => member.id === userId),
+  );
 }
 
 export async function getWorkspace(workspaceId: string): Promise<Workspace | undefined> {
@@ -292,7 +302,10 @@ export async function upsertWorkspace(workspace: Workspace): Promise<Workspace> 
   return workspace;
 }
 
-export async function getBoard(workspaceId: string, boardId: string): Promise<WorkspaceBoard | undefined> {
+export async function getBoard(
+  workspaceId: string,
+  boardId: string,
+): Promise<WorkspaceBoard | undefined> {
   const workspace = await getWorkspace(workspaceId);
   return workspace?.boards.find((board) => board.id === boardId);
 }
@@ -300,7 +313,7 @@ export async function getBoard(workspaceId: string, boardId: string): Promise<Wo
 export async function saveBoard(
   workspaceId: string,
   nextBoard: WorkspaceBoard,
-  actor: WorkspaceMember
+  actor: WorkspaceMember,
 ): Promise<{ board: WorkspaceBoard; activity: ActivityEvent }> {
   const workspace = await getWorkspace(workspaceId);
   if (!workspace) {
@@ -344,7 +357,7 @@ export async function saveBoard(
 
 export async function recordUploadReceipt(
   workspaceId: string,
-  receipt: Omit<UploadReceiptSummary, "id" | "workspaceId"> & { id?: string }
+  receipt: Omit<UploadReceiptSummary, "id" | "workspaceId"> & { id?: string },
 ): Promise<UploadReceiptSummary> {
   const workspace = await getWorkspace(workspaceId);
   if (!workspace) {
@@ -369,7 +382,7 @@ export async function recordUploadReceipt(
 
 export async function recordWorkspaceNotification(
   workspaceId: string,
-  notification: NotificationEvent
+  notification: NotificationEvent,
 ): Promise<NotificationEvent> {
   const workspace = await getWorkspace(workspaceId);
   if (!workspace) {
@@ -394,7 +407,7 @@ export async function recordGoalAutomationProgress(
   workspaceId: string,
   boardId: string,
   cardId: string,
-  update: AutomationUpdate
+  update: AutomationUpdate,
 ): Promise<{ automation: GoalAutomationState; activity: ActivityEvent }> {
   const workspace = await getWorkspace(workspaceId);
   if (!workspace) {
@@ -405,7 +418,9 @@ export async function recordGoalAutomationProgress(
     throw new Error(`Board ${boardId} not found in workspace ${workspaceId}`);
   }
 
-  const column = board.columns.find((entry) => getColumnGoals(entry).some((card) => card.id === cardId));
+  const column = board.columns.find((entry) =>
+    getColumnGoals(entry).some((card) => card.id === cardId),
+  );
   if (!column) {
     throw new Error(`Card ${cardId} not found in workspace ${workspaceId}`);
   }
@@ -429,8 +444,7 @@ export async function recordGoalAutomationProgress(
     status: update.status,
     attempt: update.attempt ?? automation.history.length + 1,
     startedAt: timestamp,
-    finishedAt:
-      update.status === "completed" || update.status === "failed" ? timestamp : undefined,
+    finishedAt: update.status === "completed" || update.status === "failed" ? timestamp : undefined,
     notes: update.notes,
     toolResults: update.toolResults.map((result) => ({
       ...result,
@@ -471,7 +485,7 @@ export async function recordGoalAutomationProgress(
 export async function createBoard(
   workspaceId: string,
   board: Omit<WorkspaceBoard, "workspaceId" | "metrics">,
-  actor: WorkspaceMember
+  actor: WorkspaceMember,
 ): Promise<{ board: WorkspaceBoard; activity: ActivityEvent }> {
   const workspace = await getWorkspace(workspaceId);
   if (!workspace) {
@@ -503,7 +517,11 @@ export async function createBoard(
   return { board: newBoard, activity };
 }
 
-export async function removeBoard(workspaceId: string, boardId: string, actor: WorkspaceMember): Promise<void> {
+export async function removeBoard(
+  workspaceId: string,
+  boardId: string,
+  actor: WorkspaceMember,
+): Promise<void> {
   const workspace = await getWorkspace(workspaceId);
   if (!workspace) {
     throw new Error(`Workspace ${workspaceId} not found`);
@@ -523,11 +541,12 @@ export async function removeBoard(workspaceId: string, boardId: string, actor: W
 }
 
 async function computeBoardMetrics(
-  board: Pick<WorkspaceBoard, "columns" | "goalId" | "id">
+  board: Pick<WorkspaceBoard, "columns" | "goalId" | "id">,
 ): Promise<BoardMetrics> {
   const completedColumn = board.columns.find((col) => col.title.toLowerCase().includes("done"));
   const completed = completedColumn ? getColumnGoals(completedColumn).length : 0;
-  const active = board.columns.reduce((count, column) => count + getColumnGoals(column).length, 0) - completed;
+  const active =
+    board.columns.reduce((count, column) => count + getColumnGoals(column).length, 0) - completed;
   const vibeMomentum = Math.min(100, Math.max(0, 40 + active * 5 - completed * 3));
   const metrics: BoardMetrics = {
     completedGoals: completed,

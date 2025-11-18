@@ -43,6 +43,7 @@ pub struct ModuleDescriptor {
 }
 
 impl ModuleDescriptor {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         id: impl Into<String>,
         label: impl Into<String>,
@@ -263,6 +264,12 @@ impl AgentModule {
     }
 }
 
+impl Default for AgentModule {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ShellModule for AgentModule {
     fn descriptor(&self) -> &ModuleDescriptor {
         &self.descriptor
@@ -310,6 +317,12 @@ impl DashboardModule {
     }
 }
 
+impl Default for DashboardModule {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ShellModule for DashboardModule {
     fn descriptor(&self) -> &ModuleDescriptor {
         &self.descriptor
@@ -350,6 +363,12 @@ impl KanbanModule {
     }
 }
 
+impl Default for KanbanModule {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ShellModule for KanbanModule {
     fn descriptor(&self) -> &ModuleDescriptor {
         &self.descriptor
@@ -385,6 +404,12 @@ impl CiModule {
                 vec!["developer".into(), "admin".into()],
             ),
         }
+    }
+}
+
+impl Default for CiModule {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -438,6 +463,12 @@ impl StorageModule {
     }
 }
 
+impl Default for StorageModule {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ShellModule for StorageModule {
     fn descriptor(&self) -> &ModuleDescriptor {
         &self.descriptor
@@ -484,6 +515,12 @@ impl AnalyticsModule {
     }
 }
 
+impl Default for AnalyticsModule {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ShellModule for AnalyticsModule {
     fn descriptor(&self) -> &ModuleDescriptor {
         &self.descriptor
@@ -527,6 +564,12 @@ impl ChatModule {
                 vec!["developer".into(), "operator".into(), "admin".into()],
             ),
         }
+    }
+}
+
+impl Default for ChatModule {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -581,6 +624,12 @@ impl ResearchNotebookModule {
                 ],
             ),
         }
+    }
+}
+
+impl Default for ResearchNotebookModule {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -641,6 +690,21 @@ pub fn default_modules() -> Vec<Arc<dyn ShellModule>> {
     modules.into_iter().map(wrap).collect()
 }
 
+impl ModuleContext {
+    fn module_accessible(&self, descriptor: &ModuleDescriptor) -> bool {
+        let state = self.store.read();
+        if descriptor.allowed_roles.is_empty() {
+            return true;
+        }
+
+        let session_roles = &state.session.roles;
+        descriptor
+            .allowed_roles
+            .iter()
+            .any(|role| session_roles.iter().any(|r| r == role))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -693,20 +757,5 @@ mod tests {
             .iter()
             .all(|item| item.id != "analytics"));
         assert!(!state.workspaces.contains_key("analytics"));
-    }
-}
-
-impl ModuleContext {
-    fn module_accessible(&self, descriptor: &ModuleDescriptor) -> bool {
-        let state = self.store.read();
-        if descriptor.allowed_roles.is_empty() {
-            return true;
-        }
-
-        let session_roles = &state.session.roles;
-        descriptor
-            .allowed_roles
-            .iter()
-            .any(|role| session_roles.iter().any(|r| r == role))
     }
 }

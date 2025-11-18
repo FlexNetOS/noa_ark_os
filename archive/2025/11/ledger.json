@@ -30,6 +30,8 @@
     "timestamp": "2025-11-14T21:51:21.395212Z",
     "reason": "Upgraded CLI script into event-driven triage service with remediation automation. Legacy script replaced with text-armored snapshot to satisfy no-binary policy.",
     "replacement": "scripts/triage_analyzer.py"
+  },
+  {
     "original": ".vscode/",
     "archive": "archive/2025/11/.vscode.tar.b64",
     "sha256": "a00da042a7a416a5ff9f594899a14876fae5a835b130b0c405eb5ef7aae5c7fd",
@@ -46,5 +48,14 @@
     "reason": "Prepared devcontainer assets for archival after CLI parity verification.",
     "replacement": "docs/roadmap/cli_config_migration_checklist.md",
     "notes": "Base64 encoded tarball replaces binary .tar.zst artifact to satisfy GitHub storage policy."
+  },
+  {
+    "original": "agents/data/agent_directory.csv",
+    "archive": "archive/2025/11/agents/data/agent_directory.csv.tar.zst",
+    "sha256": "d88a07f69c3023df72c59fb5b31289157f27d7c1a86c7e407a4d7a8a613c785e",
+    "timestamp": "2025-11-17T20:32:47Z",
+    "reason": "Deduplicated the 862-row agent registry down to the canonical 302 entries after capturing the prior dataset.",
+    "replacement": "agents/data/agent_directory.csv",
+    "notes": "Tarball contains the HEAD snapshot before the deduplication rewrite."
   }
 ]

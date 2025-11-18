@@ -61,6 +61,7 @@ mod tests {
 
     #[test]
     fn test_version() {
-        assert!(!VERSION.is_empty());
+        let version = VERSION.to_string();
+        assert!(!version.is_empty());
     }
 }

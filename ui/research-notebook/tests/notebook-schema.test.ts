@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import type { PageSchema, WidgetSchema } from "@noa-ark/shared-ui/schema";
 import { notebookToPageSchema, ResearchNotebookRecord } from "../src";
+
+type PageRegion = PageSchema["regions"][number];
 
 test("notebookToPageSchema produces research widgets", () => {
   const notebook: ResearchNotebookRecord = {
@@ -31,13 +34,13 @@ test("notebookToPageSchema produces research widgets", () => {
 
   const schema = notebookToPageSchema(notebook);
   assert.equal(schema.regions[0].widgets[0].kind, "research.notebook.summary");
-  const sectionRegion = schema.regions.find((region) => region.id === "demo-notebook-sections");
+  const sectionRegion = schema.regions.find((region: PageRegion) => region.id === "demo-notebook-sections");
   assert(sectionRegion, "sections region should exist");
-  assert(sectionRegion!.widgets.some((widget) => widget.kind === "research.notebook.section"));
+  assert(sectionRegion!.widgets.some((widget: WidgetSchema) => widget.kind === "research.notebook.section"));
 
-  const resourcesRegion = schema.regions.find((region) => region.id === "demo-notebook-resources");
+  const resourcesRegion = schema.regions.find((region: PageRegion) => region.id === "demo-notebook-resources");
   assert(resourcesRegion, "resources region should exist");
-  const resourceKinds = new Set(resourcesRegion!.widgets.map((widget) => widget.kind));
+  const resourceKinds = new Set(resourcesRegion!.widgets.map((widget: WidgetSchema) => widget.kind));
   assert(resourceKinds.has("research.notebook.citations"));
   assert(resourceKinds.has("research.notebook.media"));
 });

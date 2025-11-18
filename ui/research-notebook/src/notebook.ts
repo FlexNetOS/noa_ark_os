@@ -32,8 +32,8 @@ function collectCitations(
   };
 
   notebook.metadata.citations?.forEach(push);
-  notebook.sections.forEach((section) => section.citations?.forEach(push));
-  notebook.appendix?.forEach((section) => section.citations?.forEach(push));
+  notebook.sections.forEach((section: NotebookSection) => section.citations?.forEach(push));
+  notebook.appendix?.forEach((section: NotebookSection) => section.citations?.forEach(push));
 
   return Array.from(aggregated.values());
 }
@@ -42,8 +42,8 @@ function collectMedia(
   sections: NotebookSection[],
 ): NotebookMediaAsset[] {
   const bucket: NotebookMediaAsset[] = [];
-  sections.forEach((section) => {
-    section.media?.forEach((media) => bucket.push(media));
+  sections.forEach((section: NotebookSection) => {
+    section.media?.forEach((media: NotebookMediaAsset) => bucket.push(media));
   });
   return bucket;
 }
@@ -98,7 +98,7 @@ export function notebookToPageSchema(
     shells: notebook.metadata.shells,
   });
 
-  const sectionWidgets = notebook.sections.map((section, index) =>
+  const sectionWidgets = notebook.sections.map((section: NotebookSection, index: number) =>
     makeWidget(`${notebook.metadata.id}-section-${section.id || index}`, "research.notebook.section", {
       heading: section.heading,
       summary: section.summary,
@@ -110,7 +110,7 @@ export function notebookToPageSchema(
     }),
   );
 
-  const appendixWidgets = (notebook.appendix ?? []).map((section, index) =>
+  const appendixWidgets = (notebook.appendix ?? []).map((section: NotebookSection, index: number) =>
     makeWidget(`${notebook.metadata.id}-appendix-${section.id || index}`, "research.notebook.section", {
       heading: section.heading,
       summary: section.summary,

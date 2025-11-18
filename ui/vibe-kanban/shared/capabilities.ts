@@ -111,7 +111,7 @@ function normalizeCapabilityRecord(input: unknown): CapabilityRecord | null {
 
 export function evaluateFeatureGates(
   registry: CapabilityRegistry,
-  gates: CapabilityFeatureGate[] = KANBAN_FEATURE_GATES
+  gates: CapabilityFeatureGate[] = KANBAN_FEATURE_GATES,
 ): CapabilityFeatureGateStatus[] {
   const provided = new Set<string>();
 

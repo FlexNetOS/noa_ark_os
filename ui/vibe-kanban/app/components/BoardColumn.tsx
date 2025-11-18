@@ -8,7 +8,8 @@ import { KanbanCard } from "./KanbanCard";
 import { AddCardComposer } from "./AddCardComposer";
 import { DRAG_DATA_TYPE } from "./drag-utils";
 
-const accentClassName = (accent: string) => `h-10 w-10 rounded-2xl bg-gradient-to-br p-[2px] ${accent}`;
+const accentClassName = (accent: string) =>
+  `h-10 w-10 rounded-2xl bg-gradient-to-br p-[2px] ${accent}`;
 
 type BoardColumnProps = {
   column: VibeColumn;
@@ -113,7 +114,12 @@ export function BoardColumn({
             onDragStart={onColumnDragStart}
             onDragEnd={onColumnDragEnd}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              className="h-4 w-4"
+            >
               <path d="M7 4.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 11a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm9-11a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm-9 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm9 0a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm-9 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm9 0a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
             </svg>
           </button>
@@ -134,7 +140,12 @@ export function BoardColumn({
           className="rounded-full bg-white/5 p-2 text-white/60 transition hover:bg-white/10 hover:text-white"
           aria-label="Remove column"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            className="h-4 w-4"
+          >
             <path
               fillRule="evenodd"
               d="M10 8.586 5.293 3.879 3.879 5.293 8.586 10l-4.707 4.707 1.414 1.414L10 11.414l4.707 4.707 1.414-1.414L11.414 10l4.707-4.707-1.414-1.414L10 8.586Z"

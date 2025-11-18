@@ -1,0 +1,1409 @@
+{
+  "generated_at": 1763430266436,
+  "manifests": [
+    {
+      "path": "Cargo.toml",
+      "package": null,
+      "dependencies": [],
+      "workspace_members": [
+        "core/Cargo.toml",
+        "agents/Cargo.toml",
+        "ai/runtime/Cargo.toml",
+        "workflow/Cargo.toml",
+        "sandbox/Cargo.toml",
+        "cicd/Cargo.toml",
+        "crc/Cargo.toml",
+        "crc-adapter-sdk/Cargo.toml",
+        "runtime/manager/Cargo.toml",
+        "ui/core/Cargo.toml",
+        "server/ai/inference/Cargo.toml",
+        "server/gateway/Cargo.toml",
+        "services/relocation-daemon/Cargo.toml",
+        "apps/cli/Cargo.toml",
+        "server/relocation/Cargo.toml",
+        "server/ui_api/Cargo.toml",
+        "tools/symbol_graph/Cargo.toml",
+        "tools/security/shim/Cargo.toml",
+        "plugins/sdk/Cargo.toml",
+        "tools/quarantine_guard/Cargo.toml"
+      ]
+    },
+    {
+      "path": "agents/Cargo.toml",
+      "package": "noa_agents",
+      "dependencies": [
+        {
+          "name": "anyhow",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "async-trait",
+          "requirement": "0.1",
+          "optional": false
+        },
+        {
+          "name": "chrono",
+          "requirement": "0.4",
+          "optional": false
+        },
+        {
+          "name": "csv",
+          "requirement": "1.3",
+          "optional": false
+        },
+        {
+          "name": "noa_core",
+          "requirement": "../core",
+          "optional": false
+        },
+        {
+          "name": "noa_inference",
+          "requirement": "../server/ai/inference",
+          "optional": false
+        },
+        {
+          "name": "serde",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "serde_json",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "thiserror",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "tokio",
+          "requirement": "1.35",
+          "optional": false
+        },
+        {
+          "name": "tracing",
+          "requirement": "0.1",
+          "optional": false
+        },
+        {
+          "name": "uuid",
+          "requirement": "1.6",
+          "optional": false
+        }
+      ],
+      "workspace_members": []
+    },
+    {
+      "path": "ai/runtime/Cargo.toml",
+      "package": "ai-runtime",
+      "dependencies": [
+        {
+          "name": "agents",
+          "requirement": "../../agents",
+          "optional": false
+        },
+        {
+          "name": "anyhow",
+          "requirement": null,
+          "optional": false
+        },
+        {
+          "name": "async-trait",
+          "requirement": "0.1",
+          "optional": false
+        },
+        {
+          "name": "chrono",
+          "requirement": "0.4",
+          "optional": false
+        },
+        {
+          "name": "hex",
+          "requirement": "0.4",
+          "optional": false
+        },
+        {
+          "name": "serde",
+          "requirement": null,
+          "optional": false
+        },
+        {
+          "name": "serde_json",
+          "requirement": null,
+          "optional": false
+        },
+        {
+          "name": "sha2",
+          "requirement": "0.10",
+          "optional": false
+        },
+        {
+          "name": "thiserror",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "tokio",
+          "requirement": null,
+          "optional": false
+        }
+      ],
+      "workspace_members": []
+    },
+    {
+      "path": "apps/cli/Cargo.toml",
+      "package": "noa-cli",
+      "dependencies": [
+        {
+          "name": "anyhow",
+          "requirement": null,
+          "optional": false
+        },
+        {
+          "name": "clap",
+          "requirement": "4.5",
+          "optional": false
+        },
+        {
+          "name": "futures",
+          "requirement": "0.3",
+          "optional": false
+        },
+        {
+          "name": "noa-plugin-sdk",
+          "requirement": "../../plugins/sdk",
+          "optional": false
+        },
+        {
+          "name": "noa_cicd",
+          "requirement": "../../cicd",
+          "optional": false
+        },
+        {
+          "name": "noa_core",
+          "requirement": "../../core",
+          "optional": false
+        },
+        {
+          "name": "noa_inference",
+          "requirement": "../../server/ai/inference",
+          "optional": false
+        },
+        {
+          "name": "noa_workflow",
+          "requirement": "../../workflow",
+          "optional": false
+        },
+        {
+          "name": "relocation-daemon",
+          "requirement": "../../services/relocation-daemon",
+          "optional": false
+        },
+        {
+          "name": "serde",
+          "requirement": null,
+          "optional": false
+        },
+        {
+          "name": "serde_json",
+          "requirement": null,
+          "optional": false
+        },
+        {
+          "name": "serde_yaml",
+          "requirement": null,
+          "optional": false
+        },
+        {
+          "name": "tokio",
+          "requirement": null,
+          "optional": false
+        },
+        {
+          "name": "uuid",
+          "requirement": "1.6",
+          "optional": false
+        },
+        {
+          "name": "walkdir",
+          "requirement": "2",
+          "optional": false
+        }
+      ],
+      "workspace_members": []
+    },
+    {
+      "path": "cicd/Cargo.toml",
+      "package": "noa_cicd",
+      "dependencies": [
+        {
+          "name": "anyhow",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "clap",
+          "requirement": "4.5",
+          "optional": false
+        },
+        {
+          "name": "noa_core",
+          "requirement": "../core",
+          "optional": false
+        },
+        {
+          "name": "noa_security_shim",
+          "requirement": "../tools/security/shim",
+          "optional": false
+        },
+        {
+          "name": "noa_workflow",
+          "requirement": "../workflow",
+          "optional": false
+        },
+        {
+          "name": "serde",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "serde_json",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "serde_yaml",
+          "requirement": "0.9",
+          "optional": false
+        },
+        {
+          "name": "sha2",
+          "requirement": "0.10",
+          "optional": false
+        },
+        {
+          "name": "thiserror",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "time",
+          "requirement": "0.3",
+          "optional": false
+        },
+        {
+          "name": "tokio",
+          "requirement": "1.35",
+          "optional": false
+        },
+        {
+          "name": "tracing",
+          "requirement": "0.1",
+          "optional": false
+        },
+        {
+          "name": "tracing-subscriber",
+          "requirement": "0.3",
+          "optional": false
+        },
+        {
+          "name": "uuid",
+          "requirement": "1.6",
+          "optional": false
+        }
+      ],
+      "workspace_members": []
+    },
+    {
+      "path": "core/Cargo.toml",
+      "package": "noa_core",
+      "dependencies": [
+        {
+          "name": "axum",
+          "requirement": "0.7",
+          "optional": false
+        },
+        {
+          "name": "clap",
+          "requirement": "4.5",
+          "optional": false
+        },
+        {
+          "name": "serde",
+          "requirement": null,
+          "optional": false
+        },
+        {
+          "name": "serde_json",
+          "requirement": null,
+          "optional": false
+        },
+        {
+          "name": "serde_yaml",
+          "requirement": "0.9",
+          "optional": false
+        },
+        {
+          "name": "syn",
+          "requirement": "2.0",
+          "optional": false
+        },
+        {
+          "name": "sysinfo",
+          "requirement": "0.30",
+          "optional": false
+        },
+        {
+          "name": "thiserror",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "tokio",
+          "requirement": "1",
+          "optional": false
+        },
+        {
+          "name": "toml",
+          "requirement": "0.8",
+          "optional": false
+        },
+        {
+          "name": "walkdir",
+          "requirement": "2.5",
+          "optional": false
+        }
+      ],
+      "workspace_members": []
+    },
+    {
+      "path": "crc-adapter-sdk/Cargo.toml",
+      "package": "crc_adapter_sdk",
+      "dependencies": [
+        {
+          "name": "anyhow",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "async-trait",
+          "requirement": "0.1",
+          "optional": false
+        },
+        {
+          "name": "serde",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "serde_json",
+          "requirement": "1.0",
+          "optional": false
+        }
+      ],
+      "workspace_members": []
+    },
+    {
+      "path": "crc/Cargo.toml",
+      "package": "noa_crc",
+      "dependencies": [
+        {
+          "name": "anyhow",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "base64",
+          "requirement": "0.21",
+          "optional": false
+        },
+        {
+          "name": "blake3",
+          "requirement": "1.5",
+          "optional": false
+        },
+        {
+          "name": "chrono",
+          "requirement": "0.4",
+          "optional": false
+        },
+        {
+          "name": "clap",
+          "requirement": "4.4",
+          "optional": false
+        },
+        {
+          "name": "dashmap",
+          "requirement": "5.5",
+          "optional": false
+        },
+        {
+          "name": "flate2",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "notify",
+          "requirement": "6.1",
+          "optional": false
+        },
+        {
+          "name": "petgraph",
+          "requirement": "0.6",
+          "optional": false
+        },
+        {
+          "name": "serde",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "serde_json",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "serde_with",
+          "requirement": "3.4",
+          "optional": false
+        },
+        {
+          "name": "serde_yaml",
+          "requirement": "0.9",
+          "optional": false
+        },
+        {
+          "name": "tar",
+          "requirement": "0.4",
+          "optional": false
+        },
+        {
+          "name": "tempfile",
+          "requirement": "3.10",
+          "optional": false
+        },
+        {
+          "name": "thiserror",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "tokio",
+          "requirement": "1.35",
+          "optional": false
+        },
+        {
+          "name": "tracing",
+          "requirement": "0.1",
+          "optional": false
+        },
+        {
+          "name": "tracing-subscriber",
+          "requirement": "0.3",
+          "optional": false
+        },
+        {
+          "name": "uuid",
+          "requirement": "1.6",
+          "optional": false
+        },
+        {
+          "name": "walkdir",
+          "requirement": "2.4",
+          "optional": false
+        },
+        {
+          "name": "zip",
+          "requirement": "0.6",
+          "optional": false
+        }
+      ],
+      "workspace_members": []
+    },
+    {
+      "path": "crc/drop-in/incoming/repos/agent-registry/Cargo.toml",
+      "package": "agent-registry",
+      "dependencies": [
+        {
+          "name": "anyhow",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "chrono",
+          "requirement": "0.4",
+          "optional": false
+        },
+        {
+          "name": "env_logger",
+          "requirement": "0.10",
+          "optional": false
+        },
+        {
+          "name": "log",
+          "requirement": "0.4",
+          "optional": false
+        },
+        {
+          "name": "redis",
+          "requirement": "0.23",
+          "optional": false
+        },
+        {
+          "name": "reqwest",
+          "requirement": "0.11",
+          "optional": false
+        },
+        {
+          "name": "serde",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "serde_json",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "sqlx",
+          "requirement": "0.7",
+          "optional": false
+        },
+        {
+          "name": "tokio",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "uuid",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "warp",
+          "requirement": "0.3",
+          "optional": false
+        }
+      ],
+      "workspace_members": []
+    },
+    {
+      "path": "inference/Cargo.toml",
+      "package": null,
+      "dependencies": [],
+      "workspace_members": []
+    },
+    {
+      "path": "memory/Cargo.toml",
+      "package": "noa_memory",
+      "dependencies": [
+        {
+          "name": "chrono",
+          "requirement": "0.4",
+          "optional": false
+        },
+        {
+          "name": "parking_lot",
+          "requirement": "0.12",
+          "optional": false
+        },
+        {
+          "name": "serde",
+          "requirement": null,
+          "optional": false
+        },
+        {
+          "name": "serde_cbor",
+          "requirement": "0.11",
+          "optional": false
+        },
+        {
+          "name": "thiserror",
+          "requirement": "1.0",
+          "optional": false
+        }
+      ],
+      "workspace_members": []
+    },
+    {
+      "path": "plugins/sdk/Cargo.toml",
+      "package": "noa-plugin-sdk",
+      "dependencies": [
+        {
+          "name": "anyhow",
+          "requirement": null,
+          "optional": false
+        },
+        {
+          "name": "serde",
+          "requirement": null,
+          "optional": false
+        },
+        {
+          "name": "serde_json",
+          "requirement": null,
+          "optional": false
+        }
+      ],
+      "workspace_members": []
+    },
+    {
+      "path": "runtime/manager/Cargo.toml",
+      "package": "runtime_manager",
+      "dependencies": [
+        {
+          "name": "anyhow",
+          "requirement": null,
+          "optional": false
+        },
+        {
+          "name": "cap-std",
+          "requirement": "2.0.0",
+          "optional": false
+        },
+        {
+          "name": "noa_core",
+          "requirement": "../../core",
+          "optional": false
+        },
+        {
+          "name": "serde",
+          "requirement": null,
+          "optional": false
+        },
+        {
+          "name": "serde_yaml",
+          "requirement": null,
+          "optional": false
+        },
+        {
+          "name": "thiserror",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "wasi-common",
+          "requirement": "16.0.0",
+          "optional": false
+        },
+        {
+          "name": "wasmtime",
+          "requirement": "16.0.0",
+          "optional": false
+        },
+        {
+          "name": "wasmtime-wasi",
+          "requirement": "16.0.0",
+          "optional": false
+        }
+      ],
+      "workspace_members": []
+    },
+    {
+      "path": "sandbox/Cargo.toml",
+      "package": "noa_sandbox",
+      "dependencies": [
+        {
+          "name": "serde",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "serde_json",
+          "requirement": "1.0",
+          "optional": false
+        }
+      ],
+      "workspace_members": []
+    },
+    {
+      "path": "server/Cargo.toml",
+      "package": null,
+      "dependencies": [],
+      "workspace_members": [
+        "server/core/Cargo.toml",
+        "server/api/Cargo.toml",
+        "server/inference/Cargo.toml",
+        "server/retrieval/Cargo.toml",
+        "server/plugins/Cargo.toml",
+        "server/observability/Cargo.toml",
+        "server/cli/Cargo.toml",
+        "server/ai/inference/Cargo.toml"
+      ]
+    },
+    {
+      "path": "server/ai/inference/Cargo.toml",
+      "package": "noa_inference",
+      "dependencies": [
+        {
+          "name": "anyhow",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "async-stream",
+          "requirement": "0.3",
+          "optional": false
+        },
+        {
+          "name": "async-trait",
+          "requirement": "0.1",
+          "optional": false
+        },
+        {
+          "name": "futures",
+          "requirement": "0.3",
+          "optional": false
+        },
+        {
+          "name": "reqwest",
+          "requirement": "0.11",
+          "optional": false
+        },
+        {
+          "name": "serde",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "serde_json",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "thiserror",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "tokio",
+          "requirement": "1",
+          "optional": false
+        },
+        {
+          "name": "tokio-stream",
+          "requirement": "0.1",
+          "optional": false
+        },
+        {
+          "name": "tracing",
+          "requirement": "0.1",
+          "optional": false
+        }
+      ],
+      "workspace_members": []
+    },
+    {
+      "path": "server/gateway/Cargo.toml",
+      "package": "noa_gateway",
+      "dependencies": [
+        {
+          "name": "anyhow",
+          "requirement": null,
+          "optional": false
+        },
+        {
+          "name": "chrono",
+          "requirement": "0.4",
+          "optional": false
+        },
+        {
+          "name": "ctrlc",
+          "requirement": "3",
+          "optional": false
+        },
+        {
+          "name": "jsonwebtoken",
+          "requirement": "9",
+          "optional": false
+        },
+        {
+          "name": "noa_agents",
+          "requirement": "../../agents",
+          "optional": false
+        },
+        {
+          "name": "noa_core",
+          "requirement": "../../core",
+          "optional": false
+        },
+        {
+          "name": "parking_lot",
+          "requirement": "0.12",
+          "optional": false
+        },
+        {
+          "name": "reqwest",
+          "requirement": "0.12",
+          "optional": false
+        },
+        {
+          "name": "rusqlite",
+          "requirement": "0.31",
+          "optional": false
+        },
+        {
+          "name": "serde",
+          "requirement": null,
+          "optional": false
+        },
+        {
+          "name": "serde_json",
+          "requirement": null,
+          "optional": false
+        },
+        {
+          "name": "thiserror",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "tracing",
+          "requirement": "0.1",
+          "optional": false
+        }
+      ],
+      "workspace_members": []
+    },
+    {
+      "path": "server/relocation/Cargo.toml",
+      "package": "relocation-server",
+      "dependencies": [
+        {
+          "name": "anyhow",
+          "requirement": null,
+          "optional": false
+        },
+        {
+          "name": "hyper",
+          "requirement": "0.14",
+          "optional": false
+        },
+        {
+          "name": "relocation-daemon",
+          "requirement": "../../services/relocation-daemon",
+          "optional": false
+        },
+        {
+          "name": "serde",
+          "requirement": null,
+          "optional": false
+        },
+        {
+          "name": "serde_json",
+          "requirement": null,
+          "optional": false
+        },
+        {
+          "name": "tokio",
+          "requirement": null,
+          "optional": false
+        },
+        {
+          "name": "tracing",
+          "requirement": "0.1",
+          "optional": false
+        },
+        {
+          "name": "tracing-subscriber",
+          "requirement": "0.3",
+          "optional": false
+        },
+        {
+          "name": "uuid",
+          "requirement": "1.6",
+          "optional": false
+        }
+      ],
+      "workspace_members": []
+    },
+    {
+      "path": "server/ui_api/Cargo.toml",
+      "package": "noa_ui_api",
+      "dependencies": [
+        {
+          "name": "anyhow",
+          "requirement": "1",
+          "optional": false
+        },
+        {
+          "name": "async-stream",
+          "requirement": "0.3",
+          "optional": false
+        },
+        {
+          "name": "axum",
+          "requirement": "0.7",
+          "optional": false
+        },
+        {
+          "name": "bytes",
+          "requirement": "1",
+          "optional": false
+        },
+        {
+          "name": "chrono",
+          "requirement": "0.4",
+          "optional": false
+        },
+        {
+          "name": "clap",
+          "requirement": "4.5",
+          "optional": false
+        },
+        {
+          "name": "flate2",
+          "requirement": "1",
+          "optional": false
+        },
+        {
+          "name": "futures",
+          "requirement": "0.3",
+          "optional": false
+        },
+        {
+          "name": "noa_crc",
+          "requirement": "../../crc",
+          "optional": false
+        },
+        {
+          "name": "noa_workflow",
+          "requirement": "../../workflow",
+          "optional": false
+        },
+        {
+          "name": "prost",
+          "requirement": "0.12",
+          "optional": false
+        },
+        {
+          "name": "prost-types",
+          "requirement": "0.12",
+          "optional": false
+        },
+        {
+          "name": "serde",
+          "requirement": null,
+          "optional": false
+        },
+        {
+          "name": "serde_json",
+          "requirement": null,
+          "optional": false
+        },
+        {
+          "name": "serde_repr",
+          "requirement": "0.1",
+          "optional": false
+        },
+        {
+          "name": "serde_yaml",
+          "requirement": "0.9",
+          "optional": false
+        },
+        {
+          "name": "tar",
+          "requirement": "0.4",
+          "optional": false
+        },
+        {
+          "name": "thiserror",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "tokio",
+          "requirement": null,
+          "optional": false
+        },
+        {
+          "name": "tokio-stream",
+          "requirement": "0.1",
+          "optional": false
+        },
+        {
+          "name": "tonic",
+          "requirement": "0.11",
+          "optional": false
+        },
+        {
+          "name": "tower",
+          "requirement": "0.4",
+          "optional": false
+        },
+        {
+          "name": "tracing",
+          "requirement": "0.1",
+          "optional": false
+        },
+        {
+          "name": "tracing-subscriber",
+          "requirement": "0.3",
+          "optional": false
+        },
+        {
+          "name": "uuid",
+          "requirement": "1",
+          "optional": false
+        },
+        {
+          "name": "zip",
+          "requirement": "0.6",
+          "optional": false
+        }
+      ],
+      "workspace_members": []
+    },
+    {
+      "path": "services/agent-registry/rust/Cargo.toml",
+      "package": "agent-registry",
+      "dependencies": [
+        {
+          "name": "anyhow",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "chrono",
+          "requirement": "0.4",
+          "optional": false
+        },
+        {
+          "name": "env_logger",
+          "requirement": "0.10",
+          "optional": false
+        },
+        {
+          "name": "log",
+          "requirement": "0.4",
+          "optional": false
+        },
+        {
+          "name": "redis",
+          "requirement": "0.23",
+          "optional": false
+        },
+        {
+          "name": "reqwest",
+          "requirement": "0.11",
+          "optional": false
+        },
+        {
+          "name": "serde",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "serde_json",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "sqlx",
+          "requirement": "0.7",
+          "optional": false
+        },
+        {
+          "name": "tokio",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "uuid",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "warp",
+          "requirement": "0.3",
+          "optional": false
+        }
+      ],
+      "workspace_members": []
+    },
+    {
+      "path": "services/relocation-daemon/Cargo.toml",
+      "package": "relocation-daemon",
+      "dependencies": [
+        {
+          "name": "anyhow",
+          "requirement": null,
+          "optional": false
+        },
+        {
+          "name": "chrono",
+          "requirement": "0.4",
+          "optional": false
+        },
+        {
+          "name": "noa_core",
+          "requirement": "../../core",
+          "optional": false
+        },
+        {
+          "name": "serde",
+          "requirement": null,
+          "optional": false
+        },
+        {
+          "name": "serde_json",
+          "requirement": null,
+          "optional": false
+        },
+        {
+          "name": "serde_yaml",
+          "requirement": "0.9",
+          "optional": false
+        },
+        {
+          "name": "tokio",
+          "requirement": null,
+          "optional": false
+        },
+        {
+          "name": "tracing",
+          "requirement": "0.1",
+          "optional": false
+        },
+        {
+          "name": "uuid",
+          "requirement": "1.6",
+          "optional": false
+        }
+      ],
+      "workspace_members": []
+    },
+    {
+      "path": "tools/quarantine_guard/Cargo.toml",
+      "package": "quarantine_guard",
+      "dependencies": [
+        {
+          "name": "anyhow",
+          "requirement": null,
+          "optional": false
+        },
+        {
+          "name": "chrono",
+          "requirement": "0.4",
+          "optional": false
+        },
+        {
+          "name": "serde",
+          "requirement": null,
+          "optional": false
+        },
+        {
+          "name": "serde_json",
+          "requirement": null,
+          "optional": false
+        },
+        {
+          "name": "serde_yaml",
+          "requirement": null,
+          "optional": false
+        },
+        {
+          "name": "sha2",
+          "requirement": "0.10",
+          "optional": false
+        },
+        {
+          "name": "walkdir",
+          "requirement": "2",
+          "optional": false
+        }
+      ],
+      "workspace_members": []
+    },
+    {
+      "path": "tools/security/shim/Cargo.toml",
+      "package": "noa_security_shim",
+      "dependencies": [
+        {
+          "name": "chrono",
+          "requirement": "0.4",
+          "optional": false
+        },
+        {
+          "name": "serde",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "serde_json",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "thiserror",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "walkdir",
+          "requirement": "2.4",
+          "optional": false
+        }
+      ],
+      "workspace_members": []
+    },
+    {
+      "path": "tools/symbol_graph/Cargo.toml",
+      "package": "noa_symbol_graph",
+      "dependencies": [
+        {
+          "name": "anyhow",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "noa_core",
+          "requirement": "../../core",
+          "optional": false
+        },
+        {
+          "name": "notify",
+          "requirement": "6.1",
+          "optional": false
+        },
+        {
+          "name": "serde",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "serde_json",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "thiserror",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "time",
+          "requirement": "0.3",
+          "optional": false
+        },
+        {
+          "name": "tree-sitter",
+          "requirement": "0.20",
+          "optional": false
+        },
+        {
+          "name": "tree-sitter-rust",
+          "requirement": "0.20",
+          "optional": false
+        },
+        {
+          "name": "tree-sitter-typescript",
+          "requirement": "0.20",
+          "optional": false
+        },
+        {
+          "name": "walkdir",
+          "requirement": "2.4",
+          "optional": false
+        }
+      ],
+      "workspace_members": []
+    },
+    {
+      "path": "ui/core/Cargo.toml",
+      "package": "noa_ui",
+      "dependencies": [
+        {
+          "name": "noa_core",
+          "requirement": "../../core",
+          "optional": false
+        },
+        {
+          "name": "once_cell",
+          "requirement": "1.19",
+          "optional": false
+        },
+        {
+          "name": "serde",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "serde_json",
+          "requirement": "1.0",
+          "optional": false
+        }
+      ],
+      "workspace_members": []
+    },
+    {
+      "path": "workflow/Cargo.toml",
+      "package": "noa_workflow",
+      "dependencies": [
+        {
+          "name": "chrono",
+          "requirement": "0.4",
+          "optional": false
+        },
+        {
+          "name": "clap",
+          "requirement": "4",
+          "optional": false
+        },
+        {
+          "name": "noa_agents",
+          "requirement": "../agents",
+          "optional": false
+        },
+        {
+          "name": "noa_core",
+          "requirement": "../core",
+          "optional": false
+        },
+        {
+          "name": "noa_memory",
+          "requirement": "../memory",
+          "optional": false
+        },
+        {
+          "name": "serde",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "serde_json",
+          "requirement": "1.0",
+          "optional": false
+        },
+        {
+          "name": "serde_yaml",
+          "requirement": "0.9",
+          "optional": false
+        },
+        {
+          "name": "tempfile",
+          "requirement": "3",
+          "optional": false
+        },
+        {
+          "name": "thiserror",
+          "requirement": "1",
+          "optional": false
+        },
+        {
+          "name": "tokio",
+          "requirement": "1",
+          "optional": false
+        },
+        {
+          "name": "tokio-stream",
+          "requirement": "0.1",
+          "optional": false
+        }
+      ],
+      "workspace_members": []
+    }
+  ]
+}

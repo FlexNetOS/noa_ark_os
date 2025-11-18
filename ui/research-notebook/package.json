@@ -6,26 +6,26 @@
   "sideEffects": false,
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "import": "./dist/src/index.js",
+      "types": "./dist/src/index.d.ts"
     },
     "./renderers/web": {
-      "import": "./dist/renderers/web.js",
-      "types": "./dist/renderers/web.d.ts"
+      "import": "./dist/src/renderers/web.js",
+      "types": "./dist/src/renderers/web.d.ts"
     },
     "./renderers/desktop": {
-      "import": "./dist/renderers/desktop.js",
-      "types": "./dist/renderers/desktop.d.ts"
+      "import": "./dist/src/renderers/desktop.js",
+      "types": "./dist/src/renderers/desktop.d.ts"
     },
     "./renderers/native": {
-      "import": "./dist/renderers/native.js",
-      "types": "./dist/renderers/native.d.ts"
+      "import": "./dist/src/renderers/native.js",
+      "types": "./dist/src/renderers/native.d.ts"
     }
   },
   "scripts": {
     "build": "tsc --project tsconfig.json",
     "lint": "tsc --noEmit --project tsconfig.json",
-    "test": "node --import tsx --test tests/**/*.test.ts"
+    "test": "bash -lc 'shopt -s globstar nullglob && node --import tsx --test tests/**/*.test.ts'"
   },
   "peerDependencies": {
     "react": ">=18"
@@ -34,6 +34,7 @@
     "@noa-ark/shared-ui": "workspace:*"
   },
   "devDependencies": {
+    "@types/node": "20.14.10",
     "@types/react": "18.2.73",
     "tsx": "4.7.1",
     "typescript": "5.4.5"

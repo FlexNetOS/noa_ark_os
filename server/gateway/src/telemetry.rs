@@ -124,10 +124,7 @@ impl TelemetrySink {
         Ok(())
     }
 
-    pub fn record_rate_limits(
-        &self,
-        snapshot: RateMetricsSnapshot,
-    ) -> Result<(), TelemetryError> {
+    pub fn record_rate_limits(&self, snapshot: RateMetricsSnapshot) -> Result<(), TelemetryError> {
         let mut metrics = self.metrics.lock();
         metrics.rate_limit = snapshot;
         self.persist_metrics(&metrics)

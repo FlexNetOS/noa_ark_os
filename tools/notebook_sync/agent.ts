@@ -70,14 +70,16 @@ export function runNotebookSync(root: string = process.cwd()): NotebookSyncResul
     };
   }
 
-  const notebooks = loadNotebooks(root);
   const aggregatedChanges = aggregateChanges(diffs.active);
 
-  const notebooksTouched = notebooks.filter((notebook) => {
-    return applyNotebookUpdates(notebook, aggregatedChanges, diffs.active);
-  }).length;
-
-  notebooks.forEach((notebook) => persistNotebook(notebook));
+  let notebooksTouched = 0;
+  for (const notebook of enumerateNotebooks(root)) {
+    const changed = applyNotebookUpdates(notebook, aggregatedChanges, diffs.active);
+    if (changed) {
+      notebooksTouched += 1;
+    }
+    persistNotebook(notebook);
+  }
 
   recordLedger(ledgerPath, diffs.active);
   appendAnalyticsRun(analyticsPath, {
@@ -122,43 +124,41 @@ function readDiffs(diffDir: string): { active: NotebookMetadataDiff[]; all: stri
   return { active: diffs, all: files };
 }
 
-function loadNotebooks(root: string): NotebookFile[] {
+function* enumerateNotebooks(root: string): Generator<NotebookFile> {
   const notebooksRoot = path.join(root, 'notebooks');
   if (!fs.existsSync(notebooksRoot)) {
-    return [];
+    return;
   }
-  const files: NotebookFile[] = [];
-  traverseDirectory(notebooksRoot, (filePath) => {
+  for (const filePath of traverseDirectory(notebooksRoot)) {
     if (!filePath.endsWith('.ipynb')) {
-      return;
+      continue;
     }
     const original = fs.readFileSync(filePath, 'utf8');
     try {
       const content = JSON.parse(original);
-      files.push({ path: filePath, content, original });
+      yield { path: filePath, content, original };
     } catch (error) {
       console.warn(`[notebook-sync] unable to parse notebook ${filePath}:`, error);
     }
-  });
-  return files;
+  }
 }
 
-function traverseDirectory(dir: string, onFile: (filePath: string) => void): void {
+function* traverseDirectory(dir: string): Generator<string> {
   if (!fs.existsSync(dir)) {
     return;
   }
   const entries = fs.readdirSync(dir, { withFileTypes: true });
-  entries.forEach((entry) => {
+  for (const entry of entries) {
     if (entry.name === '.workspace' || entry.name === 'node_modules') {
-      return;
+      continue;
     }
     const fullPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      traverseDirectory(fullPath, onFile);
+      yield* traverseDirectory(fullPath);
     } else if (entry.isFile()) {
-      onFile(fullPath);
+      yield fullPath;
     }
-  });
+  }
 }
 
 function aggregateChanges(diffs: NotebookMetadataDiff[]): NotebookSymbolChange[] {

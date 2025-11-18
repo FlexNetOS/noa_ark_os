@@ -5,10 +5,7 @@ import { createBoard, getWorkspace } from "@/server/workspace-store";
 import { workspaceEventHub } from "@/server/workspace-events";
 import type { WorkspaceBoard } from "@/app/components/board-types";
 
-export async function GET(
-  _request: Request,
-  { params }: { params: { workspaceId: string } }
-) {
+export async function GET(_request: Request, { params }: { params: { workspaceId: string } }) {
   const user = assertUser();
   const workspace = await getWorkspace(params.workspaceId);
   if (!workspace || !workspace.members.some((member) => member.id === user.id)) {
@@ -17,10 +14,7 @@ export async function GET(
   return NextResponse.json({ boards: workspace.boards });
 }
 
-export async function POST(
-  request: Request,
-  { params }: { params: { workspaceId: string } }
-) {
+export async function POST(request: Request, { params }: { params: { workspaceId: string } }) {
   const user = assertUser();
   const workspace = await getWorkspace(params.workspaceId);
   if (!workspace) {
@@ -38,29 +32,28 @@ export async function POST(
     description: payload.description ?? "",
     lastUpdated: now,
     accent: payload.accent ?? "from-indigo-500 via-purple-500 to-blue-500",
-    columns:
-      payload.columns?.length
-        ? payload.columns
-        : [
-            {
-              id: "todo",
-              title: "To Do",
-              accent: payload.accent ?? "from-indigo-500 via-purple-500 to-blue-500",
-              goals: [],
-            },
-            {
-              id: "in-progress",
-              title: "In Progress",
-              accent: "from-sky-500 via-cyan-400 to-emerald-400",
-              goals: [],
-            },
-            {
-              id: "done",
-              title: "Completed",
-              accent: "from-violet-500 via-indigo-400 to-fuchsia-500",
-              goals: [],
-            },
-          ],
+    columns: payload.columns?.length
+      ? payload.columns
+      : [
+          {
+            id: "todo",
+            title: "To Do",
+            accent: payload.accent ?? "from-indigo-500 via-purple-500 to-blue-500",
+            goals: [],
+          },
+          {
+            id: "in-progress",
+            title: "In Progress",
+            accent: "from-sky-500 via-cyan-400 to-emerald-400",
+            goals: [],
+          },
+          {
+            id: "done",
+            title: "Completed",
+            accent: "from-violet-500 via-indigo-400 to-fuchsia-500",
+            goals: [],
+          },
+        ],
     archived: false,
     moodSamples: payload.moodSamples ?? [],
   };

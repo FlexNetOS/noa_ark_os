@@ -6,64 +6,153 @@ import { useBoardState } from "../useBoardState";
 import type { WorkspaceBoard } from "../board-types";
 import * as sessionModule from "@noa-ark/shared-ui/session";
 
-vi.mock("@noa-ark/shared-ui/session", async () => {
-  const actual = await vi.importActual<typeof import("@noa-ark/shared-ui/session")>("@noa-ark/shared-ui/session");
+type Listener = (value: unknown) => void;
 
+function createSessionContinuityMock() {
   class MockSessionContinuityClient {
     static last: MockSessionContinuityClient | null = null;
-    private listeners = new Map<string, Set<(value: unknown) => void>>();
+    private listeners = new Map<string, Set<Listener>>();
     public requested: ResumeToken[] = [];
+    private connected = false;
 
     constructor() {
       MockSessionContinuityClient.last = this;
     }
 
-    on(event: string, handler: (value: unknown) => void) {
-      const set = this.listeners.get(event) ?? new Set();
+    on(event: string, handler: Listener) {
+      const set = this.listeners.get(event) ?? new Set<Listener>();
       set.add(handler);
       this.listeners.set(event, set);
     }
 
-    off(event: string, handler: (value: unknown) => void) {
+    off(event: string, handler: Listener) {
       const set = this.listeners.get(event);
       set?.delete(handler);
+      if (set && set.size === 0) {
+        this.listeners.delete(event);
+      }
     }
 
-    connectWebSocket() {}
-    disconnect() {}
+    connectWebSocket() {
+      this.connected = true;
+    }
+
+    disconnect() {
+      this.connected = false;
+      this.listeners.clear();
+      if (MockSessionContinuityClient.last === this) {
+        MockSessionContinuityClient.last = null;
+      }
+    }
 
     requestResume(token: ResumeToken) {
       this.requested.push(token);
     }
 
     emit(event: string, payload: unknown) {
+      if (!this.connected) {
+        this.connectWebSocket();
+      }
       const set = this.listeners.get(event);
       set?.forEach((handler) => handler(payload));
     }
   }
 
   return {
-    ...actual,
     SessionContinuityClient: MockSessionContinuityClient,
-    __getLastClient: () => MockSessionContinuityClient.last,
+    getLastClient: () => MockSessionContinuityClient.last,
+  };
+}
+
+vi.mock("@noa-ark/shared-ui/session", async () => {
+  const actual = await vi.importActual<typeof import("@noa-ark/shared-ui/session")>(
+    "@noa-ark/shared-ui/session",
+  );
+  const { SessionContinuityClient, getLastClient } = createSessionContinuityMock();
+
+  return {
+    ...actual,
+    SessionContinuityClient,
+    __getLastClient: getLastClient,
   };
 });
 
 const fetchMock = vi.fn();
 
 global.fetch = fetchMock as unknown as typeof fetch;
-(globalThis as { EventSource?: typeof EventSource }).EventSource = class MockEventSource {
+type MockMessageEvent = MessageEvent & { data: string };
+type MockEventListener = (event: MockMessageEvent) => void;
+
+class MockEventSource {
+  static readonly CONNECTING = 0;
+  static readonly OPEN = 1;
+  static readonly CLOSED = 2;
+
   url: string;
+  readonly CONNECTING = MockEventSource.CONNECTING;
+  readonly OPEN = MockEventSource.OPEN;
+  readonly CLOSED = MockEventSource.CLOSED;
+  readyState = MockEventSource.CONNECTING;
+  onopen: ((this: EventSource, ev: Event) => unknown) | null = null;
+  onmessage: ((this: EventSource, ev: MessageEvent) => unknown) | null = null;
+  onerror: ((this: EventSource, ev: Event) => unknown) | null = null;
+  withCredentials = false;
+  private listeners = new Map<string, Set<MockEventListener>>();
+
   constructor(url: string) {
     this.url = url;
+    this.readyState = MockEventSource.OPEN;
   }
-  addEventListener() {}
-  removeEventListener() {}
-  close() {}
-} as unknown as typeof EventSource;
 
-const getLastClient = () =>
-  (sessionModule as unknown as { __getLastClient?: () => any }).__getLastClient?.();
+  addEventListener(event: string, listener: MockEventListener) {
+    const handlers = this.listeners.get(event) ?? new Set<MockEventListener>();
+    handlers.add(listener);
+    this.listeners.set(event, handlers);
+  }
+
+  removeEventListener(event: string, listener: MockEventListener) {
+    const handlers = this.listeners.get(event);
+    handlers?.delete(listener);
+    if (handlers && handlers.size === 0) {
+      this.listeners.delete(event);
+    }
+  }
+
+  dispatchEvent(_: Event): boolean {
+    return true;
+  }
+
+  emit(event: string, data: string) {
+    const payload = { data, type: event } as MockMessageEvent;
+    this.listeners.get(event)?.forEach((listener) => listener(payload));
+    if (event === "message") {
+      this.onmessage?.call(this as unknown as EventSource, payload);
+    }
+  }
+
+  close() {
+    this.readyState = MockEventSource.CLOSED;
+    this.listeners.clear();
+    this.onopen = null;
+    this.onmessage = null;
+    this.onerror = null;
+  }
+}
+
+(globalThis as { EventSource?: typeof EventSource }).EventSource =
+  MockEventSource as unknown as typeof EventSource;
+
+type MockClientShape = {
+  requested: ResumeToken[];
+  emit: (event: string, payload: unknown) => void;
+  disconnect: () => void;
+};
+
+type SessionModuleWithMock = typeof sessionModule & {
+  __getLastClient?: () => MockClientShape | null;
+};
+
+const getLastClient = () => (sessionModule as SessionModuleWithMock).__getLastClient?.() ?? null;
 
 describe("useBoardState planner integration", () => {
   const board: WorkspaceBoard = {
@@ -129,7 +218,14 @@ describe("useBoardState planner integration", () => {
         return {
           ok: true,
           json: async () => ({
-            workspace: { id: "studio", members: [], boards: [board], activity: [], notifications: [], uploadReceipts: [] },
+            workspace: {
+              id: "studio",
+              members: [],
+              boards: [board],
+              activity: [],
+              notifications: [],
+              uploadReceipts: [],
+            },
           }),
         } as Response;
       }
@@ -161,9 +257,7 @@ describe("useBoardState planner integration", () => {
                 expiresAt: new Date(Date.now() + 1000 * 60 * 60).toISOString(),
               },
               startedAt: new Date().toISOString(),
-              stages: [
-                { id: "goal-intake", name: "Goal Intake", state: "pending" },
-              ],
+              stages: [{ id: "goal-intake", name: "Goal Intake", state: "pending" }],
             },
           }),
         } as Response;
@@ -205,7 +299,7 @@ describe("useBoardState planner integration", () => {
     await waitFor(() => expect(result.current.planner.plans[0].stages[0].state).toBe("running"));
 
     const beforeRefresh = fetchMock.mock.calls.filter(([input]) =>
-      String(input).endsWith("/api/workspaces/studio/boards/launchpad")
+      String(input).endsWith("/api/workspaces/studio/boards/launchpad"),
     ).length;
 
     await act(async () => {
@@ -220,7 +314,7 @@ describe("useBoardState planner integration", () => {
     await waitFor(() => expect(result.current.planner.plans[0].status).toBe("completed"));
 
     const afterRefresh = fetchMock.mock.calls.filter(([input]) =>
-      String(input).endsWith("/api/workspaces/studio/boards/launchpad")
+      String(input).endsWith("/api/workspaces/studio/boards/launchpad"),
     ).length;
     expect(afterRefresh).toBeGreaterThan(beforeRefresh);
 

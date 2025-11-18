@@ -63,7 +63,14 @@ export function AutomationPanel({ cards, onRetry }: AutomationPanelProps) {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: tokens.spacing.md, padding: tokens.spacing.lg }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: tokens.spacing.md,
+        padding: tokens.spacing.lg,
+      }}
+    >
       {entries.map(({ card, latestRun }) => {
         const automation = card.automation!;
         const hasFailure = latestRun?.status === "failed";
@@ -75,17 +82,25 @@ export function AutomationPanel({ cards, onRetry }: AutomationPanelProps) {
               border: `1px solid ${tokens.colors["border/subtle"]}`,
               padding: tokens.spacing.md,
               background:
-                latestRun?.status === "running"
-                  ? SURFACE_GLOW
-                  : tokens.colors["surface/primary"],
+                latestRun?.status === "running" ? SURFACE_GLOW : tokens.colors["surface/primary"],
               display: "flex",
               flexDirection: "column",
               gap: tokens.spacing.sm,
             }}
           >
-            <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <header
+              style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+            >
               <div>
-                <p style={{ fontSize: "0.75rem", color: tokens.colors["text/subtle"], marginBottom: 4 }}>Goal</p>
+                <p
+                  style={{
+                    fontSize: "0.75rem",
+                    color: tokens.colors["text/subtle"],
+                    marginBottom: 4,
+                  }}
+                >
+                  Goal
+                </p>
                 <strong style={{ fontSize: "1rem" }}>{card.title}</strong>
               </div>
               <div style={{ textAlign: "right" }}>
@@ -124,22 +139,30 @@ export function AutomationPanel({ cards, onRetry }: AutomationPanelProps) {
                     >
                       <div>
                         <p style={{ fontSize: "0.8rem", fontWeight: 600 }}>{tool.name}</p>
-                        <p style={{ fontSize: "0.75rem", color: tokens.colors["text/subtle"] }}>{tool.capability}</p>
+                        <p style={{ fontSize: "0.75rem", color: tokens.colors["text/subtle"] }}>
+                          {tool.capability}
+                        </p>
                         {tool.error && (
-                          <p style={{ fontSize: "0.75rem", color: tokens.colors["status/danger"] }}>{tool.error}</p>
+                          <p style={{ fontSize: "0.75rem", color: tokens.colors["status/danger"] }}>
+                            {tool.error}
+                          </p>
                         )}
                         {tool.output && !tool.error && (
                           <p style={{ fontSize: "0.75rem", color: TEXT_MUTED }}>{tool.output}</p>
                         )}
                       </div>
-                      <span style={{ fontSize: "0.75rem", textTransform: "capitalize" }}>{tool.status}</span>
+                      <span style={{ fontSize: "0.75rem", textTransform: "capitalize" }}>
+                        {tool.status}
+                      </span>
                     </div>
                   ))}
                 </div>
               </section>
             )}
 
-            <footer style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <footer
+              style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+            >
               <p style={{ fontSize: "0.75rem", color: tokens.colors["text/subtle"] }}>
                 Updated {new Date(automation.lastUpdated).toLocaleString()}
               </p>

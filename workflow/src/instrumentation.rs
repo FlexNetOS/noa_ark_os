@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::fs::{self, OpenOptions};
-use std::io::{BufRead, ErrorKind, Write};
+use std::io::{BufRead, Write};
 use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
 
@@ -149,6 +149,32 @@ pub struct AutoFixActionReceipt {
     pub plan: Value,
     pub policy: PolicyDecisionRecord,
     pub signed_operation: SignedOperation,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct BudgetDecisionMetrics {
+    pub tokens_used: f64,
+    pub token_limit: f64,
+    pub latency_ms: f64,
+    pub latency_limit: f64,
+}
+
+#[derive(Debug, Clone)]
+pub struct BudgetDecisionParams<'a> {
+    pub workflow_id: &'a str,
+    pub stage_id: &'a str,
+    pub metrics: BudgetDecisionMetrics,
+    pub action: &'a str,
+    pub rewritten_plan: Option<Value>,
+}
+
+struct BudgetDecisionEvidence<'a> {
+    workflow_id: &'a str,
+    stage_id: &'a str,
+    metrics: BudgetDecisionMetrics,
+    action: &'a str,
+    rewritten_plan: Option<&'a Value>,
+    snapshot: &'a PathBuf,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -717,32 +743,21 @@ impl EvidenceLedgerEntry {
         }
     }
 
-    fn budget_decision(
-        workflow_id: &str,
-        stage_id: &str,
-        tokens_used: f64,
-        token_limit: f64,
-        latency_ms: f64,
-        latency_limit: f64,
-        action: &str,
-        rewritten_plan: &Option<Value>,
-        snapshot: &PathBuf,
-        signed: SignedOperation,
-    ) -> Self {
+    fn budget_decision(context: BudgetDecisionEvidence<'_>, signed: SignedOperation) -> Self {
         Self {
             kind: EvidenceLedgerKind::BudgetDecision,
             timestamp: current_timestamp_millis(),
             reference: signed.signature.clone(),
             payload: json!({
-                "workflow_id": workflow_id,
-                "stage_id": stage_id,
-                "tokens_used": tokens_used,
-                "token_limit": token_limit,
-                "latency_ms": latency_ms,
-                "latency_limit": latency_limit,
-                "action": action,
-                "rewritten_plan": rewritten_plan,
-                "snapshot": snapshot,
+                "workflow_id": context.workflow_id,
+                "stage_id": context.stage_id,
+                "tokens_used": context.metrics.tokens_used,
+                "token_limit": context.metrics.token_limit,
+                "latency_ms": context.metrics.latency_ms,
+                "latency_limit": context.metrics.latency_limit,
+                "action": context.action,
+                "rewritten_plan": context.rewritten_plan,
+                "snapshot": context.snapshot,
             }),
             signed_operation: signed,
         }
@@ -1037,15 +1052,15 @@ impl PipelineInstrumentation {
 
     pub fn record_budget_decision(
         &self,
-        workflow_id: &str,
-        stage_id: &str,
-        tokens_used: f64,
-        token_limit: f64,
-        latency_ms: f64,
-        latency_limit: f64,
-        action: &str,
-        rewritten_plan: Option<Value>,
+        params: BudgetDecisionParams<'_>,
     ) -> Result<BudgetDecisionRecord, InstrumentationError> {
+        let BudgetDecisionParams {
+            workflow_id,
+            stage_id,
+            metrics,
+            action,
+            rewritten_plan,
+        } = params;
         let timestamp = current_timestamp_millis();
         let filename = format!(
             "{}-{}-{}-budget.json",
@@ -1062,12 +1077,12 @@ impl PipelineInstrumentation {
             "workflow_id": workflow_id,
             "stage_id": stage_id,
             "recorded_at": timestamp,
-            "tokens_used": tokens_used,
-            "token_limit": token_limit,
-            "latency_ms": latency_ms,
-            "latency_limit": latency_limit,
+            "tokens_used": metrics.tokens_used,
+            "token_limit": metrics.token_limit,
+            "latency_ms": metrics.latency_ms,
+            "latency_limit": metrics.latency_limit,
             "action": action,
-            "rewritten_plan": rewritten_plan,
+            "rewritten_plan": rewritten_plan.as_ref(),
         });
         fs::write(&snapshot_path, serde_json::to_string_pretty(&manifest)?)?;
 
@@ -1086,10 +1101,10 @@ impl PipelineInstrumentation {
             stage_id.to_string(),
         )
         .with_metadata(json!({
-            "tokens_used": tokens_used,
-            "token_limit": token_limit,
-            "latency_ms": latency_ms,
-            "latency_limit": latency_limit,
+            "tokens_used": metrics.tokens_used,
+            "token_limit": metrics.token_limit,
+            "latency_ms": metrics.latency_ms,
+            "latency_limit": metrics.latency_limit,
             "action": action,
             "snapshot": snapshot_path.to_string_lossy(),
         }));
@@ -1097,27 +1112,24 @@ impl PipelineInstrumentation {
         let record = BudgetDecisionRecord {
             workflow_id: workflow_id.to_string(),
             stage_id: stage_id.to_string(),
-            tokens_used,
-            token_limit,
-            latency_ms,
-            latency_limit,
+            tokens_used: metrics.tokens_used,
+            token_limit: metrics.token_limit,
+            latency_ms: metrics.latency_ms,
+            latency_limit: metrics.latency_limit,
             action: action.to_string(),
             rewritten_plan: rewritten_plan.clone(),
             snapshot_path: snapshot_path.clone(),
             signed_operation: signed.clone(),
         };
-        self.append_evidence_ledger(EvidenceLedgerEntry::budget_decision(
+        let evidence = BudgetDecisionEvidence {
             workflow_id,
             stage_id,
-            tokens_used,
-            token_limit,
-            latency_ms,
-            latency_limit,
+            metrics,
             action,
-            &record.rewritten_plan,
-            &record.snapshot_path,
-            signed,
-        ))?;
+            rewritten_plan: record.rewritten_plan.as_ref(),
+            snapshot: &record.snapshot_path,
+        };
+        self.append_evidence_ledger(EvidenceLedgerEntry::budget_decision(evidence, signed))?;
         Ok(record)
     }
 
@@ -1324,7 +1336,7 @@ impl PipelineInstrumentation {
                 inputs,
                 &agent_snapshots,
             );
-            self.persist_reward_history(&*keeper)?;
+            self.persist_reward_history(&keeper)?;
             drop(keeper);
             println!(
                 "[REWARD] {}::{} delta={:.2} coverage={:.2} flake={:.2} tokens={:.2} rollback={:.2}",
@@ -1580,11 +1592,7 @@ impl PipelineInstrumentation {
 
         for base in [&self.index_dir, &self.mirror_dir] {
             let path = base.join(format!("{}.log", log_name));
-            let mut file = OpenOptions::new()
-                .create(true)
-                .write(true)
-                .append(true)
-                .open(path)?;
+            let mut file = OpenOptions::new().create(true).append(true).open(path)?;
             file.write_all(payload.as_bytes())?;
             file.flush()?;
             file.sync_all()?;
@@ -1610,6 +1618,12 @@ impl PipelineStorageLayout {
     pub fn log_pair(&self, log_name: &str) -> (PathBuf, PathBuf) {
         let file = format!("{}.log", log_name);
         (self.index_dir.join(&file), self.mirror_dir.join(&file))
+    }
+}
+
+impl Default for PipelineStorageLayout {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -1744,7 +1758,7 @@ fn with_log_lock<T>(
 ) -> Result<T, InstrumentationError> {
     let _guard = log_write_lock()
         .lock()
-        .map_err(|_| std::io::Error::new(ErrorKind::Other, "log write lock poisoned"))?;
+        .map_err(|_| std::io::Error::other("log write lock poisoned"))?;
     f()
 }
 

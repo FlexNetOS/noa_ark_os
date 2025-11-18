@@ -154,19 +154,14 @@ impl Symbol {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum LifecycleStage {
+    #[default]
     Prototype,
     Active,
     Deprecated,
     Retired,
-}
-
-impl Default for LifecycleStage {
-    fn default() -> Self {
-        LifecycleStage::Prototype
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -684,7 +679,7 @@ impl VerificationReport {
         }
 
         let failover_proved =
-            schematic.failover_paths.iter().any(|path| path.len() >= 1) || connectors.len() > 1;
+            schematic.failover_paths.iter().any(|path| !path.is_empty()) || connectors.len() > 1;
         if !failover_proved {
             issues.push("no failover path available".to_string());
         }
@@ -1400,6 +1395,12 @@ impl QuantumSecurityPosture {
             .unwrap()
             .get(connector)
             .map(|material| material.algorithm.clone())
+    }
+}
+
+impl Default for QuantumSecurityPosture {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -3244,7 +3245,7 @@ mod tests {
             // Since we can't directly set scores in the current API,
             // we'll test that the calculation stays within bounds
             let calculated_score = exchange.get_trust_score("nonexistent");
-            prop_assert!(calculated_score >= 0.0 && calculated_score <= 1.0);
+            prop_assert!((0.0..=1.0).contains(&calculated_score));
         }
     }
 }

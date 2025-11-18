@@ -26,7 +26,8 @@ export function buildPromptPayload(goal: Goal): AIPromptPayload {
     checklist.push("Confirm integrations are synced and healthy");
   }
 
-  const contextPaths = goal.integrations?.map((integration) => `services/${integration.kind}`) ?? [];
+  const contextPaths =
+    goal.integrations?.map((integration) => `services/${integration.kind}`) ?? [];
 
   return {
     goalId: goal.id,

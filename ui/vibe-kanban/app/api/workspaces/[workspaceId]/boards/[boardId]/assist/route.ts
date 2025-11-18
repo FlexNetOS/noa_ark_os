@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-
 import { assertUser } from "@/app/lib/session";
 import type { Goal, VibeCard, WorkspaceBoard } from "@/app/components/board-types";
 import { aiDatabase } from "@/server/ai-database";
@@ -19,11 +18,14 @@ function generateSuggestions(board: WorkspaceBoard) {
   if (activeGoals > 8) {
     suggestions.push({
       title: "Focus the flow",
-      detail: "More than eight active goals are in play. Spin up an automation to auto-archive stale work or split the board into swimlanes.",
+      detail:
+        "More than eight active goals are in play. Spin up an automation to auto-archive stale work or split the board into swimlanes.",
     });
   }
 
-  const hypeGoals = board.columns.flatMap((column) => column.goals.filter((goal) => goal.mood === "hype"));
+  const hypeGoals = board.columns.flatMap((column) =>
+    column.goals.filter((goal) => goal.mood === "hype"),
+  );
   if (hypeGoals.length) {
     suggestions.push({
       title: "Capture the hype",
@@ -44,7 +46,8 @@ function generateSuggestions(board: WorkspaceBoard) {
   if (!suggestions.length) {
     suggestions.push({
       title: "Board is balanced",
-      detail: "Momentum is healthy. Consider enabling automated release notes from the Agent Factory for bonus delight.",
+      detail:
+        "Momentum is healthy. Consider enabling automated release notes from the Agent Factory for bonus delight.",
     });
   }
 
@@ -56,7 +59,7 @@ function buildGoalPayload(
   context: { workspaceId: string; boardId: string; userId: string },
   board: WorkspaceBoard,
   focusCard: VibeCard | null,
-  suggestions: { title: string; detail: string }[]
+  suggestions: { title: string; detail: string }[],
 ): GoalPayload {
   const baseContext = {
     boardSnapshot: board,
@@ -101,7 +104,7 @@ function buildGoalPayload(
 
 export async function POST(
   request: Request,
-  { params }: { params: { workspaceId: string; boardId: string } }
+  { params }: { params: { workspaceId: string; boardId: string } },
 ) {
   const user = assertUser();
   const workspace = await getWorkspace(params.workspaceId);
@@ -166,11 +169,17 @@ export async function POST(
   } | null = null;
 
   try {
-    const goalPayload = buildGoalPayload(await request.json().catch(() => ({})), {
-      workspaceId: workspace.id,
-      boardId: board.id,
-      userId: user.id,
-    }, board, focusCard, suggestions);
+    const goalPayload = buildGoalPayload(
+      await request.json().catch(() => ({})),
+      {
+        workspaceId: workspace.id,
+        boardId: board.id,
+        userId: user.id,
+      },
+      board,
+      focusCard,
+      suggestions,
+    );
     const plannerResult = await planGoal(goalPayload);
     plan = {
       goalId: goalPayload.id ?? plannerResult.workflowId,
@@ -206,19 +215,23 @@ export async function POST(
 }
 
 function pickFocusGoal(board: WorkspaceBoard): Goal | null {
-  const inProgress = board.columns.find((column) => column.title.toLowerCase().includes("progress"));
+  const inProgress = board.columns.find((column) =>
+    column.title.toLowerCase().includes("progress"),
+  );
   if (!inProgress) {
     return board.columns[0]?.goals[0] ?? null;
   }
   const sorted = [...inProgress.goals].sort(
-    (a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt)
+    (a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt),
   );
   return sorted[0] ?? null;
 }
 
 function buildBoardEmbedding(board: WorkspaceBoard): number[] {
   const totalGoals = board.columns.reduce((count, column) => count + column.goals.length, 0);
-  const hypeGoals = board.columns.flatMap((column) => column.goals.filter((goal) => goal.mood === "hype")).length;
+  const hypeGoals = board.columns.flatMap((column) =>
+    column.goals.filter((goal) => goal.mood === "hype"),
+  ).length;
   const doneColumn = board.columns.find((column) => column.title.toLowerCase().includes("done"));
   const completed = doneColumn?.goals.length ?? 0;
   const focusGoals = board.columns

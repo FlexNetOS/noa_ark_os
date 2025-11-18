@@ -34,13 +34,15 @@ describe("capability-gated UI", () => {
           },
         ]}
         capabilitiesLoading={false}
-      />
+      />,
     );
 
     const button = screen.getByRole("button", { name: /add column/i });
     expect(button.getAttribute("disabled")).not.toBeNull();
     expect(button.getAttribute("title")).toMatch(/Enable capability/i);
-    expect((screen.getByTestId("capability-kanban.manageColumns").textContent ?? "")).toMatch(/unavailable/i);
+    expect(screen.getByTestId("capability-kanban.manageColumns").textContent ?? "").toMatch(
+      /unavailable/i,
+    );
   });
 
   it("gates the assist panel when the capability is missing and re-enables once restored", () => {
@@ -57,12 +59,14 @@ describe("capability-gated UI", () => {
           available: false,
         }}
         loading={false}
-      />
+      />,
     );
 
     const disabledButton = screen.getByRole("button", { name: /spark assist/i });
     expect(disabledButton.getAttribute("disabled")).not.toBeNull();
-    expect(screen.getByTestId("assist-empty-message").textContent).toMatch(/enable the kanban\.assist capability/i);
+    expect(screen.getByTestId("assist-empty-message").textContent).toMatch(
+      /enable the kanban\.assist capability/i,
+    );
 
     rerender(
       <AssistPanel
@@ -76,12 +80,14 @@ describe("capability-gated UI", () => {
           available: true,
         }}
         loading={false}
-      />
+      />,
     );
 
-    const enabledButton = screen.getByRole("button", { name: /spark assist/i }) as HTMLButtonElement;
+    const enabledButton = screen.getByRole("button", {
+      name: /spark assist/i,
+    }) as HTMLButtonElement;
     expect(enabledButton.disabled).toBe(false);
-    expect((screen.getByTestId("assist-capability-status").textContent ?? "")).toMatch(/ready/i);
+    expect(screen.getByTestId("assist-capability-status").textContent ?? "").toMatch(/ready/i);
   });
 
   it("hides goal insights metrics when the capability or feature flag is disabled", () => {
@@ -129,20 +135,10 @@ describe("capability-gated UI", () => {
       },
     };
 
-    const { rerender } = render(
-      <BoardHeader
-        {...baseProps}
-        goalInsightsEnabled={false}
-      />
-    );
+    const { rerender } = render(<BoardHeader {...baseProps} goalInsightsEnabled={false} />);
     expect(screen.queryByText(/Goal success/i)).toBeNull();
 
-    rerender(
-      <BoardHeader
-        {...baseProps}
-        goalInsightsEnabled
-      />
-    );
+    rerender(<BoardHeader {...baseProps} goalInsightsEnabled />);
     expect(screen.getByText(/Goal success/i)).toBeTruthy();
   });
 });

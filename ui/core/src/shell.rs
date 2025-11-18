@@ -11,8 +11,8 @@ use crate::chat::ChatWorkspace;
 use crate::components::{KnowledgeOverlay, NavigationRail, ShellChrome, WorkspaceSwitcher};
 use crate::events::ShellEvent;
 use crate::module::{default_modules, ModuleContext, ShellModule};
-use crate::renderer::renderer::Renderer;
 use crate::renderer::RenderFrame;
+use crate::renderer::Renderer;
 use crate::services::ShellServices;
 use crate::state::{GlobalState, GlobalStore, KnowledgeArticle, UserSession, WorkspacePersona};
 use crate::workflows::WorkflowCatalog;
@@ -358,7 +358,6 @@ impl UnifiedShell {
         let mut workspaces: Vec<_> = state_snapshot
             .workspaces
             .values()
-            .cloned()
             .filter(|workspace| {
                 workspace.allowed_roles.is_empty()
                     || workspace
@@ -366,6 +365,7 @@ impl UnifiedShell {
                         .iter()
                         .any(|role| session_roles.iter().any(|r| r == role))
             })
+            .cloned()
             .collect();
         workspaces.sort_by(|a, b| a.label.cmp(&b.label));
 

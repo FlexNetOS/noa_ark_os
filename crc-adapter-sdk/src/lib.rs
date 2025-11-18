@@ -11,7 +11,7 @@ pub trait CapabilityAdapter: Send + Sync {
     fn metadata(&self) -> AdapterMetadata;
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub struct AdapterMetadata {
     pub id: String,
     pub kind: String,
@@ -22,6 +22,7 @@ pub struct AdapterMetadata {
     pub provides: Vec<String>,
 }
 
+#[derive(Default)]
 pub struct CapabilityRegistry {
     adapters: HashMap<String, AdapterMetadata>,
 }

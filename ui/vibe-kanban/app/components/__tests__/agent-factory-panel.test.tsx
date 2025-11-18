@@ -91,7 +91,7 @@ describe("deriveAgentFactoryLayers", () => {
           lastTriggeredAt: ISO,
           summary: "Escalation requested",
         },
-      })
+      }),
     );
     const l1 = layers.find((layer) => layer.id === "L1");
     expect(l1?.state).toBe("alert");
@@ -102,7 +102,12 @@ describe("deriveAgentFactoryLayers", () => {
     const board: WorkspaceBoard = {
       ...baseBoard,
       columns: [
-        { id: "doing", title: "Doing", accent: "hue", goals: [{ id: "g", title: "Goal", notes: "", createdAt: ISO, mood: "flow" }] },
+        {
+          id: "doing",
+          title: "Doing",
+          accent: "hue",
+          goals: [{ id: "g", title: "Goal", notes: "", createdAt: ISO, mood: "flow" }],
+        },
       ],
       metrics: {
         completedGoals: 1,
@@ -137,7 +142,7 @@ describe("deriveAgentFactoryLayers", () => {
             uploadedBy: { id: "owner", name: "Kai" },
           },
         ],
-      })
+      }),
     );
     const l5 = layers.find((layer) => layer.id === "L5");
     expect(l5?.state).toBe("alert");

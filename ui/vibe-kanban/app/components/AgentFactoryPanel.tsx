@@ -39,17 +39,17 @@ export function deriveAgentFactoryLayers(context: AgentFactoryContext): AgentFac
   const successRate = boardMetrics?.goalSuccessRate;
   const leadTime = boardMetrics?.goalLeadTimeHours;
   const owner =
-    context.workspace?.members.find((member) => member.role === "owner")?.name ??
-    "Workspace owner";
+    context.workspace?.members.find((member) => member.role === "owner")?.name ?? "Workspace owner";
   const totalGoals =
     context.snapshot?.columns.reduce((count, column) => count + column.goals.length, 0) ?? 0;
   const activeColumns = context.snapshot?.columns.length ?? 0;
   const plannerPlan = context.planner.plans[0];
-  const orchestratorFocus = context.assist?.focusCard?.title ?? context.assist?.suggestions?.[0]?.title;
+  const orchestratorFocus =
+    context.assist?.focusCard?.title ?? context.assist?.suggestions?.[0]?.title;
   const orchestrationMemory =
     context.goalInsights?.insightSummary ?? context.goalInsights?.summary ?? "Memory synced.";
   const degradedIntegrations = context.integrations.filter(
-    (integration) => integration.status === "degraded" || integration.status === "error"
+    (integration) => integration.status === "degraded" || integration.status === "error",
   );
   const lastUploadAt = latestUpload(context.uploadReceipts);
 
@@ -169,7 +169,9 @@ export function AgentFactoryPanel({ state }: { state: BoardState }) {
           >
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-[0.55rem] uppercase tracking-[0.5em] text-white/40">{layer.id}</p>
+                <p className="text-[0.55rem] uppercase tracking-[0.5em] text-white/40">
+                  {layer.id}
+                </p>
                 <h3 className="text-lg font-semibold text-white">{layer.label}</h3>
                 <p className="text-xs uppercase tracking-[0.3em] text-white/45">{layer.persona}</p>
               </div>

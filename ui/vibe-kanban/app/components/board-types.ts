@@ -104,7 +104,13 @@ export type WorkspaceMember = {
 
 export type ActivityEvent = {
   id: string;
-  type: "board.created" | "board.updated" | "board.archived" | "presence.joined" | "presence.left" | "automation.triggered";
+  type:
+    | "board.created"
+    | "board.updated"
+    | "board.archived"
+    | "presence.joined"
+    | "presence.left"
+    | "automation.triggered";
   actorId: string;
   actorName: string;
   boardId?: string;

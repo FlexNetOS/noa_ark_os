@@ -7,6 +7,30 @@
 
 ## ✅ THE WORKING METHOD
 
+### 🚦 Unified Full Stack Launcher
+
+Run every prerequisite (toolchain activation, installs, builds, tests) and launch the entire stack with one command. Logs stream into `build_output/system-launch/` so you can inspect each service.
+
+**Linux / WSL / macOS**
+
+```bash
+./scripts/full_stack_launch.sh
+```
+
+**Windows PowerShell (through WSL)**
+
+```powershell
+wsl bash ./scripts/full_stack_launch.sh
+```
+
+Add flags as needed:
+
+- `--prepare-only` – install/build/test everything, then exit without launching services.
+- `--skip-tests` – useful when you only need the stack running quickly.
+- `--skip-notebook` – suppress the Jupyter server if you do not need it.
+
+`make full-stack` wraps the same script for CI-style automation.
+
 ### **Step 1: Start Server** (ONE command)
 
 ```powershell

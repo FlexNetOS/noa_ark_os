@@ -16,6 +16,14 @@ pub type CapabilityResult<T> = Result<T, CapabilityError>;
 /// Dynamic capability object stored inside the registry.
 pub type DynCapability = Arc<dyn Any + Send + Sync>;
 
+/// Initializer hook signature stored in definitions.
+type CapabilityInitHook =
+    Arc<dyn Fn(&CapabilityContext) -> CapabilityResult<DynCapability> + Send + Sync>;
+
+/// Shutdown hook signature stored in definitions.
+type CapabilityShutdownHook =
+    Arc<dyn Fn(&CapabilityContext, DynCapability) -> CapabilityResult<()> + Send + Sync>;
+
 /// Errors emitted by the capability registry.
 #[derive(Debug, thiserror::Error)]
 pub enum CapabilityError {
@@ -48,10 +56,8 @@ enum CapabilityState {
 pub struct CapabilityDefinition {
     id: String,
     dependencies: Vec<String>,
-    initializer: Arc<dyn Fn(&CapabilityContext) -> CapabilityResult<DynCapability> + Send + Sync>,
-    shutdown: Option<
-        Arc<dyn Fn(&CapabilityContext, DynCapability) -> CapabilityResult<()> + Send + Sync>,
-    >,
+    initializer: CapabilityInitHook,
+    shutdown: Option<CapabilityShutdownHook>,
     description: Option<String>,
 }
 
@@ -83,11 +89,8 @@ pub struct CapabilityDefinitionBuilder {
     id: String,
     dependencies: Vec<String>,
     description: Option<String>,
-    initializer:
-        Option<Arc<dyn Fn(&CapabilityContext) -> CapabilityResult<DynCapability> + Send + Sync>>,
-    shutdown: Option<
-        Arc<dyn Fn(&CapabilityContext, DynCapability) -> CapabilityResult<()> + Send + Sync>,
-    >,
+    initializer: Option<CapabilityInitHook>,
+    shutdown: Option<CapabilityShutdownHook>,
 }
 
 impl CapabilityDefinitionBuilder {
@@ -306,13 +309,11 @@ impl CapabilityRegistry {
                     .map(|hook| (Arc::clone(hook), entry.instance.clone()))
             };
 
-            if let Some((hook, instance)) = shutdown_hook {
-                if let Some(instance) = instance {
-                    let context = CapabilityContext::new(kernel.clone(), capability_id.clone());
-                    if let Err(err) = (hook)(&context, instance) {
-                        let message = err.to_string();
-                        return Err(CapabilityError::ShutdownFailed(capability_id, message));
-                    }
+            if let Some((hook, Some(instance))) = shutdown_hook {
+                let context = CapabilityContext::new(kernel.clone(), capability_id.clone());
+                if let Err(err) = (hook)(&context, instance) {
+                    let message = err.to_string();
+                    return Err(CapabilityError::ShutdownFailed(capability_id, message));
                 }
             }
         }
@@ -363,6 +364,12 @@ impl CapabilityRegistry {
             "no provider registered for capability {}",
             manifest_entry.id
         )))
+    }
+}
+
+impl Default for CapabilityRegistry {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

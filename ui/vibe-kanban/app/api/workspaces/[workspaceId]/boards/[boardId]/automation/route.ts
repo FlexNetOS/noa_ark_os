@@ -26,7 +26,7 @@ function normaliseToolResults(input: unknown): ToolExecutionTelemetry[] {
 
 export async function POST(
   request: Request,
-  { params }: { params: { workspaceId: string; boardId: string } }
+  { params }: { params: { workspaceId: string; boardId: string } },
 ) {
   const body = await request.json().catch(() => ({}));
   const cardId = typeof body.cardId === "string" ? body.cardId : undefined;
@@ -41,8 +41,8 @@ export async function POST(
     body.status === "queued"
       ? body.status
       : body.action === "retry"
-      ? "queued"
-      : "running";
+        ? "queued"
+        : "running";
 
   const agentId = typeof body.agentId === "string" ? body.agentId : "workflow.engine";
   const agentName = typeof body.agentName === "string" ? body.agentName : "Workflow Engine";
@@ -62,7 +62,7 @@ export async function POST(
         toolResults,
         attempt: typeof body.attempt === "number" ? body.attempt : undefined,
         occurredAt: typeof body.occurredAt === "string" ? body.occurredAt : undefined,
-      }
+      },
     );
     return NextResponse.json({ automation, activity });
   } catch (error) {

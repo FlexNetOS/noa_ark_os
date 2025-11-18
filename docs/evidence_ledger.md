@@ -122,3 +122,46 @@ record before rerunning verification.
 - **Inputs**: Hashes of `build_output.txt` and `test_output.txt`, commit SHA, tool versions from portable bundles
 - **Process**: `scripts/pipeline/record_local_pipeline.sh` runs at the end of `make pipeline.local`, writing immutable metadata; git pre-push hook and GitHub Actions both execute `tools/ci/require_local_pipeline.py` to verify the evidence before any remote workflow proceeds.
 - **Purpose**: Guarantees that every merge candidate has already passed the offline pipeline, keeping local execution authoritative and remote CI as a thin witness layer.
+
+## 2025-11-18 – Kernel Image Build (CORE-IMG-2025-11-18)
+
+- **Artifacts**: `dist/kernel/noa_kernel`, `dist/kernel/noa_host_control`, `dist/kernel/manifest.yaml`, `dist/kernel/README.md`, `dist/kernel/test-results.log`
+- **Inputs**: `core/config/default_manifest.yaml`, `server/tools/activate-cargo.sh`, `server/tools/activate-node.sh`, portable toolchains (cargo 1.91.1, rustc 1.91.1, node v20.19.5, pnpm 8.15.4)
+- **Process**:
+  1. `source ./server/tools/activate-cargo.sh && cargo build -p noa_core`
+  2. `source ./server/tools/activate-cargo.sh && source ./server/tools/activate-node.sh && make image`
+- **Verification**: `cargo test -p noa_core --tests -- --nocapture` emits 37 passing unit tests plus host control/world integration suites; results captured in `dist/kernel/test-results.log`.
+- **Purpose**: Produces the hardened kernel binaries and accompanying manifest/test log for downstream packaging and Truth Gate review, confirming the offline toolchain remains hermetic.
+
+## 2025-11-18 – Python Gateway & Manifest Verification (PY-VER-2025-11-18)
+
+- **Artifacts**: `build_output/python-tests/test-results-2025-11-18.log`
+- **Hashes**: `sha256:2b8f1df512f9a14c221f4153521bd0f268b19ddd254f8ca3ba7cbfc78bd309ac`
+- **Inputs**: `tests/python/*.py`, `server/python/requirements.txt`, repo-managed virtual env `.venv` (python 3.12.3, pytest 7.4.3)
+- **Process**:
+  1. `python3 -m venv .venv && source .venv/bin/activate`
+  2. `pip install -r server/python/requirements.txt`
+  3. `python -m pytest tests/python | tee build_output/python-tests/test-results-2025-11-18.log`
+- **Verification**: Suite result `14 passed, 1 skipped` covering `test_gateway.py`, `test_kernel_manifest.py`, `test_notebook_sync_token.py`, and auxiliary bundles ensures manifest descriptors align with service definitions and gateway routing stays healthy.
+- **Purpose**: Documents that the Python verification stack ran inside the hermetic venv, producing audit-friendly logs and hashes for the Truth Gate.
+
+## 2025-11-18 – Gateway Policy Self-Heal (GATEWAY-SH-2025-11-18)
+
+- **Artifacts**: `build_output/gateway-self-heal.json`, `build_output/telemetry/self-heal-metrics.json`, `build_output/gateway-python-tests/gateway-python-tests.json`
+- **Inputs**: `services/gateway/self_heal.py`, portable Python (repo `.venv`), kernel capability token helpers (`core/kernel/security/tokens.py`)
+- **Process**:
+  1. `python services/gateway/self_heal.py --output build_output/gateway-self-heal.json`
+  2. Script issues kernel-signed capability tokens per service, exercises each policy route, and exports telemetry snapshots.
+  3. Supplemental probe (`build_output/gateway-python-tests/gateway-python-tests.json`) captures manual gateway request permutations (missing token, client mismatch, scope enforcement) to preserve raw responses.
+- **Verification**: All registered services (`gateway`, `runtime-manager`, `openai`, `anthropic`, `llama.cpp`, `notebook-sync`) returned HTTP 200 with policy and rate checks enforced; telemetry digest stored alongside the summary.
+- **Purpose**: Establishes an auditable record that the refreshed self-heal ran offline and now guards `make pipeline.local`, preventing gateway policy regressions from progressing past the local pipeline.
+
+## 2025-11-18 – Kernel Image Build (CORE-IMG-2025-11-18-R2)
+
+- **Artifacts**: `dist/kernel/noa_kernel`, `dist/kernel/noa_host_control`, `dist/kernel/manifest.yaml`, `dist/kernel/README.md`, `dist/kernel/test-results.log`
+- **Inputs**: `core/config/default_manifest.yaml`, portable toolchains activated via `./server/tools/activate-cargo.sh` and `./server/tools/activate-node.sh`, cargo 1.91.1/rustc 1.91.1/node v20.19.5/pnpm 8.15.4
+- **Process**:
+  1. `source ./server/tools/activate-cargo.sh && source ./server/tools/activate-node.sh && make kernel`
+  2. `source ./server/tools/activate-cargo.sh && source ./server/tools/activate-node.sh && make image`
+- **Verification**: `cargo test -p noa_core --tests -- --nocapture` plus the host-control/world suites executed automatically by `make image`; the resulting stdout is recorded in `dist/kernel/test-results.log`.
+- **Purpose**: Confirms the hardened image can be regenerated deterministically and keeps the audit trail current for the Truth Gate.

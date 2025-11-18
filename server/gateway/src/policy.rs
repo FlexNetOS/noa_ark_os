@@ -400,7 +400,13 @@ impl PolicyEnforcer {
             .map_err(|err| PolicyError::AuditFailure(err.to_string()))?;
         self.audit_sink
             .record(&signed)
-            .map_err(|err| PolicyError::AuditFailure(err))
+            .map_err(PolicyError::AuditFailure)
+    }
+}
+
+impl Default for PolicyEnforcer {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

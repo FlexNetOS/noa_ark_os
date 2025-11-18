@@ -37,7 +37,20 @@
     </div>
 
     <div class="timestamp">
-        Generated on: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+        Generated on: <span id="generated-on">loading…</span>
     </div>
+
+    <script>
+      (function () {
+        try {
+          var el = document.getElementById("generated-on");
+          if (el) {
+            el.textContent = new Date().toISOString();
+          }
+        } catch (e) {
+          // non-fatal; leave placeholder text
+        }
+      })();
+    </script>
 </body>
 </html>

@@ -13,7 +13,7 @@ const CAPABILITY_REGISTRY_PATH = path.resolve(
   "..",
   "..",
   "registry",
-  "capabilities.json"
+  "capabilities.json",
 );
 
 let cachedRegistry: CapabilityRegistry | null = null;
@@ -25,11 +25,7 @@ function cloneDefaultRegistry(): CapabilityRegistry {
 
 // Type guard for Node.js error with code property
 function isNodeError(error: unknown): error is NodeJS.ErrnoException {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error
-  );
+  return typeof error === "object" && error !== null && "code" in error;
 }
 
 async function loadCapabilityRegistryFromDisk(): Promise<CapabilityRegistry> {

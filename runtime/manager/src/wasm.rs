@@ -11,6 +11,12 @@ use wasmtime::{Config, Engine, Linker, Module, Store};
 use wasmtime_wasi::sync::{add_to_linker, WasiCtxBuilder};
 use wasmtime_wasi::{I32Exit, WasiCtx};
 
+type ProbeStore = (
+    Store<ProbeState>,
+    WritePipe<Cursor<Vec<u8>>>,
+    WritePipe<Cursor<Vec<u8>>>,
+);
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WasmProbeConfig {
     #[serde(default = "default_max_memory_mb")]
@@ -143,17 +149,7 @@ impl WasmProbeRunner {
         })
     }
 
-    fn build_store(
-        &self,
-        args: &[String],
-    ) -> Result<
-        (
-            Store<ProbeState>,
-            WritePipe<Cursor<Vec<u8>>>,
-            WritePipe<Cursor<Vec<u8>>>,
-        ),
-        WasmProbeError,
-    > {
+    fn build_store(&self, args: &[String]) -> Result<ProbeStore, WasmProbeError> {
         let stdout_pipe = WritePipe::new_in_memory();
         let stderr_pipe = WritePipe::new_in_memory();
 

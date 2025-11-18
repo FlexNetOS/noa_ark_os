@@ -46,7 +46,8 @@ function getClientIdentity(request: Request) {
 
 export async function POST(request: Request) {
   const identity = getClientIdentity(request);
-  const traceSource = typeof request.headers?.get === "function" ? request.headers.get("x-trace-id") : null;
+  const traceSource =
+    typeof request.headers?.get === "function" ? request.headers.get("x-trace-id") : null;
   const traceId = ensureTraceId(traceSource);
   if (!aiRateLimiter.consume(identity)) {
     logWarn({

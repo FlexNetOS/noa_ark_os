@@ -43,16 +43,19 @@ export function UploadPanel({ state }: UploadPanelProps) {
         setUploading(false);
       }
     },
-    [dropType, state]
+    [dropType, state],
   );
 
   return (
     <div className="rounded-3xl border border-white/10 bg-surface/70 p-5 text-white/70">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-white/50">CRC Uploads</h3>
+          <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-white/50">
+            CRC Uploads
+          </h3>
           <p className="mt-1 text-xs text-white/40">
-            Ship artifacts into the CRC drop-in. Hashes are recorded in the workspace notifications stream.
+            Ship artifacts into the CRC drop-in. Hashes are recorded in the workspace notifications
+            stream.
           </p>
         </div>
       </div>
@@ -97,7 +100,9 @@ export function UploadPanel({ state }: UploadPanelProps) {
               <ul className="mt-1 space-y-1 text-[10px] normal-case text-white/60">
                 {recentReceipts.map((receipt) => (
                   <li key={receipt.id} className="truncate">
-                    <span className="font-mono text-[10px] text-white/70">{receipt.casKeys[0]}</span>
+                    <span className="font-mono text-[10px] text-white/70">
+                      {receipt.casKeys[0]}
+                    </span>
                     {receipt.casKeys.length > 1 ? ` (+${receipt.casKeys.length - 1})` : ""}
                   </li>
                 ))}

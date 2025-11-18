@@ -1,4 +1,6 @@
 {
+  "$schema": "./registry.schema.json",
+  "registryVersion": "1.0.0",
   "generated_at": "2024-05-01T00:00:00Z",
   "files": [
     {

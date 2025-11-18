@@ -8,18 +8,13 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
 /// Personas describe the lens through which a workspace is configured.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash, Default)]
 pub enum WorkspacePersona {
     Operator,
+    #[default]
     Developer,
     Executive,
     Researcher,
-}
-
-impl Default for WorkspacePersona {
-    fn default() -> Self {
-        WorkspacePersona::Developer
-    }
 }
 
 /// Navigation items rendered within the global navigation rail.
@@ -117,7 +112,7 @@ impl Default for UserSession {
 }
 
 /// Global state aggregated by the unified shell.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct GlobalState {
     pub session: UserSession,
     pub navigation: NavigationState,
@@ -125,19 +120,6 @@ pub struct GlobalState {
     pub notifications: Vec<Notification>,
     pub data: HashMap<String, serde_json::Value>,
     pub knowledge_base: HashMap<WorkspacePersona, Vec<KnowledgeArticle>>,
-}
-
-impl Default for GlobalState {
-    fn default() -> Self {
-        Self {
-            session: UserSession::default(),
-            navigation: NavigationState::default(),
-            workspaces: HashMap::new(),
-            notifications: vec![],
-            data: HashMap::new(),
-            knowledge_base: HashMap::new(),
-        }
-    }
 }
 
 /// Thread-safe wrapper around [`GlobalState`].
@@ -278,7 +260,7 @@ mod tests {
 
         store.upsert_workspace(workspace.clone());
         let state = store.read();
-        assert!(state.workspaces.get("dev").is_some());
+        assert!(state.workspaces.contains_key("dev"));
         assert!(state.workspaces.get("dev").unwrap().contains_route("/chat"));
     }
 

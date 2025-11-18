@@ -76,7 +76,8 @@ export function BoardShell({ state }: BoardShellProps) {
     !state.capabilities.loading &&
     isFeatureEnabled("quickComposer") &&
     state.capabilities.has("kanban.quickComposer");
-  const canManageColumns = !state.capabilities.loading && state.capabilities.has("kanban.manageColumns");
+  const canManageColumns =
+    !state.capabilities.loading && state.capabilities.has("kanban.manageColumns");
   const addColumnDisabledReason = canManageColumns
     ? undefined
     : "Enable the kanban.manageColumns capability to add new columns.";
@@ -85,12 +86,20 @@ export function BoardShell({ state }: BoardShellProps) {
     return null;
   }
 
-  const handleGoalDragStart = (columnId: string, goal: Goal, event: ReactDragEvent<HTMLButtonElement>) => {
+  const handleGoalDragStart = (
+    columnId: string,
+    goal: Goal,
+    event: ReactDragEvent<HTMLButtonElement>,
+  ) => {
     setDragData(event, { type: "goal", columnId, goalId: goal.id });
     setDraggingGoalId(goal.id);
   };
 
-  const handleGoalDragOver = (columnId: string, goalId: string, event: ReactDragEvent<HTMLButtonElement>) => {
+  const handleGoalDragOver = (
+    columnId: string,
+    goalId: string,
+    event: ReactDragEvent<HTMLButtonElement>,
+  ) => {
     const payload = readDragData(event);
     if (!payload || payload.type !== "goal") return;
     event.preventDefault();
@@ -107,7 +116,11 @@ export function BoardShell({ state }: BoardShellProps) {
     });
   };
 
-  const handleGoalDrop = (columnId: string, goalId: string, event: ReactDragEvent<HTMLButtonElement>) => {
+  const handleGoalDrop = (
+    columnId: string,
+    goalId: string,
+    event: ReactDragEvent<HTMLButtonElement>,
+  ) => {
     const payload = readDragData(event);
     if (!payload || payload.type !== "goal") return;
     event.preventDefault();
@@ -236,7 +249,9 @@ export function BoardShell({ state }: BoardShellProps) {
                 isGoalDropZoneActive={columnGoalDropTarget === column.id}
                 draggingGoalId={draggingGoalId}
                 dropTargetGoalId={
-                  goalDropTarget && goalDropTarget.columnId === column.id ? goalDropTarget.goalId : null
+                  goalDropTarget && goalDropTarget.columnId === column.id
+                    ? goalDropTarget.goalId
+                    : null
                 }
               />
             ))}

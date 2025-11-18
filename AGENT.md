@@ -319,6 +319,17 @@ Before marking a task complete:
 * **Build/Test cadence:**
   * `cargo build --workspace`, `cargo test --workspace`, `cargo clippy --workspace -- -D warnings`, `cargo fmt --all`
   * pnpm targets: `pnpm install --frozen-lockfile`, `pnpm build`, `pnpm lint`, `pnpm typecheck`, `pnpm test`
+  * Kernel shortcut: `source ./server/tools/activate-cargo.sh && make kernel` for the `noa_core` crate when iterating locally.
+  * Hardened kernel image (drops artifacts into `dist/kernel/{noa_kernel,noa_host_control,manifest.yaml,README.md,test-results.log}`):
+
+    ```bash
+    cd /home/noa/dev/workspace/noa_ark_os/noa_ark_os
+    source ./server/tools/activate-cargo.sh
+    source ./server/tools/activate-node.sh
+    make image
+    ```
+
+    Capture `dist/kernel/test-results.log` plus artifact hashes and append a dated entry to `docs/evidence_ledger.md` after every successful image build.
 * **Feature workflow:** create `feature/<name>` branch → edit → run full build/test matrix above → commit using Conventional Commits → push. Archive any replaced assets under `archive/YYYY/MM/` with ledger updates before merging.
 * **Fork processing (CRC):** place incoming fork under `crc/drop-in/incoming/forks/<name>/`, run `crc/detect-forks.ps1 -Mode process -ForkName "<name>"`, review generated branch `fork/<name>`, integrate, then archive originals when done.
 * **Agent restoration pattern:** inspect backup in `agents/src/implementations/_backup/`, bring implementation back to `agents/src/implementations/`, register via `agents/src/registry.rs` and factory, add tests (`cargo test -p noa_agents`), update docs.

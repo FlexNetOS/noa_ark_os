@@ -16,7 +16,9 @@ export default function Page() {
   const session = useSession();
   const state = useBoardState(session.user);
   const [envelope, setEnvelope] = useState<PageEnvelope>(vibeDashboardEnvelope);
-  const [resumeToken, setResumeToken] = useState<ResumeToken | undefined>(vibeDashboardEnvelope.resumeToken);
+  const [resumeToken, setResumeToken] = useState<ResumeToken | undefined>(
+    vibeDashboardEnvelope.resumeToken,
+  );
   const traceIdRef = useRef<string>(ensureTraceId());
 
   const ready = session.status === "ready" && !!session.user && state.hydrated && state.snapshot;
@@ -40,51 +42,49 @@ export default function Page() {
   const effectiveResumeToken: ResumeToken | undefined = plannerResumeToken ?? envelopeResumeToken;
 
   const schemaRenderer = useMemo(() => {
-    return ready
-      ? (
-          <SchemaDrivenRenderer
-            schema={envelope.schema}
-            context={{
-              resumeWorkflow: (tokenOrWorkflowId: ResumeToken | string, stageId?: string) => {
-                const token: ResumeToken =
-                  typeof tokenOrWorkflowId === "string"
-                    ? {
-                      workflowId: tokenOrWorkflowId,
-                      stageId,
-                      checkpoint: stageId ?? "checkpoint://manual",
-                      issuedAt: new Date().toISOString(),
-                      expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
-                    }
-                    : tokenOrWorkflowId;
-                logInfo({
-                  component: "vibe.page",
-                  event: "workflow_resume_requested",
-                  message: "Requesting workflow resume",
-                  outcome: "pending",
-                  traceId: traceIdRef.current,
-                  context: { workflowId: token.workflowId },
-                });
-                state.resumePlan(token);
-              },
-              triggerEvent: (bindingId) => {
-                logInfo({
-                  component: "vibe.page",
-                  event: "ui_event_triggered",
-                  message: "UI event triggered",
-                  outcome: "observed",
-                  traceId: traceIdRef.current,
-                  context: { bindingId },
-                });
-              },
-                data: {
-                  boardState: state,
-                  session,
-                  resumeToken: effectiveResumeToken,
-                },
-              }}
-            />
-        )
-      : null;
+    return ready ? (
+      <SchemaDrivenRenderer
+        schema={envelope.schema}
+        context={{
+          resumeWorkflow: (tokenOrWorkflowId: ResumeToken | string, stageId?: string) => {
+            const token: ResumeToken =
+              typeof tokenOrWorkflowId === "string"
+                ? {
+                    workflowId: tokenOrWorkflowId,
+                    stageId,
+                    checkpoint: stageId ?? "checkpoint://manual",
+                    issuedAt: new Date().toISOString(),
+                    expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+                  }
+                : tokenOrWorkflowId;
+            logInfo({
+              component: "vibe.page",
+              event: "workflow_resume_requested",
+              message: "Requesting workflow resume",
+              outcome: "pending",
+              traceId: traceIdRef.current,
+              context: { workflowId: token.workflowId },
+            });
+            state.resumePlan(token);
+          },
+          triggerEvent: (bindingId) => {
+            logInfo({
+              component: "vibe.page",
+              event: "ui_event_triggered",
+              message: "UI event triggered",
+              outcome: "observed",
+              traceId: traceIdRef.current,
+              context: { bindingId },
+            });
+          },
+          data: {
+            boardState: state,
+            session,
+            resumeToken: effectiveResumeToken,
+          },
+        }}
+      />
+    ) : null;
   }, [ready, envelope.schema, state, session, effectiveResumeToken]);
 
   if (session.status === "loading") {
@@ -101,7 +101,10 @@ export default function Page() {
 
   return (
     <>
-      <NotificationCenter notifications={state.notifications} onDismiss={state.dismissNotification} />
+      <NotificationCenter
+        notifications={state.notifications}
+        onDismiss={state.dismissNotification}
+      />
       {schemaRenderer}
     </>
   );

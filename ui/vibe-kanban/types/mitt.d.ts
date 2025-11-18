@@ -1,6 +1,9 @@
 export type EventType = string | symbol;
 export type Handler<T = unknown> = (event: T) => void;
-export type WildcardHandler<T = Record<string, unknown>> = (type: keyof T, event: T[keyof T]) => void;
+export type WildcardHandler<T = Record<string, unknown>> = (
+  type: keyof T,
+  event: T[keyof T],
+) => void;
 export type EventHandlerList<T = unknown> = Array<Handler<T>>;
 export type WildCardEventHandlerList<T = Record<string, unknown>> = Array<WildcardHandler<T>>;
 export type EventHandlerMap<Events extends Record<EventType, unknown>> = Map<

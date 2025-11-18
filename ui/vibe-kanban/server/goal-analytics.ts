@@ -85,9 +85,16 @@ function normaliseGoalMetric(input: unknown): GoalMetricSnapshot | undefined {
   const totalRuns = typeof raw.totalRuns === "number" ? raw.totalRuns : 0;
   const successfulRuns = typeof raw.successfulRuns === "number" ? raw.successfulRuns : 0;
   const averageLeadTimeMs = typeof raw.averageLeadTimeMs === "number" ? raw.averageLeadTimeMs : 0;
-  const successRate = typeof raw.successRate === "number" ? raw.successRate : totalRuns > 0 ? successfulRuns / totalRuns : 0;
-  const contextPenaltyScore = typeof raw.contextPenaltyScore === "number" ? raw.contextPenaltyScore : 0;
-  const contextP95Bytes = typeof raw.contextP95Bytes === "number" ? Math.trunc(raw.contextP95Bytes) : 0;
+  const successRate =
+    typeof raw.successRate === "number"
+      ? raw.successRate
+      : totalRuns > 0
+        ? successfulRuns / totalRuns
+        : 0;
+  const contextPenaltyScore =
+    typeof raw.contextPenaltyScore === "number" ? raw.contextPenaltyScore : 0;
+  const contextP95Bytes =
+    typeof raw.contextP95Bytes === "number" ? Math.trunc(raw.contextP95Bytes) : 0;
   const contextP95LatencyMs =
     typeof raw.contextP95LatencyMs === "number" ? Math.trunc(raw.contextP95LatencyMs) : 0;
   const rewardTotal = typeof raw.rewardTotal === "number" ? raw.rewardTotal : 0;
@@ -121,11 +128,12 @@ function normaliseAgentMetric(input: unknown): GoalAgentMetric | undefined {
   }
   const totalRuns = typeof raw.totalRuns === "number" ? raw.totalRuns : 0;
   const successfulRuns = typeof raw.successfulRuns === "number" ? raw.successfulRuns : 0;
-  const successRate = typeof raw.successRate === "number"
-    ? raw.successRate
-    : totalRuns > 0
-      ? successfulRuns / totalRuns
-      : 0;
+  const successRate =
+    typeof raw.successRate === "number"
+      ? raw.successRate
+      : totalRuns > 0
+        ? successfulRuns / totalRuns
+        : 0;
   return {
     agent: raw.agent,
     totalRuns,

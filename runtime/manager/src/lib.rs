@@ -98,18 +98,13 @@ impl RuntimePlan {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum HostClassification {
     Minimal,
+    #[default]
     Standard,
     Accelerated,
-}
-
-impl Default for HostClassification {
-    fn default() -> Self {
-        HostClassification::Standard
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -846,11 +841,13 @@ services:
         .unwrap();
         fs::write(&module_path, wasm_bytes).unwrap();
 
-        let mut policy = RuntimePolicy::default();
-        policy.enable_wasm_probes = true;
-        policy.wasm_probe_config = WasmProbeConfig {
-            allow_network: false,
-            ..WasmProbeConfig::default()
+        let policy = RuntimePolicy {
+            enable_wasm_probes: true,
+            wasm_probe_config: WasmProbeConfig {
+                allow_network: false,
+                ..WasmProbeConfig::default()
+            },
+            ..Default::default()
         };
 
         let controller = AdaptiveRuntimeController::new(policy, runtime_graph());
@@ -879,11 +876,13 @@ services:
         .unwrap();
         fs::write(&module_path, wasm_bytes).unwrap();
 
-        let mut policy = RuntimePolicy::default();
-        policy.enable_wasm_probes = true;
-        policy.wasm_probe_config = WasmProbeConfig {
-            max_execution_time_ms: 1,
-            ..WasmProbeConfig::default()
+        let policy = RuntimePolicy {
+            enable_wasm_probes: true,
+            wasm_probe_config: WasmProbeConfig {
+                max_execution_time_ms: 1,
+                ..WasmProbeConfig::default()
+            },
+            ..Default::default()
         };
 
         let controller = AdaptiveRuntimeController::new(policy, runtime_graph());
@@ -917,11 +916,13 @@ services:
         .unwrap();
         fs::write(&module_path, wasm_bytes).unwrap();
 
-        let mut policy = RuntimePolicy::default();
-        policy.enable_wasm_probes = true;
-        policy.wasm_probe_config = WasmProbeConfig {
-            max_memory_mb: 1,
-            ..WasmProbeConfig::default()
+        let policy = RuntimePolicy {
+            enable_wasm_probes: true,
+            wasm_probe_config: WasmProbeConfig {
+                max_memory_mb: 1,
+                ..WasmProbeConfig::default()
+            },
+            ..Default::default()
         };
 
         let controller = AdaptiveRuntimeController::new(policy, runtime_graph());

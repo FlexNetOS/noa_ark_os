@@ -1,6 +1,6 @@
 import React from "react";
 import { WidgetSchema } from "@noa-ark/shared-ui/schema";
-import { tokens } from "@noa-ark/shared-ui/tokens";
+import { tokens, cssShadow } from "@noa-ark/shared-ui/tokens";
 import { ComponentRenderProps } from "@noa-ark/shared-ui/renderers/web";
 
 interface SummaryProps {
@@ -63,7 +63,7 @@ export function SummaryCard({ widget }: ComponentRenderProps) {
         padding: tokens.spacing.xl,
         borderRadius: tokens.radii.xl,
         background: tokens.colors["surface/primary"],
-        boxShadow: tokens.shadows["level-1"],
+        boxShadow: cssShadow(tokens.shadows["level-1"]),
       }}
     >
       <header>
@@ -175,7 +175,7 @@ export function SectionCard({ widget, context }: ComponentRenderProps) {
         borderRadius: tokens.radii.lg,
         border: `1px solid ${borderColor}`,
         background: tokens.colors["background/base"],
-        boxShadow: tokens.shadows["level-1"],
+        boxShadow: cssShadow(tokens.shadows["level-1"]),
       }}
     >
       <header style={{ display: "grid", gap: tokens.spacing.xs }}>
@@ -319,7 +319,7 @@ export function CitationList({ widget }: ComponentRenderProps) {
         padding: tokens.spacing.lg,
         borderRadius: tokens.radii.lg,
         background: tokens.colors["surface/primary"],
-        boxShadow: tokens.shadows["level-1"],
+        boxShadow: cssShadow(tokens.shadows["level-1"]),
       }}
     >
       <header>
@@ -364,7 +364,7 @@ export function MediaGallery({ widget }: ComponentRenderProps) {
         padding: tokens.spacing.lg,
         borderRadius: tokens.radii.lg,
         background: tokens.colors["surface/primary"],
-        boxShadow: tokens.shadows["level-1"],
+        boxShadow: cssShadow(tokens.shadows["level-1"]),
       }}
     >
       <header>

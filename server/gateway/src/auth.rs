@@ -327,8 +327,8 @@ impl OidcValidator {
     fn new(config: OidcConfig) -> Result<Self, AuthConfigError> {
         let mut validation = Validation::new(Algorithm::HS256);
         validation.validate_exp = true;
-        validation.set_issuer(&[config.issuer.clone()]);
-        validation.set_audience(&[config.audience.clone()]);
+        validation.set_issuer(std::slice::from_ref(&config.issuer));
+        validation.set_audience(std::slice::from_ref(&config.audience));
 
         Ok(Self {
             decoding_key: DecodingKey::from_secret(config.hs256_secret.as_bytes()),

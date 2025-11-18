@@ -399,7 +399,7 @@ mod tests {
         let config = ArchiveConfig::default();
         assert_eq!(config.compression_algorithm, CompressionAlgorithm::Zstd);
         assert_eq!(config.compression_level, 3);
-        assert_eq!(config.auto_cleanup, true);
+        assert!(config.auto_cleanup);
     }
 
     #[test]

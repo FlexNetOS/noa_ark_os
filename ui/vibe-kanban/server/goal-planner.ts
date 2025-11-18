@@ -52,7 +52,8 @@ type WorkflowStartResponse = {
   stages: { id: string; name: string; state: string }[];
 };
 
-const DEFAULT_UI_API = process.env.UI_API_URL ?? process.env.NEXT_PUBLIC_UI_API ?? "http://localhost:8787";
+const DEFAULT_UI_API =
+  process.env.UI_API_URL ?? process.env.NEXT_PUBLIC_UI_API ?? "http://localhost:8787";
 
 export function createWorkflowFromGoal(goal: GoalPayload): WorkflowDefinition {
   const workflowId = goal.id ?? `goal-${randomUUID().slice(0, 8)}`;
@@ -141,7 +142,10 @@ export function createWorkflowFromGoal(goal: GoalPayload): WorkflowDefinition {
   };
 }
 
-export async function planGoal(goal: GoalPayload, options: PlannerOptions = {}): Promise<PlannerResult> {
+export async function planGoal(
+  goal: GoalPayload,
+  options: PlannerOptions = {},
+): Promise<PlannerResult> {
   const workflow = createWorkflowFromGoal(goal);
   const fetchImpl = options.fetchImpl ?? fetch;
   const baseUrl = (options.uiApiBaseUrl ?? DEFAULT_UI_API).replace(/\/$/, "");
@@ -164,15 +168,13 @@ export async function planGoal(goal: GoalPayload, options: PlannerOptions = {}):
   const stageMap = new Map(workflow.stages.map((stage) => [stage.id, stage] as const));
   const mergedStages = payload.stages.map((stage) => {
     const definition = stageMap.get(stage.id);
-    return (
-      definition ?? {
-        id: stage.id,
-        name: stage.name,
-        stageType: "sequential",
-        dependsOn: [],
-        tasks: [],
-      }
-    ) as WorkflowStageDefinition;
+    return (definition ?? {
+      id: stage.id,
+      name: stage.name,
+      stageType: "sequential",
+      dependsOn: [],
+      tasks: [],
+    }) as WorkflowStageDefinition;
   });
 
   return {

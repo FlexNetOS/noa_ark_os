@@ -12,9 +12,7 @@ const exampleGoal: Goal = {
   notes: "Add dashboards for latency and error rate.",
   createdAt: new Date("2024-05-01T00:00:00Z").toISOString(),
   mood: "focus",
-  integrations: [
-    { kind: "runtime", label: "Gateway", status: "success" },
-  ],
+  integrations: [{ kind: "runtime", label: "Gateway", status: "success" }],
 };
 
 describe("AIPromptButton", () => {
@@ -22,11 +20,12 @@ describe("AIPromptButton", () => {
   const originalClipboard = navigator.clipboard;
 
   beforeEach(() => {
-    global.fetch = vi.fn(async () =>
-      new Response(
-        JSON.stringify({ prompt: "Feature: Wire gateway observability", completion: null }),
-        { status: 200, headers: { "Content-Type": "application/json" } }
-      )
+    global.fetch = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({ prompt: "Feature: Wire gateway observability", completion: null }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
     );
     Object.assign(navigator, {
       clipboard: {
@@ -54,8 +53,8 @@ describe("AIPromptButton", () => {
       "/api/ai/prompt",
       expect.objectContaining({
         method: "POST",
-        body: expect.stringContaining("\"goal-42\""),
-      })
+        body: expect.stringContaining('"goal-42"'),
+      }),
     );
 
     const copyButton = screen.getByRole("button", { name: /copy/i });
@@ -65,7 +64,7 @@ describe("AIPromptButton", () => {
 
     await waitFor(() => {
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
-        expect.stringContaining("Feature: Wire gateway observability")
+        expect.stringContaining("Feature: Wire gateway observability"),
       );
     });
 

@@ -7,7 +7,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use thiserror::Error;
 
-use crate::instrumentation::{BudgetDecisionRecord, PipelineInstrumentation};
+use crate::instrumentation::{
+    BudgetDecisionMetrics, BudgetDecisionParams, BudgetDecisionRecord, PipelineInstrumentation,
+};
 use crate::Stage;
 
 const DEFAULT_SAMPLE_SIZE: usize = 50;
@@ -148,7 +150,9 @@ impl BudgetGuardian {
         let mut resulting_stage = stage.clone();
         let mut rewritten_plan: Option<Value> = None;
 
-        if usage.tokens > self.limits.max_tokens || usage.average_latency_ms > self.limits.max_latency_ms {
+        if usage.tokens > self.limits.max_tokens
+            || usage.average_latency_ms > self.limits.max_latency_ms
+        {
             if let Some(rewritten) = self.rewrite_stage(stage) {
                 action = BudgetAction::RewritePlan;
                 resulting_stage = rewritten.clone();
@@ -163,16 +167,18 @@ impl BudgetGuardian {
 
         let receipt = self
             .instrumentation
-            .record_budget_decision(
+            .record_budget_decision(BudgetDecisionParams {
                 workflow_id,
-                &stage.name,
-                usage.tokens,
-                self.limits.max_tokens,
-                usage.average_latency_ms,
-                self.limits.max_latency_ms,
-                action.as_str(),
-                rewritten_plan.clone(),
-            )
+                stage_id: &stage.name,
+                metrics: BudgetDecisionMetrics {
+                    tokens_used: usage.tokens,
+                    token_limit: self.limits.max_tokens,
+                    latency_ms: usage.average_latency_ms,
+                    latency_limit: self.limits.max_latency_ms,
+                },
+                action: action.as_str(),
+                rewritten_plan: rewritten_plan.clone(),
+            })
             .map_err(|err| BudgetGuardianError::Instrumentation(err.to_string()))?;
 
         Ok(BudgetDecision {
@@ -393,9 +399,8 @@ mod tests {
         let temp_root = TempDir::new().expect("temp workflow root");
         let previous = std::env::var_os("NOA_WORKFLOW_ROOT");
         std::env::set_var("NOA_WORKFLOW_ROOT", temp_root.path());
-        let instrumentation = Arc::new(
-            PipelineInstrumentation::new().expect("instrumentation bootstrap"),
-        );
+        let instrumentation =
+            Arc::new(PipelineInstrumentation::new().expect("instrumentation bootstrap"));
         if let Some(value) = previous {
             std::env::set_var("NOA_WORKFLOW_ROOT", value);
         } else {
@@ -467,9 +472,8 @@ mod tests {
 
     #[test]
     fn proceeds_when_usage_within_limits() {
-        let (guardian, _temp_dir, _summary_path) = guardian_with_events(&[
-            json!({"otel_span": {"tokens_total": 10, "latency_ms": 20}}),
-        ]);
+        let (guardian, _temp_dir, _summary_path) =
+            guardian_with_events(&[json!({"otel_span": {"tokens_total": 10, "latency_ms": 20}})]);
         let stage = sample_stage();
         let decision = guardian
             .assess_stage("workflow", &stage)

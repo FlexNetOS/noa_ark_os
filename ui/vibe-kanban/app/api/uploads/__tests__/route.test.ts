@@ -13,9 +13,7 @@ const mockWorkspace = {
   accent: "from-indigo-500 via-purple-500 to-blue-500",
   createdAt: new Date().toISOString(),
   billingPlan: "starter" as const,
-  members: [
-    { id: "user-1", name: "Ava", role: "owner", avatarHue: 265 },
-  ],
+  members: [{ id: "user-1", name: "Ava", role: "owner", avatarHue: 265 }],
   boards: [],
   activity: [],
   notifications: [],
@@ -84,8 +82,8 @@ describe("POST /api/uploads", () => {
           cas_keys: ["hash-1"],
           receipt_path: "/tmp/receipt.json",
         }),
-        { status: 200, headers: { "Content-Type": "application/json" } }
-      )
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
     );
   });
 
@@ -116,12 +114,12 @@ describe("POST /api/uploads", () => {
 
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringMatching(/\/ui\/drop-in\/upload$/),
-      expect.objectContaining({ method: "POST" })
+      expect.objectContaining({ method: "POST" }),
     );
 
     expect(recordUploadReceipt).toHaveBeenCalledWith(
       "studio",
-      expect.objectContaining({ dropId: "drop-1", originalName: "upload.tar.gz" })
+      expect.objectContaining({ dropId: "drop-1", originalName: "upload.tar.gz" }),
     );
     expect(recordWorkspaceNotification).toHaveBeenCalled();
     expect(publishNotification).toHaveBeenCalled();

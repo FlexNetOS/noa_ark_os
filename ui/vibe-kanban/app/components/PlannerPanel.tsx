@@ -9,13 +9,18 @@ type PlannerPanelProps = {
 };
 
 export function PlannerPanel({ insights, onRefresh, loading = false }: PlannerPanelProps) {
-  const summary = insights?.summary ?? "Memory is warming up. Trigger assist to populate long-term context.";
+  const summary =
+    insights?.summary ?? "Memory is warming up. Trigger assist to populate long-term context.";
   return (
     <div className="rounded-3xl border border-white/10 bg-surface/70 p-5 text-white/70">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-white/50">Planner memory</h3>
-          <p className="mt-1 text-xs text-white/40">Surface historical traces and similar missions to inform the next plan.</p>
+          <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-white/50">
+            Planner memory
+          </h3>
+          <p className="mt-1 text-xs text-white/40">
+            Surface historical traces and similar missions to inform the next plan.
+          </p>
         </div>
         <button
           onClick={() => onRefresh()}
@@ -35,7 +40,8 @@ export function PlannerPanel({ insights, onRefresh, loading = false }: PlannerPa
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
             <div className="text-xs uppercase tracking-[0.3em] text-white/40">Signals</div>
             <p className="mt-2 text-sm text-white/70">
-              {insights.insightSummary ?? `${insights.traceCount} traces with ${insights.similarGoals.length} similar goals indexed.`}
+              {insights.insightSummary ??
+                `${insights.traceCount} traces with ${insights.similarGoals.length} similar goals indexed.`}
             </p>
           </div>
           {insights.similarGoals.length > 0 && (

@@ -6,7 +6,11 @@ type AddColumnButtonProps = {
   disabledReason?: string;
 };
 
-export function AddColumnButton({ onClick, disabled = false, disabledReason }: AddColumnButtonProps) {
+export function AddColumnButton({
+  onClick,
+  disabled = false,
+  disabledReason,
+}: AddColumnButtonProps) {
   const classes = [
     "inline-flex items-center gap-2 rounded-full border px-5 py-2 text-sm font-semibold uppercase tracking-wide transition",
   ];
@@ -14,7 +18,9 @@ export function AddColumnButton({ onClick, disabled = false, disabledReason }: A
   if (disabled) {
     classes.push("border-white/10 bg-white/5 text-white/40 opacity-60 cursor-not-allowed");
   } else {
-    classes.push("border-white/10 bg-white/5 text-white/70 hover:border-white/20 hover:bg-white/15 hover:text-white");
+    classes.push(
+      "border-white/10 bg-white/5 text-white/70 hover:border-white/20 hover:bg-white/15 hover:text-white",
+    );
   }
 
   return (
@@ -26,7 +32,9 @@ export function AddColumnButton({ onClick, disabled = false, disabledReason }: A
       aria-disabled={disabled}
       title={disabled ? disabledReason ?? "Capability unavailable" : undefined}
     >
-      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-lg font-semibold">+</span>
+      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-lg font-semibold">
+        +
+      </span>
       Add column
     </button>
   );

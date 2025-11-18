@@ -8,14 +8,14 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 ACTIVATE_SCRIPT="$WORKSPACE_ROOT/server/tools/activate-cargo.sh"
-PORTABLE_CARGO="$WORKSPACE_ROOT/server/tools/cargo-portable/bin/cargo.exe"
-
-if [[ -f "$ACTIVATE_SCRIPT" && -f "$PORTABLE_CARGO" ]]; then
+PORTABLE_CARGO_UNIX="$WORKSPACE_ROOT/server/tools/cargo-portable/bin/cargo"
+PORTABLE_CARGO_WIN="$WORKSPACE_ROOT/server/tools/cargo-portable/bin/cargo.exe"
+if [[ -f "$ACTIVATE_SCRIPT" && ( -f "$PORTABLE_CARGO_UNIX" || -f "$PORTABLE_CARGO_WIN" ) ]]; then
     # shellcheck disable=SC1090
     source "$ACTIVATE_SCRIPT"
 elif [[ -n "${NOA_FORCE_PORTABLE:-}" ]]; then
     echo "NOA_FORCE_PORTABLE is set but portable toolchain was not found." >&2
-    echo "Expected: $PORTABLE_CARGO" >&2
+    echo "Expected one of: $PORTABLE_CARGO_UNIX or $PORTABLE_CARGO_WIN" >&2
     exit 1
 else
     if command -v cargo >/dev/null 2>&1; then

@@ -35,6 +35,10 @@ path = "src/bin/host_control.rs"
 name = "noa_world"
 path = "src/bin/world.rs"
 
+[[bin]]
+name = "noa_scorekeeper"
+path = "src/bin/scorekeeper.rs"
+
 [dev-dependencies]
 tempfile = "3.8"
 proptest = "1.0"

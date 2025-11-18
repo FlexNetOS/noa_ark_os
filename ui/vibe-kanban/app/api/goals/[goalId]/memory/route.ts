@@ -33,7 +33,9 @@ export async function GET(request: Request, { params }: { params: { goalId: stri
     id: `${canonicalGoalId}-memory-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
     goalId: canonicalGoalId,
     workspaceId,
-    boardId: canonicalGoalId.startsWith("board:") ? canonicalGoalId.replace("board:", "") : undefined,
+    boardId: canonicalGoalId.startsWith("board:")
+      ? canonicalGoalId.replace("board:", "")
+      : undefined,
     actorId: user.id,
     actorName: user.name,
     action: "memory.requested",
@@ -41,7 +43,12 @@ export async function GET(request: Request, { params }: { params: { goalId: stri
     metadata: { endpoint: request.url },
     createdAt: new Date().toISOString(),
   });
-  const insightSummary = buildInsightSummary(memory.traceCount, lifecycle.length, artifacts.length, similarGoals.length);
+  const insightSummary = buildInsightSummary(
+    memory.traceCount,
+    lifecycle.length,
+    artifacts.length,
+    similarGoals.length,
+  );
   return NextResponse.json({
     goalId: canonicalGoalId,
     workspaceId,
@@ -56,7 +63,12 @@ export async function GET(request: Request, { params }: { params: { goalId: stri
   });
 }
 
-function buildInsightSummary(traceCount: number, lifecycleEvents: number, artifactCount: number, similarGoals: number) {
+function buildInsightSummary(
+  traceCount: number,
+  lifecycleEvents: number,
+  artifactCount: number,
+  similarGoals: number,
+) {
   return [
     traceCount ? `${traceCount} execution traces` : "no execution traces",
     lifecycleEvents ? `${lifecycleEvents} lifecycle events` : "no lifecycle events yet",

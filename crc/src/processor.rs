@@ -137,7 +137,7 @@ impl DropProcessor {
             Ok(info) => info,
             Err(e) => {
                 // Propagate the original error after cleanup
-                return Err(e.into());
+                return Err(e);
             }
         };
 

@@ -11,7 +11,7 @@ async fn main() {
 
 async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let kernel = noa_core::init()?;
-    let scorekeeper = Arc::new(Scorekeeper::default()?);
+    let scorekeeper = Arc::new(Scorekeeper::from_env()?);
     scorekeeper.bootstrap()?;
 
     let router = api::router(Arc::clone(&scorekeeper));

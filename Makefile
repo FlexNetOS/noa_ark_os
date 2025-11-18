@@ -13,12 +13,29 @@ DEV_PNPM_HOME := $(shell if [ -f $(DEV_CONFIG_JSON) ]; then node tools/devshell/
 RUST_ANALYZER_CHECK_COMMAND := $(shell if [ -f $(DEV_CONFIG_JSON) ]; then node tools/devshell/read-config.cjs rustAnalyzer.checkCommand; fi)
 endif
 
+ifndef PNPM_REQUIRED_VERSION
+ifeq ($(wildcard package.json),package.json)
+PNPM_REQUIRED_VERSION := $(shell python3 - <<'PY' 2>/dev/null
+import json, sys
+try:
+	with open('package.json', 'r', encoding='utf-8') as handle:
+		data = json.load(handle)
+	manager = data.get('packageManager') or ''
+	if manager.startswith('pnpm@'):
+		print(manager.split('@', 1)[1])
+except Exception:
+	pass
+PY
+)
+endif
+endif
+
 PNPM ?= pnpm
-CARGO ?= cargo
+CARGO ?= ./tools/devshell/portable-cargo.sh
 CARGO_PORTABLE ?= tools/devshell/cargo-portable.sh
 UI_SCOPE ?= --filter vibe-kanban
-CARGO ?= ./tools/devshell/portable-cargo.sh
 PYTHON ?= python3
+BASE_REF ?= origin/main
 
 ifneq ($(PNPM_REQUIRED_VERSION),)
 export NOA_PNPM_REQUIRED := $(PNPM_REQUIRED_VERSION)
@@ -51,10 +68,6 @@ ifneq ($(RUST_ANALYZER_CHECK_COMMAND),)
 export RUST_ANALYZER_CHECK_COMMAND := $(RUST_ANALYZER_CHECK_COMMAND)
 endif
 
-.PHONY: build test digest run ci:local lint typecheck format notebooks-sync
-.PHONY: build test digest run ci-local-full lint typecheck format
-.PHONY: pipeline.local world-verify world-fix kernel snapshot rollback verify publish-audit rollback-sim setup
-.PHONY: build test digest run ci-local-full lint typecheck format docs-check
 PYTHON ?= python3
 BASE_REF ?= origin/main
 
@@ -90,13 +103,19 @@ export RUST_ANALYZER_CHECK_COMMAND := $(RUST_ANALYZER_CHECK_COMMAND)
 endif
 
 ACTIVATION_CHECK := \
-	@if [ -z "$$NOA_CARGO_ENV" ] || [ -z "$$NOA_NODE_ENV" ]; then \
-		echo "❌ Portable toolchain not activated. Run 'source ./server/tools/activate-cargo.sh' and 'source ./server/tools/activate-node.sh' first." >&2; \
+	@if [ -z "$$NOA_CARGO_ENV" ]; then \
+		if [ "$(CARGO)" != "./tools/devshell/portable-cargo.sh" ]; then \
+			echo "❌ Portable Cargo environment not activated. Run 'source ./server/tools/activate-cargo.sh' first." >&2; \
+			exit 1; \
+		fi; \
+	fi; \
+	if [ -z "$$NOA_NODE_ENV" ] && [ "$(NODE_AVAILABLE)" != "0" ]; then \
+		echo "❌ Portable Node environment not activated. Run 'source ./server/tools/activate-node.sh' or set NODE_AVAILABLE=0 to skip." >&2; \
 		exit 1; \
 	fi
 
-.PHONY: deps build test digest run ci-local lint typecheck format notebooks-sync
-.PHONY: deps build test digest run ci-local-full ci-local lint typecheck format
+.PHONY: deps build test digest run full-stack ci-local lint typecheck format notebooks-sync
+.PHONY: deps build test digest run full-stack ci-local-full ci-local lint typecheck format
 
 # Snapshot configuration (retained from local-first pipeline additions)
 SNAPSHOT_ARCHIVE_ROOT ?= archive
@@ -108,7 +127,8 @@ SNAPSHOT_BUNDLE_EXT ?= tar.zst
 
 .PHONY: build test digest run ci-local ci\:local lint typecheck format \
 	cargo-build cargo-check cargo-test cargo-run \
-	ui-build ui-test ui-lint ui-typecheck ui-format ui-dev
+	ui-build ui-test ui-lint ui-typecheck ui-format ui-dev \
+	gateway-self-heal
 .PHONY: pipeline.local world-verify world-fix kernel snapshot rollback verify publish-audit setup
 .PHONY: provider-pointers archival-verify duplicate-check router-singleton conventional-commits export-roadmap
 .PHONY: record-local-pipeline
@@ -162,6 +182,13 @@ run: deps
 	API_PID=$$!; \
 	wait $$UI_PID $$API_PID
 
+full-stack:
+	@set -euo pipefail; \
+	if [ -z "$$NOA_CARGO_ENV" ] || [ -z "$$NOA_NODE_ENV" ]; then \
+		echo "⚠️  Portable toolchains were not pre-activated. The launcher will activate them automatically."; \
+	fi; \
+	bash scripts/full_stack_launch.sh
+
 cargo-build:
 	$(CARGO_PORTABLE) build $(if $(ARGS),$(ARGS))
 
@@ -193,9 +220,7 @@ ui-dev:
 	$(PNPM) $(UI_SCOPE) dev $(if $(ARGS),$(ARGS))
 
 # Machine-First Pipeline (authoritative local pipeline)
-pipeline.local: world-verify build sbom test package sign verify scorekeeper publish-audit
-	@echo "✅ Pipeline complete"
-pipeline.local: world-verify build provider-pointers archival-verify duplicate-check router-singleton ci-local sbom scorekeeper package sign conventional-commits export-roadmap record-local-pipeline
+pipeline.local: world-verify build provider-pointers archival-verify duplicate-check router-singleton gateway-self-heal ci-local sbom test package sign verify scorekeeper publish-audit conventional-commits export-roadmap record-local-pipeline
 	@echo "✅ Pipeline complete"
 
 provider-pointers: deps
@@ -213,6 +238,10 @@ duplicate-check: deps
 router-singleton: deps
 	$(ACTIVATION_CHECK)
 	$(PNPM) exec tsx tools/ci/check_router_singleton.ts
+
+gateway-self-heal: deps
+	@echo "🩺 Validating gateway policy enforcement..."
+	$(PYTHON) services/gateway/self_heal.py --output build_output/gateway-self-heal.json
 
 conventional-commits: deps
 	$(ACTIVATION_CHECK)

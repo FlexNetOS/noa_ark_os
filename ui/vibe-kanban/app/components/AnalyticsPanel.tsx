@@ -19,13 +19,16 @@ function computeFlow(board: WorkspaceBoard | null) {
   }
   const doneColumn = board.columns.find((column) => /done|complete/i.test(column.title));
   const throughput = doneColumn?.goals.length ?? 0;
-  const workInProgress = board.columns.reduce((count, column) => count + column.goals.length, 0) - throughput;
+  const workInProgress =
+    board.columns.reduce((count, column) => count + column.goals.length, 0) - throughput;
   const vibeMomentum =
     typeof board.metrics?.goalMomentum === "number"
       ? board.metrics.goalMomentum
       : Math.min(100, 40 + workInProgress * 5 - throughput * 3);
-  const goalLeadTime = typeof board.metrics?.goalLeadTimeHours === "number" ? board.metrics.goalLeadTimeHours : null;
-  const goalSuccessRate = typeof board.metrics?.goalSuccessRate === "number" ? board.metrics.goalSuccessRate : null;
+  const goalLeadTime =
+    typeof board.metrics?.goalLeadTimeHours === "number" ? board.metrics.goalLeadTimeHours : null;
+  const goalSuccessRate =
+    typeof board.metrics?.goalSuccessRate === "number" ? board.metrics.goalSuccessRate : null;
   return { throughput, workInProgress, vibeMomentum, goalLeadTime, goalSuccessRate };
 }
 
@@ -37,7 +40,8 @@ export function AnalyticsPanel({ board, enableGoalInsights = false }: AnalyticsP
     { label: "Momentum", value: `${analytics.vibeMomentum}%` },
   ];
 
-  const insightsActive = enableGoalInsights && (analytics.goalLeadTime !== null || analytics.goalSuccessRate !== null);
+  const insightsActive =
+    enableGoalInsights && (analytics.goalLeadTime !== null || analytics.goalSuccessRate !== null);
 
   if (insightsActive) {
     if (analytics.goalLeadTime !== null) {
@@ -50,8 +54,12 @@ export function AnalyticsPanel({ board, enableGoalInsights = false }: AnalyticsP
 
   return (
     <div className="rounded-3xl border border-white/10 bg-surface/70 p-5 text-white/70">
-      <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-white/50">Flow analytics</h3>
-      <div className={`mt-4 grid gap-4 text-center ${cards.length > 3 ? "grid-cols-2 md:grid-cols-4" : "grid-cols-3"}`}>
+      <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-white/50">
+        Flow analytics
+      </h3>
+      <div
+        className={`mt-4 grid gap-4 text-center ${cards.length > 3 ? "grid-cols-2 md:grid-cols-4" : "grid-cols-3"}`}
+      >
         {cards.map((card) => (
           <div key={card.label} className="rounded-2xl border border-white/10 bg-white/5 p-4">
             <div className="text-xs uppercase tracking-[0.3em] text-white/40">{card.label}</div>

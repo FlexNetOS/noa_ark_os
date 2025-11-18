@@ -125,9 +125,7 @@ impl SqliteRateStore {
 impl RateStore for SqliteRateStore {
     fn load_states(&self) -> Result<HashMap<String, RateState>, RateStoreError> {
         let conn = self.conn.lock();
-        let mut stmt = conn.prepare(
-            "SELECT agent_id, remaining, last_refill FROM rate_limits",
-        )?;
+        let mut stmt = conn.prepare("SELECT agent_id, remaining, last_refill FROM rate_limits")?;
         let mut rows = stmt.query([])?;
         let mut states = HashMap::new();
         while let Some(row) = rows.next()? {
@@ -186,7 +184,7 @@ impl RateLimiter {
         registry: Arc<AgentRegistry>,
     ) -> Result<Self, RateStoreError> {
         let store: Arc<dyn RateStore> = match &config.persistence {
-            RatePersistence::Memory => Arc::new(MemoryRateStore::default()),
+            RatePersistence::Memory => Arc::new(MemoryRateStore),
             RatePersistence::Sqlite { path } => Arc::new(SqliteRateStore::new(path)?),
         };
 
@@ -249,8 +247,7 @@ impl RateLimiter {
 
         self.store
             .persist_state(&agent_id, &state_clone)
-            .map_err(|err| RateLimitError::StoreFailure(err.to_string()))?
-        ;
+            .map_err(|err| RateLimitError::StoreFailure(err.to_string()))?;
         Ok(())
     }
 
@@ -284,7 +281,9 @@ fn system_time_to_epoch(ts: SystemTime) -> Result<i64, RateStoreError> {
 
 fn epoch_to_system_time(value: i64) -> Result<SystemTime, RateStoreError> {
     if value < 0 {
-        return Err(RateStoreError::Time("epoch value cannot be negative".into()));
+        return Err(RateStoreError::Time(
+            "epoch value cannot be negative".into(),
+        ));
     }
     UNIX_EPOCH
         .checked_add(Duration::from_secs(value as u64))
@@ -340,7 +339,9 @@ mod tests {
         let dir = tempdir().unwrap();
         let db_path = dir.path().join("rate.db");
         let config = RateLimiterConfig {
-            persistence: RatePersistence::Sqlite { path: db_path.clone() },
+            persistence: RatePersistence::Sqlite {
+                path: db_path.clone(),
+            },
             ..Default::default()
         };
         let limiter = RateLimiter::new(config, registry()).expect("limiter");

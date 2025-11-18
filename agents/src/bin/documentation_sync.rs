@@ -25,9 +25,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     while let Some(arg) = args.next() {
         match arg.as_str() {
             "--pipeline-output" => {
-                let value = args
-                    .next()
-                    .ok_or_else(|| "--pipeline-output requires a value")?;
+                let value = args.next().ok_or("--pipeline-output requires a value")?;
                 pipeline_path = Some(value);
             }
             other => return Err(format!("Unknown argument: {other}").into()),
@@ -134,8 +132,7 @@ fn collect_sops(now: DateTime<Utc>) -> Vec<SopDocumentation> {
                 let name = entry
                     .file_name()
                     .to_string_lossy()
-                    .replace('-', " ")
-                    .replace('_', " ")
+                    .replace(['-', '_'], " ")
                     .split('.')
                     .next()
                     .unwrap_or_default()
@@ -144,7 +141,7 @@ fn collect_sops(now: DateTime<Utc>) -> Vec<SopDocumentation> {
                 let last_reviewed = entry
                     .metadata()
                     .and_then(|meta| meta.modified())
-                    .map(|ts| DateTime::<Utc>::from(ts))
+                    .map(DateTime::<Utc>::from)
                     .unwrap_or(now);
                 entries.push(SopDocumentation {
                     name,
@@ -178,8 +175,7 @@ fn collect_workflows() -> Vec<WorkflowDocumentation> {
                 let name = entry
                     .file_name()
                     .to_string_lossy()
-                    .replace('-', " ")
-                    .replace('_', " ")
+                    .replace(['-', '_'], " ")
                     .to_string();
                 let path = format!("workflow/{}", entry.file_name().to_string_lossy());
                 entries.push(WorkflowDocumentation {

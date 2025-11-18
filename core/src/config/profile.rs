@@ -51,7 +51,7 @@ impl ProfileDocument {
     /// Convert the profile document into a capability token description.
     pub fn into_capability_token(self, ttl: Duration) -> CapabilityToken {
         let issued_at = current_timestamp_millis();
-        let expires_at = issued_at + ttl.as_millis() as u128;
+        let expires_at = issued_at + ttl.as_millis();
 
         CapabilityToken {
             profile_name: self.profile.name,
@@ -82,21 +82,12 @@ pub struct ProfileMetadata {
 }
 
 /// Definition of allowed and denied tools.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize)]
 pub struct ToolSection {
     #[serde(default)]
     pub allowed: Vec<String>,
     #[serde(default)]
     pub denied: Vec<String>,
-}
-
-impl Default for ToolSection {
-    fn default() -> Self {
-        Self {
-            allowed: Vec::new(),
-            denied: Vec::new(),
-        }
-    }
 }
 
 impl ToolSection {
@@ -187,33 +178,23 @@ pub struct StorageRoot {
 }
 
 /// Read/write disposition for a storage root.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Default)]
 pub enum StorageMode {
     #[serde(rename = "read_only", alias = "ro")]
+    #[default]
     ReadOnly,
     #[serde(rename = "read_write", alias = "rw")]
     ReadWrite,
 }
 
-impl Default for StorageMode {
-    fn default() -> Self {
-        StorageMode::ReadOnly
-    }
-}
-
 /// Network egress mode enumeration.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum EgressMode {
     Denied,
+    #[default]
     AllowList,
     Unrestricted,
-}
-
-impl Default for EgressMode {
-    fn default() -> Self {
-        EgressMode::AllowList
-    }
 }
 
 /// Capability token derived from a profile manifest.

@@ -27,6 +27,23 @@ impl UiSchemaGrpc {
     }
 }
 
+type ProtoResult<T> = Result<T, ProtoError>;
+
+#[derive(Debug)]
+enum ProtoError {
+    InvalidTimestamp,
+    InvalidNumber,
+}
+
+impl From<ProtoError> for Status {
+    fn from(error: ProtoError) -> Self {
+        match error {
+            ProtoError::InvalidTimestamp => Status::internal("invalid timestamp"),
+            ProtoError::InvalidNumber => Status::internal("invalid number"),
+        }
+    }
+}
+
 #[async_trait]
 impl proto::ui_schema_service_server::UiSchemaService for UiSchemaGrpc {
     async fn get_page(
@@ -42,7 +59,7 @@ impl proto::ui_schema_service_server::UiSchemaService for UiSchemaGrpc {
                 .clone()
         };
 
-        let proto_envelope = page_envelope_to_proto(envelope)?;
+        let proto_envelope = page_envelope_to_proto(envelope).map_err(Status::from)?;
         Ok(Response::new(proto_envelope))
     }
 
@@ -74,7 +91,8 @@ impl proto::ui_schema_service_server::UiSchemaService for UiSchemaGrpc {
                     Err(_) => continue,
                 };
 
-                yield realtime_to_proto(event)?;
+                let proto_event = realtime_to_proto(event).map_err(Status::from)?;
+                yield proto_event;
             }
         };
 
@@ -82,7 +100,7 @@ impl proto::ui_schema_service_server::UiSchemaService for UiSchemaGrpc {
     }
 }
 
-fn page_envelope_to_proto(envelope: PageEnvelope) -> Result<proto::PageEnvelope, Status> {
+fn page_envelope_to_proto(envelope: PageEnvelope) -> ProtoResult<proto::PageEnvelope> {
     let metadata = proto::PageMetadata {
         title: envelope.schema.metadata.title,
         description: envelope.schema.metadata.description.unwrap_or_default(),
@@ -96,7 +114,7 @@ fn page_envelope_to_proto(envelope: PageEnvelope) -> Result<proto::PageEnvelope,
         .schema
         .regions
         .into_iter()
-        .map(|region| -> Result<proto::LayoutRegion, Status> {
+        .map(|region| -> ProtoResult<proto::LayoutRegion> {
             let widgets = region
                 .widgets
                 .into_iter()
@@ -114,7 +132,7 @@ fn page_envelope_to_proto(envelope: PageEnvelope) -> Result<proto::PageEnvelope,
                         props: Some(props),
                     })
                 })
-                .collect::<Result<Vec<_>, Status>>()?;
+                .collect::<ProtoResult<Vec<_>>>()?;
 
             Ok(proto::LayoutRegion {
                 id: region.id,
@@ -126,13 +144,13 @@ fn page_envelope_to_proto(envelope: PageEnvelope) -> Result<proto::PageEnvelope,
                 widgets,
             })
         })
-        .collect::<Result<Vec<_>, Status>>()?;
+        .collect::<ProtoResult<Vec<_>>>()?;
 
     let realtime = envelope
         .realtime
         .into_iter()
         .map(realtime_to_proto)
-        .collect::<Result<Vec<_>, Status>>()?;
+        .collect::<ProtoResult<Vec<_>>>()?;
 
     let resume_token = envelope
         .resume_token
@@ -152,7 +170,7 @@ fn page_envelope_to_proto(envelope: PageEnvelope) -> Result<proto::PageEnvelope,
     })
 }
 
-fn resume_token_to_proto(token: crate::schema::ResumeToken) -> Result<proto::ResumeToken, Status> {
+fn resume_token_to_proto(token: crate::schema::ResumeToken) -> ProtoResult<proto::ResumeToken> {
     Ok(proto::ResumeToken {
         workflow_id: token.workflow_id,
         stage_id: token.stage_id.unwrap_or_default(),
@@ -162,7 +180,7 @@ fn resume_token_to_proto(token: crate::schema::ResumeToken) -> Result<proto::Res
     })
 }
 
-fn realtime_to_proto(event: RealTimeEvent) -> Result<proto::RealTimeEvent, Status> {
+fn realtime_to_proto(event: RealTimeEvent) -> ProtoResult<proto::RealTimeEvent> {
     Ok(proto::RealTimeEvent {
         event_type: event.event_type,
         workflow_id: event.workflow_id,
@@ -171,10 +189,8 @@ fn realtime_to_proto(event: RealTimeEvent) -> Result<proto::RealTimeEvent, Statu
     })
 }
 
-fn timestamp_from_str(value: &str) -> Result<Timestamp, Status> {
-    let parsed: DateTime<Utc> = value
-        .parse()
-        .map_err(|_| Status::internal("invalid timestamp"))?;
+fn timestamp_from_str(value: &str) -> ProtoResult<Timestamp> {
+    let parsed: DateTime<Utc> = value.parse().map_err(|_| ProtoError::InvalidTimestamp)?;
 
     Ok(Timestamp {
         seconds: parsed.timestamp(),
@@ -186,13 +202,13 @@ fn slot_to_string(slot: LayoutSlot) -> String {
     slot.to_string()
 }
 
-fn json_to_struct(value: JsonValue) -> Result<Struct, Status> {
+fn json_to_struct(value: JsonValue) -> ProtoResult<Struct> {
     match value {
         JsonValue::Object(map) => {
             let fields = map
                 .into_iter()
                 .map(|(key, value)| Ok((key, value_to_prost_value(value)?)))
-                .collect::<Result<BTreeMap<_, _>, Status>>()?;
+                .collect::<ProtoResult<BTreeMap<_, _>>>()?;
             Ok(Struct { fields })
         }
         JsonValue::Null => Ok(Struct {
@@ -206,28 +222,26 @@ fn json_to_struct(value: JsonValue) -> Result<Struct, Status> {
     }
 }
 
-fn value_to_prost_value(value: JsonValue) -> Result<ProstValue, Status> {
+fn value_to_prost_value(value: JsonValue) -> ProtoResult<ProstValue> {
     let kind = match value {
         JsonValue::Null => ProstKind::NullValue(0),
         JsonValue::Bool(value) => ProstKind::BoolValue(value),
-        JsonValue::Number(number) => ProstKind::NumberValue(
-            number
-                .as_f64()
-                .ok_or_else(|| Status::internal("invalid number"))?,
-        ),
+        JsonValue::Number(number) => {
+            ProstKind::NumberValue(number.as_f64().ok_or(ProtoError::InvalidNumber)?)
+        }
         JsonValue::String(value) => ProstKind::StringValue(value),
         JsonValue::Array(values) => {
             let values = values
                 .into_iter()
                 .map(value_to_prost_value)
-                .collect::<Result<Vec<_>, Status>>()?;
+                .collect::<ProtoResult<Vec<_>>>()?;
             ProstKind::ListValue(ListValue { values })
         }
         JsonValue::Object(map) => {
             let fields = map
                 .into_iter()
                 .map(|(key, value)| Ok((key, value_to_prost_value(value)?)))
-                .collect::<Result<BTreeMap<_, _>, Status>>()?;
+                .collect::<ProtoResult<BTreeMap<_, _>>>()?;
             ProstKind::StructValue(Struct { fields })
         }
     };
