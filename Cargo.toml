@@ -14,6 +14,8 @@ members = [
     "ui/core",
     "server/ai/inference",
     "server/gateway",
+    "server/core",
+    "server/observability",
     "services/relocation-daemon",
     "apps/cli",
     "server/relocation",
@@ -37,6 +39,7 @@ serde_yaml = "0.9"
 anyhow = "1.0"
 tokio = { version = "1", features = ["full"] }
 noa_inference = { path = "server/ai/inference" }
+thiserror = "1.0"
 
 [workspace.lints.rust]
 unsafe_code = "warn"
