@@ -167,13 +167,13 @@ cargo build --bin noa-unified-server
 
 ```bash
 # Run server (development)
-cargo run --bin noa-unified-server
+cargo run --bin noa-unified-server -- --http-addr 0.0.0.0:8787 --grpc-addr 0.0.0.0:50051
 
 # Run with custom config
-cargo run --bin noa-unified-server -- --config config/dev.toml
+cargo run --bin noa-unified-server -- --config config/dev.toml --grpc-addr 0.0.0.0:50051
 
 # Run release binary
-./target/release/noa-unified-server
+./target/release/noa-unified-server --http-addr 0.0.0.0:8787 --grpc-addr 0.0.0.0:50051
 ```
 
 ### Test
@@ -188,6 +188,53 @@ cargo test --test integration
 # With coverage
 cargo tarpaulin --out Html
 ```
+
+### Operational readiness validation
+
+The unified server ships with a Docker Compose + load test harness located in `server/tests/`.
+It provisions PostgreSQL, Redis, and the UI API binary, waits for `/healthz` and `/readyz`,
+executes HTTP/gRPC smoke calls, records metrics, and enforces the `p95 < 100ms` and
+`error rate < 0.1%` thresholds before running the bundled k6 script.
+
+```bash
+# Run the stack validation once (requires Docker + python3)
+python3 server/tests/run_suite.py \
+  --compose-file server/tests/docker-compose.test.yml \
+  --metrics-output server/tests/.last-run.json \
+  --k6-script server/tests/k6/ui_workflow.js
+
+# Full CI-friendly target (installs Python deps, runs the suite, Criterion bench + k6)
+make server.test-all
+```
+
+`server/tests/run_suite.py` prints the sampled metrics as JSON so operators can capture a
+pre-activation evidence trail. A recent run looked like:
+
+```json
+{
+  "timestamp": "2024-06-01T12:00:00Z",
+  "http": {
+    "name": "http",
+    "samples": 20,
+    "duration_sec": 0.62,
+    "p95_ms": 7.41,
+    "throughput_rps": 31.6,
+    "error_rate": 0.0
+  },
+  "grpc": {
+    "name": "grpc",
+    "samples": 20,
+    "duration_sec": 0.71,
+    "p95_ms": 8.02,
+    "throughput_rps": 28.1,
+    "error_rate": 0.0
+  }
+}
+```
+
+Use the generated `server/tests/.last-run.json` file when handing over an environment; a
+passed run indicates the REST/gRPC surfaces are stable, the Compose stack is healthy, the
+Criterion benchmark completed, and the k6 script met the latency/error thresholds.
 
 ## Configuration
 
@@ -292,6 +339,11 @@ The same workflow is exposed through the helper utility: `python server/deploy/e
 ### Health & Metrics
 
 ```
+GET  /health          - Legacy liveness probe (always 200 if alive)
+GET  /healthz         - HTTP liveness probe for the UI API stack
+GET  /ready           - Legacy readiness probe (checks dependencies)
+GET  /readyz          - Aggregated readiness (drop root + streaming session)
+GET  /metrics         - Prometheus metrics
 GET  /health          - Liveness probe (always 200 if alive)
 GET  /ready           - Readiness probe (only 200 after Postgres/Redis/Qdrant clients initialise)
 GET  /metrics         - Prometheus metrics (served on the main port and, if configured, on `observability.metrics_*`)
