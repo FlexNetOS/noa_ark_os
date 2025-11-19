@@ -68,7 +68,6 @@
 }
 
 :9090 {
-    reverse_proxy {$NOA_CADDY_METRICS_TARGET:-localhost:9090}
     @metrics {
         remote_ip 127.0.0.1 10.0.0.0/8
     }
