@@ -8,12 +8,12 @@ spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app.kubernetes.io/name: {{ include "noa-server.name" . }}
-      app.kubernetes.io/instance: {{ .Release.Name }}
+      {{- include "noa-server.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "noa-server.labels" . | nindent 8 }}
+        {{- include "noa-server.selectorLabels" . | nindent 8 }}
+        {{- include "noa-server.extraPodLabels" . | nindent 8 }}
       {{- with .Values.podAnnotations }}
       annotations:
         {{- toYaml . | nindent 8 }}
