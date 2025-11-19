@@ -20,7 +20,7 @@ use noa_crc::ir::Lane;
 use noa_crc::{CRCState, CRCSystem, DropManifest, OriginalArtifact, Priority, SourceType};
 use noa_workflow::{StageState, Workflow, WorkflowEngine, WorkflowState};
 use serde::{Deserialize, Serialize};
-use serde_json::Value as JsonValue;
+use serde_json::{json, Value as JsonValue};
 use tokio::fs;
 use tokio::sync::RwLock;
 use tokio::task;
@@ -172,6 +172,8 @@ impl UiApiServer {
             .route("/ui/pages/:page_id", get(Self::get_page))
             .route("/ui/pages/:page_id/events", get(Self::stream_events))
             .route("/ui/workflows", post(Self::start_workflow))
+            .route("/healthz", get(Self::health))
+            .route("/readyz", get(Self::ready))
             // Upload → Digest
             .route("/ui/drop-in/upload", post(Self::upload_drop))
             .route("/api/uploads", post(Self::upload_drop))
@@ -179,6 +181,46 @@ impl UiApiServer {
             // Capabilities surfacing
             .route("/api/capabilities", get(Self::get_capabilities))
             .with_state(self.state.clone())
+    }
+
+    pub fn state(&self) -> UiApiState {
+        self.state.clone()
+    }
+
+    async fn health() -> impl IntoResponse {
+        let payload = json!({
+            "status": "ok",
+            "timestamp": Utc::now().to_rfc3339(),
+        });
+        (StatusCode::OK, Json(payload))
+    }
+
+    async fn ready(State(state): State<UiApiState>) -> impl IntoResponse {
+        let drop_root_exists = fs::try_exists(state.drop_root()).await.unwrap_or(false);
+        let session_ready = state
+            .session()
+            .lock()
+            .map(|guard| guard.is_some())
+            .unwrap_or(false);
+
+        let ready = drop_root_exists && session_ready;
+        let status = if ready {
+            StatusCode::OK
+        } else {
+            StatusCode::SERVICE_UNAVAILABLE
+        };
+
+        let payload = json!({
+            "status": if ready { "ready" } else { "initialising" },
+            "drop_root": {
+                "path": state.drop_root(),
+                "exists": drop_root_exists,
+            },
+            "session_stream": session_ready,
+            "timestamp": Utc::now().to_rfc3339(),
+        });
+
+        (status, Json(payload))
     }
 
     async fn upload_panel() -> impl IntoResponse {
