@@ -160,20 +160,20 @@ cargo build
 cargo build --release
 
 # Build the workspace binary that wires the orchestrator + gateway
-cargo build --bin noa-unified-server
+cargo build --bin noa-ui-api-server
 ```
 
 ### Run
 
 ```bash
 # Run server (development)
-cargo run --bin noa-unified-server -- --http-addr 0.0.0.0:8787 --grpc-addr 0.0.0.0:50051
+cargo run --bin noa-ui-api-server -- --http-addr 0.0.0.0:8787 --grpc-addr 0.0.0.0:50051
 
 # Run with custom config
-cargo run --bin noa-unified-server -- --config config/dev.toml --grpc-addr 0.0.0.0:50051
+cargo run --bin noa-ui-api-server -- --config config/dev.toml --grpc-addr 0.0.0.0:50051
 
 # Run release binary
-./target/release/noa-unified-server --http-addr 0.0.0.0:8787 --grpc-addr 0.0.0.0:50051
+./target/release/noa-ui-api-server --http-addr 0.0.0.0:8787 --grpc-addr 0.0.0.0:50051
 ```
 
 ### Test
