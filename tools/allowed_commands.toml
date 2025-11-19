@@ -1,0 +1,39 @@
+# Allowlisted workspace commands for the NOA Tools Agent
+# Each command defines the executable plus arguments that may be invoked.
+# When `allow_additional_args = true`, the request's arguments must start with
+# the listed args but may append extra trailing values.
+
+[[command]]
+executable = "cargo"
+args = ["build", "--workspace"]
+allow_additional_args = false
+
+[[command]]
+executable = "cargo"
+args = ["test", "--workspace"]
+allow_additional_args = false
+
+[[command]]
+executable = "cargo"
+args = ["clippy", "--workspace", "--", "-D", "warnings"]
+allow_additional_args = false
+
+[[command]]
+executable = "cargo"
+args = ["fmt", "--all"]
+allow_additional_args = false
+
+[[command]]
+executable = "git"
+args = ["status"]
+allow_additional_args = false
+
+[[command]]
+executable = "git"
+args = ["diff"]
+allow_additional_args = true
+
+[[command]]
+executable = "git"
+args = ["rev-parse", "HEAD"]
+allow_additional_args = false

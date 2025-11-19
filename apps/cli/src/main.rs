@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::{bail, ensure, Context, Result};
+use anyhow::{anyhow, bail, ensure, Context, Result};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use futures::StreamExt;
 use noa_caddy_manager::{CaddyManager, HealthProbe, RateLimitConfig, ReverseProxyRoute};
@@ -16,6 +16,13 @@ use noa_inference::{
     TelemetryStatus,
 };
 use noa_plugin_sdk::{ToolDescriptor, ToolRegistry};
+use noa_tools_agent::{
+    api::{
+        EditFileRequest, FilePatchHunk, FilePatchRequest, ListFilesRequest, ReadFileRequest,
+        RunCommandRequest,
+    },
+    client::ToolClient,
+};
 use noa_workflow::{
     run_storage_doctor, EvidenceLedgerEntry, EvidenceLedgerKind, InferenceMetric,
     PipelineInstrumentation, StorageDoctorStatus,
@@ -23,6 +30,7 @@ use noa_workflow::{
 use relocation_daemon::{ExecutionMode, RelocationDaemon};
 use serde::Serialize;
 use serde_json::json;
+use shlex;
 use tokio::runtime::Runtime;
 use uuid::Uuid;
 use walkdir::WalkDir;
@@ -78,6 +86,13 @@ struct RegistryArgs {
     /// Optional tool identifier, alias, or CLI command string to filter on.
     #[arg(long)]
     tool: Option<String>,
+}
+
+#[derive(Args, Clone)]
+struct ToolClientArgs {
+    /// Base URL for the noa-tools-agent server (must include the protocol)
+    #[arg(long, default_value = "http://127.0.0.1:8910/")]
+    server: String,
 }
 
 #[derive(Args, Clone)]
@@ -203,6 +218,13 @@ enum Commands {
     Plugin {
         #[command(flatten)]
         query: RegistryArgs,
+    },
+    /// Proxy workspace tooling through the NOA tools agent
+    Tools {
+        #[command(flatten)]
+        transport: ToolClientArgs,
+        #[command(subcommand)]
+        command: ToolCommands,
     },
     /// Storage utilities for instrumentation mirrors
     Storage {
@@ -339,6 +361,47 @@ enum ProfileCmd {
     List,
     Validate { name: String },
     Diff { a: String, b: String },
+}
+
+#[derive(Subcommand, Clone)]
+enum ToolCommands {
+    /// Execute an allowlisted workspace command via the tool server
+    RunCommand {
+        #[arg(long = "cmd")]
+        cmd: String,
+    },
+    /// Apply a structured JSON patch to a file
+    ApplyPatch {
+        #[arg(long = "file")]
+        file: PathBuf,
+        #[arg(long = "patch")]
+        patch: String,
+    },
+    /// Replace the entire contents of a file
+    EditFile {
+        #[arg(long = "file")]
+        file: PathBuf,
+        #[arg(long)]
+        contents: Option<String>,
+        #[arg(long = "from-file")]
+        from_file: Option<PathBuf>,
+        #[arg(long = "create")]
+        create: bool,
+    },
+    /// List directory entries from the workspace
+    ListFiles {
+        #[arg(long, default_value = ".")]
+        path: PathBuf,
+    },
+    /// Read a file from the workspace
+    ReadFile {
+        #[arg(long = "file")]
+        file: PathBuf,
+    },
+    /// Run `cargo test --workspace`
+    RunTests,
+    /// Run `cargo build --workspace`
+    Build,
 }
 
 #[derive(Subcommand)]
@@ -794,6 +857,9 @@ fn main() -> Result<()> {
             Commands::Plugin { query } => {
                 handle_registry_category("plugin", query)?;
             }
+            Commands::Tools { transport, command } => {
+                handle_tools_command(out_mode, transport, command).await?;
+            }
             Commands::Storage { command } => match command {
                 StorageCommands::Doctor => {
                     let report = run_storage_doctor()
@@ -984,6 +1050,130 @@ fn handle_registry_category(category: &str, query: RegistryArgs) -> Result<()> {
 
     println!("{}", serde_json::to_string_pretty(&response)?);
     Ok(())
+}
+
+async fn handle_tools_command(
+    out_mode: OutputMode,
+    transport: ToolClientArgs,
+    command: ToolCommands,
+) -> Result<()> {
+    let server = transport.server.trim().to_string();
+    let client = ToolClient::new(server)?;
+    match command {
+        ToolCommands::RunCommand { cmd } => {
+            let (command, args) = parse_command_line(&cmd)?;
+            let request = RunCommandRequest {
+                command,
+                args,
+                environment: Default::default(),
+                timeout_seconds: None,
+            };
+            let response = client.run_command(request).await?;
+            let payload = serde_json::to_value(response)?;
+            print_obj(out_mode, &payload)?;
+        }
+        ToolCommands::ApplyPatch { file, patch } => {
+            let hunks = parse_patch_payload(&patch)?;
+            let request = FilePatchRequest {
+                path: stringify_path(&file)?,
+                hunks,
+            };
+            let response = client.apply_patch(request).await?;
+            let payload = serde_json::to_value(response)?;
+            print_obj(out_mode, &payload)?;
+        }
+        ToolCommands::EditFile {
+            file,
+            contents,
+            from_file,
+            create,
+        } => {
+            let resolved = resolve_edit_contents(contents, from_file)?;
+            let request = EditFileRequest {
+                path: stringify_path(&file)?,
+                contents: resolved,
+                create_if_missing: create,
+            };
+            let response = client.edit_file(request).await?;
+            let payload = serde_json::to_value(response)?;
+            print_obj(out_mode, &payload)?;
+        }
+        ToolCommands::ListFiles { path } => {
+            let request = ListFilesRequest {
+                path: stringify_path(&path)?,
+            };
+            let response = client.list_files(request).await?;
+            let payload = serde_json::to_value(response)?;
+            print_obj(out_mode, &payload)?;
+        }
+        ToolCommands::ReadFile { file } => {
+            let request = ReadFileRequest {
+                path: stringify_path(&file)?,
+            };
+            let response = client.read_file(request).await?;
+            let payload = serde_json::to_value(response)?;
+            print_obj(out_mode, &payload)?;
+        }
+        ToolCommands::RunTests => {
+            let response = client.run_tests().await?;
+            let payload = serde_json::to_value(response)?;
+            print_obj(out_mode, &payload)?;
+        }
+        ToolCommands::Build => {
+            let response = client.build_workspace().await?;
+            let payload = serde_json::to_value(response)?;
+            print_obj(out_mode, &payload)?;
+        }
+    }
+
+    Ok(())
+}
+
+fn stringify_path(path: &Path) -> Result<String> {
+    path.to_str()
+        .map(|s| s.to_string())
+        .ok_or_else(|| anyhow!("path {:?} is not valid UTF-8", path))
+}
+
+fn resolve_edit_contents(contents: Option<String>, from_file: Option<PathBuf>) -> Result<String> {
+    match (contents, from_file) {
+        (Some(inline), None) => Ok(inline),
+        (None, Some(path)) => {
+            let data = fs::read_to_string(&path)
+                .with_context(|| format!("failed to read {}", path.display()))?;
+            Ok(data)
+        }
+        (Some(_), Some(_)) => {
+            bail!("use either --contents or --from-file, not both for edit-file")
+        }
+        (None, None) => bail!("either --contents or --from-file must be provided for edit-file"),
+    }
+}
+
+fn parse_command_line(cmd: &str) -> Result<(String, Vec<String>)> {
+    let parts = shlex::split(cmd).ok_or_else(|| anyhow!("failed to parse command"))?;
+    if parts.is_empty() {
+        bail!("command cannot be empty");
+    }
+    let command = parts[0].clone();
+    let args = parts[1..].to_vec();
+    Ok((command, args))
+}
+
+fn parse_patch_payload(input: &str) -> Result<Vec<FilePatchHunk>> {
+    let trimmed = input.trim();
+    if trimmed.is_empty() {
+        bail!("patch payload is empty");
+    }
+    let value: serde_json::Value =
+        serde_json::from_str(trimmed).context("patch payload must be valid JSON")?;
+    if value.is_array() {
+        serde_json::from_value(value).context("invalid patch hunk array")
+    } else if let Some(hunks) = value.get("hunks") {
+        serde_json::from_value(hunks.clone()).context("invalid 'hunks' field")
+    } else {
+        bail!("patch payload must be an array or object containing 'hunks'");
+    }
 }
 
 #[derive(Clone, Debug)]

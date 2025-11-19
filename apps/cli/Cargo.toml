@@ -27,6 +27,8 @@ noa_cicd = { path = "../../cicd" }
 noa_core = { path = "../../core" }
 noa_caddy_manager = { path = "../../server/caddy_manager" }
 walkdir = "2"
+noa-tools-agent = { path = "../../server/tools_agent", default-features = false, features = ["client"] }
+shlex = "1.3"
 
 [dev-dependencies]
 assert_cmd = "2.0"

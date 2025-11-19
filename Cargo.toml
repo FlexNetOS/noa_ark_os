@@ -25,6 +25,8 @@ members = [
     "tools/security/shim",
     "plugins/sdk",
     "tools/quarantine_guard",
+    "server/tools_agent",
+    "server/mcp",
 ]
 
 [workspace.package]
