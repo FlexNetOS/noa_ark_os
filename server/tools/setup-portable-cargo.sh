@@ -95,6 +95,11 @@ fi
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
+# SECURITY NOTE:
+# This script downloads the official rustup-init script from $RUSTUP_INIT_URL (default: https://sh.rustup.rs).
+# - The integrity of the Rust toolchain is checked by rustup-init itself after download.
+# - For air-gapped or high-security environments, you may override NOA_RUSTUP_INIT_URL to use a locally verified copy.
+#   Example: export NOA_RUSTUP_INIT_URL="file:///path/to/verified/rustup-init.sh"
 info "\n📥 Downloading rustup-init script..."
 curl -fsSL "$RUSTUP_INIT_URL" -o "$TMP_DIR/rustup-init.sh"
 chmod +x "$TMP_DIR/rustup-init.sh"
