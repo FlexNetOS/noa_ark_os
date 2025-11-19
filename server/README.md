@@ -73,12 +73,30 @@ The NOA Unified Server is a Rust-first monolithic application server designed to
 - Prometheus metrics
 - OpenTelemetry traces
 - Health checks
+- Implemented in the shared Rust crate `server/observability` (log formatters, OTLP exporters, Prometheus helpers)
 
 ### 7. CLI (`cli/`)
 - Server management
 - Configuration
 - Migrations
 - Admin tools
+The workspace now describes the crates that actually live in `server/` instead
+of pointing at placeholder directories. Each crate can be built and tested in
+isolation, but they are also wired together through the workspace manifest.
+
+| Crate | Path | Kind | Depends On | Purpose |
+| --- | --- | --- | --- | --- |
+| `noa_orchestrator` | `server/` | library | `noa_core`, `tracing` | Adaptive scaling policies and orchestration utilities that inspect telemetry and coordinate workloads. |
+| `noa_gateway` | `server/gateway` | library + bin | `noa_core`, `noa_agents`, security + auth deps | Programmable multi-protocol entrypoint that exposes HTTP/gRPC/WebSocket surfaces with auth, policy, and rate-limiting. |
+| `noa_inference` | `server/ai/inference` | library | async + HTTP tooling | Client for inference backends, model streaming helpers, and test shims for AI integrations. |
+| `noa_ui_api` | `server/ui_api` | library | `noa_workflow`, `noa_crc` | Server-driven UI orchestration layer that exposes workflow metadata and streaming UI events. |
+| `relocation-server` | `server/relocation` | library + bin | `relocation-daemon`, `hyper` | HTTP control plane for the relocation daemon, used to bootstrap agents across hosts. |
+| `noa-unified-server` | `server/bins/noa-unified-server` | binary | `noa_orchestrator`, `noa_gateway` | Thin binary that initialises the orchestrator and gateway so the unified server can be launched via `cargo run --bin noa-unified-server`. |
+
+The `noa-unified-server` binary currently verifies that the orchestrator and
+gateway bootstrap paths succeed and emits telemetry about the scaling decision
+it calculated. Upcoming features can add the HTTP runtime, plugin loading, and
+workflow orchestration on top of this foundation.
 
 ## Technology Stack
 
@@ -141,8 +159,8 @@ cargo build
 # Release build (optimized)
 cargo build --release
 
-# Build specific component
-cargo build -p noa-server-api
+# Build the workspace binary that wires the orchestrator + gateway
+cargo build --bin noa-unified-server
 ```
 
 ### Run
@@ -174,16 +192,20 @@ cargo tarpaulin --out Html
 ## Configuration
 
 Configuration is loaded from (in order of precedence):
-1. CLI flags
+1. CLI flags (see table below)
 2. Environment variables (prefix: `NOA_`)
-3. Config files (`config/default.toml`, `config/{profile}.toml`)
+3. Config files (`server/config/default.toml`, `server/config/{profile}.toml`)
 
-**Example** (`config/default.toml`):
+**Example** (`server/config/default.toml`):
 ```toml
 [server]
 host = "0.0.0.0"
 port = 8080
 workers = 4
+
+[server.tls]
+cert_path = "server/vault/runtime/tls/dev-cert.pem"
+key_path = "server/vault/runtime/tls/dev-key.pem"
 
 [database]
 url = "postgresql://localhost:5432/noa"
@@ -192,20 +214,38 @@ max_connections = 20
 [cache]
 url = "redis://localhost:6379"
 
+[qdrant]
+url = "http://localhost:6333"
+
 [inference]
 device = "auto"
 model_path = "/models"
 
 [observability]
 log_level = "info"
-metrics_port = 9090
+log_format = "pretty"
+metrics_bind = "127.0.0.1"
+metrics_port = 9100
+otlp_endpoint = "http://127.0.0.1:4317"
 ```
+
+**CLI flags**:
+
+| Flag | Description |
+| --- | --- |
+| `--config <path>` | Load an additional TOML file on top of the layered defaults |
+| `--profile <name>` | Merge `server/config/<name>.toml` before env overrides |
+| `--host` / `--port` / `--workers` | Override the `[server]` section |
+| `--metrics-bind` / `--metrics-port` | Override `observability.metrics_*` |
+| `--log-level` / `--log-format` | Override tracing output (formats: `pretty`, `json`) |
+| `--otlp-endpoint` | Point tracing export at a custom OTLP/OTLP-gRPC endpoint |
 
 **Environment Variables**:
 ```bash
 export NOA_SERVER__HOST=0.0.0.0
 export NOA_SERVER__PORT=8080
 export NOA_DATABASE__URL=postgresql://localhost:5432/noa
+export NOA_OBSERVABILITY__METRICS_PORT=9200
 export RUST_LOG=info
 ```
 
@@ -215,8 +255,8 @@ export RUST_LOG=info
 
 ```
 GET  /health          - Liveness probe (always 200 if alive)
-GET  /ready           - Readiness probe (checks dependencies)
-GET  /metrics         - Prometheus metrics
+GET  /ready           - Readiness probe (only 200 after Postgres/Redis/Qdrant clients initialise)
+GET  /metrics         - Prometheus metrics (served on the main port and, if configured, on `observability.metrics_*`)
 ```
 
 ### REST API (v1)
