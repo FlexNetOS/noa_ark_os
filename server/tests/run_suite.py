@@ -128,6 +128,7 @@ def wait_for_http(url: str, timeout: float = 90.0) -> None:
             if response.status_code < 400:
                 return
         except requests.RequestException:
+            # Ignore transient connection errors while waiting for service to become available.
             pass
         time.sleep(2)
     raise TimeoutError(f"timed out waiting for {url}")
