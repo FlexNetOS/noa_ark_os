@@ -171,7 +171,7 @@ async fn metrics_handler(State(state): State<AppState>) -> impl IntoResponse {
     let body = state.metrics.render();
     let headers = [(
         header::CONTENT_TYPE,
-        HeaderValue::from_static("text/plain; version=0.0.4"),
+        HeaderValue::from_static("text/plain; version=1.0.0; charset=utf-8"),
     )];
     (StatusCode::OK, headers, body)
 }
