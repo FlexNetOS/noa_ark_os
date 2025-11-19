@@ -1,0 +1,13 @@
+{
+  "$schema": "./registry.schema.json",
+  "registryVersion": "1.0.0",
+  "category": "server.vault",
+  "description": "Gateway-managed settings for Vault runtime bootstrap and CLI helpers.",
+  "variables": [
+    {
+      "name": "NOA_VAULT_HOME",
+      "required": false,
+      "description": "Base directory for Vault runtime data, auth manifests, and logs. Defaults to $HOME/.noa/vault when unset."
+    }
+  ]
+}

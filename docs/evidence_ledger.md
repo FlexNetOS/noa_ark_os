@@ -165,3 +165,22 @@ record before rerunning verification.
   2. `source ./server/tools/activate-cargo.sh && source ./server/tools/activate-node.sh && make image`
 - **Verification**: `cargo test -p noa_core --tests -- --nocapture` plus the host-control/world suites executed automatically by `make image`; the resulting stdout is recorded in `dist/kernel/test-results.log`.
 - **Purpose**: Confirms the hardened image can be regenerated deterministically and keeps the audit trail current for the Truth Gate.
+
+## 2025-11-19 – Vault Runtime Contract (VAULT-HOME-2025-11-19)
+
+- **Artifacts**: `.workspace/registry/environment.vault.json`, `server/vault/vault.hcl`,
+  `server/vault/configure-gateway-auth-simple.sh`, `server/vault/README.md`,
+  `docs/runtime/vault/README.md`
+- **Purpose**: Replace hard-coded host paths with the gateway-managed
+  `NOA_VAULT_HOME` setting so Vault data, runtime manifests, and gateway auth
+  helpers resolve identically across machines.
+- **Process**:
+  1. Declared `NOA_VAULT_HOME` in the registry and documentation.
+  2. Updated Vault Raft storage to use `{{env "NOA_VAULT_HOME"}}/data`.
+  3. Taught `configure-gateway-auth-simple.sh` to export/seed the managed home
+     and surface the override flag.
+  4. Captured the new bootstrap flow in both `server/vault/README.md` and
+     `docs/runtime/vault/README.md`.
+- **Verification**: Manual review of generated paths plus script dry-run logic
+  (file seeding) to ensure the new location is honored without requiring
+  absolute paths.
