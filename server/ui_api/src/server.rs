@@ -211,7 +211,7 @@ impl UiApiServer {
         };
 
         let payload = json!({
-            "status": if ready { "ready" } else { "initialising" },
+            "status": if ready { "ready" } else { "initializing" },
             "drop_root": {
                 "path": state.drop_root(),
                 "exists": drop_root_exists,
