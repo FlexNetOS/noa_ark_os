@@ -37,48 +37,23 @@ The NOA Unified Server is a Rust-first monolithic application server designed to
 
 ## Components
 
-### 1. Gateway (`api/`)
-- HTTP/1.1 REST API
-- HTTP/2 gRPC (tonic)
-- WebSocket/SSE streaming
-- Single port via ALPN
-- Health and metrics endpoints
+The workspace now describes the crates that actually live in `server/` instead
+of pointing at placeholder directories. Each crate can be built and tested in
+isolation, but they are also wired together through the workspace manifest.
 
-### 2. Core Orchestration (`core/`)
-- Task scheduling
-- Workflow execution
-- Parallel processing
-- Backpressure management
+| Crate | Path | Kind | Depends On | Purpose |
+| --- | --- | --- | --- | --- |
+| `noa_orchestrator` | `server/` | library | `noa_core`, `tracing` | Adaptive scaling policies and orchestration utilities that inspect telemetry and coordinate workloads. |
+| `noa_gateway` | `server/gateway` | library + bin | `noa_core`, `noa_agents`, security + auth deps | Programmable multi-protocol entrypoint that exposes HTTP/gRPC/WebSocket surfaces with auth, policy, and rate-limiting. |
+| `noa_inference` | `server/ai/inference` | library | async + HTTP tooling | Client for inference backends, model streaming helpers, and test shims for AI integrations. |
+| `noa_ui_api` | `server/ui_api` | library | `noa_workflow`, `noa_crc` | Server-driven UI orchestration layer that exposes workflow metadata and streaming UI events. |
+| `relocation-server` | `server/relocation` | library + bin | `relocation-daemon`, `hyper` | HTTP control plane for the relocation daemon, used to bootstrap agents across hosts. |
+| `noa-unified-server` | `server/bins/noa-unified-server` | binary | `noa_orchestrator`, `noa_gateway` | Thin binary that initialises the orchestrator and gateway so the unified server can be launched via `cargo run --bin noa-unified-server`. |
 
-### 3. Inference Runtime (`inference/`)
-- Candle ML framework
-- SafeTensors model format
-- CPU and CUDA support
-- Batch processing
-
-### 4. Retrieval Engine (`retrieval/`)
-- Vector embeddings (fastembed-rs)
-- Qdrant vector database
-- Semantic search
-- RAG capabilities
-
-### 5. Plugin Runtime (`plugins/`)
-- WASM (wasmtime)
-- Capability-based security
-- Sandboxed execution
-- Native plugins (feature-gated)
-
-### 6. Observability (`observability/`)
-- Structured logging (tracing)
-- Prometheus metrics
-- OpenTelemetry traces
-- Health checks
-
-### 7. CLI (`cli/`)
-- Server management
-- Configuration
-- Migrations
-- Admin tools
+The `noa-unified-server` binary currently verifies that the orchestrator and
+gateway bootstrap paths succeed and emits telemetry about the scaling decision
+it calculated. Upcoming features can add the HTTP runtime, plugin loading, and
+workflow orchestration on top of this foundation.
 
 ## Technology Stack
 
@@ -116,8 +91,8 @@ cargo build
 # Release build (optimized)
 cargo build --release
 
-# Build specific component
-cargo build -p noa-server-api
+# Build the workspace binary that wires the orchestrator + gateway
+cargo build --bin noa-unified-server
 ```
 
 ### Run
