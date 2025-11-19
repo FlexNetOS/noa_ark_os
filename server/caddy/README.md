@@ -111,8 +111,7 @@ endpoints via `--admin-endpoint`.
    `NOA_CADDY_RATE_EVENTS`.
 3. Run the desired configuration (base or overlay) with `caddy run`.
 4. Use the CLI to push ad-hoc routes for experimental domains or
-   microservices: `noa caddy push-route --domain demo.local --upstream
-   localhost:18080`.
+   microservices: `noa caddy push-route --domain demo.local --upstream localhost:18080`.
 5. Reload via CLI or `caddy reload` whenever the config changes.
 6. Verify HTTPS using `curl --cacert` or `openssl`, then inspect logs and
    rate-limit counters to prove the protections are active.
