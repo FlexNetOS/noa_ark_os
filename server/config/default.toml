@@ -3,11 +3,11 @@ host = "127.0.0.1"
 port = 8080
 workers = 4
 
-[server.tls]
-cert_path = "server/vault/runtime/tls/dev-cert.pem"
-key_path = "server/vault/runtime/tls/dev-key.pem"
-client_ca_path = "server/vault/runtime/tls/ca.pem"
-
+# [server.tls]
+# cert_path = "server/vault/runtime/tls/dev-cert.pem"
+# key_path = "server/vault/runtime/tls/dev-key.pem"
+# client_ca_path = "server/vault/runtime/tls/ca.pem"
+# 
 [database]
 url = "postgresql://localhost:5432/noa"
 max_connections = 20
