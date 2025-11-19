@@ -7,7 +7,7 @@
 ###############################
 
 {
-    admin {$NOA_CADDY_ADMIN_ENDPOINT:-0.0.0.0:2019}
+    admin {$NOA_CADDY_ADMIN_ENDPOINT:-127.0.0.1:2019}
     auto_https on
     email {$NOA_CADDY_ACME_EMAIL:-admin@noa-ark-os.com}
     storage file_system {
