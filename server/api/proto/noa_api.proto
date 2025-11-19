@@ -1,0 +1,108 @@
+syntax = "proto3";
+
+package noa.api.v1;
+
+// RoutedPlan describes the routing and protocol information for a request.
+message RoutedPlan {
+  // The protocol to use for routing (e.g., "grpc", "graphql", "websocket").
+  string protocol = 1;
+  // The list of target endpoints or agent names for the plan.
+  repeated string targets = 2;
+  // Optional: Additional metadata as a JSON-encoded string.
+  // The schema depends on the protocol and use case.
+  // Example: {"priority": "high", "timeout_ms": 5000}
+  string metadata_json = 3;
+}
+
+// InferenceRequest represents a request to perform AI inference with a prompt.
+message InferenceRequest {
+  // The prompt text for inference.
+  string prompt = 1;
+  // Optional: Protocol override (e.g., "grpc", "graphql", "websocket").
+  string protocol = 2;
+  // Optional: JSON-encoded metadata for the request.
+  // Example: {"temperature": 0.7, "max_tokens": 128}
+  string metadata_json = 3;
+}
+
+// InferenceResponse contains the result of an inference request.
+message InferenceResponse {
+  // Unique identifier for the request.
+  string request_id = 1;
+  // The routed plan used to process the request.
+  RoutedPlan plan = 2;
+  // Status of the inference (e.g., "success", "error").
+  string status = 3;
+  // Optional: Additional notes or error messages.
+  string note = 4;
+}
+
+// RetrievalRequest represents a request to retrieve information based on a query.
+message RetrievalRequest {
+  // The query string for retrieval.
+  string query = 1;
+  // Optional: Protocol override (e.g., "grpc", "graphql", "websocket").
+  string protocol = 2;
+  // Optional: JSON-encoded metadata for the request.
+  // Example: {"top_k": 5, "filter": "recent"}
+  string metadata_json = 3;
+}
+
+// RetrievalResponse contains the result of a retrieval request.
+message RetrievalResponse {
+  // Unique identifier for the request.
+  string request_id = 1;
+  // The routed plan used to process the request.
+  RoutedPlan plan = 2;
+  // Status of the retrieval (e.g., "success", "error").
+  string status = 3;
+  // Optional: Additional notes or error messages.
+  string note = 4;
+}
+
+// OrchestrationRequest represents a request to execute a task or workflow.
+message OrchestrationRequest {
+  // The task or workflow to execute.
+  string task = 1;
+  // Optional: Protocol override (e.g., "grpc", "graphql", "websocket").
+  string protocol = 2;
+  // Optional: JSON-encoded metadata for the request.
+  // Example: {"schedule": "immediate", "priority": "low"}
+  string metadata_json = 3;
+}
+
+// OrchestrationResponse contains the result of an orchestration request.
+message OrchestrationResponse {
+  // Unique identifier for the request.
+  string request_id = 1;
+  // The routed plan used to process the request.
+  RoutedPlan plan = 2;
+  // Status of the orchestration (e.g., "success", "error").
+  string status = 3;
+  // Optional: Additional notes or error messages.
+  string note = 4;
+}
+
+// InferenceService provides AI inference capabilities.
+// Usage example:
+//   rpc Invoke(InferenceRequest) returns (InferenceResponse);
+service InferenceService {
+  // Invoke an inference request with the given prompt.
+  rpc Invoke (InferenceRequest) returns (InferenceResponse);
+}
+
+// RetrievalService provides information retrieval capabilities.
+// Usage example:
+//   rpc Retrieve(RetrievalRequest) returns (RetrievalResponse);
+service RetrievalService {
+  // Retrieve information based on the given query.
+  rpc Retrieve (RetrievalRequest) returns (RetrievalResponse);
+}
+
+// OrchestrationService provides task and workflow orchestration capabilities.
+// Usage example:
+//   rpc Execute(OrchestrationRequest) returns (OrchestrationResponse);
+service OrchestrationService {
+  // Execute a task or workflow as specified in the request.
+  rpc Execute (OrchestrationRequest) returns (OrchestrationResponse);
+}

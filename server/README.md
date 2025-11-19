@@ -87,11 +87,12 @@ isolation, but they are also wired together through the workspace manifest.
 | Crate | Path | Kind | Depends On | Purpose |
 | --- | --- | --- | --- | --- |
 | `noa_orchestrator` | `server/` | library | `noa_core`, `tracing` | Adaptive scaling policies and orchestration utilities that inspect telemetry and coordinate workloads. |
-| `noa_gateway` | `server/gateway` | library + bin | `noa_core`, `noa_agents`, security + auth deps | Programmable multi-protocol entrypoint that exposes HTTP/gRPC/WebSocket surfaces with auth, policy, and rate-limiting. |
+| `noa_gateway` | `server/gateway` | library + bin | `noa_core`, `noa_agents`, security + auth deps | Programmable multi-protocol router that powers policy decisions, rate limits, and downstream selection logic. |
+| `noa_api` | `server/api` | library | `noa_gateway`, `noa_observability`, `axum`, `tonic` | Axum + Tonic server exposing `/health`, `/ready`, `/metrics`, `/v1/*` REST routes, their gRPC equivalents, and WebSocket bootstrap streams on a shared ALPN-enabled port. |
 | `noa_inference` | `server/ai/inference` | library | async + HTTP tooling | Client for inference backends, model streaming helpers, and test shims for AI integrations. |
 | `noa_ui_api` | `server/ui_api` | library | `noa_workflow`, `noa_crc` | Server-driven UI orchestration layer that exposes workflow metadata and streaming UI events. |
 | `relocation-server` | `server/relocation` | library + bin | `relocation-daemon`, `hyper` | HTTP control plane for the relocation daemon, used to bootstrap agents across hosts. |
-| `noa-unified-server` | `server/bins/noa-unified-server` | binary | `noa_orchestrator`, `noa_gateway` | Thin binary that initialises the orchestrator and gateway so the unified server can be launched via `cargo run --bin noa-unified-server`. |
+| `noa-unified-server` | `server/bins/noa-unified-server` | binary | `noa_orchestrator`, `noa_api` | Thin binary that initialises the orchestrator and boots the shared Axum + Tonic API server via `cargo run --bin noa-unified-server`. |
 
 The `noa-unified-server` binary currently verifies that the orchestrator and
 gateway bootstrap paths succeed and emits telemetry about the scaling decision
@@ -167,13 +168,16 @@ cargo build --bin noa-unified-server
 
 ```bash
 # Run server (development)
-cargo run --bin noa-unified-server -- --http-addr 0.0.0.0:8787 --grpc-addr 0.0.0.0:50051
+cargo run --bin noa-unified-server -- --host 0.0.0.0 --port 8787 --workers 4
 
-# Run with custom config
-cargo run --bin noa-unified-server -- --config config/dev.toml --grpc-addr 0.0.0.0:50051
+# Run with explicit host/port overrides
+cargo run --bin noa-unified-server -- --host 127.0.0.1 --port 8080
 
 # Run release binary
-./target/release/noa-unified-server --http-addr 0.0.0.0:8787 --grpc-addr 0.0.0.0:50051
+./target/release/noa-unified-server --host 0.0.0.0 --port 8787 --workers 8
+
+# Smoke test
+curl -sf http://127.0.0.1:8787/health
 ```
 
 ### Test
