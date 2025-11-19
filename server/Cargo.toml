@@ -1,15 +1,32 @@
+[package]
+name = "noa_orchestrator"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["NOA ARK OS Team"]
+description = "Runtime orchestration utilities and adaptive scaling policies for the unified server"
+
 [workspace]
 resolver = "2"
-
 members = [
-    "core",
-    "api",
-    "inference",
-    "retrieval",
-    "plugins",
-    "observability",
-    "cli", "ai/inference",
+    "gateway",
+    "ui_api",
+    "relocation",
+    "ai/inference",
+    "bins/noa-unified-server",
 ]
+default-members = [
+    ".",
+    "gateway",
+    "ui_api",
+    "relocation",
+    "ai/inference",
+    "bins/noa-unified-server",
+]
+
+[dependencies]
+noa_core = { path = "../core" }
+tracing = { workspace = true }
 
 [workspace.package]
 version = "0.1.0"
