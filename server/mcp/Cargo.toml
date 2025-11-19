@@ -1,0 +1,14 @@
+[package]
+name = "noa-mcp-server"
+version = "0.1.0"
+edition = "2021"
+authors = ["NOA ARK OS Team"]
+description = "Minimal MCP adapter for the NOA tools agent"
+license = "MIT"
+
+[dependencies]
+anyhow = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+noa-tools-agent = { path = "../tools_agent", default-features = false, features = ["client"] }

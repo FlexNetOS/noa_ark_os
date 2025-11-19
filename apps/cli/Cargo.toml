@@ -26,6 +26,8 @@ futures = "0.3"
 noa_cicd = { path = "../../cicd" }
 noa_core = { path = "../../core" }
 walkdir = "2"
+noa-tools-agent = { path = "../../server/tools_agent", default-features = false, features = ["client"] }
+shlex = "1.3"
 
 [dev-dependencies]
 assert_cmd = "2.0"

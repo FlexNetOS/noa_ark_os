@@ -148,6 +148,50 @@ curl http://127.0.0.1:3000/health
 
 See [Gateway Documentation](docs/plans/GATEWAY_ROADMAP.md) for complete workflows.
 
+### Tools Agent & MCP Execution Layer
+
+Every AI agent, CLI, or automation must interact with the repository through the
+NOA Tools Agent API instead of raw shell access. The tool server enforces the
+allowlisted commands in `tools/allowed_commands.toml`, keeps all file accesses
+inside the workspace root, and logs each call to
+`docs/evidence_ledger.tools.log`.
+
+1. **Start the tool server**
+
+   ```bash
+   cd /home/noa/dev/workspace/noa_ark_os/noa_ark_os
+   cargo run -p noa-tools-agent
+   ```
+
+   Set `NOA_TOOLS_ADDRESS`, `NOA_TOOLS_ALLOWLIST`, or `NOA_TOOLS_LEDGER` to
+   override the defaults if needed.
+
+2. **Exercise tools from the CLI**
+
+   ```bash
+   noa tools run-command --cmd "cargo build --workspace"
+   noa tools apply-patch --file docs/example.md --patch '{"hunks":[{"start_line":1,"end_line":1,"replacement":"# Title\n"}]}'
+   noa tools read-file --file docs/agent_tools/TOOL_API.md
+   ```
+
+   Provide `--server http://host:port/` if the server is not running on the
+   default `127.0.0.1:8910` endpoint.
+
+3. **Bridge MCP-compatible editors**
+
+   ```bash
+   cargo run -p noa-mcp-server
+   ```
+
+   The MCP adapter listens on STDIN/STDOUT, registers tools such as
+   `noa.run_command`, `noa.apply_patch`, `noa.read_file`, `noa.build`, and
+   `noa.test`, and forwards each call through the HTTP tool server. Configure the
+   adapter with `NOA_TOOLS_SERVER_URL` when connecting Copilot, Claude, or other
+   MCP clients.
+
+The full API schema lives in `docs/agent_tools/TOOL_API.md`. Treat the server as
+the single source of truth: external automation must not bypass it.
+
 ## 🔄 Development Workflow
 
 ### CRC/CI/CD - Continue ReCode / Continuous Integration / Continuous Development
