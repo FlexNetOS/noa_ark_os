@@ -13,6 +13,7 @@ members = [
     "runtime/manager",
     "ui/core",
     "server/ai/inference",
+    "server/caddy_manager",
     "server/gateway",
     "server/core",
     "server/observability",

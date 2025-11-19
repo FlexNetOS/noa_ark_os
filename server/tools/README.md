@@ -160,6 +160,29 @@ invoking `make`, `pnpm`, or the pipeline tasks.
 
 ---
 
+## 🌐 Portable Caddy reverse proxy
+
+The reverse proxy follows the same hermetic toolchain approach. The scripts
+under `server/tools/` download the official Caddy release for your platform,
+extract it into `server/tools/caddy-portable/`, and refresh
+`caddy-portable.manifest.json`.
+
+```bash
+# Linux/macOS/WSL
+./server/tools/setup-portable-caddy.sh
+source ./server/tools/activate-caddy.sh
+
+# Windows PowerShell
+./server/tools/setup-portable-caddy.ps1
+./server/tools/activate-caddy.ps1
+```
+
+Activation exports `NOA_CADDY_HOME` and prepends the portable binary to `PATH`
+so `caddy validate`, `caddy run`, and `noa caddy ...` always reference the same
+audited artifact across CI and developer hosts.
+
+---
+
 ## 🔧 Manual Installation Steps
 
 If you prefer manual setup:
