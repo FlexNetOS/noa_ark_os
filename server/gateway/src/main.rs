@@ -73,11 +73,11 @@ async fn main() -> Result<()> {
     let server_config =
         config::load(cli.overrides()).context("failed to load server configuration")?;
 
-    let log_format = parse_log_format(
-        cli.log_format
-            .clone()
-            .unwrap_or_else(|| server_config.observability.log_format.clone()),
-    )?;
+    let log_format = if let Some(fmt_str) = cli.log_format.clone() {
+        LogFormat::from_str(&fmt_str)?
+    } else {
+        server_config.observability.log_format
+    };
     let log_level = cli
         .log_level
         .clone()
