@@ -28,6 +28,7 @@ use anyhow::{anyhow, Context, Result};
 use chrono::{DateTime, Utc};
 use noa_agents::registry::AgentRegistry;
 use noa_core::security::{self, Permission};
+use serde::Serialize;
 use std::sync::Arc;
 use tracing::instrument;
 
@@ -44,7 +45,7 @@ pub struct GatewayRequest {
 }
 
 /// Simplified response emitted by the gateway after routing.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct GatewayResponse {
     pub request_id: String,
     pub route_plan: RoutePlan,
