@@ -183,7 +183,7 @@ model_path = "/models"
 log_level = "info"
 log_format = "pretty"
 metrics_bind = "127.0.0.1"
-metrics_port = 9090
+metrics_port = 9100
 otlp_endpoint = "http://127.0.0.1:4317"
 ```
 
