@@ -34,7 +34,7 @@ def _run(command: List[str], env: Optional[Dict[str, str]] = None) -> None:
 
 
 def _capture_compose_logs(tag: str, env: Dict[str, str]) -> Path:
-    timestamp = dt.datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+    timestamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     destination = EVIDENCE_DIR / f"compose-{timestamp}-{tag}.log"
     result = subprocess.run(
         ["docker", "compose", "-f", str(COMPOSE_FILE), "logs", "--no-color"],
