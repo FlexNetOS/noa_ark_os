@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Activate portable Caddy binary for the current shell session.
-set -euo pipefail
+# NOTE: Do not use 'set -euo pipefail' in activate scripts intended to be sourced,
+# as it can cause the parent shell to exit on error.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 CADDY_HOME="$SCRIPT_DIR/caddy-portable"
