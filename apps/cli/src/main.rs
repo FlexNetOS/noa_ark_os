@@ -268,7 +268,7 @@ enum CaddyCommands {
     PushRoute {
         #[arg(long, default_value = "http://127.0.0.1:2019")]
         admin_endpoint: String,
-        #[arg(long)]
+        #[arg(long, required = true)]
         domain: String,
         #[arg(long = "upstream", required = true)]
         upstreams: Vec<String>,
