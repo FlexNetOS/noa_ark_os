@@ -30,6 +30,11 @@ USAGE
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --workspace)
+            if [[ -z "${2:-}" ]]; then
+                echo "Error: --workspace requires a path argument" >&2
+                usage >&2
+                exit 1
+            fi
             if [[ ! -d "$2" ]]; then
                 echo "Workspace directory does not exist: $2" >&2
                 exit 1
