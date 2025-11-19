@@ -1,0 +1,20 @@
+# Staging overlay: dedicated subdomain with JSON logs routed to staging bucket.
+import ../Caddyfile
+
+staging.{$NOA_CADDY_PRIMARY_DOMAIN:-noa-ark-os.com} {
+    reverse_proxy {$NOA_CADDY_STAGING_UPSTREAM:-localhost:18080} {
+        lb_policy round_robin
+        health_uri /ready
+    }
+    log {
+        output file logs/applications/caddy/staging-access.log {
+            roll_size 25MiB
+            roll_keep 10
+        }
+        format json
+    }
+    header {
+        Strict-Transport-Security "max-age=86400"
+        Referrer-Policy "no-referrer"
+    }
+}

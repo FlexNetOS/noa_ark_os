@@ -138,6 +138,74 @@ sudo systemctl start noa-orchestrator
 sudo systemctl status noa-orchestrator
 ```
 
+## Caddy Reverse Proxy and HTTPS
+
+The production build specification requires Caddy to front the unified
+server. The repository now ships portable installers and CLI helpers so
+the proxy can be managed alongside the Rust services.
+
+### Launch workflow
+
+```bash
+# 1. Install the portable binary (one-time per host)
+./server/tools/setup-portable-caddy.sh
+
+# 2. Activate the binary for the current shell
+source ./server/tools/activate-caddy.sh
+
+# 3. Load default environment variables
+source server/caddy/caddy.env
+
+# 4. Start Caddy next to the Rust server
+caddy run --config server/caddy/Caddyfile
+```
+
+Use `server/caddy/overlays/` when you need development, staging, or
+production-specific behavior (`dev.caddy`, `staging.caddy`, and
+`prod.caddy` respectively). Each overlay imports the base template and
+adds TLS, logging, or rate-limiting tweaks for that environment.
+
+### Verifying HTTPS certificates
+
+1. For public domains, keep ports 80/443 open so the automatic HTTPS
+   flow can obtain certificates from Let’s Encrypt.
+2. For local testing, run `caddy trust` after the first `caddy run` to
+   install the internal CA into the OS trust store.
+3. Confirm issuance with OpenSSL:
+   ```bash
+   openssl s_client -connect localhost:8443 -servername localhost |
+     openssl x509 -noout -text
+   ```
+4. Hit the proxied service to ensure the upstream is healthy:
+   `curl -k https://localhost:8443/health`.
+
+### Managing routes via CLI
+
+The `apps/cli` crate now exposes `noa caddy push-route` and
+`noa caddy reload`. Example usage:
+
+```bash
+cargo run -p noa-cli -- caddy push-route \
+  --domain demo.noa-ark-os.local \
+  --upstream localhost:8080 \
+  --rate-limit-events 60
+
+cargo run -p noa-cli -- caddy reload
+```
+
+These commands call the Caddy admin API directly, which means you can
+push emergency shims or reload the file-based config without leaving the
+Rust toolchain.
+
+### Rate limiting and logging checks
+
+The default `Caddyfile` and the prod overlay both enable the
+`rate_limit` module. After launching the proxy, send a burst of requests
+with `hey` or `ab` and confirm that HTTP 429s are emitted after the
+configured threshold. Structured logs live under
+`logs/applications/caddy/` (JSON by default); tail them to ensure
+request metadata, TLS information, and rate-limit events are captured.
+
 ## Docker Deployment
 
 ### Single-Host Docker Compose

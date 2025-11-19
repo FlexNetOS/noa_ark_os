@@ -1,0 +1,26 @@
+# Production overlay: enable mTLS to upstream workloads for sensitive routes.
+import ../Caddyfile
+
+secure.{$NOA_CADDY_PRIMARY_DOMAIN:-noa-ark-os.com} {
+    reverse_proxy {$NOA_CADDY_SECURE_UPSTREAM:-localhost:28080} {
+        transport http {
+            tls
+            tls_insecure_skip_verify false
+            tls_trusted_ca_certs {$NOA_CADDY_CLIENT_CA:-config/system/ca/clients.pem}
+        }
+    }
+    rate_limit {
+        zone tenants {
+            key {http.request.header.X-Tenant-ID}
+            events 20
+            window 10s
+        }
+    }
+    log {
+        output file logs/applications/caddy/prod-secure.log {
+            roll_size 10MiB
+            roll_keep 30
+        }
+        format json
+    }
+}
