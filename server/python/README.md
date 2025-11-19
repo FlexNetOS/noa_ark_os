@@ -116,6 +116,9 @@ Rust Agent System
 - Can integrate with Rust agents via APIs when needed
 - Follows microservices architecture patterns
 - Each service is self-contained and deployable
+- Configure workspace paths via `NOA_WORKSPACE_PATH` (gateway-managed); the
+  shared helper in `server.python.common.workspace` propagates the value so no
+  manual edits are required inside the individual services.
 
 ## 🧪 Testing
 
