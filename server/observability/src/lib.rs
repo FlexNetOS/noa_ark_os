@@ -85,34 +85,19 @@ pub fn init_tracing(config: &TracingConfig) -> Result<TracingGuard> {
 
     let (otel_layer, otlp_enabled) = build_otlp_layer(config)?;
 
-    let init_result = if let Some(layer) = otel_layer {
-        match config.log_format {
-            LogFormat::Pretty => Registry::default()
-                .with(layer)
-                .with(fmt::layer().with_target(true))
-                .with(env_filter)
-                .try_init(),
-            LogFormat::Json => Registry::default()
-                .with(layer)
-                .with(fmt::layer().json().with_target(true))
-                .with(env_filter)
-                .try_init(),
-        }
-    } else {
-        match config.log_format {
-            LogFormat::Pretty => Registry::default()
-                .with(fmt::layer().with_target(true))
-                .with(env_filter)
-                .try_init(),
-            LogFormat::Json => Registry::default()
-                .with(fmt::layer().json().with_target(true))
-                .with(env_filter)
-                .try_init(),
-        }
+    let fmt_layer = match config.log_format {
+        LogFormat::Pretty => fmt::layer().with_target(true),
+        LogFormat::Json => fmt::layer().json().with_target(true),
     };
 
-    init_result.map_err(|err| anyhow::anyhow!("failed to install tracing subscriber: {err}"))?;
+    let mut subscriber = Registry::default().with(env_filter).with(fmt_layer);
+    if let Some(layer) = otel_layer {
+        subscriber = subscriber.with(layer);
+    }
 
+    subscriber
+        .try_init()
+        .map_err(|err| anyhow::anyhow!("failed to install tracing subscriber: {err}"))?;
     Ok(TracingGuard::new(otlp_enabled))
 }
 
