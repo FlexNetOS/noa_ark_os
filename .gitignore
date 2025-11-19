@@ -219,7 +219,7 @@ logs/
 Thumbs.db
 Desktop.ini
 
-# Portable Tools (excluded from Git)
+# Portable Tools (excluded from Git, populated by setup-portable-cargo.* and setup-portable-node.*)
 server/tools/cargo-portable/
 server/tools/rustup-portable/*
 !server/tools/rustup-portable/

@@ -25,6 +25,7 @@ noa_inference = { path = "../../server/ai/inference" }
 futures = "0.3"
 noa_cicd = { path = "../../cicd" }
 noa_core = { path = "../../core" }
+noa_caddy_manager = { path = "../../server/caddy_manager" }
 walkdir = "2"
 noa-tools-agent = { path = "../../server/tools_agent", default-features = false, features = ["client"] }
 shlex = "1.3"

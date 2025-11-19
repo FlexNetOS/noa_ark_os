@@ -131,7 +131,7 @@ SNAPSHOT_BUNDLE_EXT ?= tar.zst
 	gateway-self-heal
 .PHONY: pipeline.local world-verify world-fix kernel snapshot rollback verify publish-audit setup
 .PHONY: provider-pointers archival-verify duplicate-check router-singleton conventional-commits export-roadmap
-.PHONY: record-local-pipeline
+.PHONY: record-local-pipeline server.test-all
 
 
 deps:
@@ -390,6 +390,10 @@ publish-audit:
 rollback-sim:
 	@echo "⏱️  Running rollback simulation..."
 	@cargo run --manifest-path cicd/Cargo.toml --bin rollback_simulation -- --repo . --ledger audit/ledger.jsonl --output audit/rollbacks
+server.test-all:
+	$(PYTHON) -m pip install --quiet --disable-pip-version-check -r server/tests/requirements.txt
+	$(PYTHON) server/tests/run_suite.py --compose-file server/tests/docker-compose.test.yml --project-name noa-server-stack --metrics-output server/tests/.last-run.json --k6-script server/tests/k6/ui_workflow.js
+	$(CARGO) bench -p noa_ui_api --bench ui_schema -- --warm-up-time 1 --measurement-time 2 --sample-size 25
 
 # Setup toolchain
 setup:

@@ -7,6 +7,7 @@ use std::sync::Arc;
 use anyhow::{anyhow, bail, ensure, Context, Result};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use futures::StreamExt;
+use noa_caddy_manager::{CaddyManager, HealthProbe, RateLimitConfig, ReverseProxyRoute};
 use noa_cicd::CICDSystem;
 use noa_core::security::verify_signed_operation;
 use noa_core::utils::simple_hash;
@@ -240,6 +241,11 @@ enum Commands {
         #[command(subcommand)]
         command: NotebookCommands,
     },
+    /// Manage the embedded Caddy reverse proxy
+    Caddy {
+        #[command(subcommand)]
+        command: CaddyCommands,
+    },
     /// Run a natural language query through the inference router
     Query {
         #[arg(value_name = "PROMPT")]
@@ -276,6 +282,40 @@ enum RegistryCmd {
     Describe { tool: String },
     Search { query: String },
     Validate,
+}
+
+#[derive(Subcommand)]
+enum CaddyCommands {
+    /// Push a reverse proxy route through the Caddy admin API
+    PushRoute {
+        #[arg(long, default_value = "http://127.0.0.1:2019")]
+        admin_endpoint: String,
+        #[arg(long, required = true)]
+        domain: String,
+        #[arg(long = "upstream", required = true)]
+        upstreams: Vec<String>,
+        #[arg(long, default_value = "/health")]
+        health_uri: String,
+        #[arg(long, default_value = "10s")]
+        health_interval: String,
+        #[arg(long, default_value = "5s")]
+        health_timeout: String,
+        #[arg(long)]
+        disable_health_check: bool,
+        #[arg(long)]
+        disable_compression: bool,
+        #[arg(long)]
+        disable_security_headers: bool,
+        #[arg(long)]
+        rate_limit_events: Option<u64>,
+        #[arg(long)]
+        rate_limit_window: Option<String>,
+    },
+    /// Trigger a configuration reload via the admin API
+    Reload {
+        #[arg(long, default_value = "http://127.0.0.1:2019")]
+        admin_endpoint: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -846,6 +886,77 @@ fn main() -> Result<()> {
             Commands::Notebook { command } => {
                 handle_notebook_command(out_mode, command)?;
             }
+            Commands::Caddy { command } => match command {
+                CaddyCommands::PushRoute {
+                    admin_endpoint,
+                    domain,
+                    upstreams,
+                    health_uri,
+                    health_interval,
+                    health_timeout,
+                    disable_health_check,
+                    disable_compression,
+                    disable_security_headers,
+                    rate_limit_events,
+                    rate_limit_window,
+                } => {
+                    ensure!(
+                        !upstreams.is_empty(),
+                        "provide at least one --upstream value"
+                    );
+                    let mut route = ReverseProxyRoute::default();
+                    route.domain = domain;
+                    route.upstreams = upstreams;
+                    route.enable_compression = !disable_compression;
+                    route.inject_security_headers = !disable_security_headers;
+                    route.health_probe = if disable_health_check {
+                        None
+                    } else {
+                        Some(HealthProbe {
+                            uri: health_uri,
+                            interval: health_interval,
+                            timeout: health_timeout,
+                        })
+                    };
+                    route.rate_limit = match rate_limit_events {
+                        Some(events) => Some(RateLimitConfig {
+                            zone: "dynamic".into(),
+                            key: "{remote_host}".into(),
+                            events,
+                            window: rate_limit_window
+                                .unwrap_or_else(|| "1m".to_string()),
+                        }),
+                        None => {
+                            if rate_limit_window.is_some() {
+                                bail!(
+                                    "--rate-limit-window requires --rate-limit-events"
+                                );
+                            }
+                            None
+                        }
+                    };
+                    let manager = CaddyManager::new(admin_endpoint)?;
+                    manager.push_route(&route).await?;
+                    let payload = json!({
+                        "component": "caddy",
+                        "action": "push_route",
+                        "domain": route.domain,
+                        "upstreams": route.upstreams,
+                        "status": "ok"
+                    });
+                    print_obj(out_mode, &payload)?;
+                }
+                CaddyCommands::Reload { admin_endpoint } => {
+                    let manager = CaddyManager::new(admin_endpoint)?;
+                    manager.reload().await?;
+                    let payload = json!({
+                        "component": "caddy",
+                        "action": "reload",
+                        "status": "ok"
+                    });
+                    print_obj(out_mode, &payload)?;
+                }
+            },
             Commands::Query { prompt, stream } => {
                 let instrumentation = Arc::new(
                     PipelineInstrumentation::new()

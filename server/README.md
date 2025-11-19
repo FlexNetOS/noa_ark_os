@@ -73,12 +73,30 @@ The NOA Unified Server is a Rust-first monolithic application server designed to
 - Prometheus metrics
 - OpenTelemetry traces
 - Health checks
+- Implemented in the shared Rust crate `server/observability` (log formatters, OTLP exporters, Prometheus helpers)
 
 ### 7. CLI (`cli/`)
 - Server management
 - Configuration
 - Migrations
 - Admin tools
+The workspace now describes the crates that actually live in `server/` instead
+of pointing at placeholder directories. Each crate can be built and tested in
+isolation, but they are also wired together through the workspace manifest.
+
+| Crate | Path | Kind | Depends On | Purpose |
+| --- | --- | --- | --- | --- |
+| `noa_orchestrator` | `server/` | library | `noa_core`, `tracing` | Adaptive scaling policies and orchestration utilities that inspect telemetry and coordinate workloads. |
+| `noa_gateway` | `server/gateway` | library + bin | `noa_core`, `noa_agents`, security + auth deps | Programmable multi-protocol entrypoint that exposes HTTP/gRPC/WebSocket surfaces with auth, policy, and rate-limiting. |
+| `noa_inference` | `server/ai/inference` | library | async + HTTP tooling | Client for inference backends, model streaming helpers, and test shims for AI integrations. |
+| `noa_ui_api` | `server/ui_api` | library | `noa_workflow`, `noa_crc` | Server-driven UI orchestration layer that exposes workflow metadata and streaming UI events. |
+| `relocation-server` | `server/relocation` | library + bin | `relocation-daemon`, `hyper` | HTTP control plane for the relocation daemon, used to bootstrap agents across hosts. |
+| `noa-unified-server` | `server/bins/noa-unified-server` | binary | `noa_orchestrator`, `noa_gateway` | Thin binary that initialises the orchestrator and gateway so the unified server can be launched via `cargo run --bin noa-unified-server`. |
+
+The `noa-unified-server` binary currently verifies that the orchestrator and
+gateway bootstrap paths succeed and emits telemetry about the scaling decision
+it calculated. Upcoming features can add the HTTP runtime, plugin loading, and
+workflow orchestration on top of this foundation.
 
 ## Technology Stack
 
@@ -99,38 +117,63 @@ The NOA Unified Server is a Rust-first monolithic application server designed to
 
 ### Prerequisites
 
-```bash
-# Install Rust
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+1. **Install system packages (Linux example)**
 
-# Install system dependencies
-sudo apt install libssl-dev pkg-config postgresql-client redis-tools
-```
+   ```bash
+   sudo apt update
+   sudo apt install -y build-essential clang pkg-config libssl-dev python3 curl postgresql-client redis-tools
+   ```
+
+   **macOS:** `xcode-select --install` plus `brew install pkg-config openssl@3 postgresql redis`
+
+2. **Provision the portable Rust toolchain (one-time)**
+
+   ```powershell
+   # Windows PowerShell
+   powershell -ExecutionPolicy Bypass -File .\server\tools\setup-portable-cargo.ps1
+   ```
+
+   ```bash
+   # Linux/macOS shells
+   bash ./server/tools/setup-portable-cargo.sh
+   ```
+
+3. **Activate Cargo in every new shell session**
+
+   ```powershell
+   .\server\tools\activate-cargo.ps1
+   ```
+
+   ```bash
+   source ./server/tools/activate-cargo.sh
+   ```
+
+   > 💡 Run `python server/tools/dev_env_cli.py doctor` whenever you want to verify the activation scripts or detect the current platform profile.
 
 ### Build
 
 ```bash
-# Development build
+# Development build (after activation)
 cargo build
 
 # Release build (optimized)
 cargo build --release
 
-# Build specific component
-cargo build -p noa-server-api
+# Build the workspace binary that wires the orchestrator + gateway
+cargo build --bin noa-unified-server
 ```
 
 ### Run
 
 ```bash
 # Run server (development)
-cargo run --bin noa-unified-server
+cargo run --bin noa-unified-server -- --http-addr 0.0.0.0:8787 --grpc-addr 0.0.0.0:50051
 
 # Run with custom config
-cargo run --bin noa-unified-server -- --config config/dev.toml
+cargo run --bin noa-unified-server -- --config config/dev.toml --grpc-addr 0.0.0.0:50051
 
 # Run release binary
-./target/release/noa-unified-server
+./target/release/noa-unified-server --http-addr 0.0.0.0:8787 --grpc-addr 0.0.0.0:50051
 ```
 
 ### Test
@@ -146,19 +189,70 @@ cargo test --test integration
 cargo tarpaulin --out Html
 ```
 
+### Operational readiness validation
+
+The unified server ships with a Docker Compose + load test harness located in `server/tests/`.
+It provisions PostgreSQL, Redis, and the UI API binary, waits for `/healthz` and `/readyz`,
+executes HTTP/gRPC smoke calls, records metrics, and enforces the `p95 < 100ms` and
+`error rate < 0.1%` thresholds before running the bundled k6 script.
+
+```bash
+# Run the stack validation once (requires Docker + python3)
+python3 server/tests/run_suite.py \
+  --compose-file server/tests/docker-compose.test.yml \
+  --metrics-output server/tests/.last-run.json \
+  --k6-script server/tests/k6/ui_workflow.js
+
+# Full CI-friendly target (installs Python deps, runs the suite, Criterion bench + k6)
+make server.test-all
+```
+
+`server/tests/run_suite.py` prints the sampled metrics as JSON so operators can capture a
+pre-activation evidence trail. A recent run looked like:
+
+```json
+{
+  "timestamp": "2024-06-01T12:00:00Z",
+  "http": {
+    "name": "http",
+    "samples": 20,
+    "duration_sec": 0.62,
+    "p95_ms": 7.41,
+    "throughput_rps": 31.6,
+    "error_rate": 0.0
+  },
+  "grpc": {
+    "name": "grpc",
+    "samples": 20,
+    "duration_sec": 0.71,
+    "p95_ms": 8.02,
+    "throughput_rps": 28.1,
+    "error_rate": 0.0
+  }
+}
+```
+
+Use the generated `server/tests/.last-run.json` file when handing over an environment; a
+passed run indicates the REST/gRPC surfaces are stable, the Compose stack is healthy, the
+Criterion benchmark completed, and the k6 script met the latency/error thresholds.
+
 ## Configuration
 
 Configuration is loaded from (in order of precedence):
-1. CLI flags
+1. CLI flags (see table below)
 2. Environment variables (prefix: `NOA_`)
-3. Config files (`config/default.toml`, `config/{profile}.toml`)
+3. Config files (`server/config/default.toml`, `server/config/{profile}.toml`)
 
-**Example** (`config/default.toml`):
+**Example** (`server/config/default.toml`):
 ```toml
 [server]
 host = "0.0.0.0"
 port = 8080
 workers = 4
+
+[server.tls]
+cert_path = "server/vault/runtime/tls/dev-cert.pem"
+key_path = "server/vault/runtime/tls/dev-key.pem"
 
 [database]
 url = "postgresql://localhost:5432/noa"
@@ -167,31 +261,92 @@ max_connections = 20
 [cache]
 url = "redis://localhost:6379"
 
+[qdrant]
+url = "http://localhost:6333"
+
 [inference]
 device = "auto"
 model_path = "/models"
 
 [observability]
 log_level = "info"
-metrics_port = 9090
+log_format = "pretty"
+metrics_bind = "127.0.0.1"
+metrics_port = 9100
+otlp_endpoint = "http://127.0.0.1:4317"
 ```
+
+**CLI flags**:
+
+| Flag | Description |
+| --- | --- |
+| `--config <path>` | Load an additional TOML file on top of the layered defaults |
+| `--profile <name>` | Merge `server/config/<name>.toml` before env overrides |
+| `--host` / `--port` / `--workers` | Override the `[server]` section |
+| `--metrics-bind` / `--metrics-port` | Override `observability.metrics_*` |
+| `--log-level` / `--log-format` | Override tracing output (formats: `pretty`, `json`) |
+| `--otlp-endpoint` | Point tracing export at a custom OTLP/OTLP-gRPC endpoint |
 
 **Environment Variables**:
 ```bash
 export NOA_SERVER__HOST=0.0.0.0
 export NOA_SERVER__PORT=8080
 export NOA_DATABASE__URL=postgresql://localhost:5432/noa
+export NOA_OBSERVABILITY__METRICS_PORT=9200
 export RUST_LOG=info
 ```
+
+## Containerized Deployment
+
+### Docker Compose
+
+The repository ships a deterministic Compose stack at `server/docker-compose.yml` that includes PostgreSQL, Redis, Qdrant, and the unified server.
+
+```bash
+cd server
+# Optional: override the default password used by both PostgreSQL and the server connection string
+export POSTGRES_PASSWORD=supersecret
+docker compose up -d
+
+# Verify the server is ready
+curl -f http://localhost:8080/health
+
+# Tear the stack down when finished (add -v to prune volumes)
+docker compose down
+```
+
+For CI automation, `python server/deploy/env_manager.py compose-up --wait` boots the stack, blocks until `/health` succeeds, and captures logs in `var/telemetry/deploy/`. Use the matching `compose-down` and `compose-logs` subcommands to stop services and archive evidence for later inspection.
+
+### Helm Chart
+
+`server/helm/` contains a first-class Helm chart with health probes, resource requests, and an optional `ServiceMonitor`. Install or upgrade the release by pointing Helm at the chart directory:
+
+```bash
+# Install into the "platform" namespace
+helm install noa-server server/helm -n platform -f server/helm/values.yaml
+
+# Upgrade (or install if missing) after editing values
+helm upgrade noa-server server/helm -n platform -f server/helm/values.yaml --install
+
+# Remove the release when no longer needed
+helm uninstall noa-server -n platform
+```
+
+The same workflow is exposed through the helper utility: `python server/deploy/env_manager.py helm-install --namespace platform`, `helm-upgrade`, and `helm-uninstall` manage releases while keeping commands uniform in CI.
 
 ## API Endpoints
 
 ### Health & Metrics
 
 ```
-GET  /health          - Liveness probe (always 200 if alive)
-GET  /ready           - Readiness probe (checks dependencies)
+GET  /health          - Legacy liveness probe (always 200 if alive)
+GET  /healthz         - HTTP liveness probe for the UI API stack
+GET  /ready           - Legacy readiness probe (checks dependencies)
+GET  /readyz          - Aggregated readiness (drop root + streaming session)
 GET  /metrics         - Prometheus metrics
+GET  /health          - Liveness probe (always 200 if alive)
+GET  /ready           - Readiness probe (only 200 after Postgres/Redis/Qdrant clients initialise)
+GET  /metrics         - Prometheus metrics (served on the main port and, if configured, on `observability.metrics_*`)
 ```
 
 ### REST API (v1)
