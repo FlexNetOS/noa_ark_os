@@ -37,7 +37,8 @@ else
 fi
 
 if [[ -d "$EXTRACT_DIR/caddy_${CADDY_VERSION}_${TARGET_OS}_amd64" ]]; then
-    mv "$EXTRACT_DIR/caddy_${CADDY_VERSION}_${TARGET_OS}_amd64"/* "$EXTRACT_DIR/"
+    mv "$EXTRACT_DIR/caddy_${CADDY_VERSION}_${TARGET_OS}_amd64"/* "$EXTRACT_DIR/" 2>/dev/null || true
+    rmdir "$EXTRACT_DIR/caddy_${CADDY_VERSION}_${TARGET_OS}_amd64" 2>/dev/null || true
 fi
 
 ln -sfn "$EXTRACT_DIR" "$CADDY_ROOT/current"
