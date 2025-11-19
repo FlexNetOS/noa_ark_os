@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package noa.api.v1;
+
+message RoutedPlan {
+  string protocol = 1;
+  repeated string targets = 2;
+  string metadata_json = 3;
+}
+
+message InferenceRequest {
+  string prompt = 1;
+  string protocol = 2;
+  string metadata_json = 3;
+}
+
+message InferenceResponse {
+  string request_id = 1;
+  RoutedPlan plan = 2;
+  string status = 3;
+  string note = 4;
+}
+
+message RetrievalRequest {
+  string query = 1;
+  string protocol = 2;
+  string metadata_json = 3;
+}
+
+message RetrievalResponse {
+  string request_id = 1;
+  RoutedPlan plan = 2;
+  string status = 3;
+  string note = 4;
+}
+
+message OrchestrationRequest {
+  string task = 1;
+  string protocol = 2;
+  string metadata_json = 3;
+}
+
+message OrchestrationResponse {
+  string request_id = 1;
+  RoutedPlan plan = 2;
+  string status = 3;
+  string note = 4;
+}
+
+service InferenceService {
+  rpc Invoke (InferenceRequest) returns (InferenceResponse);
+}
+
+service RetrievalService {
+  rpc Retrieve (RetrievalRequest) returns (RetrievalResponse);
+}
+
+service OrchestrationService {
+  rpc Execute (OrchestrationRequest) returns (OrchestrationResponse);
+}

@@ -129,8 +129,19 @@ impl ProgrammableRouter {
 impl Default for ProgrammableRouter {
     fn default() -> Self {
         Self::new(
-            vec!["serviceA".into(), "serviceB".into(), "analytics".into()],
-            vec!["workflow".into(), "memory".into(), "security".into()],
+            vec![
+                "retrieval".into(),
+                "orchestration".into(),
+                "analytics".into(),
+                "serviceA".into(),
+                "serviceB".into(),
+            ],
+            vec![
+                "inference".into(),
+                "workflow".into(),
+                "memory".into(),
+                "security".into(),
+            ],
             vec![
                 "agent-activity".into(),
                 "alerts".into(),
