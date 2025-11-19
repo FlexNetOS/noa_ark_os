@@ -190,7 +190,9 @@ def run_grpc_checks(target: str, schema_pb2, schema_pb2_grpc, iterations: int) -
     def call():
         stub.GetPage(schema_pb2.PageRequest(page_id="integration-suite"), timeout=5)
 
-    return collect_metrics("grpc", iterations, call)
+    result = collect_metrics("grpc", iterations, call)
+    channel.close()
+    return result
 
 
 def enforce_thresholds(snapshot: MetricSnapshot) -> None:
