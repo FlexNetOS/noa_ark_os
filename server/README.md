@@ -117,18 +117,43 @@ workflow orchestration on top of this foundation.
 
 ### Prerequisites
 
-```bash
-# Install Rust
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+1. **Install system packages (Linux example)**
 
-# Install system dependencies
-sudo apt install libssl-dev pkg-config postgresql-client redis-tools
-```
+   ```bash
+   sudo apt update
+   sudo apt install -y build-essential clang pkg-config libssl-dev python3 curl postgresql-client redis-tools
+   ```
+
+   **macOS:** `xcode-select --install` plus `brew install pkg-config openssl@3 postgresql redis`
+
+2. **Provision the portable Rust toolchain (one-time)**
+
+   ```powershell
+   # Windows PowerShell
+   powershell -ExecutionPolicy Bypass -File .\server\tools\setup-portable-cargo.ps1
+   ```
+
+   ```bash
+   # Linux/macOS shells
+   bash ./server/tools/setup-portable-cargo.sh
+   ```
+
+3. **Activate Cargo in every new shell session**
+
+   ```powershell
+   .\server\tools\activate-cargo.ps1
+   ```
+
+   ```bash
+   source ./server/tools/activate-cargo.sh
+   ```
+
+   > 💡 Run `python server/tools/dev_env_cli.py doctor` whenever you want to verify the activation scripts or detect the current platform profile.
 
 ### Build
 
 ```bash
-# Development build
+# Development build (after activation)
 cargo build
 
 # Release build (optimized)
