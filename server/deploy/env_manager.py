@@ -75,8 +75,8 @@ def command_compose_down(args: argparse.Namespace) -> None:
     cmd = ["docker", "compose", "-f", str(COMPOSE_FILE), "down"]
     if args.prune:
         cmd.append("-v")
-    _run(cmd, env=env)
     _capture_compose_logs("down", env)
+    _run(cmd, env=env)
 
 
 def command_compose_logs(args: argparse.Namespace) -> None:
