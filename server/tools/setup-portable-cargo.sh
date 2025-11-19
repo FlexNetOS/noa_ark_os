@@ -30,6 +30,10 @@ USAGE
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --workspace)
+            if [[ ! -d "$2" ]]; then
+                echo "Workspace directory does not exist: $2" >&2
+                exit 1
+            fi
             WORKSPACE_ROOT="$(cd "$2" && pwd)"
             shift 2
             ;;
