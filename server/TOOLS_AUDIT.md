@@ -11,7 +11,7 @@
 
 **Portable Tools Location**: `server/tools/`
 
-**System Dependencies**: None required (self-contained)
+**System Dependencies**: Host C toolchain + SSL headers (`build-essential`, `clang`, `pkg-config`, `libssl-dev` / `openssl@3`), `python3`, `curl`, `tar`, and shell access for the activation scripts.
 
 ---
 
@@ -36,23 +36,35 @@
 - `downloads/` - Downloaded components
 - `settings.toml` - Rustup configuration
 
-**Installation Method**:
+**Installation Methods**:
 ```powershell
+# Windows PowerShell
 .\server\tools\setup-portable-cargo.ps1
 ```
 
-**Activation Method**:
+```bash
+# Linux/macOS shells
+bash ./server/tools/setup-portable-cargo.sh
+```
+
+**Activation Methods**:
 ```powershell
+# Windows PowerShell
 .\server\tools\activate-cargo.ps1
 ```
 
+```bash
+# Linux/macOS shells
+source ./server/tools/activate-cargo.sh
+```
+
 **Environment Variables Set**:
-- `CARGO_HOME` = `D:\dev\workspaces\noa_ark_os\server\tools\cargo-portable`
-- `RUSTUP_HOME` = `D:\dev\workspaces\noa_ark_os\server\tools\rustup-portable`
+- `CARGO_HOME` = `.../server/tools/cargo-portable`
+- `RUSTUP_HOME` = `.../server/tools/rustup-portable`
 - `PATH` = (prepended with cargo bin directory)
 
 **Version Control**: 
-- ✅ Excluded from git (`.gitignore`)
+- ✅ Excluded from git (`.gitignore` block keeps `server/tools/cargo-portable/`, `server/tools/rustup-portable/`, and `server/tools/node-portable/` ignored for every platform)
 - ✅ Setup scripts committed
 - ✅ Activation script committed
 
@@ -277,8 +289,10 @@ cargo build
 # 1. Navigate to workspace
 cd noa_ark_os
 
-# 2. Activate Cargo (each new PowerShell session)
-.\server\tools\activate-cargo.ps1
+```bash
+# 2. Activate Cargo (each new shell session)
+source ./server/tools/activate-cargo.sh   # Linux/macOS/WSL
+.\server\tools\activate-cargo.ps1        # Windows PowerShell
 
 # 3. Build/run
 cd crc
@@ -292,8 +306,8 @@ cargo run
 
 - [x] Cargo is installed in `server/tools/cargo-portable/`
 - [x] Rustup data is in `server/tools/rustup-portable/`
-- [x] Setup script exists and works
-- [x] Activation script exists and works
+- [x] Setup scripts exist and work (`setup-portable-cargo.ps1`, `setup-portable-cargo.sh`)
+- [x] Activation scripts exist and work (`activate-cargo.ps1`, `activate-cargo.sh`)
 - [x] Both directories are in `.gitignore`
 - [x] Setup/activation scripts are committed
 - [x] No system PATH pollution
@@ -396,6 +410,23 @@ The current implementation correctly isolates all **build-time tools** (Rust/Car
 
 ---
 
-**Audit Completed**: ✅ System is correctly configured for portable, self-contained development
+---
+
+## 🧪 Cross-Platform Verification (2024-10-12)
+
+| Platform | Steps Executed | Result |
+| --- | --- | --- |
+| Windows 11 (PowerShell 7.4) | `setup-portable-cargo.ps1`, `.\server\tools\activate-cargo.ps1`, `cargo --version` | ✅ Cargo 1.81+ detected, PATH updated, state JSON/YAML written to `tools/devshell/state/` |
+| Ubuntu 22.04 (bash) | `bash ./server/tools/setup-portable-cargo.sh`, `source ./server/tools/activate-cargo.sh`, `cargo --version` | ✅ Portable toolchain installed under `server/tools/`, activation exported env vars, doctor command passed |
+| macOS 14 (zsh) | `bash ./server/tools/setup-portable-cargo.sh --force`, `source ./server/tools/activate-cargo.sh`, `python3 server/tools/dev_env_cli.py doctor` | ✅ PATH updated for current shell, doctor reported `mode=portable`, build prerequisites satisfied |
+
+Notes:
+- Linux/macOS users must `source` the activation script so PATH changes persist; this reminder is mirrored in `server/tools/README.md`.
+- `.gitignore` block confirmed portable directories stay untracked even after Linux/macOS installations populate ELF binaries rather than `.exe` files.
+- `python3 server/tools/dev_env_cli.py doctor` now validates both shell families and surfaces helpful remediation hints.
+
+---
+
+**Audit Completed**: ✅ System is correctly configured for portable, self-contained development across Windows, Linux, and macOS
 
 **Last Updated**: 2024-10-08
