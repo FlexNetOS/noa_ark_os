@@ -249,6 +249,44 @@ export NOA_OBSERVABILITY__METRICS_PORT=9200
 export RUST_LOG=info
 ```
 
+## Containerized Deployment
+
+### Docker Compose
+
+The repository ships a deterministic Compose stack at `server/docker-compose.yml` that includes PostgreSQL, Redis, Qdrant, and the unified server.
+
+```bash
+cd server
+# Optional: override the default password used by both PostgreSQL and the server connection string
+export POSTGRES_PASSWORD=supersecret
+docker compose up -d
+
+# Verify the server is ready
+curl -f http://localhost:8080/health
+
+# Tear the stack down when finished (add -v to prune volumes)
+docker compose down
+```
+
+For CI automation, `python server/deploy/env_manager.py compose-up --wait` boots the stack, blocks until `/health` succeeds, and captures logs in `var/telemetry/deploy/`. Use the matching `compose-down` and `compose-logs` subcommands to stop services and archive evidence for later inspection.
+
+### Helm Chart
+
+`server/helm/` contains a first-class Helm chart with health probes, resource requests, and an optional `ServiceMonitor`. Install or upgrade the release by pointing Helm at the chart directory:
+
+```bash
+# Install into the "platform" namespace
+helm install noa-server server/helm -n platform -f server/helm/values.yaml
+
+# Upgrade (or install if missing) after editing values
+helm upgrade noa-server server/helm -n platform -f server/helm/values.yaml --install
+
+# Remove the release when no longer needed
+helm uninstall noa-server -n platform
+```
+
+The same workflow is exposed through the helper utility: `python server/deploy/env_manager.py helm-install --namespace platform`, `helm-upgrade`, and `helm-uninstall` manage releases while keeping commands uniform in CI.
+
 ## API Endpoints
 
 ### Health & Metrics
