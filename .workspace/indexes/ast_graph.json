@@ -1,5 +1,5 @@
 {
-  "generated_at": 1763430266260,
+  "generated_at": 1763507084267,
   "nodes": [
     {
       "id": "cicd/examples/validate_portable",
@@ -44,12 +44,12 @@
     {
       "id": "cicd/src/bin/publish_audit",
       "path": "cicd/src/bin/publish_audit.rs",
-      "functions": 12,
+      "functions": 14,
       "structs": 3,
       "enums": 0,
       "traits": 0,
       "impls": 0,
-      "dependencies": 19
+      "dependencies": 21
     },
     {
       "id": "cicd/src/lib",
@@ -58,7 +58,7 @@
       "structs": 10,
       "enums": 4,
       "traits": 0,
-      "impls": 10,
+      "impls": 9,
       "dependencies": 25
     },
     {
@@ -138,7 +138,7 @@
       "structs": 9,
       "enums": 1,
       "traits": 0,
-      "impls": 7,
+      "impls": 6,
       "dependencies": 10
     },
     {
@@ -160,6 +160,216 @@
       "traits": 0,
       "impls": 0,
       "dependencies": 12
+    },
+    {
+      "id": "target/release/build/noa_ui_api-6e280a5283868755/out/noa.ui",
+      "path": "target/release/build/noa_ui_api-6e280a5283868755/out/noa.ui.rs",
+      "functions": 0,
+      "structs": 8,
+      "enums": 0,
+      "traits": 0,
+      "impls": 0,
+      "dependencies": 0
+    },
+    {
+      "id": "target/release/build/serde_core-4f638e9a4855a561/out/private",
+      "path": "target/release/build/serde_core-4f638e9a4855a561/out/private.rs",
+      "functions": 0,
+      "structs": 0,
+      "enums": 0,
+      "traits": 0,
+      "impls": 0,
+      "dependencies": 0
+    },
+    {
+      "id": "target/release/build/serde-6d26701cc16b74b3/out/private",
+      "path": "target/release/build/serde-6d26701cc16b74b3/out/private.rs",
+      "functions": 0,
+      "structs": 0,
+      "enums": 0,
+      "traits": 0,
+      "impls": 0,
+      "dependencies": 1
+    },
+    {
+      "id": "target/release/build/serde_core-e1ab09d4bf0da4a5/out/private",
+      "path": "target/release/build/serde_core-e1ab09d4bf0da4a5/out/private.rs",
+      "functions": 0,
+      "structs": 0,
+      "enums": 0,
+      "traits": 0,
+      "impls": 0,
+      "dependencies": 0
+    },
+    {
+      "id": "target/release/build/typenum-fbac5b17b46c4ceb/out/tests",
+      "path": "target/release/build/typenum-fbac5b17b46c4ceb/out/tests.rs",
+      "functions": 1743,
+      "structs": 0,
+      "enums": 0,
+      "traits": 0,
+      "impls": 0,
+      "dependencies": 3
+    },
+    {
+      "id": "target/release/build/serde-9805bc5318d87417/out/private",
+      "path": "target/release/build/serde-9805bc5318d87417/out/private.rs",
+      "functions": 0,
+      "structs": 0,
+      "enums": 0,
+      "traits": 0,
+      "impls": 0,
+      "dependencies": 1
+    },
+    {
+      "id": "target/release/build/target-lexicon-cea6eca60709ad55/out/host",
+      "path": "target/release/build/target-lexicon-cea6eca60709ad55/out/host.rs",
+      "functions": 0,
+      "structs": 0,
+      "enums": 0,
+      "traits": 0,
+      "impls": 6,
+      "dependencies": 8
+    },
+    {
+      "id": "target/release/build/cranelift-codegen-b9d221d46d0e4a2f/out/version",
+      "path": "target/release/build/cranelift-codegen-b9d221d46d0e4a2f/out/version.rs",
+      "functions": 0,
+      "structs": 0,
+      "enums": 0,
+      "traits": 0,
+      "impls": 0,
+      "dependencies": 0
+    },
+    {
+      "id": "target/release/build/cranelift-codegen-b9d221d46d0e4a2f/out/isle_aarch64",
+      "path": "target/release/build/cranelift-codegen-b9d221d46d0e4a2f/out/isle_aarch64.rs",
+      "functions": 328,
+      "structs": 1,
+      "enums": 38,
+      "traits": 4,
+      "impls": 9,
+      "dependencies": 2
+    },
+    {
+      "id": "target/release/build/cranelift-codegen-b9d221d46d0e4a2f/out/isle_s390x",
+      "path": "target/release/build/cranelift-codegen-b9d221d46d0e4a2f/out/isle_s390x.rs",
+      "functions": 569,
+      "structs": 1,
+      "enums": 24,
+      "traits": 4,
+      "impls": 9,
+      "dependencies": 2
+    },
+    {
+      "id": "target/release/build/cranelift-codegen-b9d221d46d0e4a2f/out/settings-x86",
+      "path": "target/release/build/cranelift-codegen-b9d221d46d0e4a2f/out/settings-x86.rs",
+      "functions": 1,
+      "structs": 1,
+      "enums": 0,
+      "traits": 0,
+      "impls": 4,
+      "dependencies": 0
+    },
+    {
+      "id": "target/release/build/cranelift-codegen-b9d221d46d0e4a2f/out/inst_builder",
+      "path": "target/release/build/cranelift-codegen-b9d221d46d0e4a2f/out/inst_builder.rs",
+      "functions": 0,
+      "structs": 0,
+      "enums": 0,
+      "traits": 1,
+      "impls": 0,
+      "dependencies": 0
+    },
+    {
+      "id": "target/release/build/cranelift-codegen-b9d221d46d0e4a2f/out/opcodes",
+      "path": "target/release/build/cranelift-codegen-b9d221d46d0e4a2f/out/opcodes.rs",
+      "functions": 1,
+      "structs": 0,
+      "enums": 3,
+      "traits": 0,
+      "impls": 3,
+      "dependencies": 0
+    },
+    {
+      "id": "target/release/build/cranelift-codegen-b9d221d46d0e4a2f/out/isle_opt",
+      "path": "target/release/build/cranelift-codegen-b9d221d46d0e4a2f/out/isle_opt.rs",
+      "functions": 178,
+      "structs": 1,
+      "enums": 0,
+      "traits": 4,
+      "impls": 9,
+      "dependencies": 2
+    },
+    {
+      "id": "target/release/build/cranelift-codegen-b9d221d46d0e4a2f/out/settings",
+      "path": "target/release/build/cranelift-codegen-b9d221d46d0e4a2f/out/settings.rs",
+      "functions": 1,
+      "structs": 1,
+      "enums": 4,
+      "traits": 0,
+      "impls": 16,
+      "dependencies": 0
+    },
+    {
+      "id": "target/release/build/cranelift-codegen-b9d221d46d0e4a2f/out/types",
+      "path": "target/release/build/cranelift-codegen-b9d221d46d0e4a2f/out/types.rs",
+      "functions": 0,
+      "structs": 0,
+      "enums": 0,
+      "traits": 0,
+      "impls": 0,
+      "dependencies": 0
+    },
+    {
+      "id": "target/release/build/cranelift-codegen-b9d221d46d0e4a2f/out/isle_x64",
+      "path": "target/release/build/cranelift-codegen-b9d221d46d0e4a2f/out/isle_x64.rs",
+      "functions": 482,
+      "structs": 1,
+      "enums": 17,
+      "traits": 4,
+      "impls": 9,
+      "dependencies": 2
+    },
+    {
+      "id": "target/release/build/cranelift-codegen-b9d221d46d0e4a2f/out/isle_riscv64",
+      "path": "target/release/build/cranelift-codegen-b9d221d46d0e4a2f/out/isle_riscv64.rs",
+      "functions": 479,
+      "structs": 1,
+      "enums": 49,
+      "traits": 4,
+      "impls": 9,
+      "dependencies": 2
+    },
+    {
+      "id": "target/release/build/cranelift-isle-4f7c0c1a1dd8c390/out/isle_tests",
+      "path": "target/release/build/cranelift-isle-4f7c0c1a1dd8c390/out/isle_tests.rs",
+      "functions": 27,
+      "structs": 0,
+      "enums": 0,
+      "traits": 0,
+      "impls": 0,
+      "dependencies": 0
+    },
+    {
+      "id": "target/release/build/serde_core-078e5917274f337d/out/private",
+      "path": "target/release/build/serde_core-078e5917274f337d/out/private.rs",
+      "functions": 0,
+      "structs": 0,
+      "enums": 0,
+      "traits": 0,
+      "impls": 0,
+      "dependencies": 0
+    },
+    {
+      "id": "target/release/build/libsqlite3-sys-aa2067ac922443c8/out/bindgen",
+      "path": "target/release/build/libsqlite3-sys-aa2067ac922443c8/out/bindgen.rs",
+      "functions": 0,
+      "structs": 38,
+      "enums": 0,
+      "traits": 0,
+      "impls": 0,
+      "dependencies": 0
     },
     {
       "id": "target/debug/build/libsqlite3-sys-38c8efa7c1ee1459/out/bindgen",
@@ -194,6 +404,26 @@
     {
       "id": "target/debug/build/noa_ui_api-41f3b2570de356cd/out/noa.ui",
       "path": "target/debug/build/noa_ui_api-41f3b2570de356cd/out/noa.ui.rs",
+      "functions": 0,
+      "structs": 8,
+      "enums": 0,
+      "traits": 0,
+      "impls": 0,
+      "dependencies": 0
+    },
+    {
+      "id": "target/debug/build/noa_ui_api-7feeee60dd5bb484/out/noa.ui",
+      "path": "target/debug/build/noa_ui_api-7feeee60dd5bb484/out/noa.ui.rs",
+      "functions": 0,
+      "structs": 8,
+      "enums": 0,
+      "traits": 0,
+      "impls": 0,
+      "dependencies": 0
+    },
+    {
+      "id": "target/debug/build/noa_ui_api-e4eae65fed0f173e/out/noa.ui",
+      "path": "target/debug/build/noa_ui_api-e4eae65fed0f173e/out/noa.ui.rs",
       "functions": 0,
       "structs": 8,
       "enums": 0,
@@ -332,6 +562,16 @@
       "dependencies": 3
     },
     {
+      "id": "target/debug/build/noa_ui_api-947cc0a4940da549/out/noa.ui",
+      "path": "target/debug/build/noa_ui_api-947cc0a4940da549/out/noa.ui.rs",
+      "functions": 0,
+      "structs": 8,
+      "enums": 0,
+      "traits": 0,
+      "impls": 0,
+      "dependencies": 0
+    },
+    {
       "id": "target/debug/build/noa_ui_api-87dfc7a37897a4ad/out/noa.ui",
       "path": "target/debug/build/noa_ui_api-87dfc7a37897a4ad/out/noa.ui.rs",
       "functions": 0,
@@ -344,6 +584,16 @@
     {
       "id": "target/debug/build/noa_ui_api-4499a6edf9816d3b/out/noa.ui",
       "path": "target/debug/build/noa_ui_api-4499a6edf9816d3b/out/noa.ui.rs",
+      "functions": 0,
+      "structs": 8,
+      "enums": 0,
+      "traits": 0,
+      "impls": 0,
+      "dependencies": 0
+    },
+    {
+      "id": "target/debug/build/noa_ui_api-2318632a6e4e6715/out/noa.ui",
+      "path": "target/debug/build/noa_ui_api-2318632a6e4e6715/out/noa.ui.rs",
       "functions": 0,
       "structs": 8,
       "enums": 0,
@@ -386,6 +636,16 @@
       "path": "target/debug/build/cranelift-isle-38d9171ceda2fc0c/out/isle_tests.rs",
       "functions": 27,
       "structs": 0,
+      "enums": 0,
+      "traits": 0,
+      "impls": 0,
+      "dependencies": 0
+    },
+    {
+      "id": "target/debug/build/noa_ui_api-092e20f1a619710d/out/noa.ui",
+      "path": "target/debug/build/noa_ui_api-092e20f1a619710d/out/noa.ui.rs",
+      "functions": 0,
+      "structs": 8,
       "enums": 0,
       "traits": 0,
       "impls": 0,
@@ -708,7 +968,7 @@
       "structs": 8,
       "enums": 2,
       "traits": 0,
-      "impls": 5,
+      "impls": 7,
       "dependencies": 7
     },
     {
@@ -868,7 +1128,7 @@
       "structs": 3,
       "enums": 1,
       "traits": 0,
-      "impls": 2,
+      "impls": 3,
       "dependencies": 14
     },
     {
@@ -949,7 +1209,7 @@
       "enums": 1,
       "traits": 0,
       "impls": 1,
-      "dependencies": 10
+      "dependencies": 9
     },
     {
       "id": "ui/core/src/analytics",
@@ -975,10 +1235,10 @@
       "id": "ui/core/src/renderer",
       "path": "ui/core/src/renderer.rs",
       "functions": 0,
-      "structs": 1,
+      "structs": 2,
       "enums": 0,
       "traits": 0,
-      "impls": 0,
+      "impls": 1,
       "dependencies": 3
     },
     {
@@ -988,7 +1248,7 @@
       "structs": 12,
       "enums": 2,
       "traits": 1,
-      "impls": 23,
+      "impls": 31,
       "dependencies": 15
     },
     {
@@ -1048,7 +1308,7 @@
       "structs": 8,
       "enums": 2,
       "traits": 0,
-      "impls": 6,
+      "impls": 4,
       "dependencies": 10
     },
     {
@@ -1168,7 +1428,7 @@
       "structs": 3,
       "enums": 1,
       "traits": 0,
-      "impls": 3,
+      "impls": 2,
       "dependencies": 5
     },
     {
@@ -1358,7 +1618,7 @@
       "structs": 2,
       "enums": 2,
       "traits": 0,
-      "impls": 4,
+      "impls": 3,
       "dependencies": 5
     },
     {
@@ -1408,7 +1668,7 @@
       "structs": 7,
       "enums": 3,
       "traits": 0,
-      "impls": 4,
+      "impls": 5,
       "dependencies": 18
     },
     {
@@ -1420,6 +1680,16 @@
       "traits": 0,
       "impls": 0,
       "dependencies": 25
+    },
+    {
+      "id": "server/tools/rustup-portable/toolchains/stable-x86_64-unknown-linux-gnu/share/doc/rust/html/error_codes/main",
+      "path": "server/tools/rustup-portable/toolchains/stable-x86_64-unknown-linux-gnu/share/doc/rust/html/error_codes/main.rs",
+      "functions": 6,
+      "structs": 0,
+      "enums": 1,
+      "traits": 0,
+      "impls": 1,
+      "dependencies": 14
     },
     {
       "id": "server/src/adaptive_scaling",
@@ -1466,9 +1736,9 @@
       "path": "server/ui_api/src/grpc.rs",
       "functions": 8,
       "structs": 1,
-      "enums": 0,
+      "enums": 1,
       "traits": 0,
-      "impls": 2,
+      "impls": 3,
       "dependencies": 21
     },
     {
@@ -1498,7 +1768,7 @@
       "structs": 12,
       "enums": 1,
       "traits": 1,
-      "impls": 3,
+      "impls": 5,
       "dependencies": 52
     },
     {
@@ -1658,7 +1928,7 @@
       "structs": 8,
       "enums": 6,
       "traits": 0,
-      "impls": 5,
+      "impls": 4,
       "dependencies": 18
     },
     {
@@ -1745,11 +2015,11 @@
       "id": "workflow/src/instrumentation",
       "path": "workflow/src/instrumentation.rs",
       "functions": 7,
-      "structs": 27,
+      "structs": 30,
       "enums": 4,
       "traits": 0,
-      "impls": 17,
-      "dependencies": 30
+      "impls": 18,
+      "dependencies": 29
     },
     {
       "id": "workflow/src/auto_fixers",
@@ -1762,6 +2032,16 @@
       "dependencies": 12
     },
     {
+      "id": "workflow/src/bin/reward_report",
+      "path": "workflow/src/bin/reward_report.rs",
+      "functions": 3,
+      "structs": 1,
+      "enums": 0,
+      "traits": 0,
+      "impls": 0,
+      "dependencies": 6
+    },
+    {
       "id": "workflow/src/budget_guardian",
       "path": "workflow/src/budget_guardian.rs",
       "functions": 3,
@@ -1769,7 +2049,7 @@
       "enums": 2,
       "traits": 0,
       "impls": 3,
-      "dependencies": 11
+      "dependencies": 13
     },
     {
       "id": "workflow/src/reward",
@@ -1779,7 +2059,7 @@
       "enums": 1,
       "traits": 0,
       "impls": 7,
-      "dependencies": 9
+      "dependencies": 8
     },
     {
       "id": "workflow/src/lib",
@@ -1962,6 +2242,16 @@
       "dependencies": 11
     },
     {
+      "id": "core/src/bin/scorekeeper",
+      "path": "core/src/bin/scorekeeper.rs",
+      "functions": 2,
+      "structs": 1,
+      "enums": 0,
+      "traits": 0,
+      "impls": 0,
+      "dependencies": 7
+    },
+    {
       "id": "core/src/bin/kernel",
       "path": "core/src/bin/kernel.rs",
       "functions": 3,
@@ -2018,7 +2308,7 @@
       "structs": 6,
       "enums": 2,
       "traits": 0,
-      "impls": 5,
+      "impls": 6,
       "dependencies": 7
     },
     {
@@ -2038,7 +2328,7 @@
       "structs": 4,
       "enums": 2,
       "traits": 0,
-      "impls": 4,
+      "impls": 5,
       "dependencies": 7
     },
     {
@@ -2048,7 +2338,7 @@
       "structs": 11,
       "enums": 3,
       "traits": 0,
-      "impls": 7,
+      "impls": 4,
       "dependencies": 6
     },
     {
@@ -2308,7 +2598,7 @@
       "structs": 3,
       "enums": 6,
       "traits": 0,
-      "impls": 10,
+      "impls": 4,
       "dependencies": 4
     },
     {
@@ -5710,12 +6000,22 @@
     },
     {
       "from": "cicd/src/bin/publish_audit",
+      "to": "serde_json::Value",
+      "relation": "use"
+    },
+    {
+      "from": "cicd/src/bin/publish_audit",
       "to": "sha2::Digest",
       "relation": "use"
     },
     {
       "from": "cicd/src/bin/publish_audit",
       "to": "sha2::Sha256",
+      "relation": "use"
+    },
+    {
+      "from": "cicd/src/bin/publish_audit",
+      "to": "std::collections::HashMap",
       "relation": "use"
     },
     {
@@ -6504,6 +6804,156 @@
       "relation": "use"
     },
     {
+      "from": "target/release/build/noa_ui_api-6e280a5283868755/out/noa.ui",
+      "to": "target/release/build/noa_ui_api-6e280a5283868755/out/noa.ui::ui_schema_service_client",
+      "relation": "module"
+    },
+    {
+      "from": "target/release/build/noa_ui_api-6e280a5283868755/out/noa.ui",
+      "to": "target/release/build/noa_ui_api-6e280a5283868755/out/noa.ui::ui_schema_service_server",
+      "relation": "module"
+    },
+    {
+      "from": "target/release/build/serde_core-4f638e9a4855a561/out/private",
+      "to": "target/release/build/serde_core-4f638e9a4855a561/out/private::__private228",
+      "relation": "module"
+    },
+    {
+      "from": "target/release/build/serde-6d26701cc16b74b3/out/private",
+      "to": "target/release/build/serde-6d26701cc16b74b3/out/private::__private228",
+      "relation": "module"
+    },
+    {
+      "from": "target/release/build/serde-6d26701cc16b74b3/out/private",
+      "to": "serde_core::__private228",
+      "relation": "use"
+    },
+    {
+      "from": "target/release/build/serde_core-e1ab09d4bf0da4a5/out/private",
+      "to": "target/release/build/serde_core-e1ab09d4bf0da4a5/out/private::__private228",
+      "relation": "module"
+    },
+    {
+      "from": "target/release/build/typenum-fbac5b17b46c4ceb/out/tests",
+      "to": "typenum::*",
+      "relation": "use"
+    },
+    {
+      "from": "target/release/build/typenum-fbac5b17b46c4ceb/out/tests",
+      "to": "core::ops::*",
+      "relation": "use"
+    },
+    {
+      "from": "target/release/build/typenum-fbac5b17b46c4ceb/out/tests",
+      "to": "core::cmp::Ordering",
+      "relation": "use"
+    },
+    {
+      "from": "target/release/build/serde-9805bc5318d87417/out/private",
+      "to": "target/release/build/serde-9805bc5318d87417/out/private::__private228",
+      "relation": "module"
+    },
+    {
+      "from": "target/release/build/serde-9805bc5318d87417/out/private",
+      "to": "serde_core::__private228",
+      "relation": "use"
+    },
+    {
+      "from": "target/release/build/target-lexicon-cea6eca60709ad55/out/host",
+      "to": "crate::Aarch64Architecture::*",
+      "relation": "use"
+    },
+    {
+      "from": "target/release/build/target-lexicon-cea6eca60709ad55/out/host",
+      "to": "crate::ArmArchitecture::*",
+      "relation": "use"
+    },
+    {
+      "from": "target/release/build/target-lexicon-cea6eca60709ad55/out/host",
+      "to": "crate::CustomVendor",
+      "relation": "use"
+    },
+    {
+      "from": "target/release/build/target-lexicon-cea6eca60709ad55/out/host",
+      "to": "crate::Mips32Architecture::*",
+      "relation": "use"
+    },
+    {
+      "from": "target/release/build/target-lexicon-cea6eca60709ad55/out/host",
+      "to": "crate::Mips64Architecture::*",
+      "relation": "use"
+    },
+    {
+      "from": "target/release/build/target-lexicon-cea6eca60709ad55/out/host",
+      "to": "crate::Riscv32Architecture::*",
+      "relation": "use"
+    },
+    {
+      "from": "target/release/build/target-lexicon-cea6eca60709ad55/out/host",
+      "to": "crate::Riscv64Architecture::*",
+      "relation": "use"
+    },
+    {
+      "from": "target/release/build/target-lexicon-cea6eca60709ad55/out/host",
+      "to": "crate::X86_32Architecture::*",
+      "relation": "use"
+    },
+    {
+      "from": "target/release/build/cranelift-codegen-b9d221d46d0e4a2f/out/isle_aarch64",
+      "to": "super::*",
+      "relation": "use"
+    },
+    {
+      "from": "target/release/build/cranelift-codegen-b9d221d46d0e4a2f/out/isle_aarch64",
+      "to": "std::marker::PhantomData",
+      "relation": "use"
+    },
+    {
+      "from": "target/release/build/cranelift-codegen-b9d221d46d0e4a2f/out/isle_s390x",
+      "to": "super::*",
+      "relation": "use"
+    },
+    {
+      "from": "target/release/build/cranelift-codegen-b9d221d46d0e4a2f/out/isle_s390x",
+      "to": "std::marker::PhantomData",
+      "relation": "use"
+    },
+    {
+      "from": "target/release/build/cranelift-codegen-b9d221d46d0e4a2f/out/isle_opt",
+      "to": "super::*",
+      "relation": "use"
+    },
+    {
+      "from": "target/release/build/cranelift-codegen-b9d221d46d0e4a2f/out/isle_opt",
+      "to": "std::marker::PhantomData",
+      "relation": "use"
+    },
+    {
+      "from": "target/release/build/cranelift-codegen-b9d221d46d0e4a2f/out/isle_x64",
+      "to": "super::*",
+      "relation": "use"
+    },
+    {
+      "from": "target/release/build/cranelift-codegen-b9d221d46d0e4a2f/out/isle_x64",
+      "to": "std::marker::PhantomData",
+      "relation": "use"
+    },
+    {
+      "from": "target/release/build/cranelift-codegen-b9d221d46d0e4a2f/out/isle_riscv64",
+      "to": "super::*",
+      "relation": "use"
+    },
+    {
+      "from": "target/release/build/cranelift-codegen-b9d221d46d0e4a2f/out/isle_riscv64",
+      "to": "std::marker::PhantomData",
+      "relation": "use"
+    },
+    {
+      "from": "target/release/build/serde_core-078e5917274f337d/out/private",
+      "to": "target/release/build/serde_core-078e5917274f337d/out/private::__private228",
+      "relation": "module"
+    },
+    {
       "from": "target/debug/build/serde_core-580797da5f46b1c8/out/private",
       "to": "target/debug/build/serde_core-580797da5f46b1c8/out/private::__private228",
       "relation": "module"
@@ -6526,6 +6976,26 @@
     {
       "from": "target/debug/build/noa_ui_api-41f3b2570de356cd/out/noa.ui",
       "to": "target/debug/build/noa_ui_api-41f3b2570de356cd/out/noa.ui::ui_schema_service_server",
+      "relation": "module"
+    },
+    {
+      "from": "target/debug/build/noa_ui_api-7feeee60dd5bb484/out/noa.ui",
+      "to": "target/debug/build/noa_ui_api-7feeee60dd5bb484/out/noa.ui::ui_schema_service_client",
+      "relation": "module"
+    },
+    {
+      "from": "target/debug/build/noa_ui_api-7feeee60dd5bb484/out/noa.ui",
+      "to": "target/debug/build/noa_ui_api-7feeee60dd5bb484/out/noa.ui::ui_schema_service_server",
+      "relation": "module"
+    },
+    {
+      "from": "target/debug/build/noa_ui_api-e4eae65fed0f173e/out/noa.ui",
+      "to": "target/debug/build/noa_ui_api-e4eae65fed0f173e/out/noa.ui::ui_schema_service_client",
+      "relation": "module"
+    },
+    {
+      "from": "target/debug/build/noa_ui_api-e4eae65fed0f173e/out/noa.ui",
+      "to": "target/debug/build/noa_ui_api-e4eae65fed0f173e/out/noa.ui::ui_schema_service_server",
       "relation": "module"
     },
     {
@@ -6604,6 +7074,16 @@
       "relation": "use"
     },
     {
+      "from": "target/debug/build/noa_ui_api-947cc0a4940da549/out/noa.ui",
+      "to": "target/debug/build/noa_ui_api-947cc0a4940da549/out/noa.ui::ui_schema_service_client",
+      "relation": "module"
+    },
+    {
+      "from": "target/debug/build/noa_ui_api-947cc0a4940da549/out/noa.ui",
+      "to": "target/debug/build/noa_ui_api-947cc0a4940da549/out/noa.ui::ui_schema_service_server",
+      "relation": "module"
+    },
+    {
       "from": "target/debug/build/noa_ui_api-87dfc7a37897a4ad/out/noa.ui",
       "to": "target/debug/build/noa_ui_api-87dfc7a37897a4ad/out/noa.ui::ui_schema_service_client",
       "relation": "module"
@@ -6624,6 +7104,16 @@
       "relation": "module"
     },
     {
+      "from": "target/debug/build/noa_ui_api-2318632a6e4e6715/out/noa.ui",
+      "to": "target/debug/build/noa_ui_api-2318632a6e4e6715/out/noa.ui::ui_schema_service_client",
+      "relation": "module"
+    },
+    {
+      "from": "target/debug/build/noa_ui_api-2318632a6e4e6715/out/noa.ui",
+      "to": "target/debug/build/noa_ui_api-2318632a6e4e6715/out/noa.ui::ui_schema_service_server",
+      "relation": "module"
+    },
+    {
       "from": "target/debug/build/noa_ui_api-09c498029a534f79/out/noa.ui",
       "to": "target/debug/build/noa_ui_api-09c498029a534f79/out/noa.ui::ui_schema_service_client",
       "relation": "module"
@@ -6641,6 +7131,16 @@
     {
       "from": "target/debug/build/noa_ui_api-dd5bd4c0f7c5ce09/out/noa.ui",
       "to": "target/debug/build/noa_ui_api-dd5bd4c0f7c5ce09/out/noa.ui::ui_schema_service_server",
+      "relation": "module"
+    },
+    {
+      "from": "target/debug/build/noa_ui_api-092e20f1a619710d/out/noa.ui",
+      "to": "target/debug/build/noa_ui_api-092e20f1a619710d/out/noa.ui::ui_schema_service_client",
+      "relation": "module"
+    },
+    {
+      "from": "target/debug/build/noa_ui_api-092e20f1a619710d/out/noa.ui",
+      "to": "target/debug/build/noa_ui_api-092e20f1a619710d/out/noa.ui::ui_schema_service_server",
       "relation": "module"
     },
     {
@@ -8855,11 +9355,6 @@
     },
     {
       "from": "ui/core/src/chat",
-      "to": "crate::state::NavigationState",
-      "relation": "use"
-    },
-    {
-      "from": "ui/core/src/chat",
       "to": "crate::workflows::WorkflowCatalog",
       "relation": "use"
     },
@@ -8942,11 +9437,6 @@
       "from": "ui/core/src/renderer",
       "to": "crate::UIContext",
       "relation": "use"
-    },
-    {
-      "from": "ui/core/src/renderer",
-      "to": "ui/core/src/renderer::renderer",
-      "relation": "module"
     },
     {
       "from": "ui/core/src/renderer",
@@ -9220,7 +9710,7 @@
     },
     {
       "from": "ui/core/src/adapters",
-      "to": "crate::renderer::renderer::Renderer",
+      "to": "crate::renderer::Renderer",
       "relation": "use"
     },
     {
@@ -9355,12 +9845,12 @@
     },
     {
       "from": "ui/core/src/shell",
-      "to": "crate::renderer::renderer::Renderer",
+      "to": "crate::renderer::RenderFrame",
       "relation": "use"
     },
     {
       "from": "ui/core/src/shell",
-      "to": "crate::renderer::RenderFrame",
+      "to": "crate::renderer::Renderer",
       "relation": "use"
     },
     {
@@ -11509,6 +11999,76 @@
       "relation": "use"
     },
     {
+      "from": "server/tools/rustup-portable/toolchains/stable-x86_64-unknown-linux-gnu/share/doc/rust/html/error_codes/main",
+      "to": "std::env",
+      "relation": "use"
+    },
+    {
+      "from": "server/tools/rustup-portable/toolchains/stable-x86_64-unknown-linux-gnu/share/doc/rust/html/error_codes/main",
+      "to": "std::error::Error",
+      "relation": "use"
+    },
+    {
+      "from": "server/tools/rustup-portable/toolchains/stable-x86_64-unknown-linux-gnu/share/doc/rust/html/error_codes/main",
+      "to": "std::fs::self",
+      "relation": "use"
+    },
+    {
+      "from": "server/tools/rustup-portable/toolchains/stable-x86_64-unknown-linux-gnu/share/doc/rust/html/error_codes/main",
+      "to": "std::fs::File",
+      "relation": "use"
+    },
+    {
+      "from": "server/tools/rustup-portable/toolchains/stable-x86_64-unknown-linux-gnu/share/doc/rust/html/error_codes/main",
+      "to": "std::io::Write",
+      "relation": "use"
+    },
+    {
+      "from": "server/tools/rustup-portable/toolchains/stable-x86_64-unknown-linux-gnu/share/doc/rust/html/error_codes/main",
+      "to": "std::path::Path",
+      "relation": "use"
+    },
+    {
+      "from": "server/tools/rustup-portable/toolchains/stable-x86_64-unknown-linux-gnu/share/doc/rust/html/error_codes/main",
+      "to": "std::path::PathBuf",
+      "relation": "use"
+    },
+    {
+      "from": "server/tools/rustup-portable/toolchains/stable-x86_64-unknown-linux-gnu/share/doc/rust/html/error_codes/main",
+      "to": "std::str::FromStr",
+      "relation": "use"
+    },
+    {
+      "from": "server/tools/rustup-portable/toolchains/stable-x86_64-unknown-linux-gnu/share/doc/rust/html/error_codes/main",
+      "to": "mdbook::book::BookItem",
+      "relation": "use"
+    },
+    {
+      "from": "server/tools/rustup-portable/toolchains/stable-x86_64-unknown-linux-gnu/share/doc/rust/html/error_codes/main",
+      "to": "mdbook::book::Chapter",
+      "relation": "use"
+    },
+    {
+      "from": "server/tools/rustup-portable/toolchains/stable-x86_64-unknown-linux-gnu/share/doc/rust/html/error_codes/main",
+      "to": "mdbook::book::parse_summary",
+      "relation": "use"
+    },
+    {
+      "from": "server/tools/rustup-portable/toolchains/stable-x86_64-unknown-linux-gnu/share/doc/rust/html/error_codes/main",
+      "to": "mdbook::Config",
+      "relation": "use"
+    },
+    {
+      "from": "server/tools/rustup-portable/toolchains/stable-x86_64-unknown-linux-gnu/share/doc/rust/html/error_codes/main",
+      "to": "mdbook::MDBook",
+      "relation": "use"
+    },
+    {
+      "from": "server/tools/rustup-portable/toolchains/stable-x86_64-unknown-linux-gnu/share/doc/rust/html/error_codes/main",
+      "to": "rustc_errors::codes::DIAGNOSTICS",
+      "relation": "use"
+    },
+    {
       "from": "server/src/adaptive_scaling",
       "to": "noa_core::metrics::self",
       "relation": "use"
@@ -13330,11 +13890,6 @@
     },
     {
       "from": "workflow/src/instrumentation",
-      "to": "std::io::ErrorKind",
-      "relation": "use"
-    },
-    {
-      "from": "workflow/src/instrumentation",
       "to": "std::io::Write",
       "relation": "use"
     },
@@ -13424,6 +13979,36 @@
       "relation": "module"
     },
     {
+      "from": "workflow/src/bin/reward_report",
+      "to": "std::error::Error",
+      "relation": "use"
+    },
+    {
+      "from": "workflow/src/bin/reward_report",
+      "to": "std::path::PathBuf",
+      "relation": "use"
+    },
+    {
+      "from": "workflow/src/bin/reward_report",
+      "to": "clap::Parser",
+      "relation": "use"
+    },
+    {
+      "from": "workflow/src/bin/reward_report",
+      "to": "noa_workflow::AgentStandingSummary",
+      "relation": "use"
+    },
+    {
+      "from": "workflow/src/bin/reward_report",
+      "to": "noa_workflow::RewardReport",
+      "relation": "use"
+    },
+    {
+      "from": "workflow/src/bin/reward_report",
+      "to": "noa_workflow::RewardScorekeeper",
+      "relation": "use"
+    },
+    {
       "from": "workflow/src/budget_guardian",
       "to": "std::fs",
       "relation": "use"
@@ -13461,6 +14046,16 @@
     {
       "from": "workflow/src/budget_guardian",
       "to": "thiserror::Error",
+      "relation": "use"
+    },
+    {
+      "from": "workflow/src/budget_guardian",
+      "to": "crate::instrumentation::BudgetDecisionMetrics",
+      "relation": "use"
+    },
+    {
+      "from": "workflow/src/budget_guardian",
+      "to": "crate::instrumentation::BudgetDecisionParams",
       "relation": "use"
     },
     {
@@ -13516,11 +14111,6 @@
     {
       "from": "workflow/src/reward",
       "to": "serde::Serialize",
-      "relation": "use"
-    },
-    {
-      "from": "workflow/src/reward",
-      "to": "serde_json",
       "relation": "use"
     },
     {
@@ -14612,6 +15202,41 @@
       "from": "core/src/memory",
       "to": "core/src/memory::tests",
       "relation": "module"
+    },
+    {
+      "from": "core/src/bin/scorekeeper",
+      "to": "std::error::Error",
+      "relation": "use"
+    },
+    {
+      "from": "core/src/bin/scorekeeper",
+      "to": "clap::Parser",
+      "relation": "use"
+    },
+    {
+      "from": "core/src/bin/scorekeeper",
+      "to": "noa_core::scorekeeper::MetricStatus",
+      "relation": "use"
+    },
+    {
+      "from": "core/src/bin/scorekeeper",
+      "to": "noa_core::scorekeeper::ScoreInputs",
+      "relation": "use"
+    },
+    {
+      "from": "core/src/bin/scorekeeper",
+      "to": "noa_core::scorekeeper::Scorekeeper",
+      "relation": "use"
+    },
+    {
+      "from": "core/src/bin/scorekeeper",
+      "to": "noa_core::scorekeeper::TrustSnapshot",
+      "relation": "use"
+    },
+    {
+      "from": "core/src/bin/scorekeeper",
+      "to": "serde_json::to_string_pretty",
+      "relation": "use"
     },
     {
       "from": "core/src/bin/kernel",

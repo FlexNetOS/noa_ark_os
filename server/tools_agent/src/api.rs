@@ -105,4 +105,47 @@ pub struct ReadFileResponse {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExtractCapabilitiesRequest {
+    pub path: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CapabilityItem {
+    pub kind: String,
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExtractCapabilitiesResponse {
+    pub items: Vec<CapabilityItem>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConsolidateRequest {
+    pub canonical_path: String,
+    pub source_path: String,
+    #[serde(default)]
+    pub consolidation_reason: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConsolidateResponse {
+    pub archive_path: String,
+    pub report_path: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EmptyRequest {}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TodoEntry {
+    pub id: u64,
+    pub title: String,
+    pub status: String,
+    pub details: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TodoListDocument {
+    pub items: Vec<TodoEntry>,
+}

@@ -7,20 +7,14 @@ import { Readable } from "node:stream";
 import { ReadableStream as WebReadableStream } from "node:stream/web";
 
 import { assertUser } from "@/app/lib/session";
-import {
-  getWorkspace,
-  recordUploadReceipt,
-  recordWorkspaceNotification,
-} from "@/server/workspace-store";
+import { getWorkspace, recordUploadReceipt, recordWorkspaceNotification } from "@/server/workspace-store";
 import { workspaceEventHub } from "@/server/workspace-events";
 import { ensureTraceId, logError, logInfo } from "@noa-ark/shared-ui/logging";
 
 export const runtime = "nodejs";
 
 function resolveUploadDir() {
-  return process.env.UPLOAD_TMP
-    ? path.resolve(process.env.UPLOAD_TMP)
-    : path.join(process.cwd(), "tmp/uploads");
+  return process.env.UPLOAD_TMP ? path.resolve(process.env.UPLOAD_TMP) : path.join(process.cwd(), "tmp/uploads");
 }
 
 function sanitizeFilename(name: string | undefined) {
@@ -30,8 +24,7 @@ function sanitizeFilename(name: string | undefined) {
 
 export async function POST(request: Request) {
   const user = assertUser();
-  const traceSource =
-    typeof request.headers?.get === "function" ? request.headers.get("x-trace-id") : null;
+  const traceSource = typeof request.headers?.get === "function" ? request.headers.get("x-trace-id") : null;
   const traceId = ensureTraceId(traceSource);
   const component = "api.uploads";
 
@@ -96,8 +89,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Failed to persist upload." }, { status: 500 });
   }
 
-  const bridgeBase =
-    process.env.UPLOAD_BRIDGE_URL ?? process.env.NEXT_PUBLIC_UI_API ?? "http://localhost:8787";
+  const bridgeBase = process.env.UPLOAD_BRIDGE_URL ?? process.env.NEXT_PUBLIC_UI_API ?? "http://localhost:8787";
   const endpoint = new URL("/ui/drop-in/upload", bridgeBase).toString();
 
   const forwardForm = new FormData();
@@ -149,10 +141,7 @@ export async function POST(request: Request) {
       traceId,
       context: { endpoint, workspaceId, dropType, status: bridgeResponse.status, errorBody },
     });
-    return NextResponse.json(
-      { error: "Bridge rejected upload." },
-      { status: bridgeResponse.status },
-    );
+    return NextResponse.json({ error: "Bridge rejected upload." }, { status: bridgeResponse.status });
   }
 
   let payload: {

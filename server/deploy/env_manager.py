@@ -34,7 +34,15 @@ def _run(command: List[str], env: Optional[Dict[str, str]] = None) -> None:
 
 
 def _capture_compose_logs(tag: str, env: Dict[str, str]) -> Path:
+<<<<<<< Updated upstream
     timestamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+=======
+<<<<<<< HEAD
+    timestamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+=======
+    timestamp = dt.datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+>>>>>>> 4931f485 (server: add docker-compose stack, Helm chart, env_manager helper; README: document containerized deployment)
+>>>>>>> Stashed changes
     destination = EVIDENCE_DIR / f"compose-{timestamp}-{tag}.log"
     result = subprocess.run(
         ["docker", "compose", "-f", str(COMPOSE_FILE), "logs", "--no-color"],
@@ -75,8 +83,18 @@ def command_compose_down(args: argparse.Namespace) -> None:
     cmd = ["docker", "compose", "-f", str(COMPOSE_FILE), "down"]
     if args.prune:
         cmd.append("-v")
+<<<<<<< Updated upstream
     _capture_compose_logs("down", env)
     _run(cmd, env=env)
+=======
+<<<<<<< HEAD
+    _capture_compose_logs("down", env)
+    _run(cmd, env=env)
+=======
+    _run(cmd, env=env)
+    _capture_compose_logs("down", env)
+>>>>>>> 4931f485 (server: add docker-compose stack, Helm chart, env_manager helper; README: document containerized deployment)
+>>>>>>> Stashed changes
 
 
 def command_compose_logs(args: argparse.Namespace) -> None:

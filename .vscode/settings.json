@@ -109,10 +109,10 @@
   // Additional Editor Settings
   // ============================================
 
-  // Disable editor formatters to enforce CLI-only workflows
-  "editor.formatOnSave": false,
+  // Format on save for Rust files
   "[rust]": {
-    "editor.formatOnSave": false
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "rust-lang.rust-analyzer"
   },
 
   // Git configuration

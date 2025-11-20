@@ -23,10 +23,10 @@ pub use agent_dispatch::{
     ToolExecutionStatus, ToolRequirement,
 };
 pub use instrumentation::{
-    run_storage_doctor, AgentExecutionResult, DeploymentOutcomeRecord, EvidenceLedgerEntry,
-    EvidenceLedgerKind, GoalAgentMetric, GoalMetricSnapshot, GoalOutcomeRecord, InferenceMetric,
-    MerkleLeaf, MerkleLevel, PipelineInstrumentation, PipelineStorageLayout, SecurityScanReport,
-    SecurityScanStatus, StageReceipt, StorageDoctorReport, StorageDoctorStatus, TaskReceipt,
+    AgentExecutionResult, DeploymentOutcomeRecord, EvidenceLedgerEntry, EvidenceLedgerKind,
+    GoalAgentMetric, GoalMetricSnapshot, GoalOutcomeRecord, InferenceMetric, MerkleLeaf,
+    MerkleLevel, PipelineInstrumentation, SecurityScanReport, SecurityScanStatus, StageReceipt,
+    TaskReceipt,
 };
 pub use reward::{
     AgentApprovalStatus, AgentStanding, AgentStandingSummary, RewardAgentSnapshot, RewardDelta,

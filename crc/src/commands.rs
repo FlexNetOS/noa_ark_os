@@ -408,13 +408,11 @@ fn parse_priority(priority_str: &str) -> Result<Priority, Error> {
 }
 
 fn extract_name_from_url(url: &str) -> String {
-    let segment = url.rsplit('/').next().unwrap_or(url);
-    let name = segment.split('.').next().unwrap_or(segment);
-    if name.is_empty() {
-        "unknown".to_string()
-    } else {
-        name.to_string()
-    }
+    url.rsplit('/')
+        .next()
+        .and_then(|s| s.split('.').next())
+        .unwrap_or("unknown")
+        .to_string()
 }
 
 #[cfg(test)]

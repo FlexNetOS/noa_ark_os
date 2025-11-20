@@ -3,7 +3,7 @@
 
 use crate::unified_types::{AgentCategory, AgentLayer, AgentMetadata, HealthStatus, RegistryStats};
 use crate::{Error, Result};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io::{Cursor, Read};
 use std::path::Path;
 use std::sync::{Arc, RwLock};
@@ -76,6 +76,7 @@ impl AgentRegistry {
     fn load_from_reader<R: Read>(&self, mut reader: csv::Reader<R>) -> Result<usize> {
         let mut count = 0;
         let mut agents_write = self.agents.write().unwrap();
+        let mut duplicate_logged: HashSet<String> = HashSet::new();
 
         for result in reader.records() {
             let record = result?;
@@ -85,7 +86,8 @@ impl AgentRegistry {
                 let is_new = agents_write.insert(agent_id.clone(), agent).is_none();
                 if is_new {
                     count += 1;
-                } else {
+                } else if duplicate_logged.insert(agent_id.clone()) {
+                    // Only log each duplicate once to reduce startup noise
                     info!(
                         "Duplicate agent entry detected, keeping latest: {}",
                         agent_id

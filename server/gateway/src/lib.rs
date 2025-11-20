@@ -11,16 +11,14 @@
 //! so it can run in CI without external infrastructure.
 
 mod auth;
-mod partner;
 mod policy;
 mod rate_limit;
 mod router;
 mod telemetry;
 
 pub use auth::{AuthCredentials, UnifiedAuthenticator};
-pub use partner::{GatewaySdk, OnboardingRequest, OnboardingResponse, PartnerApi};
-pub use policy::{EnforcementContext, GatewayPolicy, PolicyEnforcer};
-pub use rate_limit::{RateLimiter, RateLimiterConfig, RateMetricsSnapshot, RatePersistence};
+pub use policy::{GatewayPolicy, PolicyEnforcer};
+pub use rate_limit::{RateLimiter, RateLimiterConfig};
 pub use router::{ProgrammableRouter, Protocol, RoutePlan};
 pub use telemetry::{GatewayMetrics, TelemetryEvent, TelemetrySink};
 
@@ -85,7 +83,7 @@ impl Gateway {
         let authenticator = UnifiedAuthenticator::default();
         let policy = PolicyEnforcer::new();
         let router = ProgrammableRouter::default();
-        let rate_limiter = RateLimiter::new(RateLimiterConfig::default(), registry)?;
+        let rate_limiter = RateLimiter::new(RateLimiterConfig::default(), registry);
         Self::new(authenticator, policy, router, rate_limiter, telemetry)
     }
 
@@ -98,24 +96,14 @@ impl Gateway {
             .context("authentication failed")?;
 
         // Step 2 - authorise via core security policies
-        let enforcement_context =
-            EnforcementContext::from_payload(&request.protocol, &request.payload);
         self.policy
-            .enforce(
-                request.user_id,
-                request.required_permission.clone(),
-                &enforcement_context,
-            )
+            .enforce(request.user_id, request.required_permission)
             .context("policy enforcement failure")?;
 
         // Step 3 - enforce rate limits for the linked agent/service
         self.rate_limiter
             .check(&request.agent_id)
             .context("rate limit exceeded")?;
-        let rate_metrics = self.rate_limiter.metrics_snapshot();
-        self.telemetry
-            .record_rate_limits(rate_metrics)
-            .context("failed to export rate-limit telemetry")?;
 
         // Step 4 - compute programmable route plan
         let route_plan = self.router.route(&request.protocol, &request.payload)?;
@@ -153,12 +141,7 @@ pub fn bootstrap_gateway() -> Result<Gateway> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::auth::{
-        DEV_AGENT_SAN_PREFIX, DEV_ALLOWED_FINGERPRINT, DEV_CONTROL_PLANE_SAN, DEV_OIDC_AUDIENCE,
-        DEV_OIDC_ISSUER, DEV_OIDC_SECRET,
-    };
     use crate::rate_limit::RateLimitError;
-    use jsonwebtoken::{encode, EncodingKey, Header};
     use serde_json::json;
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -183,7 +166,11 @@ mod tests {
             request_id: "req-graphql".into(),
             user_id: 0,
             agent_id: Some("fixed_agent_gateway".into()),
-            credentials: test_credentials("fixed_agent_gateway"),
+            credentials: AuthCredentials {
+                mtls: Some("agent-cert".into()),
+                oidc: Some("id-token-verified".into()),
+                api_key: Some("key-123".into()),
+            },
             protocol: Protocol::GraphQl,
             payload: json!({
                 "query": "{ serviceA { id name } }",
@@ -236,11 +223,9 @@ mod tests {
             RateLimiterConfig {
                 refill_interval: Duration::from_secs(60),
                 layer_limits,
-                ..Default::default()
             },
             registry,
-        )
-        .expect("limiter");
+        );
 
         let agent_id = Some(agent.agent_id.clone());
         assert!(limiter.check(&agent_id).is_ok());
@@ -248,41 +233,5 @@ mod tests {
             .check(&agent_id)
             .expect_err("second call should exceed configured limit");
         assert!(matches!(err, RateLimitError::LimitExceeded(_)));
-    }
-
-    fn test_credentials(agent_id: &str) -> AuthCredentials {
-        AuthCredentials {
-            mtls: Some(crate::auth::MtlsCertificate {
-                fingerprint: DEV_ALLOWED_FINGERPRINT.into(),
-                subject_alt_names: vec![
-                    format!("{}{}", DEV_AGENT_SAN_PREFIX, agent_id),
-                    DEV_CONTROL_PLANE_SAN.into(),
-                ],
-            }),
-            oidc: Some(test_token()),
-            api_key: Some("key-123".into()),
-        }
-    }
-
-    fn test_token() -> String {
-        let claims = serde_json::json!({
-            "iss": DEV_OIDC_ISSUER,
-            "aud": DEV_OIDC_AUDIENCE,
-            "exp": current_epoch() + 3600,
-            "sub": "gateway-test",
-        });
-        encode(
-            &Header::default(),
-            &claims,
-            &EncodingKey::from_secret(DEV_OIDC_SECRET.as_bytes()),
-        )
-        .expect("token")
-    }
-
-    fn current_epoch() -> u64 {
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_secs()
     }
 }
