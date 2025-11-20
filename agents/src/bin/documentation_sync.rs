@@ -25,7 +25,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     while let Some(arg) = args.next() {
         match arg.as_str() {
             "--pipeline-output" => {
-                let value = args.next().ok_or("--pipeline-output requires a value")?;
+                let value = args
+                    .next()
+                    .ok_or("--pipeline-output requires a value")?;
                 pipeline_path = Some(value);
             }
             other => return Err(format!("Unknown argument: {other}").into()),

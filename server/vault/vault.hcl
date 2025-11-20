@@ -10,6 +10,7 @@ listener "tcp" {
 
 storage "raft" {
   path    = "{{env \"NOA_VAULT_HOME\"}}/data"
+  path    = "/home/deflex/workspace/server/vault/data"
   node_id = "vault-node-1"
 }
 

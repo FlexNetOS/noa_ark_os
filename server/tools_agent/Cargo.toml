@@ -41,3 +41,13 @@ tracing-subscriber = { version = "0.3", optional = true, features = ["fmt", "env
 toml = "0.8"
 chrono = { version = "0.4", features = ["serde"] }
 async-trait = { version = "0.1" }
+walkdir = "2"
+globset = "0.4"
+regex = "1"
+zstd = { version = "0.13", features = ["zstdmt"], default-features = true }
+tar = "0.4"
+clap = { version = "4.5", features = ["derive"] }
+syn = { version = "2.0", features = ["full", "parsing", "visit"] }
+quote = "1.0"
+sha2 = "0.10"
+noa-plugin-sdk = { path = "../../plugins/sdk" }

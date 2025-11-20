@@ -684,13 +684,6 @@ Write-Host "Vault service installed. Start with: Start-Service $serviceName"
 9. Integrate with agent-registry (see Integration section)
 10. Install as service (see Installation as Windows Service section)
 
-### Gateway Auth Config
-
-The gateway authenticator now expects a JSON bundle (`server/vault/gateway_auth.example.json`). Load
-it into Vault and set `GATEWAY_VAULT_SECRET_PATH=secret/data/gateway/auth` so the gateway can fetch
-API keys, mTLS fingerprints, and OIDC settings at runtime. See
-`docs/operations/GATEWAY_AUTH_SECRETS.md` for rotation steps.
-
 ---
 
 **Source:** WSL `/home/deflex/workspace/server/vault/`  

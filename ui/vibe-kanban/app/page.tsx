@@ -17,7 +17,7 @@ export default function Page() {
   const state = useBoardState(session.user);
   const [envelope, setEnvelope] = useState<PageEnvelope>(vibeDashboardEnvelope);
   const [resumeToken, setResumeToken] = useState<ResumeToken | undefined>(
-    vibeDashboardEnvelope.resumeToken,
+    vibeDashboardEnvelope.resumeToken ?? undefined
   );
   const traceIdRef = useRef<string>(ensureTraceId());
 
@@ -38,53 +38,57 @@ export default function Page() {
   }, []);
 
   const plannerResumeToken = state.planner.plans.find((plan) => plan.resumeToken)?.resumeToken;
-  const envelopeResumeToken = typeof resumeToken === "string" ? undefined : resumeToken;
-  const effectiveResumeToken: ResumeToken | undefined = plannerResumeToken ?? envelopeResumeToken;
+  const effectiveResumeToken: ResumeToken | undefined = plannerResumeToken ?? resumeToken;
 
   const schemaRenderer = useMemo(() => {
-    return ready ? (
-      <SchemaDrivenRenderer
-        schema={envelope.schema}
-        context={{
-          resumeWorkflow: (tokenOrWorkflowId: ResumeToken | string, stageId?: string) => {
-            const token: ResumeToken =
-              typeof tokenOrWorkflowId === "string"
-                ? {
-                    workflowId: tokenOrWorkflowId,
-                    stageId,
-                    checkpoint: stageId ?? "checkpoint://manual",
-                    issuedAt: new Date().toISOString(),
-                    expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
-                  }
-                : tokenOrWorkflowId;
-            logInfo({
-              component: "vibe.page",
-              event: "workflow_resume_requested",
-              message: "Requesting workflow resume",
-              outcome: "pending",
-              traceId: traceIdRef.current,
-              context: { workflowId: token.workflowId },
-            });
-            state.resumePlan(token);
-          },
-          triggerEvent: (bindingId) => {
-            logInfo({
-              component: "vibe.page",
-              event: "ui_event_triggered",
-              message: "UI event triggered",
-              outcome: "observed",
-              traceId: traceIdRef.current,
-              context: { bindingId },
-            });
-          },
-          data: {
-            boardState: state,
-            session,
-            resumeToken: effectiveResumeToken,
-          },
-        }}
-      />
-    ) : null;
+    return ready
+      ? (
+        <SchemaDrivenRenderer
+          schema={envelope.schema}
+          context={{
+            resumeWorkflow: (token) => {
+              if (!token) {
+                return;
+              }
+              logInfo({
+                component: "vibe.page",
+                event: "workflow_resume_requested",
+                message: "Requesting workflow resume",
+                outcome: "pending",
+                traceId: traceIdRef.current,
+                context: { workflowId: token.workflowId },
+              });
+              const resumeArg: ResumeToken =
+                typeof token === "string"
+                  ? {
+                      workflowId: token,
+                      stageId: undefined,
+                      checkpoint: "",
+                      issuedAt: new Date().toISOString(),
+                      expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+                    }
+                  : token;
+              state.resumePlan(resumeArg);
+            },
+            triggerEvent: (bindingId) => {
+              logInfo({
+                component: "vibe.page",
+                event: "ui_event_triggered",
+                message: "UI event triggered",
+                outcome: "observed",
+                traceId: traceIdRef.current,
+                context: { bindingId },
+              });
+            },
+            data: {
+              boardState: state,
+              session,
+              resumeToken: effectiveResumeToken,
+            },
+          }}
+        />
+      )
+      : null;
   }, [ready, envelope.schema, state, session, effectiveResumeToken]);
 
   if (session.status === "loading") {
@@ -101,10 +105,7 @@ export default function Page() {
 
   return (
     <>
-      <NotificationCenter
-        notifications={state.notifications}
-        onDismiss={state.dismissNotification}
-      />
+      <NotificationCenter notifications={state.notifications} onDismiss={state.dismissNotification} />
       {schemaRenderer}
     </>
   );

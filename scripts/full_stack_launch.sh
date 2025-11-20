@@ -8,7 +8,10 @@ ROOT=""
 LOG_DIR=""
 PY_ENV_DIR=""
 PYTHON_BIN="python3"
-PNPM_BIN="pnpm"
+# pnpm/corepack are configured below after activation
+PNPM_REQUIRED_VERSION=""
+PNPM_AGENT=""
+declare -a PNPM_BIN
 CARGO_BIN="cargo"
 MAKE_LAUNCH_NOTE=""
 
@@ -75,14 +78,58 @@ ensure_root() {
 
 activate_toolchains() {
   if [[ -z "${NOA_CARGO_ENV:-}" ]]; then
-    info "Activating portable Cargo toolchain"
-    # shellcheck source=/dev/null
-    source "$ROOT/server/tools/activate-cargo.sh"
+    if [[ -f "$ROOT/server/tools/activate-cargo-wsl.sh" ]]; then
+      info "Activating portable Cargo toolchain (WSL/Linux)"
+      # shellcheck source=/dev/null
+      source "$ROOT/server/tools/activate-cargo-wsl.sh"
+    elif [[ -f "$ROOT/server/tools/activate-cargo.sh" ]]; then
+      info "Activating portable Cargo toolchain"
+      # shellcheck source=/dev/null
+      source "$ROOT/server/tools/activate-cargo.sh"
+    else
+      info "Cargo activator not found; assuming cargo is on PATH"
+    fi
   fi
   if [[ -z "${NOA_NODE_ENV:-}" ]]; then
-    info "Activating portable Node toolchain"
-    # shellcheck source=/dev/null
-    source "$ROOT/server/tools/activate-node.sh"
+    if [[ -f "$ROOT/server/tools/activate-node.sh" ]]; then
+      info "Activating portable Node toolchain"
+      # shellcheck source=/dev/null
+      source "$ROOT/server/tools/activate-node.sh"
+    else
+      info "Node activator not found; assuming node/pnpm are on PATH"
+    fi
+  fi
+}
+
+detect_pnpm_version() {
+  local config_json="$ROOT/tools/devshell/config.json"
+  local version=""
+  if command -v node >/dev/null 2>&1 && [[ -f "$config_json" ]]; then
+    version=$(node -e '
+      const fs=require("fs");
+      const p=process.argv[1];
+      try{const j=JSON.parse(fs.readFileSync(p,"utf8"));
+        process.stdout.write((j?.pnpm?.requiredVersion)||"");
+      }catch{process.stdout.write("");}
+    ' "$config_json" 2>/dev/null || true)
+  fi
+  [[ -z "$version" || "$version" == "None" ]] && version="8.15.4"
+  printf '%s' "$version"
+}
+
+prepare_node_pnpm() {
+  if command -v corepack >/dev/null 2>&1; then
+    PNPM_REQUIRED_VERSION=$(detect_pnpm_version)
+    PNPM_AGENT="pnpm/${PNPM_REQUIRED_VERSION}"
+    corepack prepare "pnpm@${PNPM_REQUIRED_VERSION}" --activate >/dev/null 2>&1 || true
+    export npm_config_user_agent="$PNPM_AGENT"
+    PNPM_BIN=(corepack pnpm)
+  else
+    # Fallback: assume pnpm on PATH; still set agent to reduce warnings
+    PNPM_REQUIRED_VERSION=$(detect_pnpm_version)
+    PNPM_AGENT="pnpm/${PNPM_REQUIRED_VERSION}"
+    export npm_config_user_agent="$PNPM_AGENT"
+    PNPM_BIN=(pnpm)
   fi
 }
 
@@ -102,16 +149,16 @@ setup_python_env() {
 
 run_prepare_phase() {
   info "Installing Node dependencies"
-  "$PNPM_BIN" install --frozen-lockfile
+  env npm_config_user_agent="$PNPM_AGENT" "${PNPM_BIN[@]}" install --frozen-lockfile
 
   info "Running pnpm lint/build/typecheck"
-  "$PNPM_BIN" lint
-  "$PNPM_BIN" build
-  "$PNPM_BIN" typecheck
+  env npm_config_user_agent="$PNPM_AGENT" "${PNPM_BIN[@]}" lint
+  env npm_config_user_agent="$PNPM_AGENT" "${PNPM_BIN[@]}" build
+  env npm_config_user_agent="$PNPM_AGENT" "${PNPM_BIN[@]}" typecheck
 
   if [[ $RUN_TESTS -eq 1 ]]; then
     info "Running pnpm test suite"
-    "$PNPM_BIN" test
+    env npm_config_user_agent="$PNPM_AGENT" "${PNPM_BIN[@]}" test
   else
     info "Skipping pnpm tests"
   fi
@@ -134,7 +181,7 @@ run_prepare_phase() {
 
   info "Notebook sync"
   "$CARGO_BIN" run -p noa_symbol_graph --bin notebook_watcher -- --once .
-  "$PNPM_BIN" notebooks:sync
+  env npm_config_user_agent="$PNPM_AGENT" "${PNPM_BIN[@]}" notebooks:sync
 }
 
 declare -A SERVICE_PIDS
@@ -156,7 +203,7 @@ start_services() {
   start_service "gateway" "$CARGO_BIN" run -p noa_gateway --bin gateway
   start_service "ui_api" "$CARGO_BIN" run -p noa_ui_api --bin noa_ui_api
   start_service "kernel" "$CARGO_BIN" run -p noa_core --bin noa_kernel
-  start_service "web_ui" "$PNPM_BIN" --filter vibe-kanban dev
+  start_service "web_ui" env npm_config_user_agent="$PNPM_AGENT" "${PNPM_BIN[@]}" --filter vibe-kanban dev
   if [[ -n "${LLAMA_SERVER_COMMAND:-}" ]]; then
     start_service "inference" bash -lc "${LLAMA_SERVER_COMMAND}"
   else
@@ -210,6 +257,7 @@ main() {
   ensure_root
   trap cleanup EXIT INT TERM
   activate_toolchains
+  prepare_node_pnpm
   setup_python_env
   run_prepare_phase
   if [[ "$LAUNCH_MODE" == "prepare" ]]; then

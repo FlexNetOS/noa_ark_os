@@ -24,6 +24,7 @@ pub struct PolicyDefaults {
     pub naming: NamingRules,
 }
 
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct RetentionPolicy {
     pub max_versions: Option<usize>,

@@ -1,4 +1,6 @@
 version = "12"
-default_toolchain = "stable-x86_64-unknown-linux-gnu"
+
+# This settings file was relocated from an incorrect Windows-style path.
+# Keep minimal config; add overrides below as needed.
 
 [overrides]

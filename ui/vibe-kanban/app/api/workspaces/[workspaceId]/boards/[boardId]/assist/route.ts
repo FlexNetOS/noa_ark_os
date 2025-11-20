@@ -2,12 +2,12 @@ import { NextResponse } from "next/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+
 import { assertUser } from "@/app/lib/session";
-import type { Goal, VibeCard, WorkspaceBoard } from "@/app/components/board-types";
+import type { VibeCard, WorkspaceBoard, Goal, GoalPayload } from "@/app/components/board-types";
 import { aiDatabase } from "@/server/ai-database";
 import { appendGoalTrace, getGoalMemoryInsights } from "@/server/memory-store";
 import { getBoard, getWorkspace } from "@/server/workspace-store";
-import { planGoal, type GoalPayload } from "@/server/goal-planner";
 
 function generateSuggestions(board: WorkspaceBoard) {
   const suggestions: { title: string; detail: string }[] = [];
@@ -18,14 +18,11 @@ function generateSuggestions(board: WorkspaceBoard) {
   if (activeGoals > 8) {
     suggestions.push({
       title: "Focus the flow",
-      detail:
-        "More than eight active goals are in play. Spin up an automation to auto-archive stale work or split the board into swimlanes.",
+      detail: "More than eight active goals are in play. Spin up an automation to auto-archive stale work or split the board into swimlanes.",
     });
   }
 
-  const hypeGoals = board.columns.flatMap((column) =>
-    column.goals.filter((goal) => goal.mood === "hype"),
-  );
+  const hypeGoals = board.columns.flatMap((column) => column.goals.filter((goal) => goal.mood === "hype"));
   if (hypeGoals.length) {
     suggestions.push({
       title: "Capture the hype",
@@ -46,20 +43,20 @@ function generateSuggestions(board: WorkspaceBoard) {
   if (!suggestions.length) {
     suggestions.push({
       title: "Board is balanced",
-      detail:
-        "Momentum is healthy. Consider enabling automated release notes from the Agent Factory for bonus delight.",
+      detail: "Momentum is healthy. Consider enabling automated release notes from the Agent Factory for bonus delight.",
     });
   }
 
   return suggestions;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function buildGoalPayload(
   body: unknown,
   context: { workspaceId: string; boardId: string; userId: string },
   board: WorkspaceBoard,
   focusCard: VibeCard | null,
-  suggestions: { title: string; detail: string }[],
+  suggestions: { title: string; detail: string }[]
 ): GoalPayload {
   const baseContext = {
     boardSnapshot: board,
@@ -104,7 +101,7 @@ function buildGoalPayload(
 
 export async function POST(
   request: Request,
-  { params }: { params: { workspaceId: string; boardId: string } },
+  { params }: { params: { workspaceId: string; boardId: string } }
 ) {
   const user = assertUser();
   const workspace = await getWorkspace(params.workspaceId);
@@ -115,35 +112,53 @@ export async function POST(
   if (!board) {
     return new NextResponse("Not Found", { status: 404 });
   }
+  let body: unknown = null;
+  try {
+    body = await request.json();
+  } catch {
+    body = null;
+  }
   const goalId = `board:${params.boardId}`;
+  const suggestions = generateSuggestions(board);
+  const focusCard = pickFocusGoal(board);
+  const goalPayload = buildGoalPayload(
+    body,
+    { workspaceId: workspace.id, boardId: board.id, userId: user.id },
+    board,
+    focusCard,
+    suggestions
+  );
+  const resolvedGoalId = goalPayload.id ?? goalId;
   const generatedAt = new Date().toISOString();
   aiDatabase.recordGoalLifecycleEvent({
-    goalId,
+    goalId: resolvedGoalId,
     workspaceId: workspace.id,
     eventType: "assist.requested",
     status: "received",
     summary: `Assist requested by ${user.name ?? user.id}`,
-    payload: { boardId: board.id, workspaceId: workspace.id },
+    payload: { boardId: board.id, workspaceId: workspace.id, goal: goalPayload },
   });
-  const suggestions = generateSuggestions(board);
-  const focusCard = pickFocusGoal(board);
   aiDatabase.recordGoalLifecycleEvent({
-    goalId,
+    goalId: resolvedGoalId,
     workspaceId: workspace.id,
     eventType: "assist.generated",
     status: "success",
     summary: `Generated ${suggestions.length} suggestions`,
-    payload: { boardId: board.id, suggestionCount: suggestions.length },
+    payload: {
+      boardId: board.id,
+      suggestionCount: suggestions.length,
+      goal: goalPayload,
+    },
   });
   aiDatabase.upsertGoalEmbedding({
-    goalId,
+    goalId: resolvedGoalId,
     workspaceId: workspace.id,
     embeddingModel: "kanban.board.stats.v1",
     embedding: buildBoardEmbedding(board),
   });
   await appendGoalTrace({
-    id: `${goalId}-assist-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
-    goalId,
+    id: `${resolvedGoalId}-assist-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    goalId: resolvedGoalId,
     workspaceId: workspace.id,
     boardId: board.id,
     actorId: user.id,
@@ -153,55 +168,13 @@ export async function POST(
     metadata: { suggestionCount: suggestions.length },
     createdAt: generatedAt,
   });
-  const memory = await getGoalMemoryInsights(goalId, workspace.id);
-  const lifecycle = aiDatabase.listGoalLifecycleEvents(goalId, 25);
-  const artifacts = aiDatabase.listArtifacts(goalId, 25);
-  const similarGoals = aiDatabase.searchSimilarGoals(goalId, "kanban.board.stats.v1", 5);
-
-  let plan: {
-    goalId: string;
-    goalTitle: string;
-    workflowId: string;
-    state: string;
-    stages: { id: string; name: string; state: string }[];
-    resumeToken?: unknown;
-    startedAt: string;
-  } | null = null;
-
-  try {
-    const goalPayload = buildGoalPayload(
-      await request.json().catch(() => ({})),
-      {
-        workspaceId: workspace.id,
-        boardId: board.id,
-        userId: user.id,
-      },
-      board,
-      focusCard,
-      suggestions,
-    );
-    const plannerResult = await planGoal(goalPayload);
-    plan = {
-      goalId: goalPayload.id ?? plannerResult.workflowId,
-      goalTitle: goalPayload.title,
-      workflowId: plannerResult.workflowId,
-      state: "pending",
-      stages: plannerResult.stages.map((stage) => ({
-        id: stage.id,
-        name: stage.name,
-        state: "pending",
-      })),
-      resumeToken: plannerResult.resumeToken,
-      startedAt: new Date().toISOString(),
-    };
-  } catch (error) {
-    console.warn("Planner failed to start workflow", error);
-  }
-
+  const memory = await getGoalMemoryInsights(resolvedGoalId, workspace.id);
+  const lifecycle = aiDatabase.listGoalLifecycleEvents(resolvedGoalId, 25);
+  const artifacts = aiDatabase.listArtifacts(resolvedGoalId, 25);
+  const similarGoals = aiDatabase.searchSimilarGoals(resolvedGoalId, "kanban.board.stats.v1", 5);
   return NextResponse.json({
     suggestions,
     focusCard,
-    plan,
     memory: {
       summary: memory.summary,
       traceCount: memory.traceCount,
@@ -215,27 +188,26 @@ export async function POST(
 }
 
 function pickFocusGoal(board: WorkspaceBoard): Goal | null {
-  const inProgress = board.columns.find((column) =>
-    column.title.toLowerCase().includes("progress"),
-  );
+  const inProgress = board.columns.find((column) => column.title.toLowerCase().includes("progress"));
   if (!inProgress) {
     return board.columns[0]?.goals[0] ?? null;
   }
   const sorted = [...inProgress.goals].sort(
-    (a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt),
+    (a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt)
   );
   return sorted[0] ?? null;
 }
 
+function resolveGoals(column: WorkspaceBoard["columns"][number]): Goal[] {
+  return column.goals ?? column.cards ?? [];
+}
+
 function buildBoardEmbedding(board: WorkspaceBoard): number[] {
-  const totalGoals = board.columns.reduce((count, column) => count + column.goals.length, 0);
-  const hypeGoals = board.columns.flatMap((column) =>
-    column.goals.filter((goal) => goal.mood === "hype"),
-  ).length;
+  const totals = board.columns.map((column) => resolveGoals(column));
+  const totalGoals = totals.reduce((count, goals) => count + goals.length, 0);
+  const hypeGoals = totals.flat().filter((card) => card.mood === "hype").length;
   const doneColumn = board.columns.find((column) => column.title.toLowerCase().includes("done"));
-  const completed = doneColumn?.goals.length ?? 0;
-  const focusGoals = board.columns
-    .flatMap((column) => column.goals)
-    .filter((goal) => goal.mood === "focus").length;
+  const completed = doneColumn ? resolveGoals(doneColumn).length : 0;
+  const focusGoals = totals.flat().filter((card) => card.mood === "focus").length;
   return [totalGoals, hypeGoals, completed, focusGoals].map((value) => Number(value));
 }

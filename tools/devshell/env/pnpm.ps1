@@ -4,12 +4,24 @@ $applier = Join-Path $devDir 'apply-config.mjs'
 
 if (Get-Command node -ErrorAction SilentlyContinue) {
   if (Test-Path $applier) {
-    $script = & node $applier pwsh
+    $result = & node $applier pwsh
     if ($LASTEXITCODE -ne 0) {
       throw "Failed to apply devshell configuration via $applier"
     }
-    if ($script) {
-      Invoke-Expression $script
+    if ($result) {
+      try {
+        $envVars = $result | ConvertFrom-Json
+        foreach ($pair in $envVars.PSObject.Properties) {
+          $envName = $pair.Name
+          $envValue = $pair.Value
+          if ($envName -and $envValue -is [string]) {
+            $env:$envName = $envValue
+          }
+        }
+      } catch {
+        throw "Failed to parse environment variables from $applier output as JSON: $_"
+      }
+      Invoke-Expression $result
     }
   }
 } else {

@@ -164,57 +164,6 @@ pub enum LifecycleStage {
     Retired,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum QosTier {
-    /// Best effort - no guarantees, lowest priority
-    BestEffort,
-    /// Standard - basic guarantees, moderate priority
-    Standard,
-    /// Premium - high guarantees, high priority
-    Premium,
-    /// Critical - maximum guarantees, highest priority
-    Critical,
-}
-
-impl QosTier {
-    pub fn priority(&self) -> u8 {
-        match self {
-            QosTier::BestEffort => 0,
-            QosTier::Standard => 1,
-            QosTier::Premium => 2,
-            QosTier::Critical => 3,
-        }
-    }
-
-    pub fn max_latency_ms(&self) -> u32 {
-        match self {
-            QosTier::BestEffort => 5000,
-            QosTier::Standard => 1000,
-            QosTier::Premium => 100,
-            QosTier::Critical => 10,
-        }
-    }
-
-    pub fn min_trust_score(&self) -> f32 {
-        match self {
-            QosTier::BestEffort => 0.5,
-            QosTier::Standard => 0.7,
-            QosTier::Premium => 0.9,
-            QosTier::Critical => 0.95,
-        }
-    }
-
-    pub fn concurrency_limit(&self) -> usize {
-        match self {
-            QosTier::BestEffort => 100,
-            QosTier::Standard => 50,
-            QosTier::Premium => 20,
-            QosTier::Critical => 5,
-        }
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompatibilityWindow {
     pub related_kind: SymbolKind,
@@ -287,7 +236,6 @@ pub struct ConnectionPolicy {
     pub min_attestation_score: f32,
     pub trusted_issuers: HashSet<String>,
     pub required_compliance: HashSet<String>,
-    pub qos_tier: QosTier,
 }
 
 impl ConnectionPolicy {
@@ -302,10 +250,6 @@ impl ConnectionPolicy {
             return false;
         }
         if !constraints.allowed_zones.is_subset(&self.allowed_zones) {
-            return false;
-        }
-        // QoS tier must be at least as high as requested
-        if self.qos_tier.priority() < constraints.qos_tier.priority() {
             return false;
         }
         true
@@ -349,7 +293,6 @@ pub struct ToolArtifact {
     pub checksum: String,
     pub supported_sandboxes: HashSet<SandboxKind>,
     pub max_parallel_sessions: usize,
-    pub qos_tier: QosTier,
 }
 
 impl ToolArtifact {
@@ -598,7 +541,6 @@ pub struct ExecutionLease {
     pub sandbox: SandboxKind,
     pub started_at: SystemTime,
     pub shared: bool,
-    pub qos_tier: QosTier,
 }
 
 #[derive(Debug, Clone)]
@@ -613,7 +555,6 @@ pub struct IntentConstraints {
     pub min_trust_score: f32,
     pub encryption_supported: bool,
     pub allowed_zones: HashSet<String>,
-    pub qos_tier: QosTier,
 }
 
 /// High level business goal compiled into routing requirements.
@@ -1087,8 +1028,6 @@ struct IntentConstraintSpec {
     encryption: bool,
     #[serde(default = "default_zones")]
     zones: Vec<String>,
-    #[serde(default = "default_qos")]
-    qos_tier: QosTier,
 }
 
 impl Default for IntentConstraintSpec {
@@ -1098,7 +1037,6 @@ impl Default for IntentConstraintSpec {
             min_trust_score: default_trust(),
             encryption: default_true(),
             zones: default_zones(),
-            qos_tier: default_qos(),
         }
     }
 }
@@ -1119,10 +1057,6 @@ fn default_zones() -> Vec<String> {
     vec!["global".into()]
 }
 
-fn default_qos() -> QosTier {
-    QosTier::Standard
-}
-
 impl IntentConstraintSpec {
     fn into_constraints(self) -> IntentConstraints {
         IntentConstraints {
@@ -1130,7 +1064,6 @@ impl IntentConstraintSpec {
             min_trust_score: self.min_trust_score,
             encryption_supported: self.encryption,
             allowed_zones: self.zones.into_iter().collect::<HashSet<_>>(),
-            qos_tier: self.qos_tier,
         }
     }
 }
@@ -1240,107 +1173,6 @@ impl ConsensusMesh {
     pub fn global_snapshot(&self) -> Vec<MicroSubstation> {
         self.stations.read().unwrap().values().cloned().collect()
     }
-
-    /// Simulate consensus protocol (Raft/BFT placeholder) for global state synchronization.
-    pub fn synchronize_state(
-        &self,
-        _state_update: HashMap<String, String>,
-    ) -> Result<(), GatewayError> {
-        // Placeholder for Raft/BFT consensus
-        // In a real implementation, this would involve leader election, log replication, etc.
-        // For now, just apply the update to all stations
-        let mut stations = self.stations.write().unwrap();
-        for station in stations.values_mut() {
-            // Simulate applying state update
-            station.autonomy_score = (station.autonomy_score + 0.01).min(1.0);
-        }
-        Ok(())
-    }
-
-    /// Get the leader station for consensus decisions.
-    pub fn get_leader(&self) -> Option<String> {
-        self.stations.read().unwrap().keys().next().cloned()
-    }
-}
-
-/// Trust exchange marketplace for partners, managing signed telemetry and trust scores.
-#[derive(Debug, Default)]
-pub struct TrustExchange {
-    partner_telemetry: RwLock<HashMap<String, Vec<SignedTelemetry>>>,
-    trust_scores: RwLock<HashMap<String, f32>>,
-    reroute_threshold: f32,
-}
-
-#[derive(Debug, Clone)]
-pub struct SignedTelemetry {
-    pub partner_id: String,
-    pub telemetry: TelemetryEvent,
-    pub signature: String, // Placeholder for cryptographic signature
-    pub timestamp: SystemTime,
-}
-
-impl TrustExchange {
-    pub fn new() -> Self {
-        Self {
-            partner_telemetry: RwLock::new(HashMap::new()),
-            trust_scores: RwLock::new(HashMap::new()),
-            // One recent, valid telemetry event should avoid reroute by default.
-            // Trust score scales with recent telemetry count / 10.0.
-            // Use a slightly lower threshold to avoid FP rounding edge cases.
-            // One recent event yields ~0.1, so 0.095 guarantees no reroute.
-            reroute_threshold: 0.095,
-        }
-    }
-
-    /// Submit signed telemetry from a partner.
-    pub fn submit_telemetry(&self, telemetry: SignedTelemetry) -> Result<(), GatewayError> {
-        // Verify signature (placeholder)
-        if !self.verify_signature(&telemetry) {
-            return Err(GatewayError::AttestationFailed("invalid signature".into()));
-        }
-
-        let mut partner_data = self.partner_telemetry.write().unwrap();
-        partner_data
-            .entry(telemetry.partner_id.clone())
-            .or_default()
-            .push(telemetry);
-        Ok(())
-    }
-
-    /// Get trust score for a partner based on telemetry history.
-    pub fn get_trust_score(&self, partner_id: &str) -> f32 {
-        let partner_data = self.partner_telemetry.read().unwrap();
-        if let Some(telemetry_list) = partner_data.get(partner_id) {
-            // Simple trust calculation based on telemetry volume and recency
-            let recent_count = telemetry_list
-                .iter()
-                .filter(|t| t.timestamp > SystemTime::now() - Duration::from_secs(3600))
-                .count();
-            (recent_count as f32 / 10.0).min(1.0)
-        } else {
-            0.0
-        }
-    }
-
-    /// Determine if rerouting is needed based on trust scores.
-    pub fn should_reroute(&self, partner_id: &str) -> bool {
-        self.get_trust_score(partner_id) < self.reroute_threshold
-    }
-
-    /// Update trust scores based on recent telemetry.
-    pub fn update_trust_scores(&self) {
-        let partner_data = self.partner_telemetry.read().unwrap();
-        let mut scores = self.trust_scores.write().unwrap();
-        for (partner_id, _telemetry_list) in partner_data.iter() {
-            let score = self.get_trust_score(partner_id);
-            scores.insert(partner_id.clone(), score);
-        }
-    }
-
-    fn verify_signature(&self, _telemetry: &SignedTelemetry) -> bool {
-        // Placeholder for signature verification
-        true
-    }
 }
 
 /// Representation of post-quantum key material for connectors.
@@ -1408,114 +1240,26 @@ impl Default for QuantumSecurityPosture {
 #[derive(Debug, Default)]
 pub struct HardwareAcceleratedFabric {
     lanes: RwLock<HashMap<String, Vec<String>>>,
-    smartnic_devices: RwLock<HashMap<String, SmartNicDevice>>,
-    offload_stats: RwLock<HashMap<String, OffloadStats>>,
-}
-
-#[derive(Debug, Clone)]
-pub struct SmartNicDevice {
-    pub device_id: String,
-    pub capabilities: HashSet<String>,
-    pub max_bandwidth_gbps: u32,
-    pub supported_operations: HashSet<String>,
-    pub qos_queues: u8,
-}
-
-#[derive(Debug, Clone)]
-pub struct OffloadStats {
-    pub operations_offloaded: u64,
-    pub bytes_processed: u64,
-    pub avg_latency_us: u32,
-    pub last_used: SystemTime,
 }
 
 impl HardwareAcceleratedFabric {
     pub fn new() -> Self {
         Self {
             lanes: RwLock::new(HashMap::new()),
-            smartnic_devices: RwLock::new(HashMap::new()),
-            offload_stats: RwLock::new(HashMap::new()),
         }
     }
 
-    pub fn register_smartnic(&self, device: SmartNicDevice) {
-        self.smartnic_devices
-            .write()
-            .unwrap()
-            .insert(device.device_id.clone(), device);
-    }
-
-    pub fn offload(&self, connector: &str, operation: &str) -> Result<(), GatewayError> {
-        let devices = self.smartnic_devices.read().unwrap();
-        if devices.is_empty() {
-            // Fallback to software if no hardware available
-            let mut lanes = self.lanes.write().unwrap();
-            let lane = lanes.entry(operation.into()).or_default();
-            if lane.len() > 32 {
-                lane.clear();
-            }
-            lane.push(connector.into());
-            return Ok(());
+    pub fn offload(&self, connector: &str, operation: &str) {
+        let mut lanes = self.lanes.write().unwrap();
+        let lane = lanes.entry(operation.into()).or_default();
+        if lane.len() > 32 {
+            lane.clear();
         }
-
-        // Find suitable SmartNIC device
-        let device = devices
-            .values()
-            .find(|d| d.supported_operations.contains(operation))
-            .ok_or_else(|| {
-                GatewayError::ToolNotFound(format!("no SmartNIC supports {}", operation))
-            })?;
-
-        // Offload to hardware
-        let mut stats = self.offload_stats.write().unwrap();
-        let stat = stats
-            .entry(device.device_id.clone())
-            .or_insert(OffloadStats {
-                operations_offloaded: 0,
-                bytes_processed: 0,
-                avg_latency_us: 100, // Assume 100us baseline
-                last_used: SystemTime::now(),
-            });
-        stat.operations_offloaded += 1;
-        stat.last_used = SystemTime::now();
-
-        self.emit_hardware_event("offload", &device.device_id, operation, connector)?;
-        Ok(())
-    }
-
-    pub fn get_offload_stats(&self) -> HashMap<String, OffloadStats> {
-        self.offload_stats.read().unwrap().clone()
+        lane.push(connector.into());
     }
 
     pub fn active_lanes(&self) -> HashMap<String, Vec<String>> {
         self.lanes.read().unwrap().clone()
-    }
-
-    fn emit_hardware_event(
-        &self,
-        event_type: &str,
-        device_id: &str,
-        operation: &str,
-        connector: &str,
-    ) -> Result<(), GatewayError> {
-        // This would integrate with the main telemetry system
-        // For now, just log to lanes as placeholder
-        let mut lanes = self.lanes.write().unwrap();
-        let key = format!("hardware:{}:{}", event_type, device_id);
-        let lane = lanes.entry(key).or_default();
-        lane.push(format!(
-            "{}:{}:{}",
-            operation,
-            connector,
-            SystemTime::now()
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .unwrap()
-                .as_secs()
-        ));
-        if lane.len() > 100 {
-            lane.remove(0);
-        }
-        Ok(())
     }
 }
 
@@ -1524,54 +1268,26 @@ struct KnowledgeNode {
     kind: SymbolKind,
     capabilities: HashSet<String>,
     impact_radius: usize,
-    policies: Vec<String>,
-    incidents: Vec<String>,
-    embeddings: Vec<f32>, // Placeholder for embeddings
 }
 
 /// Semantic twin with knowledge graph reasoning.
 #[derive(Debug, Default)]
 pub struct SemanticTwin {
     graph: RwLock<HashMap<String, KnowledgeNode>>,
-    incidents: RwLock<Vec<Incident>>,
-    playbooks: RwLock<HashMap<String, Playbook>>,
-}
-
-#[derive(Debug, Clone)]
-pub struct Incident {
-    pub id: String,
-    pub description: String,
-    pub affected_connectors: Vec<String>,
-    pub root_causes: Vec<String>,
-    pub timestamp: SystemTime,
-}
-
-#[derive(Debug, Clone)]
-pub struct Playbook {
-    pub id: String,
-    pub name: String,
-    pub triggers: Vec<String>,
-    pub actions: Vec<String>,
-    pub success_rate: f32,
 }
 
 impl SemanticTwin {
     pub fn new() -> Self {
         Self {
             graph: RwLock::new(HashMap::new()),
-            incidents: RwLock::new(Vec::new()),
-            playbooks: RwLock::new(HashMap::new()),
         }
     }
 
-    pub fn ingest_symbol(&self, symbol: &Symbol, policies: &[String], incidents: &[String]) {
+    pub fn ingest_symbol(&self, symbol: &Symbol) {
         let node = KnowledgeNode {
             kind: symbol.kind.clone(),
             capabilities: symbol.capabilities.clone(),
             impact_radius: symbol.capabilities.len().max(1),
-            policies: policies.to_vec(),
-            incidents: incidents.to_vec(),
-            embeddings: vec![], // TODO: integrate with AI embeddings
         };
 
         self.graph.write().unwrap().insert(symbol.id.clone(), node);
@@ -1604,102 +1320,6 @@ impl SemanticTwin {
             }
         }
         findings
-    }
-
-    pub fn record_incident(&self, incident: Incident) {
-        self.incidents.write().unwrap().push(incident);
-    }
-
-    pub fn analyze_root_cause(&self, failed_connectors: &[String]) -> Vec<String> {
-        let graph = self.graph.read().unwrap();
-        let incidents = self.incidents.read().unwrap();
-        let mut causes = Vec::new();
-
-        for connector in failed_connectors {
-            if let Some(node) = graph.get(connector) {
-                // Check for common patterns in incidents
-                for incident in incidents.iter().rev().take(10) {
-                    if incident.affected_connectors.contains(connector) {
-                        causes.extend(incident.root_causes.clone());
-                    }
-                }
-                // Policy-related causes
-                if node.policies.contains(&"strict".to_string()) {
-                    causes.push(format!("policy violation on {}", connector));
-                }
-                // Capability overload
-                if node.impact_radius > 5 {
-                    causes.push(format!("high load on {}", connector));
-                }
-                // Surface incidents & embeddings (prevent dead_code for fields)
-                if !node.incidents.is_empty() {
-                    causes.push(format!("recent incidents on {}", connector));
-                }
-                if !node.embeddings.is_empty() {
-                    causes.push(format!("embedding profile size {}", node.embeddings.len()));
-                }
-            }
-        }
-        causes
-    }
-
-    pub fn register_playbook(&self, playbook: Playbook) {
-        self.playbooks
-            .write()
-            .unwrap()
-            .insert(playbook.id.clone(), playbook);
-    }
-
-    pub fn execute_playbook(&self, trigger: &str) -> Option<Playbook> {
-        let playbooks = self.playbooks.read().unwrap();
-        playbooks
-            .values()
-            .find(|p| p.triggers.contains(&trigger.to_string()))
-            .cloned()
-    }
-}
-
-/// Unified telemetry bus for streaming events to dashboards and anomaly detection.
-pub struct TelemetryBus {
-    subscribers: RwLock<Vec<Box<dyn TelemetrySubscriber + Send + Sync>>>,
-}
-
-impl std::fmt::Debug for TelemetryBus {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("TelemetryBus")
-            .field("subscriber_count", &self.subscribers.read().unwrap().len())
-            .finish()
-    }
-}
-
-pub trait TelemetrySubscriber: Send + Sync {
-    fn on_event(&self, event: &TelemetryEvent);
-}
-
-impl TelemetryBus {
-    pub fn new() -> Self {
-        TelemetryBus {
-            subscribers: RwLock::new(Vec::new()),
-        }
-    }
-
-    pub fn subscribe(&self, subscriber: Box<dyn TelemetrySubscriber + Send + Sync>) {
-        self.subscribers.write().unwrap().push(subscriber);
-    }
-
-    pub fn publish(&self, event: &TelemetryEvent) {
-        let subscribers = self.subscribers.read().unwrap();
-        for subscriber in subscribers.iter() {
-            subscriber.on_event(event);
-        }
-    }
-}
-
-impl Default for TelemetryBus {
-    fn default() -> Self {
-        TelemetryBus {
-            subscribers: RwLock::new(Vec::new()),
-        }
     }
 }
 
@@ -1787,8 +1407,6 @@ pub struct Gateway {
     security_posture: QuantumSecurityPosture,
     symbol_fabric: HardwareAcceleratedFabric,
     semantic_twin: SemanticTwin,
-    telemetry_bus: TelemetryBus,
-    trust_exchange: TrustExchange,
 }
 
 impl Gateway {
@@ -1971,11 +1589,10 @@ impl Gateway {
             ]),
         );
         self.coherence.replicate("catalog");
-        self.semantic_twin
-            .ingest_symbol(arc_symbol.as_ref(), &[], &[]);
+        self.semantic_twin.ingest_symbol(arc_symbol.as_ref());
         self.federation.assign_connector(&id);
         self.security_posture.ensure_connector(&id);
-        self.symbol_fabric.offload(&id, "registration")?;
+        self.symbol_fabric.offload(&id, "registration");
 
         self.emit_event(
             TelemetryKind::ConnectorRegistered,
@@ -2002,7 +1619,7 @@ impl Gateway {
         );
         drop(connectors);
         self.security_posture.ensure_connector(connector_id);
-        self.symbol_fabric.offload(connector_id, "connect")?;
+        self.symbol_fabric.offload(connector_id, "connect");
         self.federation.heartbeat("alpha");
         Ok(())
     }
@@ -2208,7 +1825,7 @@ impl Gateway {
             let risks = self.semantic_twin.predict_risk(&plan.connectors);
             for connector in &plan.connectors {
                 self.security_posture.rekey(connector, "falcon1024");
-                self.symbol_fabric.offload(connector, "route")?;
+                self.symbol_fabric.offload(connector, "route");
             }
             if !risks.is_empty() {
                 self.emit_event(TelemetryKind::SelfHealSuggested, risks.join("|"))?;
@@ -2417,20 +2034,6 @@ impl Gateway {
                 artifact_id, sandbox
             )));
         }
-
-        // Check QoS compatibility with connector policy
-        let connectors = self.connectors_read()?;
-        let connector_policy = connectors
-            .get(connector_id)
-            .map(|record| &record.policy)
-            .ok_or_else(|| GatewayError::NotFound(connector_id.to_string()))?;
-        if connector_policy.qos_tier.priority() < artifact.qos_tier.priority() {
-            return Err(GatewayError::PolicyViolation(format!(
-                "connector {} QoS tier {:?} insufficient for artifact {} requiring {:?}",
-                connector_id, connector_policy.qos_tier, artifact_id, artifact.qos_tier
-            )));
-        }
-        drop(connectors);
         drop(catalog);
 
         let mut sessions = self
@@ -2449,7 +2052,6 @@ impl Gateway {
             sandbox,
             started_at: SystemTime::now(),
             shared: artifact.max_parallel_sessions > 1,
-            qos_tier: artifact.qos_tier,
         };
 
         let mut connectors = self.connectors_write()?;
@@ -2461,7 +2063,7 @@ impl Gateway {
 
         self.emit_event(
             TelemetryKind::ToolMounted,
-            format!("{}->{}@{:?}", connector_id, artifact_id, artifact.qos_tier),
+            format!("{}->{}", connector_id, artifact_id),
         )?;
 
         Ok(lease)
@@ -2523,43 +2125,21 @@ impl Gateway {
     }
 
     fn emit_event(&self, kind: TelemetryKind, context: String) -> Result<(), GatewayError> {
-        let event = TelemetryEvent {
+        let mut telemetry = self.telemetry_write()?;
+        telemetry.push(TelemetryEvent {
             timestamp: SystemTime::now(),
             kind,
             context,
-        };
-        let mut telemetry = self.telemetry_write()?;
-        telemetry.push(event.clone());
-        drop(telemetry);
-        self.telemetry_bus.publish(&event);
+        });
         Ok(())
     }
 
-    pub fn register_smartnic_device(&self, device: SmartNicDevice) -> Result<(), GatewayError> {
-        self.symbol_fabric.register_smartnic(device.clone());
-        self.emit_event(
-            TelemetryKind::ToolMounted, // Reuse event type for hardware
-            format!("smartnic:{} registered", device.device_id),
-        )?;
-        Ok(())
+    pub fn fabric_snapshot(&self) -> FabricSnapshot {
+        self.coherence.snapshot()
     }
 
-    pub fn get_hardware_stats(&self) -> HashMap<String, OffloadStats> {
-        self.symbol_fabric.get_offload_stats()
-    }
-
-    pub fn register_playbook(&self, playbook: Playbook) {
-        self.semantic_twin.register_playbook(playbook);
-    }
-
-    pub fn execute_playbook(&self, trigger: &str) -> Option<Playbook> {
-        self.semantic_twin.execute_playbook(trigger)
-    }
-
-    pub fn digital_twin_simulation(&self, intent: &Intent) -> Result<RoutePlan, GatewayError> {
-        // Simulate routing in a digital twin environment
-        // For now, just call route_intent, but in future, this could simulate different conditions
-        self.route_intent(intent)
+    pub fn governance_snapshot(&self) -> Vec<GovernanceRecord> {
+        self.governance.snapshot()
     }
 
     pub fn update_reliability_feed(&self, feed: ReliabilityFeed) -> Result<(), GatewayError> {
@@ -2574,49 +2154,6 @@ impl Gateway {
             ),
         )?;
         Ok(())
-    }
-
-    /// Submit signed telemetry to the trust exchange marketplace.
-    pub fn submit_partner_telemetry(&self, telemetry: SignedTelemetry) -> Result<(), GatewayError> {
-        self.trust_exchange.submit_telemetry(telemetry)?;
-        self.emit_event(
-            TelemetryKind::SchemaRegistered, // Reuse event type
-            "partner telemetry submitted".into(),
-        )?;
-        Ok(())
-    }
-
-    /// Get trust score for a partner.
-    pub fn get_partner_trust_score(&self, partner_id: &str) -> f32 {
-        self.trust_exchange.get_trust_score(partner_id)
-    }
-
-    /// Check if rerouting is needed based on partner trust.
-    pub fn should_reroute_from_partner(&self, partner_id: &str) -> bool {
-        self.trust_exchange.should_reroute(partner_id)
-    }
-
-    /// Update trust scores across all partners.
-    pub fn update_partner_trust_scores(&self) {
-        self.trust_exchange.update_trust_scores();
-    }
-
-    /// Synchronize state across federated micro-stations.
-    pub fn synchronize_federation_state(
-        &self,
-        state_update: HashMap<String, String>,
-    ) -> Result<(), GatewayError> {
-        self.federation.synchronize_state(state_update)?;
-        self.emit_event(
-            TelemetryKind::FabricReplicated,
-            "federation state synchronized".into(),
-        )?;
-        Ok(())
-    }
-
-    /// Get the current federation leader.
-    pub fn get_federation_leader(&self) -> Option<String> {
-        self.federation.get_leader()
     }
 
     fn connectors_read(
@@ -2725,8 +2262,6 @@ impl Default for Gateway {
             security_posture: QuantumSecurityPosture::new(),
             symbol_fabric: HardwareAcceleratedFabric::new(),
             semantic_twin: SemanticTwin::new(),
-            telemetry_bus: TelemetryBus::new(),
-            trust_exchange: TrustExchange::new(),
         }
     }
 }
@@ -2785,8 +2320,6 @@ fn default_schemas() -> Vec<SymbolSchema> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use proptest::prelude::*;
-    use std::collections::HashMap;
     use std::time::{Duration, SystemTime};
 
     fn sample_policy() -> ConnectionPolicy {
@@ -2798,7 +2331,6 @@ mod tests {
             min_attestation_score: 0.85,
             trusted_issuers: HashSet::from(["noa-ca".into()]),
             required_compliance: HashSet::new(),
-            qos_tier: QosTier::Premium,
         }
     }
 
@@ -2808,7 +2340,6 @@ mod tests {
             min_trust_score: 0.6,
             encryption_supported: true,
             allowed_zones: HashSet::from(["global".into()]),
-            qos_tier: QosTier::Standard,
         }
     }
 
@@ -2841,16 +2372,6 @@ mod tests {
         symbol
     }
 
-    fn sample_smartnic(ops: &[&str]) -> SmartNicDevice {
-        SmartNicDevice {
-            device_id: "nic-1".into(),
-            capabilities: HashSet::from(["accelerated".into()]),
-            max_bandwidth_gbps: 100,
-            supported_operations: ops.iter().map(|op| op.to_string()).collect(),
-            qos_queues: 4,
-        }
-    }
-
     #[test]
     fn register_and_route_symbol() {
         let gateway = Gateway::new();
@@ -2869,46 +2390,6 @@ mod tests {
         assert!(plan.verification.is_success());
         assert!(plan.connectors.contains(&symbol.id));
         assert!(!plan.schematic.nodes.is_empty());
-    }
-
-    #[test]
-    fn hardware_offload_falls_back_without_devices() {
-        let fabric = HardwareAcceleratedFabric::new();
-        fabric
-            .offload("connector-alpha", "route")
-            .expect("software fallback should succeed");
-        let lanes = fabric.lanes.read().unwrap();
-        assert!(
-            lanes.get("route").is_some(),
-            "software fallback should enqueue the operation"
-        );
-    }
-
-    #[test]
-    fn hardware_offload_records_stats_when_device_present() {
-        let fabric = HardwareAcceleratedFabric::new();
-        fabric.register_smartnic(sample_smartnic(&["route"]));
-
-        fabric
-            .offload("connector-alpha", "route")
-            .expect("hardware offload should succeed");
-
-        let stats = fabric.get_offload_stats();
-        let stat = stats.get("nic-1").expect("SmartNIC stats recorded");
-        assert_eq!(stat.operations_offloaded, 1);
-        assert!(
-            stat.last_used <= SystemTime::now(),
-            "last_used timestamp should be updated"
-        );
-    }
-
-    #[test]
-    fn hardware_offload_errors_on_unknown_operation() {
-        let fabric = HardwareAcceleratedFabric::new();
-        fabric.register_smartnic(sample_smartnic(&["registration"]));
-
-        let err = fabric.offload("connector-alpha", "route").unwrap_err();
-        matches!(err, GatewayError::ToolNotFound(_));
     }
 
     #[test]
@@ -3032,220 +2513,5 @@ mod tests {
             .predictive_self_heal()
             .expect("healing should succeed");
         assert!(!actions.is_empty());
-    }
-
-    #[test]
-    fn trust_exchange_submits_and_scores_telemetry() {
-        let gateway = Gateway::new();
-        let telemetry = SignedTelemetry {
-            partner_id: "partner1".into(),
-            telemetry: TelemetryEvent {
-                timestamp: SystemTime::now(),
-                kind: TelemetryKind::SchemaRegistered,
-                context: "test".into(),
-            },
-            signature: "sig".into(),
-            timestamp: SystemTime::now(),
-        };
-
-        gateway
-            .submit_partner_telemetry(telemetry)
-            .expect("telemetry submission should succeed");
-        let score = gateway.get_partner_trust_score("partner1");
-        assert!(score > 0.0);
-        assert!(!gateway.should_reroute_from_partner("partner1"));
-    }
-
-    #[test]
-    fn federation_synchronizes_state() {
-        let gateway = Gateway::new();
-        let state_update = HashMap::from([("key".into(), "value".into())]);
-        gateway
-            .synchronize_federation_state(state_update)
-            .expect("state sync should succeed");
-        let leader = gateway.get_federation_leader();
-        assert!(leader.is_some());
-    }
-
-    // Property-based tests for critical gateway functions
-
-    proptest! {
-        #[test]
-        fn symbol_with_stable_id_is_deterministic(
-            name in "[a-zA-Z0-9_]{1,64}",
-            version in "[0-9]+\\.[0-9]+\\.[0-9]+",
-            schema_hash in "[a-f0-9]{64}"
-        ) {
-            let capabilities = HashSet::from(["read".to_string(), "write".to_string()]);
-            let symbol1 = Symbol::with_stable_id(
-                &name,
-                SymbolKind::Service,
-                &version,
-                capabilities.clone(),
-                &schema_hash
-            );
-            let symbol2 = Symbol::with_stable_id(
-                &name,
-                SymbolKind::Service,
-                &version,
-                capabilities,
-                &schema_hash
-            );
-            prop_assert_eq!(symbol1.id, symbol2.id);
-            prop_assert_eq!(symbol1.version, symbol2.version);
-        }
-
-        #[test]
-        fn symbol_registration_handles_various_names(
-            name in "[a-zA-Z0-9_]{1,64}",
-            _version in "[0-9]+\\.[0-9]+\\.[0-9]+",
-            schema_hash in "[a-f0-9]{64}"
-        ) {
-            let gateway = Gateway::new();
-            // Register a schema that matches the symbol
-            let schema = SymbolSchema {
-                schema_id: format!("test.{}.schema", name),
-                kind: SymbolKind::Service,
-                version: _version.clone(),
-                capability_taxonomy: HashSet::from(["read".to_string()]),
-                lifecycle: LifecycleStage::Active,
-                recommended_zones: HashSet::from(["global".to_string()]),
-                compliance_tags: HashSet::new(),
-                compatibility: vec![],
-                schema_hash: schema_hash.clone(),
-            };
-            gateway.register_schema(schema).expect("schema registration should succeed");
-
-            let capabilities = HashSet::from(["read".to_string()]);
-            let symbol = Symbol::with_stable_id(
-                &name,
-                SymbolKind::Service,
-                &_version,
-                capabilities,
-                &schema_hash
-            );
-            let policy = ConnectionPolicy {
-                max_latency_ms: 1000,
-                min_trust_score: 0.5,
-                allowed_zones: HashSet::from(["global".to_string()]),
-                encryption_required: false,
-                min_attestation_score: 0.7,
-                trusted_issuers: HashSet::new(),
-                required_compliance: HashSet::new(),
-                qos_tier: QosTier::Standard,
-            };
-            let result = gateway.register_symbol(symbol, policy);
-            prop_assert!(result.is_ok());
-        }
-
-        #[test]
-        fn connection_policy_allows_with_constraints(
-            max_latency in 100..5000u32,
-            min_trust in 0.1..1.0f32,
-            zone in "[a-zA-Z0-9_]{1,32}"
-        ) {
-            let policy = ConnectionPolicy {
-                max_latency_ms: max_latency,
-                min_trust_score: min_trust,
-                allowed_zones: HashSet::from([zone.clone()]),
-                encryption_required: false,
-                min_attestation_score: 0.7,
-                trusted_issuers: HashSet::new(),
-                required_compliance: HashSet::new(),
-                qos_tier: QosTier::Standard,
-            };
-
-            let constraints = IntentConstraints {
-                max_latency_ms: max_latency + 100, // Ensure policy latency is stricter
-                min_trust_score: min_trust - 0.1, // Ensure policy trust is higher requirement
-                encryption_supported: true,
-                allowed_zones: HashSet::from([zone]),
-                qos_tier: QosTier::Standard,
-            };
-
-            // Test allowed constraints
-            prop_assert!(policy.allows(&constraints));
-
-            // Test blocked constraints (wrong zone)
-            let blocked_constraints = IntentConstraints {
-                max_latency_ms: constraints.max_latency_ms,
-                min_trust_score: constraints.min_trust_score,
-                encryption_supported: constraints.encryption_supported,
-                allowed_zones: HashSet::from(["blocked_zone".to_string()]),
-                qos_tier: constraints.qos_tier,
-            };
-            prop_assert!(!policy.allows(&blocked_constraints));
-        }
-
-        #[test]
-        fn intent_creation_with_various_parameters(
-            description in "[a-zA-Z0-9_ ]{1,128}",
-            cap_count in 1..5usize
-        ) {
-            let capabilities: HashSet<String> = (0..cap_count)
-                .map(|i| format!("cap{}", i))
-                .collect();
-
-            let constraints = IntentConstraints {
-                max_latency_ms: 1000,
-                min_trust_score: 0.6,
-                encryption_supported: true,
-                allowed_zones: HashSet::from(["global".to_string()]),
-                qos_tier: QosTier::Standard,
-            };
-
-            let intent = Intent {
-                description: description.clone(),
-                target_kind: SymbolKind::Service,
-                required_capabilities: capabilities.clone(),
-                constraints: constraints.clone(),
-            };
-
-            prop_assert_eq!(intent.description, description);
-            prop_assert_eq!(intent.target_kind, SymbolKind::Service);
-            prop_assert_eq!(intent.required_capabilities, capabilities);
-            prop_assert_eq!(intent.constraints.max_latency_ms, constraints.max_latency_ms);
-        }
-
-        #[test]
-        fn semantic_twin_evaluation_consistency(
-            _symbol_name in "[a-zA-Z0-9_]{1,64}",
-            connector_count in 1..5usize
-        ) {
-            let twin = SemanticTwin::new();
-            let connectors: Vec<String> = (0..connector_count)
-                .map(|i| format!("connector{}", i))
-                .collect();
-
-            let capabilities = HashSet::from(["read".to_string(), "write".to_string()]);
-            let constraints = IntentConstraints {
-                max_latency_ms: 1000,
-                min_trust_score: 0.6,
-                encryption_supported: true,
-                allowed_zones: HashSet::from(["global".to_string()]),
-                qos_tier: QosTier::Standard,
-            };
-
-            let intent = Intent {
-                description: "test intent".to_string(),
-                target_kind: SymbolKind::Service,
-                required_capabilities: capabilities,
-                constraints,
-            };
-
-            // Evaluation should be deterministic for same inputs
-            let result1 = twin.evaluate_intent(&intent, &connectors);
-            let result2 = twin.evaluate_intent(&intent, &connectors);
-            prop_assert_eq!(result1, result2);
-        }
-
-        #[test]
-        fn trust_score_calculation_bounds(_score in 0.0..1.0) {
-            let exchange = TrustExchange::new();
-            // Since we can't directly set scores in the current API,
-            // we'll test that the calculation stays within bounds
-            let calculated_score = exchange.get_trust_score("nonexistent");
-            prop_assert!((0.0..=1.0).contains(&calculated_score));
-        }
     }
 }

@@ -24,6 +24,10 @@ use uuid::Uuid;
 /// - **L4Operations** (Specialist): Operational execution and domain expertise.
 /// - **L5Infrastructure** (Micro): Fine-grained task execution and infrastructure services.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+///   Agent layer in NOA's five-layer hierarchy.
+///
+/// The naming scheme maps legacy terms (Executive, Board, Stack-Chief,
+/// Specialist, Micro) to the new L1–L5 architecture used by the registry.
 pub enum AgentLayer {
     /// L1: Root CECCA, Constitutional authority (formerly "Executive")
     L1Autonomy,
@@ -98,11 +102,11 @@ pub enum HealthStatus {
 /// Agent type classification
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum AgentType {
-    Master, // CECCA, Board, Executive
+    Master,   // CECCA, Board, Executive
     #[default]
-    Worker, // Specialists, Operators
+    Worker,   // Specialists, Operators
     SubAgent, // Micro agents
-    Swarm,  // Coordinated groups
+    Swarm,    // Coordinated groups
 }
 
 /// Agent language/runtime

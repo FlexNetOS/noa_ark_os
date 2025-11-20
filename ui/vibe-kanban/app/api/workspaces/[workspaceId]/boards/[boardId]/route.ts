@@ -7,7 +7,7 @@ import type { WorkspaceBoard } from "@/app/components/board-types";
 
 export async function GET(
   _request: Request,
-  { params }: { params: { workspaceId: string; boardId: string } },
+  { params }: { params: { workspaceId: string; boardId: string } }
 ) {
   const user = assertUser();
   const workspace = await getWorkspace(params.workspaceId);
@@ -23,7 +23,7 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { workspaceId: string; boardId: string } },
+  { params }: { params: { workspaceId: string; boardId: string } }
 ) {
   const user = assertUser();
   const workspace = await getWorkspace(params.workspaceId);
@@ -60,7 +60,7 @@ export async function PUT(
 
 export async function DELETE(
   _request: Request,
-  { params }: { params: { workspaceId: string; boardId: string } },
+  { params }: { params: { workspaceId: string; boardId: string } }
 ) {
   const user = assertUser();
   const workspace = await getWorkspace(params.workspaceId);

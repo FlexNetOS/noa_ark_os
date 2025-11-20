@@ -4,6 +4,7 @@ use std::sync::Arc;
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use futures::FutureExt;
+use futures::TryFutureExt;
 use noa_ui_api::{UiApiServer, UiSchemaGrpc};
 use tokio::net::TcpListener;
 use tokio::sync::Notify;
@@ -60,19 +61,41 @@ async fn main() -> Result<()> {
     let router = server.router();
     let shutdown = Shutdown::new();
 
+<<<<<<< Updated upstream
     let http_future = axum::serve(listener, router)
         .with_graceful_shutdown(shutdown.clone().wait())
         .map_err(|err| anyhow!("HTTP server exited: {err}"));
 
     let grpc_state = server.state();
     let grpc_service = UiSchemaGrpc::new(grpc_state);
+=======
+    let shutdown_http = shutdown.clone();
+    let http_future = {
+        let listener = listener;
+        let router = router;
+        async move {
+            axum::serve(listener, router)
+                .with_graceful_shutdown(shutdown_http.wait_owned())
+                .await
+                .map_err(|err| anyhow!("HTTP server exited: {err}"))
+        }
+    };
+
+    let grpc_state = server.state();
+    let grpc_service = UiSchemaGrpc::new(grpc_state);
+    let shutdown_grpc = shutdown.clone();
+>>>>>>> Stashed changes
     let grpc_future = tonic::transport::Server::builder()
         .add_service(
             noa_ui_api::grpc::proto::ui_schema_service_server::UiSchemaServiceServer::new(
                 grpc_service,
             ),
         )
+<<<<<<< Updated upstream
         .serve_with_shutdown(grpc_addr, shutdown.clone().wait())
+=======
+        .serve_with_shutdown(grpc_addr, shutdown_grpc.wait_owned())
+>>>>>>> Stashed changes
         .map_err(|err| anyhow!("gRPC server exited: {err}"));
 
     let signal_shutdown = shutdown.clone();
@@ -128,6 +151,16 @@ impl Shutdown {
         self.notify.notified().await;
     }
 
+<<<<<<< Updated upstream
+=======
+    fn wait_owned(&self) -> impl std::future::Future<Output = ()> + Send + 'static {
+        let cloned = self.clone();
+        async move {
+            cloned.wait().await;
+        }
+    }
+
+>>>>>>> Stashed changes
     fn trigger(&self) {
         self.notify.notify_waiters();
     }

@@ -117,9 +117,14 @@ require_cmd() {
 }
 
 activate_toolchains() {
-  if [[ -z "${NOA_CARGO_ENV:-}" && -f "$ROOT_DIR/server/tools/activate-cargo.sh" ]]; then
-    # shellcheck disable=SC1091
-    source "$ROOT_DIR/server/tools/activate-cargo.sh"
+  if [[ -z "${NOA_CARGO_ENV:-}" ]]; then
+    if [[ -f "$ROOT_DIR/server/tools/activate-cargo-wsl.sh" ]]; then
+      # shellcheck disable=SC1091
+      source "$ROOT_DIR/server/tools/activate-cargo-wsl.sh"
+    elif [[ -f "$ROOT_DIR/server/tools/activate-cargo.sh" ]]; then
+      # shellcheck disable=SC1091
+      source "$ROOT_DIR/server/tools/activate-cargo.sh"
+    fi
   fi
   if [[ -z "${NOA_NODE_ENV:-}" && -f "$ROOT_DIR/server/tools/activate-node.sh" ]]; then
     # shellcheck disable=SC1091
@@ -146,6 +151,9 @@ prepare_env() {
   else
     UI_API_URL="http://$UI_API_BIND"
   fi
+
+  # Export for Rust UI API to read via clap env attributes
+  export NOA_UI_API_ADDR="$UI_API_BIND"
 
   export NOA_UI_DROP_ROOT="${NOA_UI_DROP_ROOT:-$ROOT_DIR/crc/drop-in/incoming}"
   export CRC_CAS_DIR="${CRC_CAS_DIR:-$ROOT_DIR/storage/cas}"
@@ -203,7 +211,7 @@ start_services() {
   log "▶ Launching NOA UI API on $UI_API_BIND"
   (
     set -euo pipefail
-    cargo run -p noa_ui_api -- "$UI_API_BIND"
+    cargo run -p noa_ui_api
   ) |& tee "$API_LOG" &
   API_PID=$!
 

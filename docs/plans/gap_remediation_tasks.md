@@ -96,8 +96,6 @@ This document tracks actionable tasks to resolve outstanding gaps and quality is
 - [ ] **Ingestion jobs**
   - [ ] Implement jobs aggregating CRC throughput, deployment frequency, and agent efficiency metrics by environment.
   - [ ] Schedule jobs via orchestrator (Temporal/Dagster) with retry policies, alerting hooks, and observability metrics.
-  - [x] Land a nightly materializer (`workflow/cron/analytics_materializer.py`) that converts workflow event logs into
-        `storage/db/analytics/goal_kpis.json` and pipeline-ready snapshots.
 - [ ] **Dashboard consumers**
   - [ ] Provide Grafana/Metabase dashboards under `docs/analytics/dashboards`, referencing required data sources.
   - [ ] Document data refresh cadence, retention policies, and access requirements.

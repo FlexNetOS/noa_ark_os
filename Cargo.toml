@@ -18,6 +18,7 @@ members = [
     "server/core",
     "server/api",
     "server/observability",
+    "server/tools_agent",
     "services/relocation-daemon",
     "apps/cli",
     "server/relocation",
@@ -26,8 +27,6 @@ members = [
     "tools/security/shim",
     "plugins/sdk",
     "tools/quarantine_guard",
-    "server/tools_agent",
-    "server/mcp",
 ]
 
 [workspace.package]
@@ -44,6 +43,7 @@ anyhow = "1.0"
 tokio = { version = "1", features = ["full"] }
 noa_inference = { path = "server/ai/inference" }
 thiserror = "1.0"
+config = "0.13"
 
 [workspace.lints.rust]
 unsafe_code = "warn"

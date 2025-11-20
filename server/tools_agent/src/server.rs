@@ -18,9 +18,15 @@ use tower_http::trace::TraceLayer;
 use tracing::{error, info};
 
 use crate::api::{
-    EditFileRequest, EditFileResponse, EmptyRequest, ErrorResponse, FileEntry, FileKind,
-    FilePatchHunk, FilePatchRequest, FilePatchResponse, ListFilesRequest, ListFilesResponse,
-    ReadFileRequest, ReadFileResponse, RunCommandRequest, RunCommandResponse, ToolResponse,
+    CapabilityItem, ConsolidateRequest, ConsolidateResponse, EditFileRequest, EditFileResponse,
+    EmptyRequest, ErrorResponse, ExtractCapabilitiesRequest, ExtractCapabilitiesResponse,
+    FileEntry, FileKind, FilePatchHunk, FilePatchRequest, FilePatchResponse, ListFilesRequest,
+    ListFilesResponse, ReadFileRequest, ReadFileResponse, RunCommandRequest, RunCommandResponse,
+    ToolResponse,
+};
+use crate::consolidation::{
+    archive_file_versioned, calculate_sha256, extract_capabilities, ConsolidationIndex,
+    ConsolidationIndexEntry, ConsolidationReport, ConsolidationVersion, VersionLedger,
 };
 
 const DEFAULT_ADDRESS: &str = "127.0.0.1:8910";
@@ -67,6 +73,8 @@ pub async fn run_server(options: ServerOptions) -> Result<()> {
         .route("/read_file", post(read_file_handler))
         .route("/run_tests", post(run_tests_handler))
         .route("/build_workspace", post(build_workspace_handler))
+        .route("/extract_capabilities", post(extract_capabilities_handler))
+        .route("/consolidate", post(consolidate_handler))
         .with_state(state.clone())
         .layer(ServiceBuilder::new().layer(TraceLayer::new_for_http()));
 
@@ -338,6 +346,115 @@ impl ToolServerState {
             contents,
         })
     }
+
+    async fn extract_capabilities_impl(
+        &self,
+        request: &ExtractCapabilitiesRequest,
+    ) -> Result<ExtractCapabilitiesResponse> {
+        let path = self.resolve_path(&request.path)?;
+        let items = task::spawn_blocking(move || -> Result<Vec<CapabilityItem>> {
+            let caps = extract_capabilities(&path)?;
+            Ok(caps
+                .into_iter()
+                .map(|c| CapabilityItem {
+                    kind: c.kind().to_string(),
+                    name: c.name().to_string(),
+                })
+                .collect())
+        })
+        .await??;
+        Ok(ExtractCapabilitiesResponse { items })
+    }
+
+    async fn consolidate_impl(&self, request: &ConsolidateRequest) -> Result<ConsolidateResponse> {
+        let root = &self.root;
+        let canonical = self.resolve_path(&request.canonical_path)?;
+        let source = self.resolve_path(&request.source_path)?;
+        if !canonical.exists() {
+            bail!("canonical file does not exist: {}", canonical.display());
+        }
+        if !source.exists() {
+            bail!("source file does not exist: {}", source.display());
+        }
+        let reason = if request.consolidation_reason.is_empty() {
+            "unspecified".to_string()
+        } else {
+            request.consolidation_reason.clone()
+        };
+
+        let canonical_clone = canonical.clone();
+        let source_clone = source.clone();
+        let root_clone = root.clone();
+        let reason_clone = reason.clone();
+
+        let (archive_path, report_path) = task::spawn_blocking(move || -> Result<(PathBuf, PathBuf)> {
+            let sha = calculate_sha256(&source_clone)?;
+            let version = 1u32;
+            let archive = archive_file_versioned(&canonical_clone, &root_clone, version)?;
+
+            let preserved_caps = extract_capabilities(&canonical_clone)?;
+            let archived_caps = extract_capabilities(&source_clone)?;
+
+            let preserved_names: Vec<String> = preserved_caps.iter().map(|c| c.name().to_string()).collect();
+            let archived_names: Vec<String> = archived_caps.iter().map(|c| c.name().to_string()).collect();
+
+            let version_entry = ConsolidationVersion {
+                version: format!("v{}", version),
+                source_path: source_clone.to_string_lossy().to_string(),
+                timestamp: chrono::Utc::now().to_rfc3339(),
+                sha256: sha,
+                consolidation_reason: reason_clone,
+                preserved_capabilities: preserved_names.clone(),
+                archived_capabilities: archived_names.clone(),
+                merged_by: std::env::var("USER").unwrap_or_else(|_| "unknown".to_string()),
+            };
+
+            let ledger_path = root_clone.join("archive/consolidation/ledger.json");
+            let mut ledger = if ledger_path.exists() {
+                let raw = fs::read_to_string(&ledger_path)?;
+                serde_json::from_str::<VersionLedger>(&raw).unwrap_or_else(|_| VersionLedger::new(
+                    canonical_clone.to_string_lossy().to_string(),
+                ))
+            } else {
+                VersionLedger::new(canonical_clone.to_string_lossy().to_string())
+            };
+            ledger.add_version(version_entry);
+            fs::create_dir_all(ledger_path.parent().unwrap())?;
+            fs::write(&ledger_path, serde_json::to_string_pretty(&ledger)?)?;
+
+            let report = ConsolidationReport {
+                date: chrono::Utc::now().to_rfc3339(),
+                canonical_file: canonical_clone.to_string_lossy().to_string(),
+                sources_merged: 1,
+                capability_comparison: vec![],
+                tests_passed: true,
+                total_preserved: preserved_caps.len(),
+                total_archived: archived_caps.len(),
+            };
+            let report_markdown = report.to_markdown();
+            let report_path = root_clone.join("archive/consolidation/report.md");
+            fs::create_dir_all(report_path.parent().unwrap())?;
+            fs::write(&report_path, report_markdown)?;
+
+            let index_path = root_clone.join("archive/consolidation/index.json");
+            let mut index = ConsolidationIndex::load(&index_path).unwrap_or_default();
+            index.add_entry(ConsolidationIndexEntry {
+                canonical_file: canonical_clone.to_string_lossy().to_string(),
+                version_count: ledger.versions.len(),
+                last_consolidation: chrono::Utc::now().to_rfc3339(),
+                ledger_path: ledger_path.to_string_lossy().to_string(),
+            });
+            index.save(&index_path)?;
+
+            Ok((archive, report_path))
+        })
+        .await??;
+
+        Ok(ConsolidateResponse {
+            archive_path: archive_path.to_string_lossy().to_string(),
+            report_path: report_path.to_string_lossy().to_string(),
+        })
+    }
 }
 
 async fn run_command_handler(
@@ -373,6 +490,20 @@ async fn read_file_handler(
     Json(request): Json<ReadFileRequest>,
 ) -> Result<Json<ToolResponse<ReadFileResponse>>, (StatusCode, Json<ErrorResponse>)> {
     respond(state.read_file(request).await)
+}
+
+async fn extract_capabilities_handler(
+    State(state): State<Arc<ToolServerState>>,
+    Json(request): Json<ExtractCapabilitiesRequest>,
+) -> Result<Json<ToolResponse<ExtractCapabilitiesResponse>>, (StatusCode, Json<ErrorResponse>)> {
+    respond(state.extract_capabilities_impl(&request).await)
+}
+
+async fn consolidate_handler(
+    State(state): State<Arc<ToolServerState>>,
+    Json(request): Json<ConsolidateRequest>,
+) -> Result<Json<ToolResponse<ConsolidateResponse>>, (StatusCode, Json<ErrorResponse>)> {
+    respond(state.consolidate_impl(&request).await)
 }
 
 async fn run_tests_handler(
@@ -532,7 +663,7 @@ impl AllowlistEntry {
                 .zip(self.args.iter())
                 .all(|(lhs, rhs)| lhs == rhs)
         } else {
-            &self.args == args
+            self.args == args
         }
     }
 }

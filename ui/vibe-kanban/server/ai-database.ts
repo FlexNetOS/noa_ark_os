@@ -67,10 +67,7 @@ class AiDatabase {
   private readonly getEmbeddingStatement: Database.Statement;
   private readonly listEmbeddingsStatement: Database.Statement;
 
-  constructor(
-    private readonly dbPath: string,
-    private readonly migrationsDir: string,
-  ) {
+  constructor(private readonly dbPath: string, private readonly migrationsDir: string) {
     mkdirSync(dirname(dbPath), { recursive: true });
     mkdirSync(ARTIFACT_DIRECTORY, { recursive: true });
     this.db = new Database(dbPath);
@@ -78,28 +75,28 @@ class AiDatabase {
     this.applyMigrations();
     this.insertStatement = this.db.prepare(
       `INSERT INTO ai_requests (source, card_id, title, provider, latency_ms, status, error_msg)
-       VALUES (@source, @cardId, @title, @provider, @latencyMs, @status, @errorMsg)`,
+       VALUES (@source, @cardId, @title, @provider, @latencyMs, @status, @errorMsg)`
     );
     this.listStatement = this.db.prepare(
       `SELECT id, created_at as createdAt, source, card_id as cardId, title, provider, latency_ms as latencyMs, status, error_msg as errorMsg
        FROM ai_requests
        ORDER BY created_at DESC
-       LIMIT @limit`,
+       LIMIT @limit`
     );
     this.insertGoalEventStatement = this.db.prepare(
       `INSERT INTO goal_lifecycle_events (goal_id, workspace_id, event_type, status, summary, payload)
-       VALUES (@goalId, @workspaceId, @eventType, @status, @summary, json(@payload))`,
+       VALUES (@goalId, @workspaceId, @eventType, @status, @summary, json(@payload))`
     );
     this.listGoalEventsStatement = this.db.prepare(
       `SELECT id, goal_id as goalId, workspace_id as workspaceId, event_type as eventType, status, summary, json_extract(payload, '$') as payload, created_at as createdAt
        FROM goal_lifecycle_events
        WHERE goal_id = @goalId
        ORDER BY created_at DESC
-       LIMIT @limit`,
+       LIMIT @limit`
     );
     this.insertArtifactStatement = this.db.prepare(
       `INSERT INTO agent_artifacts (goal_id, workspace_id, artifact_type, artifact_uri, title, summary, metadata)
-       VALUES (@goalId, @workspaceId, @artifactType, @artifactUri, @title, @summary, json(@metadata))`,
+       VALUES (@goalId, @workspaceId, @artifactType, @artifactUri, @title, @summary, json(@metadata))`
     );
     this.listArtifactsStatement = this.db.prepare(
       `SELECT id, goal_id as goalId, workspace_id as workspaceId, artifact_type as artifactType, artifact_uri as artifactUri, title, summary,
@@ -107,26 +104,26 @@ class AiDatabase {
        FROM agent_artifacts
        WHERE goal_id = @goalId
        ORDER BY created_at DESC
-       LIMIT @limit`,
+       LIMIT @limit`
     );
     this.upsertEmbeddingStatement = this.db.prepare(
       `INSERT INTO goal_embeddings (goal_id, workspace_id, embedding_model, embedding, embedding_norm)
        VALUES (@goalId, @workspaceId, @embeddingModel, json(@embedding), @embeddingNorm)
        ON CONFLICT(goal_id, embedding_model)
-       DO UPDATE SET embedding = excluded.embedding, embedding_norm = excluded.embedding_norm, updated_at = CURRENT_TIMESTAMP`,
+       DO UPDATE SET embedding = excluded.embedding, embedding_norm = excluded.embedding_norm, updated_at = CURRENT_TIMESTAMP`
     );
     this.getEmbeddingStatement = this.db.prepare(
       `SELECT id, goal_id as goalId, workspace_id as workspaceId, embedding_model as embeddingModel,
               json_extract(embedding, '$') as embedding, embedding_norm as embeddingNorm,
               created_at as createdAt, updated_at as updatedAt
        FROM goal_embeddings
-       WHERE goal_id = @goalId AND embedding_model = @embeddingModel`,
+       WHERE goal_id = @goalId AND embedding_model = @embeddingModel`
     );
     this.listEmbeddingsStatement = this.db.prepare(
       `SELECT id, goal_id as goalId, workspace_id as workspaceId, embedding_model as embeddingModel,
               json_extract(embedding, '$') as embedding, embedding_norm as embeddingNorm,
               created_at as createdAt, updated_at as updatedAt
-       FROM goal_embeddings`,
+       FROM goal_embeddings`
     );
   }
 
@@ -134,12 +131,10 @@ class AiDatabase {
     this.db.exec(
       `CREATE TABLE IF NOT EXISTS schema_migrations (
         id TEXT PRIMARY KEY
-      )`,
+      )`
     );
 
-    const appliedRowsLegacy = this.db.prepare(`SELECT id FROM schema_migrations`).all() as Array<{
-      id: string;
-    }>;
+    const appliedRowsLegacy = this.db.prepare(`SELECT id FROM schema_migrations`).all() as Array<{ id: string }>;
     const appliedRows = Array.isArray(appliedRowsLegacy)
       ? appliedRowsLegacy
       : (this.db.prepare(`SELECT id FROM schema_migrations`).all() as Array<{ id: string }>);
@@ -289,9 +284,7 @@ class AiDatabase {
   }
 
   getGoalEmbedding(goalId: string, embeddingModel: string): GoalEmbeddingRecord | undefined {
-    const row = this.getEmbeddingStatement.get({ goalId, embeddingModel }) as
-      | GoalEmbeddingRecord
-      | undefined;
+    const row = this.getEmbeddingStatement.get({ goalId, embeddingModel }) as GoalEmbeddingRecord | undefined;
     if (!row) {
       return undefined;
     }
@@ -310,12 +303,7 @@ class AiDatabase {
         continue;
       }
       const candidate = normalizeEmbeddingRow(candidateRow);
-      const score = cosineSimilarity(
-        target.embedding,
-        target.embeddingNorm,
-        candidate.embedding,
-        candidate.embeddingNorm,
-      );
+      const score = cosineSimilarity(target.embedding, target.embeddingNorm, candidate.embedding, candidate.embeddingNorm);
       if (!Number.isFinite(score)) {
         continue;
       }

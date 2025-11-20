@@ -55,7 +55,104 @@ pub struct KernelManifest {
     pub token_policies: Vec<TokenPolicyManifestEntry>,
 }
 
+impl Default for KernelManifest {
+    fn default() -> Self {
+        // Delegate to the canonical constructor to avoid duplication.
+        Self::manifest_default()
+    }
+}
+
 impl KernelManifest {
+    fn manifest_default() -> Self {
+        let mut capabilities = vec![
+            CapabilityManifestEntry::new(CAPABILITY_PROCESS),
+            CapabilityManifestEntry::new(CAPABILITY_MEMORY),
+            CapabilityManifestEntry::new(CAPABILITY_IPC),
+            CapabilityManifestEntry::new(CAPABILITY_FILESYSTEM),
+            CapabilityManifestEntry::new(CAPABILITY_SECURITY),
+            CapabilityManifestEntry {
+                id: CAPABILITY_GATEWAY.to_string(),
+                depends_on: vec![
+                    CAPABILITY_PROCESS.to_string(),
+                    CAPABILITY_MEMORY.to_string(),
+                    CAPABILITY_SECURITY.to_string(),
+                ],
+                ..CapabilityManifestEntry::new(CAPABILITY_GATEWAY)
+            },
+            CapabilityManifestEntry {
+                id: CAPABILITY_RUNTIME_MANAGER.to_string(),
+                depends_on: vec![
+                    CAPABILITY_PROCESS.to_string(),
+                    CAPABILITY_MEMORY.to_string(),
+                    CAPABILITY_SECURITY.to_string(),
+                ],
+                ..CapabilityManifestEntry::new(CAPABILITY_RUNTIME_MANAGER)
+            },
+        ];
+
+        let mut agent_factory_capability = CapabilityManifestEntry::new(CAPABILITY_AGENT_FACTORY);
+        agent_factory_capability.depends_on = vec![
+            CAPABILITY_PROCESS.to_string(),
+            CAPABILITY_MEMORY.to_string(),
+            CAPABILITY_SECURITY.to_string(),
+            CAPABILITY_GATEWAY.to_string(),
+        ];
+        agent_factory_capability.autostart = false;
+        capabilities.push(agent_factory_capability);
+
+        let runtimes = vec![
+            RuntimeManifestEntry::new("rust", RuntimeKind::Rust, "1.75", "bin/noa_kernel"),
+            RuntimeManifestEntry::new(
+                "python",
+                RuntimeKind::Python,
+                "3.11",
+                "python runtime/bootstrap.py",
+            ),
+            RuntimeManifestEntry::new("go", RuntimeKind::Go, "1.21", "go/bin/runtime"),
+            RuntimeManifestEntry::new(
+                "dotnet",
+                RuntimeKind::DotNet,
+                "8.0",
+                "dotnet/Noa.Runtime.dll",
+            ),
+        ];
+
+        let token_policies = vec![
+            TokenPolicyManifestEntry {
+                scope: SCOPE_HOST_ENVIRONMENT_TAKEOVER.to_string(),
+                description: Some(
+                    "Allows an actor to request exclusive control over a managed environment"
+                        .to_string(),
+                ),
+                ttl_seconds: 600,
+                capabilities: vec![
+                    CAPABILITY_PROCESS.to_string(),
+                    CAPABILITY_SECURITY.to_string(),
+                ],
+            },
+            TokenPolicyManifestEntry {
+                scope: SCOPE_HOST_RESOURCE_ARBITRATE.to_string(),
+                description: Some(
+                    "Allows an actor to arbitrate CPU/memory allocations for an environment"
+                        .to_string(),
+                ),
+                ttl_seconds: 600,
+                capabilities: vec![
+                    CAPABILITY_PROCESS.to_string(),
+                    CAPABILITY_MEMORY.to_string(),
+                    CAPABILITY_SECURITY.to_string(),
+                ],
+            },
+        ];
+
+        Self {
+            version: "1.0".to_string(),
+            capabilities,
+            runtimes,
+            metadata: HashMap::new(),
+            token_policies,
+        }
+    }
     /// Load a manifest from a YAML file.
     pub fn load_from_yaml(path: impl AsRef<Path>) -> Result<Self, ManifestError> {
         let content = fs::read_to_string(path).map_err(ManifestError::Io)?;
@@ -65,9 +162,8 @@ impl KernelManifest {
     }
 
     /// Provide a manifest populated with the built-in capabilities and runtimes.
-    pub fn builtin() -> Self {
-        Self::default()
-    }
+    #[allow(clippy::should_implement_trait)]
+    pub fn default() -> Self { Self::manifest_default() }
 
     /// Validate manifest invariants.
     pub fn validate(&self) -> Result<(), ManifestError> {
@@ -160,99 +256,6 @@ impl KernelManifest {
     /// List all token policies defined in the manifest.
     pub fn token_policies(&self) -> &[TokenPolicyManifestEntry] {
         &self.token_policies
-    }
-}
-
-impl Default for KernelManifest {
-    fn default() -> Self {
-        let mut capabilities = vec![
-            CapabilityManifestEntry::new(CAPABILITY_PROCESS),
-            CapabilityManifestEntry::new(CAPABILITY_MEMORY),
-            CapabilityManifestEntry::new(CAPABILITY_IPC),
-            CapabilityManifestEntry::new(CAPABILITY_FILESYSTEM),
-            CapabilityManifestEntry::new(CAPABILITY_SECURITY),
-            CapabilityManifestEntry {
-                id: CAPABILITY_GATEWAY.to_string(),
-                depends_on: vec![
-                    CAPABILITY_PROCESS.to_string(),
-                    CAPABILITY_MEMORY.to_string(),
-                    CAPABILITY_SECURITY.to_string(),
-                ],
-                ..CapabilityManifestEntry::new(CAPABILITY_GATEWAY)
-            },
-            CapabilityManifestEntry {
-                id: CAPABILITY_RUNTIME_MANAGER.to_string(),
-                depends_on: vec![
-                    CAPABILITY_PROCESS.to_string(),
-                    CAPABILITY_MEMORY.to_string(),
-                    CAPABILITY_SECURITY.to_string(),
-                ],
-                ..CapabilityManifestEntry::new(CAPABILITY_RUNTIME_MANAGER)
-            },
-        ];
-
-        let mut agent_factory_capability = CapabilityManifestEntry::new(CAPABILITY_AGENT_FACTORY);
-        agent_factory_capability.depends_on = vec![
-            CAPABILITY_PROCESS.to_string(),
-            CAPABILITY_MEMORY.to_string(),
-            CAPABILITY_SECURITY.to_string(),
-            CAPABILITY_GATEWAY.to_string(),
-        ];
-        agent_factory_capability.autostart = false;
-        capabilities.push(agent_factory_capability);
-
-        let runtimes = vec![
-            RuntimeManifestEntry::new("rust", RuntimeKind::Rust, "1.75", "bin/noa_kernel"),
-            RuntimeManifestEntry::new(
-                "python",
-                RuntimeKind::Python,
-                "3.11",
-                "python runtime/bootstrap.py",
-            ),
-            RuntimeManifestEntry::new("go", RuntimeKind::Go, "1.21", "go/bin/runtime"),
-            RuntimeManifestEntry::new(
-                "dotnet",
-                RuntimeKind::DotNet,
-                "8.0",
-                "dotnet/Noa.Runtime.dll",
-            ),
-        ];
-
-        let token_policies = vec![
-            TokenPolicyManifestEntry {
-                scope: SCOPE_HOST_ENVIRONMENT_TAKEOVER.to_string(),
-                description: Some(
-                    "Allows an actor to request exclusive control over a managed environment"
-                        .to_string(),
-                ),
-                ttl_seconds: 600,
-                capabilities: vec![
-                    CAPABILITY_PROCESS.to_string(),
-                    CAPABILITY_SECURITY.to_string(),
-                ],
-            },
-            TokenPolicyManifestEntry {
-                scope: SCOPE_HOST_RESOURCE_ARBITRATE.to_string(),
-                description: Some(
-                    "Allows an actor to arbitrate CPU/memory allocations for an environment"
-                        .to_string(),
-                ),
-                ttl_seconds: 600,
-                capabilities: vec![
-                    CAPABILITY_PROCESS.to_string(),
-                    CAPABILITY_MEMORY.to_string(),
-                    CAPABILITY_SECURITY.to_string(),
-                ],
-            },
-        ];
-
-        Self {
-            version: "1.0".to_string(),
-            capabilities,
-            runtimes,
-            metadata: HashMap::new(),
-            token_policies,
-        }
     }
 }
 

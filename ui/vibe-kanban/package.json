@@ -14,16 +14,14 @@
   },
   "dependencies": {
     "better-sqlite3": "9.6.0",
-    "next": "14.2.32",
+    "next": "14.2.3",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "zod": "3.22.4"
   },
   "devDependencies": {
-    "@testing-library/jest-dom": "5.17.0",
     "@testing-library/react": "14.2.1",
     "@testing-library/user-event": "14.5.2",
-    "@types/testing-library__jest-dom": "5.14.9",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "20.12.7",
     "@types/react": "18.2.73",
@@ -42,6 +40,6 @@
     "prettier": "3.2.5",
     "tailwindcss": "3.4.3",
     "typescript": "5.4.5",
-    "vitest": "1.6.1"
+    "vitest": "1.5.0"
   }
 }
