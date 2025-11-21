@@ -11,11 +11,32 @@ $binDir = Join-Path $portableRoot "bin"
 $manifestPath = Join-Path $scriptDir "pwsh-portable.manifest.json"
 $pwshVersion = $env:PWSH_VERSION
 if (-not $pwshVersion) { $pwshVersion = "7.4.5" }
+$requestedPlatform = $env:NOA_PWSH_PLATFORM
 
 function Write-Info {
     param([string]$Message)
     if ($Silent) { return }
     Write-Host $Message
+}
+
+function Resolve-ManifestPlatform {
+    param([string]$Manifest, [string]$Binary)
+    if (-not (Test-Path $Manifest)) { return $null }
+    try {
+        $data = Get-Content -Path $Manifest -Raw | ConvertFrom-Json -ErrorAction Stop
+    } catch {
+        return $null
+    }
+    if ($data.platforms) {
+        foreach ($entry in $data.platforms) {
+            if (-not $entry.binary) { continue }
+            $abs = Resolve-Path -Path (Join-Path (Split-Path -Parent $Manifest) $entry.binary)
+            if ($abs -and $abs.ToString().TrimEnd([System.IO.Path]::DirectorySeparatorChar) -eq $Binary.TrimEnd([System.IO.Path]::DirectorySeparatorChar)) {
+                return $entry.platform
+            }
+        }
+    }
+    return $data.platform ?? $data.default_platform
 }
 
 if ($env:NOA_PWSH_ENV) {
@@ -29,12 +50,16 @@ if (-not (Test-Path $portableRoot)) {
     throw "Portable PowerShell missing"
 }
 
-$pwshCandidates = @(
-    (Join-Path $binDir "pwsh.exe"),
-    (Join-Path $binDir "pwsh"),
-    (Join-Path $currentLink "pwsh.exe"),
-    (Join-Path $currentLink "pwsh")
-)
+$pwshCandidates = New-Object System.Collections.Generic.List[string]
+if ($requestedPlatform) {
+    $platformBin = Join-Path $binDir $requestedPlatform
+    $pwshCandidates.Add((Join-Path $platformBin "pwsh.exe"))
+    $pwshCandidates.Add((Join-Path $platformBin "pwsh"))
+}
+$pwshCandidates.Add((Join-Path $binDir "pwsh.exe"))
+$pwshCandidates.Add((Join-Path $binDir "pwsh"))
+$pwshCandidates.Add((Join-Path $currentLink "pwsh.exe"))
+$pwshCandidates.Add((Join-Path $currentLink "pwsh"))
 
 $pwshPath = $null
 foreach ($cand in $pwshCandidates) {
@@ -54,6 +79,8 @@ $env:POWERSHELL_BIN = $pwshPath
 $env:NOA_PWSH_ENV = "1"
 $env:NOA_PWSH_PORTABLE_ROOT = $portableRoot
 $env:NOA_PWSH_MANIFEST = $manifestPath
+$resolvedPlatform = Resolve-ManifestPlatform -Manifest $manifestPath -Binary $pwshPath
+if ($resolvedPlatform) { $env:NOA_PWSH_PLATFORM_RESOLVED = $resolvedPlatform }
 $separator = [System.IO.Path]::PathSeparator
 $prependPath = (Split-Path -Parent $pwshPath)
 if ($env:PATH -notlike "$prependPath*") {
@@ -72,6 +99,9 @@ if (-not $Silent) {
         }
         Write-Info "   manifest      = $manifestPath"
         Write-Info "   manifest sha  = $sha256"
+    }
+    if ($resolvedPlatform) {
+        Write-Info "   platform     = $resolvedPlatform"
     }
     try {
         & $pwshPath --version | Write-Info

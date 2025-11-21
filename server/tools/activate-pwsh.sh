@@ -7,6 +7,7 @@ set -euo pipefail
 
 NOA_ACTIVATE_SILENT="${NOA_ACTIVATE_SILENT:-0}"
 PWSH_VERSION="${PWSH_VERSION:-7.4.5}"
+REQUESTED_PLATFORM="${NOA_PWSH_PLATFORM:-}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 PORTABLE_ROOT="$SCRIPT_DIR/pwsh-portable"
@@ -36,7 +37,7 @@ if [[ -n "${NOA_PWSH_ENV:-}" ]]; then
     return 0 2>/dev/null || exit 0
 fi
 
-if [[ ! -d "$PORTABLE_ROOT" || ! -d "$CURRENT_LINK" ]]; then
+if [[ ! -d "$PORTABLE_ROOT" ]]; then
     fail_missing_bundle
 fi
 
@@ -46,6 +47,15 @@ PWSH_CANDIDATES=(
     "$CURRENT_LINK/pwsh"
     "$CURRENT_LINK/pwsh.exe"
 )
+
+if [[ -n "$REQUESTED_PLATFORM" ]]; then
+    if [[ -f "$BIN_DIR/$REQUESTED_PLATFORM/pwsh" ]]; then
+        PWSH_CANDIDATES=("$BIN_DIR/$REQUESTED_PLATFORM/pwsh" "${PWSH_CANDIDATES[@]}")
+    fi
+    if [[ -f "$BIN_DIR/$REQUESTED_PLATFORM/pwsh.exe" ]]; then
+        PWSH_CANDIDATES=("$BIN_DIR/$REQUESTED_PLATFORM/pwsh.exe" "${PWSH_CANDIDATES[@]}")
+    fi
+fi
 
 POWERSHELL_BIN=""
 for cand in "${PWSH_CANDIDATES[@]}"; do
@@ -61,10 +71,43 @@ if [[ -z "$POWERSHELL_BIN" ]]; then
 fi
 
 PWSH_DIR="$(cd "$(dirname "$POWERSHELL_BIN")" && pwd)"
+resolve_manifest_platform() {
+    if [[ ! -f "$MANIFEST_PATH" ]]; then
+        return
+    fi
+    if ! command -v python3 >/dev/null 2>&1; then
+        return
+    fi
+    python3 - <<'PY' "$MANIFEST_PATH" "$POWERSHELL_BIN"
+import json, sys
+from pathlib import Path
+manifest = Path(sys.argv[1])
+binary = Path(sys.argv[2]).resolve()
+try:
+    data = json.loads(manifest.read_text())
+except Exception:
+    raise SystemExit
+platforms = data.get("platforms")
+if isinstance(platforms, list):
+    for entry in platforms:
+        rel = entry.get("binary")
+        if not rel:
+            continue
+        binary_path = (manifest.parent / rel).resolve()
+        if binary_path == binary:
+            print(entry.get("platform", ""))
+            raise SystemExit
+default = data.get("platform") or data.get("default_platform")
+if default:
+    print(default)
+PY
+}
+RESOLVED_PLATFORM="$(resolve_manifest_platform || true)"
 export POWERSHELL_BIN="$POWERSHELL_BIN"
 export NOA_PWSH_ENV=1
 export NOA_PWSH_PORTABLE_ROOT="$PORTABLE_ROOT"
 export NOA_PWSH_MANIFEST="$MANIFEST_PATH"
+export NOA_PWSH_PLATFORM_RESOLVED="${RESOLVED_PLATFORM:-}"
 export PATH="$PWSH_DIR:$PATH"
 if command -v hash >/dev/null 2>&1; then
     hash -r 2>/dev/null || true
@@ -84,6 +127,9 @@ if [[ "$NOA_ACTIVATE_SILENT" != "1" ]]; then
         fi
         log "   manifest      = $MANIFEST_PATH"
         log "   manifest sha  = ${MANIFEST_SHA:-unavailable}"
+    fi
+    if [[ -n "$RESOLVED_PLATFORM" ]]; then
+        log "   platform     = $RESOLVED_PLATFORM"
     fi
     "$POWERSHELL_BIN" --version 2>/dev/null || true
     log ""

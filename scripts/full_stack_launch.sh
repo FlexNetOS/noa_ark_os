@@ -288,6 +288,13 @@ print_phase_summary() {
     printf '%-24s %-10s %s\n' "$phase" "${PHASE_STATE[$phase]}" "${PHASE_REASON[$phase]}"
   done
   printf '\n'
+  if [[ -f "$PWSH_SENTINEL" ]]; then
+    printf 'Portable PowerShell evidence: %s\n' "$PWSH_SENTINEL"
+    cat "$PWSH_SENTINEL"
+    printf '\n'
+  else
+    printf 'Portable PowerShell evidence sentinel missing (expected %s)\n\n' "$PWSH_SENTINEL"
+  fi
 }
 
 detect_host_platform() {
@@ -376,6 +383,7 @@ record_pwsh_activation() {
   local reason="$2"
   local bin="$3"
   local manifest="$4"
+  local platform="$5"
   local manifest_sha
   manifest_sha=$(compute_sha256 "$manifest")
   if [[ -z "$PWSH_SENTINEL" ]]; then
@@ -388,7 +396,8 @@ record_pwsh_activation() {
   "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "binary": "$(json_escape "${bin:-}")",
   "manifest": "$(json_escape "${manifest:-}")",
-  "manifest_sha256": "$(json_escape "$manifest_sha")"
+  "manifest_sha256": "$(json_escape "$manifest_sha")",
+  "platform": "$(json_escape "${platform:-}")"
 }
 EOF
 }
@@ -400,26 +409,26 @@ activate_portable_pwsh() {
   local previous_silent="${NOA_ACTIVATE_SILENT:-0}"
   if [[ -n "${NOA_PWSH_ENV:-}" ]]; then
     reason="NOA_PWSH_ENV preset ($POWERSHELL_BIN)"
-    record_pwsh_activation "preactivated" "$reason" "$POWERSHELL_BIN" "$manifest"
+    record_pwsh_activation "preactivated" "$reason" "$POWERSHELL_BIN" "$manifest" "${NOA_PWSH_PLATFORM_RESOLVED:-external}"
     set_phase_status "powershell_activation" "skipped" "$reason"
     return 0
   fi
   if [[ ! -f "$activator" ]]; then
     reason="missing $activator"
-    record_pwsh_activation "missing_activator" "$reason" "" "$manifest"
+    record_pwsh_activation "missing_activator" "$reason" "" "$manifest" ""
     set_phase_status "powershell_activation" "skipped" "no activator; run setup-portable-pwsh.sh"
     return 1
   fi
   if NOA_ACTIVATE_SILENT=1 source "$activator"; then
     reason="portable bundle activated"
-    record_pwsh_activation "activated" "$reason" "$POWERSHELL_BIN" "$manifest"
+    record_pwsh_activation "activated" "$reason" "$POWERSHELL_BIN" "$manifest" "${NOA_PWSH_PLATFORM_RESOLVED:-unknown}"
     set_phase_status "powershell_activation" "ran" "$reason"
     NOA_ACTIVATE_SILENT="$previous_silent"
     return 0
   else
     local rc=$?
     reason="activator exit $rc"
-    record_pwsh_activation "failed" "$reason" "$POWERSHELL_BIN" "$manifest"
+    record_pwsh_activation "failed" "$reason" "$POWERSHELL_BIN" "$manifest" "${NOA_PWSH_PLATFORM_RESOLVED:-}" 
     set_phase_status "powershell_activation" "failed" "activator failed; run setup-portable-pwsh.sh"
     NOA_ACTIVATE_SILENT="$previous_silent"
     return 1
@@ -445,6 +454,13 @@ append_pipeline_cmd() {
 }
 
 activate_toolchains() {
+  local toolchain_activator="$ROOT/server/tools/activate-toolchains.sh"
+  if [[ -f "$toolchain_activator" ]]; then
+    info "Activating portable toolchains"
+    # shellcheck source=/dev/null
+    source "$toolchain_activator"
+    return
+  fi
   if [[ -z "${NOA_CARGO_ENV:-}" ]]; then
     if [[ -f "$ROOT/server/tools/activate-cargo-wsl.sh" ]]; then
       info "Activating portable Cargo toolchain (WSL/Linux)"
@@ -724,10 +740,13 @@ needs_cuda_setup() {
 }
 
 record_cuda_state() {
+  local arch
+  arch=$(uname -m 2>/dev/null || echo "unknown")
   cat >"$CUDA_SENTINEL" <<EOF
 {
   "recorded_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "host": "$HOST_OS"
+  "host": "$HOST_OS",
+  "arch": "$arch"
 }
 EOF
 }
@@ -751,10 +770,6 @@ maybe_run_cuda_setup() {
       fi
       ;;
   esac
-  if [[ $IS_WINDOWS -ne 1 ]]; then
-    set_phase_status "cuda" "skipped" "requires Windows PowerShell"
-    return
-  fi
   if ! ensure_powershell; then
     set_phase_status "cuda" "skipped" "PowerShell unavailable"
     return
@@ -813,10 +828,6 @@ maybe_prepare_llama_server() {
       reason="auto"
       ;;
   esac
-  if [[ $IS_WINDOWS -ne 1 ]]; then
-    set_phase_status "llama_server" "skipped" "requires Windows PowerShell"
-    return
-  fi
   if ! ensure_powershell; then
     set_phase_status "llama_server" "skipped" "PowerShell unavailable"
     return

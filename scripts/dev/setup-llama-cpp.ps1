@@ -15,6 +15,11 @@ param(
     [string]$WorkspaceRoot
 )
 
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+$hostIsWindows = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)
+$hostIsLinux = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Linux)
+
 if (-not $WorkspaceRoot) {
     $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
     $WorkspaceRoot = Resolve-Path -Path (Join-Path $scriptRoot "..\..")
@@ -89,32 +94,38 @@ if ($BuildFromSource) {
     Write-Success "Llama.cpp built from source"
     
 } else {
-    Write-Info "Downloading prebuilt llama.cpp binaries..."
-    
-    # Determine architecture
+    Write-Info "Provisioning llama.cpp binaries..."
     $arch = if ([Environment]::Is64BitOperatingSystem) { "x64" } else { "x86" }
-    $llamaCppVersion = "b4315"
-    
-    # Check for CUDA
-    $hasCuda = Test-Path "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA"
-    
-    if ($hasCuda) {
-        $downloadUrl = "https://github.com/ggerganov/llama.cpp/releases/download/$llamaCppVersion/llama-$llamaCppVersion-bin-win-cuda-cu12.2.0-$arch.zip"
-        Write-Info "Downloading CUDA-enabled version..."
-    } else {
-        $downloadUrl = "https://github.com/ggerganov/llama.cpp/releases/download/$llamaCppVersion/llama-$llamaCppVersion-bin-win-avx2-$arch.zip"
-        Write-Info "Downloading CPU-only version..."
+    if ($arch -ne "x64") {
+        Write-Warning "Only x64 hosts are validated for prebuilt binaries."
     }
-    
+    $llamaCppVersion = "b4315"
+    $releaseBaseUrl = "https://github.com/ggml-org/llama.cpp/releases/download/$llamaCppVersion"
+    $assetName = if ($hostIsWindows) {
+        $hasCuda = Test-Path "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA"
+        if ($hasCuda) {
+            "llama-$llamaCppVersion-bin-win-cuda-cu12.4-$arch.zip"
+        } else {
+            "llama-$llamaCppVersion-bin-win-avx2-$arch.zip"
+        }
+    } elseif ($hostIsLinux) {
+        "llama-$llamaCppVersion-bin-ubuntu-x64.zip"
+    } else {
+        throw "Unsupported OS for prebuilt llama.cpp; build from source."
+    }
+    $downloadUrl = "$releaseBaseUrl/$assetName"
     $zipPath = Join-Path $ServerAIDir "llama-cpp.zip"
-    
     try {
         Invoke-WebRequest -Uri $downloadUrl -OutFile $zipPath
         Write-Success "Downloaded llama.cpp"
-        
+        Write-Info "Expanding $assetName into bin/ ..."
         Expand-Archive -Path $zipPath -DestinationPath (Join-Path $LlamaCppDir "bin") -Force
         Remove-Item $zipPath
-        
+        if ($hostIsLinux) {
+            Get-ChildItem -Recurse -Path (Join-Path $LlamaCppDir "bin") -Filter "llama*" | ForEach-Object {
+                chmod +x $_.FullName 2>$null
+            }
+        }
         Write-Success "Llama.cpp binaries installed"
     } catch {
         Write-Error "Failed to download: $($_.Exception.Message)"
@@ -124,28 +135,30 @@ if ($BuildFromSource) {
 }
 
 # Step 2: Download model
+$modelUrl = $null
+$modelFileName = $null
+switch ($ModelSize) {
+    "3b" {
+        $modelUrl = "https://huggingface.co/QuantFactory/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct.Q4_K_M.gguf"
+        $modelFileName = "Llama-3.2-3B-Instruct.Q4_K_M.gguf"
+    }
+    "7b" {
+        $modelUrl = "https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/mistral-7b-instruct-v0.2.Q4_K_M.gguf"
+        $modelFileName = "mistral-7b-instruct-v0.2.Q4_K_M.gguf"
+    }
+    "8b" {
+        $modelUrl = "https://huggingface.co/QuantFactory/Meta-Llama-3.1-8B-Instruct-GGUF/resolve/main/Meta-Llama-3.1-8B-Instruct.Q4_K_M.gguf"
+        $modelFileName = "Meta-Llama-3.1-8B-Instruct.Q4_K_M.gguf"
+    }
+    default {
+        Write-Error "Invalid model size: $ModelSize. Use 3b, 7b, or 8b"
+        exit 1
+    }
+}
+
 if (!$SkipModelDownload) {
     Write-Info "Downloading model..."
-    
-    $modelUrl = switch ($ModelSize) {
-        "3b" {
-            "https://huggingface.co/QuantFactory/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct.Q4_K_M.gguf"
-        }
-        "7b" {
-            "https://huggingface.co/TheBloke/Mistral-7B-Instruct-v0.2-GGUF/resolve/main/mistral-7b-instruct-v0.2.Q4_K_M.gguf"
-        }
-        "8b" {
-            "https://huggingface.co/QuantFactory/Meta-Llama-3.1-8B-Instruct-GGUF/resolve/main/Meta-Llama-3.1-8B-Instruct.Q4_K_M.gguf"
-        }
-        default {
-            Write-Error "Invalid model size: $ModelSize. Use 3b, 7b, or 8b"
-            exit 1
-        }
-    }
-    
-    $modelFileName = Split-Path $modelUrl -Leaf
     $modelPath = Join-Path (Join-Path $LlamaCppDir "models") $modelFileName
-    
     if (Test-Path $modelPath) {
         Write-Info "Model already exists: $modelPath"
     } else {
@@ -201,11 +214,13 @@ Write-Success "Configuration created: $configPath"
 # Step 4: Create start script
 Write-Info "Creating start script..."
 
-$startScriptContent = @"
+# Build start script template without expanding runtime variables
+$serverBinary = if ($hostIsWindows) { "llama-server.exe" } else { "llama-server" }
+$startScriptTemplate = @'
 # Start Llama.cpp Server
 param(
     [Parameter(Mandatory=$false)]
-    [string]$ModelFile = "$modelFileName",
+    [string]$ModelFile = "__DEFAULT_MODEL_FILE__",
     [Parameter(Mandatory=$false)]
     [string]$Host = "127.0.0.1",
     [Parameter(Mandatory=$false)]
@@ -222,7 +237,7 @@ $serverDir = Join-Path $workspaceRoot "server"
 $serverAiDir = Join-Path $serverDir "ai"
 $llamaCppDir = Join-Path $serverAiDir "llama-cpp"
 $binDir = Join-Path $llamaCppDir "bin"
-$binPath = Join-Path $binDir "llama-server.exe"
+$binPath = Join-Path $binDir "__SERVER_BINARY__"
 $modelsDir = Join-Path $llamaCppDir "models"
 $modelPath = Join-Path $modelsDir $ModelFile
 $logDir = Join-Path $llamaCppDir "logs"
@@ -230,12 +245,17 @@ $logPath = Join-Path $logDir "server.log"
 
 Write-Host "Starting Llama.cpp server..." -ForegroundColor Cyan
 Write-Host "Model: $modelPath" -ForegroundColor Gray
-Write-Host "Server: http://$Host:$Port" -ForegroundColor Gray
+Write-Host "Server: http://${Host}:$Port" -ForegroundColor Gray
 
 if (!(Test-Path $modelPath)) {
     Write-Host "ERROR: Model not found at $modelPath" -ForegroundColor Red
     Write-Host "Available models:" -ForegroundColor Yellow
     Get-ChildItem $modelsDir -Filter "*.gguf" | ForEach-Object { Write-Host "  - $($_.Name)" }
+    exit 1
+}
+
+if (!(Test-Path $binPath)) {
+    Write-Host "ERROR: Llama server binary missing at $binPath"
     exit 1
 }
 
@@ -251,11 +271,12 @@ if (!(Test-Path $modelPath)) {
     --log-file $logPath
 
 Write-Host "Server stopped" -ForegroundColor Yellow
-"@
+'@
 
 $scriptsDir = Join-Path $WorkspaceRoot "scripts"
 $devScriptsDir = Join-Path $scriptsDir "dev"
 $startScriptPath = Join-Path $devScriptsDir "start-llama-server.ps1"
+$startScriptContent = $startScriptTemplate.Replace("__DEFAULT_MODEL_FILE__", $modelFileName).Replace("__SERVER_BINARY__", $serverBinary)
 $startScriptContent | Set-Content -Path $startScriptPath -Encoding UTF8
 
 Write-Success "Start script created: $startScriptPath"

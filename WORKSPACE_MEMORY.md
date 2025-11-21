@@ -97,12 +97,12 @@ D:\dev\workspaces\noa_ark_os\
 - Cargo Check (Portable)
 - Activate Portable Cargo
 
-### Portable PowerShell Bundle (2025-11-21)
-- `server/tools/setup-portable-pwsh.{sh,ps1}` downloads PowerShell 7.4.5 into `server/tools/pwsh-portable/current/` with manifest + SHA recorded at `server/tools/pwsh-portable.manifest.json`.
-- `server/tools/activate-pwsh.{sh,ps1}` exports `POWERSHELL_BIN`, appends the bundle to `PATH`, and sets `NOA_PWSH_ENV` so any activator can rely on a consistent runtime.
-- `scripts/full_stack_launch.sh` now adds a `powershell_activation` phase that sources the activator, writes evidence to `build_output/system-launch/pwsh-activation.json`, and surfaces failures that require rerunning the setup script.
-- Existing toolchain activators (`activate-cargo-wsl.sh`, `activate-node.sh`) opportunistically source the PowerShell activator first so downstream helpers inherit the environment automatically.
-- CI/automation guard `tools/automation/check_portable_pwsh.py` validates the manifest hash + binary presence; `scripts/lib/ensure_no_duplicate_tasks.sh` now invokes it so missing bundles fail fast with remediation guidance.
+### Portable PowerShell + CUDA/Llama Enablement (2025-11-21)
+- `server/tools/setup-portable-pwsh.{sh,ps1}` now provisions multi-platform bundles (Linux, macOS, Windows) and emits a consolidated manifest (`server/tools/pwsh-portable.manifest.json`) with per-platform hashes for automation evidence.
+- `server/tools/activate-pwsh.{sh,ps1}` surface the resolved platform via `NOA_PWSH_PLATFORM_RESOLVED`, and a new `server/tools/activate-toolchains.sh` chains PowerShell, Cargo, and Node activation for launchers/CI.
+- `scripts/full_stack_launch.sh` ingests the new activator via a dedicated phase, persists `build_output/system-launch/pwsh-activation.json`, and now prints the sentinel JSON inside the phase summary for Truth Gate evidence.
+- `tools/automation/check_portable_pwsh.py` understands the consolidated manifest, can target specific platforms, and optionally runs `pwsh --version`; `scripts/lib/ensure_no_duplicate_tasks.sh` runs it with execution verification so CI fails fast if PowerShell is missing.
+- CUDA + llama.cpp provisioning scripts (`scripts/setup/setup-cuda.ps1`, `scripts/dev/setup-llama-cpp.ps1`, `scripts/dev/start-llama-server.ps1`) now support Linux hosts through the portable PowerShell runtime, enabling the launcher’s CUDA/Llama phases to run outside of Windows.
 
 ---
 

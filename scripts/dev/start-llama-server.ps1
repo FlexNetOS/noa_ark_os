@@ -1,7 +1,7 @@
 # Start Llama.cpp Server
 param(
     [Parameter(Mandatory=$false)]
-    [string]$ModelFile = "llama-3.2-3b-q4.gguf",
+    [string]$ModelFile = "Llama-3.2-3B-Instruct.Q4_K_M.gguf",
     [Parameter(Mandatory=$false)]
     [string]$Host = "127.0.0.1",
     [Parameter(Mandatory=$false)]
@@ -18,20 +18,25 @@ $serverDir = Join-Path $workspaceRoot "server"
 $serverAiDir = Join-Path $serverDir "ai"
 $llamaCppDir = Join-Path $serverAiDir "llama-cpp"
 $binDir = Join-Path $llamaCppDir "bin"
-$binPath = Join-Path $binDir "llama-server.exe"
+$binPath = Join-Path $binDir "llama-server"
 $modelsDir = Join-Path $llamaCppDir "models"
 $modelPath = Join-Path $modelsDir $ModelFile
-$logsDir = Join-Path $llamaCppDir "logs"
-$logPath = Join-Path $logsDir "server.log"
+$logDir = Join-Path $llamaCppDir "logs"
+$logPath = Join-Path $logDir "server.log"
 
 Write-Host "Starting Llama.cpp server..." -ForegroundColor Cyan
 Write-Host "Model: $modelPath" -ForegroundColor Gray
-Write-Host "Server: http://$Host:$Port" -ForegroundColor Gray
+Write-Host "Server: http://${Host}:$Port" -ForegroundColor Gray
 
 if (!(Test-Path $modelPath)) {
     Write-Host "ERROR: Model not found at $modelPath" -ForegroundColor Red
     Write-Host "Available models:" -ForegroundColor Yellow
     Get-ChildItem $modelsDir -Filter "*.gguf" | ForEach-Object { Write-Host "  - $($_.Name)" }
+    exit 1
+}
+
+if (!(Test-Path $binPath)) {
+    Write-Host "ERROR: Llama server binary missing at $binPath"
     exit 1
 }
 
