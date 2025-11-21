@@ -1,18 +1,13 @@
-use std::io::{BufRead, Write};
+use std::io::BufRead;
 use std::path::PathBuf;
 use std::str::FromStr;
+#[cfg(feature = "inference")]
 use std::sync::Arc;
 
-<<<<<<< Updated upstream
-use anyhow::{anyhow, bail, ensure, Context, Result};
-use clap::{Args, Parser, Subcommand, ValueEnum};
-use futures::StreamExt;
-use noa_caddy_manager::{CaddyManager, HealthProbe, RateLimitConfig, ReverseProxyRoute};
-=======
-use anyhow::{bail, Context, Result};
+use anyhow::{bail, ensure, Context, Result};
 use clap::{Args, Parser, Subcommand};
+use noa_caddy_manager::{CaddyManager, HealthProbe, RateLimitConfig, ReverseProxyRoute};
 #[cfg(feature = "cicd")]
->>>>>>> Stashed changes
 use noa_cicd::CICDSystem;
 #[cfg(feature = "inference")]
 use noa_inference::{
@@ -21,12 +16,15 @@ use noa_inference::{
 };
 use noa_plugin_sdk::{ToolDescriptor, ToolRegistry};
 use noa_workflow::EvidenceLedgerEntry;
-use noa_workflow::{InferenceMetric, PipelineInstrumentation};
+#[cfg(feature = "inference")]
+use noa_workflow::InferenceMetric;
+use noa_workflow::PipelineInstrumentation;
 use relocation_daemon::{ExecutionMode, RelocationDaemon};
 use serde::Serialize;
 use serde_json::json;
 use tokio::runtime::Runtime;
 use uuid::Uuid;
+use walkdir::WalkDir;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum OutputMode {
@@ -37,8 +35,8 @@ enum OutputMode {
 #[derive(Parser)]
 #[command(
     name = "noa",
-    about = "NOA Ark OS relocation daemon tooling",
     about = "NOA Ark OS unified CLI (kernel, world, registry, trust, snapshot, agent, policy, sbom, pipeline, profile)",
+    long_about = "NOA Ark OS relocation daemon tooling",
     version
 )]
 struct Cli {
@@ -168,19 +166,11 @@ enum Commands {
         #[command(subcommand)]
         command: AgentCommands,
     },
-<<<<<<< Updated upstream
-    /// Manage notebook scaffolding and hygiene
-    Notebook {
-        #[command(subcommand)]
-        command: NotebookCommands,
-    },
     /// Manage the embedded Caddy reverse proxy
     Caddy {
         #[command(subcommand)]
         command: CaddyCommands,
     },
-=======
->>>>>>> Stashed changes
     /// Run a natural language query through the inference router
     Query {
         #[arg(value_name = "PROMPT")]
@@ -250,6 +240,20 @@ enum CaddyCommands {
     Reload {
         #[arg(long, default_value = "http://127.0.0.1:2019")]
         admin_endpoint: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum NotebookCommands {
+    /// Ensure the shared notebook workspace exists and has metadata
+    Init {
+        #[arg(long, default_value = "notebooks")]
+        path: PathBuf,
+    },
+    /// Summarise the number of tracked notebooks under the workspace
+    Status {
+        #[arg(long, default_value = "notebooks")]
+        path: PathBuf,
     },
 }
 
@@ -521,6 +525,53 @@ fn main() -> Result<()> {
             Commands::Plugin { query } => {
                 handle_registry_category("plugin", query)?;
             }
+            Commands::Notebook { command } => match command {
+                NotebookCommands::Init { path } => {
+                    std::fs::create_dir_all(&path)
+                        .with_context(|| format!("failed to create {:?}", path))?;
+                    let manifest = path.join("README.noa.md");
+                    if !manifest.exists() {
+                        let contents = "# NOA Notebook Workspace\nThis directory is managed via `noa notebook`.\n";
+                        std::fs::write(&manifest, contents)?;
+                    }
+                    let payload = json!({
+                        "component": "notebook",
+                        "action": "init",
+                        "path": path.display().to_string(),
+                        "status": "ok",
+                    });
+                    print_obj(out_mode, &payload)?;
+                }
+                NotebookCommands::Status { path } => {
+                    let mut notebooks = 0usize;
+                    let mut checkpoints = 0usize;
+                    for entry in WalkDir::new(&path).into_iter().filter_map(|entry| entry.ok()) {
+                        if entry.file_type().is_file()
+                            && entry
+                                .path()
+                                .extension()
+                                .and_then(|ext| ext.to_str())
+                                == Some("ipynb")
+                        {
+                            notebooks += 1;
+                        }
+                        if entry.file_type().is_dir()
+                            && entry.file_name() == ".ipynb_checkpoints"
+                        {
+                            checkpoints += 1;
+                        }
+                    }
+                    let payload = json!({
+                        "component": "notebook",
+                        "action": "status",
+                        "path": path.display().to_string(),
+                        "notebooks": notebooks,
+                        "checkpoint_dirs": checkpoints,
+                        "status": "ok",
+                    });
+                    print_obj(out_mode, &payload)?;
+                }
+            },
             #[cfg(feature = "inference")]
             Commands::Agent { command } => {
                 let instrumentation = Arc::new(
@@ -538,7 +589,6 @@ fn main() -> Result<()> {
             Commands::Agent { .. } => {
                 print_obj(out_mode, &json!({"component":"agent","status":"inference_disabled"}))?;
             }
-<<<<<<< Updated upstream
             Commands::Caddy { command } => match command {
                 CaddyCommands::PushRoute {
                     admin_endpoint,
@@ -610,9 +660,7 @@ fn main() -> Result<()> {
                     print_obj(out_mode, &payload)?;
                 }
             },
-=======
             #[cfg(feature = "inference")]
->>>>>>> Stashed changes
             Commands::Query { prompt, stream } => {
                 let instrumentation = Arc::new(
                     PipelineInstrumentation::new()
@@ -648,7 +696,7 @@ fn main() -> Result<()> {
                             tags.clone(),
                             evidence.clone(),
                         )
-                        .map_err(anyhow::Error::msg)?;
+                        .map_err(Error::msg)?;
                     let payload = json!({
                         "pipeline_id": pipeline,
                         "status": format!("{:?}", status),
@@ -720,7 +768,7 @@ fn handle_registry_category(category: &str, query: RegistryArgs) -> Result<()> {
 fn show_evidence(workflow_filter: Option<String>, limit: Option<usize>) -> Result<()> {
     let path = PathBuf::from("storage/db/evidence/ledger.jsonl");
     if !path.exists() {
-        anyhow::bail!("evidence ledger not found at {}", path.display());
+        bail!("evidence ledger not found at {}", path.display());
     }
     let file = std::fs::File::open(&path)?;
     let reader = std::io::BufReader::new(file);
@@ -791,7 +839,10 @@ fn inference_telemetry_handle(instrumentation: Arc<PipelineInstrumentation>) -> 
     Arc::new(InferenceTelemetryBridge { instrumentation }) as TelemetryHandle
 }
 #[cfg(not(feature = "inference"))]
-fn inference_telemetry_handle(_instrumentation: Arc<PipelineInstrumentation>) -> () { () }
+#[allow(dead_code)]
+fn inference_telemetry_handle(_instrumentation: Arc<PipelineInstrumentation>) -> () {
+    ()
+}
 
 #[cfg(feature = "inference")]
 async fn build_router(telemetry: TelemetryHandle) -> Result<ProviderRouter> {

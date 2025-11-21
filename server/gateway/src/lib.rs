@@ -19,7 +19,7 @@ mod telemetry;
 pub use auth::{AuthCredentials, UnifiedAuthenticator};
 pub use policy::{GatewayPolicy, PolicyEnforcer};
 pub use rate_limit::{RateLimiter, RateLimiterConfig};
-pub use router::{ProgrammableRouter, Protocol, RoutePlan};
+pub use router::{ProgrammableRouter, Protocol, RoutePlan, RoutingError};
 pub use telemetry::{GatewayMetrics, TelemetryEvent, TelemetrySink};
 
 use anyhow::{anyhow, Context, Result};

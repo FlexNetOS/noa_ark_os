@@ -50,14 +50,6 @@ export default function Page() {
               if (!token) {
                 return;
               }
-              logInfo({
-                component: "vibe.page",
-                event: "workflow_resume_requested",
-                message: "Requesting workflow resume",
-                outcome: "pending",
-                traceId: traceIdRef.current,
-                context: { workflowId: token.workflowId },
-              });
               const resumeArg: ResumeToken =
                 typeof token === "string"
                   ? {
@@ -68,6 +60,25 @@ export default function Page() {
                       expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
                     }
                   : token;
+              if (!resumeArg.workflowId) {
+                logInfo({
+                  component: "vibe.page",
+                  event: "workflow_resume_rejected",
+                  message: "Resume token missing workflow identifier",
+                  outcome: "rejected",
+                  traceId: traceIdRef.current,
+                  context: { reason: "missing_workflow_id" },
+                });
+                return;
+              }
+              logInfo({
+                component: "vibe.page",
+                event: "workflow_resume_requested",
+                message: "Requesting workflow resume",
+                outcome: "pending",
+                traceId: traceIdRef.current,
+                context: { workflowId: resumeArg.workflowId },
+              });
               state.resumePlan(resumeArg);
             },
             triggerEvent: (bindingId) => {

@@ -1571,10 +1571,7 @@ impl PipelineInstrumentation {
 
         for base in [&self.index_dir, &self.mirror_dir] {
             let path = base.join(format!("{}.log", log_name));
-            let mut file = OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open(path)?;
+            let mut file = OpenOptions::new().create(true).append(true).open(path)?;
             file.write_all(payload.as_bytes())?;
             file.flush()?;
             file.sync_all()?;

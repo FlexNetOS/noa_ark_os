@@ -3,13 +3,9 @@ module github.com/FlexNetOS/noa_ark_os/server/go
 go 1.24.0
 
 require (
-	github.com/gin-gonic/gin v1.9.1
-	google.golang.org/protobuf v1.33.0 // indirect
-)
-
-require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/alicebob/miniredis/v2 v2.35.0
+	github.com/gin-gonic/gin v1.9.1
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/gorilla/mux v1.8.1
 	github.com/lib/pq v1.10.9
@@ -53,4 +49,5 @@ require (
 	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/sys v0.38.0 // indirect
 	golang.org/x/text v0.31.0 // indirect
+	google.golang.org/protobuf v1.33.0 // indirect
 )

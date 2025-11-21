@@ -1,7 +1,7 @@
 use anyhow::Context;
-<<<<<<< Updated upstream
 use clap::Parser;
 use noa_api::{ApiConfig, ApiServer};
+use noa_gateway::bootstrap_gateway;
 use noa_orchestrator::UnifiedOrchestrator;
 use tokio::runtime::Builder;
 use tracing::{info, warn};
@@ -25,30 +25,27 @@ impl Cli {
     }
 }
 
-=======
-use noa_gateway::bootstrap_gateway;
-use noa_orchestrator::UnifiedOrchestrator;
-use tracing::{info, warn};
-
->>>>>>> Stashed changes
 fn init_tracing() {
-    if tracing_subscriber::fmt().with_env_filter("info").try_init().is_err() {
+    if tracing_subscriber::fmt()
+        .with_env_filter("info")
+        .try_init()
+        .is_err()
+    {
         warn!("tracing subscriber already initialised");
     }
 }
 
 fn main() -> anyhow::Result<()> {
-<<<<<<< Updated upstream
     let cli = Cli::parse();
-=======
->>>>>>> Stashed changes
     init_tracing();
 
     let orchestrator = UnifiedOrchestrator::default();
     let decision = orchestrator.evaluate_scaling();
     info!(?decision, "orchestrator ready");
 
-<<<<<<< Updated upstream
+    let gateway = bootstrap_gateway().context("failed to bootstrap gateway")?;
+    info!("gateway initialised; unified server wiring API and gateway layers");
+
     let runtime = Builder::new_multi_thread()
         .enable_all()
         .worker_threads(cli.workers)
@@ -63,14 +60,8 @@ fn main() -> anyhow::Result<()> {
         .context("failed to initialise API server")?;
 
         info!("starting Axum + Tonic API server");
+
+        let _gateway = gateway; // Hold gateway wiring for the server lifetime.
         server.run().await
     })
-=======
-    let gateway = bootstrap_gateway().context("failed to bootstrap gateway")?;
-    info!("gateway initialised; unified server is ready for future wiring");
-
-    // Placeholder until the HTTP server and orchestration loops are implemented.
-    drop(gateway);
-    Ok(())
->>>>>>> Stashed changes
 }

@@ -163,7 +163,9 @@ impl KernelManifest {
 
     /// Provide a manifest populated with the built-in capabilities and runtimes.
     #[allow(clippy::should_implement_trait)]
-    pub fn default() -> Self { Self::manifest_default() }
+    pub fn default() -> Self {
+        Self::manifest_default()
+    }
 
     /// Validate manifest invariants.
     pub fn validate(&self) -> Result<(), ManifestError> {

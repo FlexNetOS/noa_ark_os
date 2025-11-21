@@ -265,7 +265,9 @@ impl AgentModule {
 }
 
 impl Default for AgentModule {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ShellModule for AgentModule {
@@ -316,7 +318,9 @@ impl DashboardModule {
 }
 
 impl Default for DashboardModule {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ShellModule for DashboardModule {
@@ -360,7 +364,9 @@ impl KanbanModule {
 }
 
 impl Default for KanbanModule {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ShellModule for KanbanModule {
@@ -402,7 +408,9 @@ impl CiModule {
 }
 
 impl Default for CiModule {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ShellModule for CiModule {
@@ -456,7 +464,9 @@ impl StorageModule {
 }
 
 impl Default for StorageModule {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ShellModule for StorageModule {
@@ -506,7 +516,9 @@ impl AnalyticsModule {
 }
 
 impl Default for AnalyticsModule {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ShellModule for AnalyticsModule {
@@ -556,7 +568,9 @@ impl ChatModule {
 }
 
 impl Default for ChatModule {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ShellModule for ChatModule {

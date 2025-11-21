@@ -102,11 +102,11 @@ pub enum HealthStatus {
 /// Agent type classification
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum AgentType {
-    Master,   // CECCA, Board, Executive
+    Master, // CECCA, Board, Executive
     #[default]
-    Worker,   // Specialists, Operators
+    Worker, // Specialists, Operators
     SubAgent, // Micro agents
-    Swarm,    // Coordinated groups
+    Swarm,  // Coordinated groups
 }
 
 /// Agent language/runtime

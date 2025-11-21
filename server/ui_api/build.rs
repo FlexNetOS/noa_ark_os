@@ -1,5 +1,5 @@
-use std::process::Command;
 use chrono::Utc;
+use std::process::Command;
 
 fn main() {
     // Preserve existing proto compilation.
@@ -12,7 +12,13 @@ fn main() {
         .args(["rev-parse", "--short", "HEAD"])
         .output()
         .ok()
-        .and_then(|o| if o.status.success() { Some(String::from_utf8_lossy(&o.stdout).trim().to_string()) } else { None })
+        .and_then(|o| {
+            if o.status.success() {
+                Some(String::from_utf8_lossy(&o.stdout).trim().to_string())
+            } else {
+                None
+            }
+        })
         .unwrap_or_else(|| "unknown".into());
     println!("cargo:rustc-env=GIT_HASH={}", hash);
     let ts = Utc::now().to_rfc3339();

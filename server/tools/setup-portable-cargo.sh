@@ -30,8 +30,6 @@ USAGE
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --workspace)
-<<<<<<< Updated upstream
-=======
             WORKSPACE_ROOT="$(cd "$2" && pwd)"
             shift 2
             ;;
@@ -165,7 +163,6 @@ USAGE
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --workspace)
->>>>>>> Stashed changes
             if [[ -z "${2:-}" ]]; then
                 echo "Error: --workspace requires a path argument" >&2
                 usage >&2

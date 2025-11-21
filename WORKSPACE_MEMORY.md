@@ -19,6 +19,13 @@
 
 ---
 
+### Task 1 – Documentation staging cleanup (2025-11-19)
+- Keep only the curated CLI/doc files staged for merge: `docs/guides/dev-environment-cli.md`, `docs/plans/roadmap.md`, `docs/plans/roadmaps/cli_tool_roadmap.{md,todo.xml}`, `docs/roadmap/cli_config_migration_checklist.md`.
+- Treat `docs/api/search.index/**` as generated Docusaurus artifacts; they remain locally generated but are not staged/committed (they already sit behind `.gitignore`).
+- Treat `.venv-notebooks/` as disposable notebook tooling; added explicit ignore to keep the virtualenv strictly local.
+- Treat security scan exports under `tools/security/shim/.workspace/indexes/**` as local cache; ignore and regenerate on demand instead of committing.
+- Next steps after this cleanup: finish notebook conflict resolution, then unblock Go/Cargo builds for launch.
+
 ## 📂 Workspace Structure
 
 ### Location

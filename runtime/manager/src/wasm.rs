@@ -148,10 +148,7 @@ impl WasmProbeRunner {
         })
     }
 
-    fn build_store(
-        &self,
-        args: &[String],
-    ) -> Result<ProbeStorePipes, WasmProbeError> {
+    fn build_store(&self, args: &[String]) -> Result<ProbeStorePipes, WasmProbeError> {
         let stdout_pipe = WritePipe::new_in_memory();
         let stderr_pipe = WritePipe::new_in_memory();
 

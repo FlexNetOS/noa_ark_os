@@ -387,68 +387,73 @@ impl ToolServerState {
         let root_clone = root.clone();
         let reason_clone = reason.clone();
 
-        let (archive_path, report_path) = task::spawn_blocking(move || -> Result<(PathBuf, PathBuf)> {
-            let sha = calculate_sha256(&source_clone)?;
-            let version = 1u32;
-            let archive = archive_file_versioned(&canonical_clone, &root_clone, version)?;
+        let (archive_path, report_path) =
+            task::spawn_blocking(move || -> Result<(PathBuf, PathBuf)> {
+                let sha = calculate_sha256(&source_clone)?;
+                let version = 1u32;
+                let archive = archive_file_versioned(&canonical_clone, &root_clone, version)?;
 
-            let preserved_caps = extract_capabilities(&canonical_clone)?;
-            let archived_caps = extract_capabilities(&source_clone)?;
+                let preserved_caps = extract_capabilities(&canonical_clone)?;
+                let archived_caps = extract_capabilities(&source_clone)?;
 
-            let preserved_names: Vec<String> = preserved_caps.iter().map(|c| c.name().to_string()).collect();
-            let archived_names: Vec<String> = archived_caps.iter().map(|c| c.name().to_string()).collect();
+                let preserved_names: Vec<String> = preserved_caps
+                    .iter()
+                    .map(|c| c.name().to_string())
+                    .collect();
+                let archived_names: Vec<String> =
+                    archived_caps.iter().map(|c| c.name().to_string()).collect();
 
-            let version_entry = ConsolidationVersion {
-                version: format!("v{}", version),
-                source_path: source_clone.to_string_lossy().to_string(),
-                timestamp: chrono::Utc::now().to_rfc3339(),
-                sha256: sha,
-                consolidation_reason: reason_clone,
-                preserved_capabilities: preserved_names.clone(),
-                archived_capabilities: archived_names.clone(),
-                merged_by: std::env::var("USER").unwrap_or_else(|_| "unknown".to_string()),
-            };
+                let version_entry = ConsolidationVersion {
+                    version: format!("v{}", version),
+                    source_path: source_clone.to_string_lossy().to_string(),
+                    timestamp: chrono::Utc::now().to_rfc3339(),
+                    sha256: sha,
+                    consolidation_reason: reason_clone,
+                    preserved_capabilities: preserved_names.clone(),
+                    archived_capabilities: archived_names.clone(),
+                    merged_by: std::env::var("USER").unwrap_or_else(|_| "unknown".to_string()),
+                };
 
-            let ledger_path = root_clone.join("archive/consolidation/ledger.json");
-            let mut ledger = if ledger_path.exists() {
-                let raw = fs::read_to_string(&ledger_path)?;
-                serde_json::from_str::<VersionLedger>(&raw).unwrap_or_else(|_| VersionLedger::new(
-                    canonical_clone.to_string_lossy().to_string(),
-                ))
-            } else {
-                VersionLedger::new(canonical_clone.to_string_lossy().to_string())
-            };
-            ledger.add_version(version_entry);
-            fs::create_dir_all(ledger_path.parent().unwrap())?;
-            fs::write(&ledger_path, serde_json::to_string_pretty(&ledger)?)?;
+                let ledger_path = root_clone.join("archive/consolidation/ledger.json");
+                let mut ledger = if ledger_path.exists() {
+                    let raw = fs::read_to_string(&ledger_path)?;
+                    serde_json::from_str::<VersionLedger>(&raw).unwrap_or_else(|_| {
+                        VersionLedger::new(canonical_clone.to_string_lossy().to_string())
+                    })
+                } else {
+                    VersionLedger::new(canonical_clone.to_string_lossy().to_string())
+                };
+                ledger.add_version(version_entry);
+                fs::create_dir_all(ledger_path.parent().unwrap())?;
+                fs::write(&ledger_path, serde_json::to_string_pretty(&ledger)?)?;
 
-            let report = ConsolidationReport {
-                date: chrono::Utc::now().to_rfc3339(),
-                canonical_file: canonical_clone.to_string_lossy().to_string(),
-                sources_merged: 1,
-                capability_comparison: vec![],
-                tests_passed: true,
-                total_preserved: preserved_caps.len(),
-                total_archived: archived_caps.len(),
-            };
-            let report_markdown = report.to_markdown();
-            let report_path = root_clone.join("archive/consolidation/report.md");
-            fs::create_dir_all(report_path.parent().unwrap())?;
-            fs::write(&report_path, report_markdown)?;
+                let report = ConsolidationReport {
+                    date: chrono::Utc::now().to_rfc3339(),
+                    canonical_file: canonical_clone.to_string_lossy().to_string(),
+                    sources_merged: 1,
+                    capability_comparison: vec![],
+                    tests_passed: true,
+                    total_preserved: preserved_caps.len(),
+                    total_archived: archived_caps.len(),
+                };
+                let report_markdown = report.to_markdown();
+                let report_path = root_clone.join("archive/consolidation/report.md");
+                fs::create_dir_all(report_path.parent().unwrap())?;
+                fs::write(&report_path, report_markdown)?;
 
-            let index_path = root_clone.join("archive/consolidation/index.json");
-            let mut index = ConsolidationIndex::load(&index_path).unwrap_or_default();
-            index.add_entry(ConsolidationIndexEntry {
-                canonical_file: canonical_clone.to_string_lossy().to_string(),
-                version_count: ledger.versions.len(),
-                last_consolidation: chrono::Utc::now().to_rfc3339(),
-                ledger_path: ledger_path.to_string_lossy().to_string(),
-            });
-            index.save(&index_path)?;
+                let index_path = root_clone.join("archive/consolidation/index.json");
+                let mut index = ConsolidationIndex::load(&index_path).unwrap_or_default();
+                index.add_entry(ConsolidationIndexEntry {
+                    canonical_file: canonical_clone.to_string_lossy().to_string(),
+                    version_count: ledger.versions.len(),
+                    last_consolidation: chrono::Utc::now().to_rfc3339(),
+                    ledger_path: ledger_path.to_string_lossy().to_string(),
+                });
+                index.save(&index_path)?;
 
-            Ok((archive, report_path))
-        })
-        .await??;
+                Ok((archive, report_path))
+            })
+            .await??;
 
         Ok(ConsolidateResponse {
             archive_path: archive_path.to_string_lossy().to_string(),

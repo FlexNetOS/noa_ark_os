@@ -20,11 +20,7 @@ use redis::Client as RedisClient;
 use serde::Deserialize;
 use serde_json::Value;
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
-<<<<<<< Updated upstream
-use tokio::signal;
-=======
 use tokio::{net::TcpListener, signal};
->>>>>>> Stashed changes
 use tracing::{error, info};
 use url::Url;
 use uuid::Uuid;
@@ -80,11 +76,7 @@ async fn main() -> Result<()> {
     let log_format = if let Some(fmt_str) = cli.log_format.clone() {
         LogFormat::from_str(&fmt_str)?
     } else {
-<<<<<<< Updated upstream
-        server_config.observability.log_format
-=======
         LogFormat::from_str(&server_config.observability.log_format)?
->>>>>>> Stashed changes
     };
     let log_level = cli
         .log_level
@@ -133,18 +125,6 @@ async fn main() -> Result<()> {
 
     if metrics_addr != addr {
         let metrics_state = state.clone();
-<<<<<<< Updated upstream
-        tokio::spawn(async move {
-            info!(?metrics_addr, "starting dedicated metrics listener");
-            if let Err(err) = axum::Server::bind(&metrics_addr)
-                .serve(
-                    Router::new()
-                        .route("/metrics", get(metrics_handler))
-                        .with_state(metrics_state)
-                        .into_make_service(),
-                )
-                .await
-=======
         let metrics_router = Router::new()
             .route("/metrics", get(metrics_handler))
             .with_state(metrics_state);
@@ -155,7 +135,6 @@ async fn main() -> Result<()> {
             info!(?metrics_addr, "starting dedicated metrics listener");
             if let Err(err) =
                 axum::serve(metrics_listener, metrics_router.into_make_service()).await
->>>>>>> Stashed changes
             {
                 error!(?err, "metrics server terminated");
             }
@@ -163,17 +142,6 @@ async fn main() -> Result<()> {
     }
     if let Some(tls) = load_rustls(server_config.server.tls.as_ref()).await? {
         info!(?addr, "starting TLS gateway server");
-<<<<<<< Updated upstream
-        axum_server::bind_rustls(addr, tls)
-            .serve(router.into_make_service())
-            .with_graceful_shutdown(shutdown_signal())
-            .await
-            .context("gateway server exited")?;
-    } else {
-        info!(?addr, "starting HTTP gateway server");
-        axum::Server::bind(&addr)
-            .serve(router.into_make_service())
-=======
         let handle = axum_server::Handle::new();
         let shutdown_handle = handle.clone();
         tokio::spawn(async move {
@@ -191,7 +159,6 @@ async fn main() -> Result<()> {
             .with_context(|| format!("failed to bind gateway address {addr}"))?;
         info!(?addr, "starting HTTP gateway server");
         axum::serve(listener, router.into_make_service())
->>>>>>> Stashed changes
             .with_graceful_shutdown(shutdown_signal())
             .await
             .context("gateway server exited")?;
@@ -317,17 +284,11 @@ struct AppState {
     dependencies: Arc<DependencyClients>,
 }
 
-<<<<<<< Updated upstream
-#[derive(Clone, Default)]
-=======
 #[derive(Default)]
->>>>>>> Stashed changes
 struct ReadinessState {
     ready: AtomicBool,
 }
 
-<<<<<<< Updated upstream
-=======
 impl Clone for ReadinessState {
     fn clone(&self) -> Self {
         Self {
@@ -336,7 +297,6 @@ impl Clone for ReadinessState {
     }
 }
 
->>>>>>> Stashed changes
 impl ReadinessState {
     fn mark_ready(&self) {
         self.ready.store(true, Ordering::Release);
@@ -455,13 +415,6 @@ async fn load_rustls(tls: Option<&config::ServerTlsConfig>) -> Result<Option<Rus
     Ok(None)
 }
 
-<<<<<<< Updated upstream
-fn parse_log_format(value: String) -> Result<LogFormat> {
-    LogFormat::from_str(&value)
-}
-
-=======
->>>>>>> Stashed changes
 async fn shutdown_signal() {
     let ctrl_c = async {
         signal::ctrl_c()
@@ -485,8 +438,6 @@ async fn shutdown_signal() {
         _ = terminate => {},
     }
 }
-<<<<<<< Updated upstream
-=======
 
 #[cfg(test)]
 mod tests {
@@ -508,4 +459,3 @@ mod tests {
         assert!(LogFormat::from_str("??").is_err());
     }
 }
->>>>>>> Stashed changes

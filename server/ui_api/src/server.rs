@@ -191,18 +191,6 @@ impl UiApiServer {
             .with_state(self.state.clone())
     }
 
-    pub fn state(&self) -> UiApiState {
-        self.state.clone()
-    }
-
-    async fn health() -> impl IntoResponse {
-        let payload = json!({
-            "status": "ok",
-            "timestamp": Utc::now().to_rfc3339(),
-        });
-        (StatusCode::OK, Json(payload))
-    }
-
     async fn ready(State(state): State<UiApiState>) -> impl IntoResponse {
         let drop_root_exists = fs::try_exists(state.drop_root()).await.unwrap_or(false);
         let session_ready = state
@@ -234,9 +222,15 @@ impl UiApiServer {
     async fn health(State(state): State<UiApiState>) -> Json<JsonValue> {
         let uptime = state.started_at.elapsed().as_secs();
         let mut flags: Vec<String> = Vec::new();
-        if std::env::var("OFFLINE_FIRST").ok().as_deref() == Some("true") { flags.push("offline-first".into()); }
-        if std::env::var("ONLINE_GITHUB_MODE").ok().as_deref() == Some("true") { flags.push("online-github-mode".into()); }
-        if std::env::var("AI_PROVIDER").is_ok() { flags.push("ai-provider".into()); }
+        if std::env::var("OFFLINE_FIRST").ok().as_deref() == Some("true") {
+            flags.push("offline-first".into());
+        }
+        if std::env::var("ONLINE_GITHUB_MODE").ok().as_deref() == Some("true") {
+            flags.push("online-github-mode".into());
+        }
+        if std::env::var("AI_PROVIDER").is_ok() {
+            flags.push("ai-provider".into());
+        }
         flags.push("fast-health-gate".into());
         // Load registry feature flags if present
         if let Ok(bytes) = std::fs::read("registry/feature_flags.json") {
@@ -244,7 +238,9 @@ impl UiApiServer {
                 if let Some(arr) = json.get("feature_flags").and_then(|v| v.as_array()) {
                     for v in arr {
                         if let Some(s) = v.as_str() {
-                            if !flags.contains(&s.to_string()) { flags.push(s.to_string()); }
+                            if !flags.contains(&s.to_string()) {
+                                flags.push(s.to_string());
+                            }
                         }
                     }
                 }
@@ -1152,10 +1148,20 @@ mod tests {
         let value: Value = serde_json::from_slice(&bytes).unwrap();
         assert_eq!(value.get("status").and_then(|v| v.as_str()), Some("ok"));
         assert!(value.get("version").and_then(|v| v.as_str()).is_some());
-        assert!(value.get("uptime_seconds").and_then(|v| v.as_u64()).is_some());
+        assert!(value
+            .get("uptime_seconds")
+            .and_then(|v| v.as_u64())
+            .is_some());
         assert!(value.get("version_hash").and_then(|v| v.as_str()).is_some());
-        assert!(value.get("build_timestamp").and_then(|v| v.as_str()).is_some());
-        assert!(value.get("feature_flags").and_then(|v| v.as_array()).map(|a| !a.is_empty()).unwrap_or(false));
+        assert!(value
+            .get("build_timestamp")
+            .and_then(|v| v.as_str())
+            .is_some());
+        assert!(value
+            .get("feature_flags")
+            .and_then(|v| v.as_array())
+            .map(|a| !a.is_empty())
+            .unwrap_or(false));
     }
 
     #[tokio::test]
@@ -1167,23 +1173,52 @@ mod tests {
         std::env::set_var("AI_PROVIDER", "test-provider");
         // Create mock registry file
         let registry_dir = Path::new("registry");
-        if !registry_dir.exists() { fs::create_dir_all(registry_dir).unwrap(); }
+        if !registry_dir.exists() {
+            fs::create_dir_all(registry_dir).unwrap();
+        }
         let mock = serde_json::json!({"feature_flags": ["schema-validation", "commit-metadata-verification"]});
-        fs::write(registry_dir.join("feature_flags.json"), serde_json::to_vec(&mock).unwrap()).unwrap();
+        fs::write(
+            registry_dir.join("feature_flags.json"),
+            serde_json::to_vec(&mock).unwrap(),
+        )
+        .unwrap();
 
         let server = UiApiServer::new();
         let router = server.router();
-        let request = Request::builder().method("GET").uri("/health").body(Body::empty()).unwrap();
+        let request = Request::builder()
+            .method("GET")
+            .uri("/health")
+            .body(Body::empty())
+            .unwrap();
         let response = router.oneshot(request).await.unwrap();
         assert_eq!(response.status(), HttpStatus::OK);
         let bytes = response.into_body().collect().await.unwrap().to_bytes();
         let value: Value = serde_json::from_slice(&bytes).unwrap();
-        let flags = value.get("feature_flags").and_then(|v| v.as_array()).expect("feature_flags array");
-        let as_set: std::collections::HashSet<_> = flags.iter().filter_map(|v| v.as_str()).collect();
-        assert!(as_set.contains("offline-first"), "offline-first from env missing");
-        assert!(as_set.contains("ai-provider"), "ai-provider from env missing");
-        assert!(as_set.contains("schema-validation"), "schema-validation from registry missing");
-        assert!(as_set.contains("commit-metadata-verification"), "commit-metadata-verification from registry missing");
-        assert!(as_set.contains("fast-health-gate"), "built-in fast-health-gate missing");
+        let flags = value
+            .get("feature_flags")
+            .and_then(|v| v.as_array())
+            .expect("feature_flags array");
+        let as_set: std::collections::HashSet<_> =
+            flags.iter().filter_map(|v| v.as_str()).collect();
+        assert!(
+            as_set.contains("offline-first"),
+            "offline-first from env missing"
+        );
+        assert!(
+            as_set.contains("ai-provider"),
+            "ai-provider from env missing"
+        );
+        assert!(
+            as_set.contains("schema-validation"),
+            "schema-validation from registry missing"
+        );
+        assert!(
+            as_set.contains("commit-metadata-verification"),
+            "commit-metadata-verification from registry missing"
+        );
+        assert!(
+            as_set.contains("fast-health-gate"),
+            "built-in fast-health-gate missing"
+        );
     }
 }

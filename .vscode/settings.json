@@ -271,5 +271,10 @@
   },
   "githubIssues.alwaysPromptForNewIssueRepo": true,
   "githubPullRequests.experimental.useQuickChat": true,
-  "githubPullRequests.notifications": "pullRequests"
+  "githubPullRequests.notifications": "pullRequests",
+  "chat.tools.terminal.ignoreDefaultAutoApproveRules": true,
+  "chat.todoListTool.writeOnly": true,
+  "chat.mcp.gallery.enabled": true,
+  "chat.agent.thinking.collapsedTools": "all",
+  "chat.agent.thinkingStyle": "collapsedPreview"
 }

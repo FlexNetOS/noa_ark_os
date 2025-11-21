@@ -1,15 +1,8 @@
 use anyhow::{anyhow, Context, Result};
 use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusHandle};
-<<<<<<< Updated upstream
-use opentelemetry::{global, KeyValue};
-use opentelemetry_otlp::WithExportConfig;
-use opentelemetry_sdk::{self, trace, Resource};
-=======
-use opentelemetry::trace::TracerProvider as _;
-use opentelemetry::{global, KeyValue};
+use opentelemetry::{global, trace::TracerProvider as _, KeyValue};
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_sdk::{self, Resource};
->>>>>>> Stashed changes
 use tracing_opentelemetry::OpenTelemetryLayer;
 use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
@@ -91,58 +84,40 @@ pub fn init_tracing(config: &TracingConfig) -> Result<TracingGuard> {
         EnvFilter::try_new(config.log_level.clone()).unwrap_or_else(|_| EnvFilter::new("info"));
 
     let (otel_layer, otlp_enabled) = build_otlp_layer(config)?;
-<<<<<<< Updated upstream
-
-    let fmt_layer = match config.log_format {
-        LogFormat::Pretty => fmt::layer().with_target(true),
-        LogFormat::Json => fmt::layer().json().with_target(true),
-    };
-
-    let mut subscriber = Registry::default().with(env_filter).with(fmt_layer);
-    if let Some(layer) = otel_layer {
-        subscriber = subscriber.with(layer);
+    match config.log_format {
+        LogFormat::Pretty => Registry::default()
+            .with(otel_layer)
+            .with(env_filter)
+            .with(fmt::layer().with_target(true))
+            .try_init(),
+        LogFormat::Json => Registry::default()
+            .with(otel_layer)
+            .with(env_filter)
+            .with(fmt::layer().json().with_target(true))
+            .try_init(),
     }
-
-    subscriber
-        .try_init()
         .map_err(|err| anyhow::anyhow!("failed to install tracing subscriber: {err}"))?;
-=======
-    install_fmt_layer(env_filter, otel_layer, config.log_format)?;
->>>>>>> Stashed changes
     Ok(TracingGuard::new(otlp_enabled))
 }
 
 fn build_otlp_layer(config: &TracingConfig) -> Result<(Option<OtlpLayer>, bool)> {
     if let Some(endpoint) = &config.otlp_endpoint {
-<<<<<<< Updated upstream
-        let exporter = opentelemetry_otlp::new_exporter()
-            .tonic()
-            .with_endpoint(endpoint.clone());
-=======
->>>>>>> Stashed changes
+        let exporter = opentelemetry_otlp::SpanExporter::builder()
+            .with_tonic()
+            .with_endpoint(endpoint.clone())
+            .build()
+            .context("failed to build OTLP exporter")?;
         let mut attributes = vec![KeyValue::new("service.name", config.service_name.clone())];
         for (key, value) in &config.resource_attributes {
             attributes.push(KeyValue::new(key.clone(), value.clone()));
         }
         let resource = Resource::new(attributes);
-<<<<<<< Updated upstream
-        let tracer = opentelemetry_otlp::new_pipeline()
-            .tracing()
-            .with_exporter(exporter)
-            .with_trace_config(trace::config().with_resource(resource))
-            .install_batch(opentelemetry_sdk::runtime::Tokio)
-            .context("failed to install OTLP tracer")?;
-=======
-        let exporter = opentelemetry_otlp::SpanExporter::builder()
-            .with_tonic()
-            .with_endpoint(endpoint.clone())
-            .build()?;
-        let tracer_provider = opentelemetry_sdk::trace::TracerProvider::builder()
+        let provider = opentelemetry_sdk::trace::TracerProvider::builder()
             .with_resource(resource)
             .with_batch_exporter(exporter, opentelemetry_sdk::runtime::Tokio)
             .build();
-        let tracer = tracer_provider.tracer(config.service_name.clone());
->>>>>>> Stashed changes
+        let tracer = provider.tracer(config.service_name.clone());
+        global::set_tracer_provider(provider);
         let layer = tracing_opentelemetry::layer().with_tracer(tracer);
         Ok((Some(layer), true))
     } else {
@@ -190,21 +165,24 @@ pub fn init(
     };
     Ok((guard, exporter))
 }
-<<<<<<< Updated upstream
-=======
 
+#[allow(dead_code)]
 fn install_fmt_layer(
     env_filter: EnvFilter,
     otel_layer: Option<OtlpLayer>,
     log_format: LogFormat,
 ) -> Result<()> {
-    let subscriber = Registry::default().with(otel_layer).with(env_filter);
     match log_format {
-        LogFormat::Pretty => subscriber.with(fmt::layer().with_target(true)).try_init(),
-        LogFormat::Json => subscriber
+        LogFormat::Pretty => Registry::default()
+            .with(otel_layer)
+            .with(env_filter.clone())
+            .with(fmt::layer().with_target(true))
+            .try_init(),
+        LogFormat::Json => Registry::default()
+            .with(otel_layer)
+            .with(env_filter)
             .with(fmt::layer().json().with_target(true))
             .try_init(),
     }
     .map_err(|err| anyhow::anyhow!("failed to install tracing subscriber: {err}"))
 }
->>>>>>> Stashed changes

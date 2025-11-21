@@ -57,6 +57,7 @@ dist/
 
 # Workspace indexes and temp files
 .workspace/
+tools/security/shim/.workspace/
 .graphs/*
 !.graphs/metrics/
 !.graphs/metrics/**
@@ -115,6 +116,7 @@ htmlcov/
 *.cover
 .env
 .venv
+.venv-notebooks/
 env/
 venv/
 ENV/
@@ -329,6 +331,11 @@ $RECYCLE.BIN/
 # Documentation artifacts
 docs/build/
 site/
+docs/api/search.index/
+docs/api/**/*.html
+
+# Windows ADS metadata
+*.Zone.Identifier
 
 # Workspace organization
 .workspace-backup-*/
