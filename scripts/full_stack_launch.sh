@@ -780,7 +780,11 @@ maybe_run_cuda_setup() {
 }
 
 llama_binary_path() {
-  printf '%s' "$ROOT/server/ai/llama-cpp/bin/llama-server.exe"
+  if [[ $IS_WINDOWS -eq 1 ]]; then
+    printf '%s' "$ROOT/server/ai/llama-cpp/bin/llama-server.exe"
+  else
+    printf '%s' "$ROOT/server/ai/llama-cpp/bin/llama-server"
+  fi
 }
 
 llama_assets_ready() {
@@ -805,10 +809,17 @@ llama_assets_ready() {
 }
 
 record_llama_state() {
+  local recorded_at_local recorded_at_utc tz_offset
+  recorded_at_local=$(date +%Y-%m-%dT%H:%M:%S%z)
+  recorded_at_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  tz_offset=$(date +%z)
   cat >"$LLAMA_SENTINEL" <<EOF
 {
-  "recorded_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "model_size": "$LLAMA_MODEL_SIZE"
+  "recorded_at": "$(json_escape "$recorded_at_local")",
+  "recorded_at_local": "$(json_escape "$recorded_at_local")",
+  "recorded_at_utc": "$(json_escape "$recorded_at_utc")",
+  "timezone_offset": "$(json_escape "$tz_offset")",
+  "model_size": "$(json_escape "$LLAMA_MODEL_SIZE")"
 }
 EOF
 }

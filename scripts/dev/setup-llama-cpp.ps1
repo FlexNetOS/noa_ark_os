@@ -119,10 +119,18 @@ if ($BuildFromSource) {
         Invoke-WebRequest -Uri $downloadUrl -OutFile $zipPath
         Write-Success "Downloaded llama.cpp"
         Write-Info "Expanding $assetName into bin/ ..."
-        Expand-Archive -Path $zipPath -DestinationPath (Join-Path $LlamaCppDir "bin") -Force
+        $binRoot = Join-Path $LlamaCppDir "bin"
+        Expand-Archive -Path $zipPath -DestinationPath $binRoot -Force
         Remove-Item $zipPath
+        # Flatten nested bin directories so callers can rely on bin/llama-server*
+        $nestedBins = Get-ChildItem -Path $binRoot -Directory -Recurse | Where-Object { $_.Name -eq "bin" -and $_.FullName -ne $binRoot }
+        foreach ($nested in $nestedBins) {
+            Get-ChildItem -Path $nested.FullName -File -ErrorAction SilentlyContinue | ForEach-Object {
+                Copy-Item $_.FullName (Join-Path $binRoot $_.Name) -Force
+            }
+        }
         if ($hostIsLinux) {
-            Get-ChildItem -Recurse -Path (Join-Path $LlamaCppDir "bin") -Filter "llama*" | ForEach-Object {
+            Get-ChildItem -Recurse -Path $binRoot -Filter "llama*" | ForEach-Object {
                 chmod +x $_.FullName 2>$null
             }
         }

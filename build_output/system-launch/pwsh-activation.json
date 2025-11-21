@@ -1,7 +1,7 @@
 {
   "status": "preactivated",
   "reason": "NOA_PWSH_ENV preset (/home/noa/dev/workspace/noa_ark_os/noa_ark_os/server/tools/pwsh-portable/bin/pwsh)",
-  "timestamp": "2025-11-21T13:06:56Z",
+  "timestamp": "2025-11-21T13:27:03Z",
   "binary": "/home/noa/dev/workspace/noa_ark_os/noa_ark_os/server/tools/pwsh-portable/bin/pwsh",
   "manifest": "/home/noa/dev/workspace/noa_ark_os/noa_ark_os/server/tools/pwsh-portable.manifest.json",
   "manifest_sha256": "136f196735063fc8f23b96faad5ac74a188b9bc6b0f8238379cd742a9ff35d89",
