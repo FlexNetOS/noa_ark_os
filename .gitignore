@@ -355,3 +355,4 @@ tools/.pnpm-home/store/
 notebooks/**/*.ipynb
 notebooks/.ipynb_checkpoints/
 archive/2025/11/notebooks/
+worktrees/
