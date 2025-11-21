@@ -291,6 +291,18 @@ print_phase_summary() {
   if [[ -f "$PWSH_SENTINEL" ]]; then
     printf 'Portable PowerShell evidence: %s\n' "$PWSH_SENTINEL"
     cat "$PWSH_SENTINEL"
+    local activation_status activation_platform activation_binary activation_current
+    activation_status=$(awk -F'"' '/"status"/{print $4; exit}' "$PWSH_SENTINEL" 2>/dev/null)
+    activation_platform=$(awk -F'"' '/"platform"/{print $4; exit}' "$PWSH_SENTINEL" 2>/dev/null)
+    activation_binary=$(awk -F'"' '/"binary"/{print $4; exit}' "$PWSH_SENTINEL" 2>/dev/null)
+    activation_current=$(awk -F'"' '/"current_target"/{print $4; exit}' "$PWSH_SENTINEL" 2>/dev/null)
+    printf 'Portable PowerShell status: %s (platform=%s)\n' "${activation_status:-unknown}" "${activation_platform:-n/a}"
+    if [[ -n "$activation_binary" ]]; then
+      printf '  Binary: %s\n' "$activation_binary"
+    fi
+    if [[ -n "$activation_current" ]]; then
+      printf '  Current link target: %s\n' "$activation_current"
+    fi
     printf '\n'
   else
     printf 'Portable PowerShell evidence sentinel missing (expected %s)\n\n' "$PWSH_SENTINEL"
@@ -386,6 +398,38 @@ record_pwsh_activation() {
   local platform="$5"
   local manifest_sha
   manifest_sha=$(compute_sha256 "$manifest")
+  local binary_sha=""
+  if [[ -n "$bin" && -f "$bin" ]]; then
+    binary_sha=$(compute_sha256 "$bin")
+  else
+    binary_sha="unavailable"
+  fi
+  local current_link=""
+  local current_target=""
+  if [[ -n "$ROOT" ]]; then
+    local current_root="$ROOT/server/tools/pwsh-portable/current"
+    if [[ -d "$current_root" ]]; then
+      if [[ "$bin" == *".exe" ]]; then
+        current_link="$current_root/pwsh.exe"
+      else
+        current_link="$current_root/pwsh"
+      fi
+      if [[ ! -f "$current_link" ]]; then
+        current_link=""
+      else
+        if command -v python3 >/dev/null 2>&1; then
+          current_target=$(python3 - "$current_link" <<'PY'
+import os
+import sys
+print(os.path.realpath(sys.argv[1]))
+PY
+)
+        elif command -v readlink >/dev/null 2>&1; then
+          current_target=$(readlink "$current_link" 2>/dev/null || echo "")
+        fi
+      fi
+    fi
+  fi
   if [[ -z "$PWSH_SENTINEL" ]]; then
     return
   fi
@@ -395,8 +439,11 @@ record_pwsh_activation() {
   "reason": "$(json_escape "$reason")",
   "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "binary": "$(json_escape "${bin:-}")",
+  "binary_sha256": "$(json_escape "$binary_sha")",
   "manifest": "$(json_escape "${manifest:-}")",
   "manifest_sha256": "$(json_escape "$manifest_sha")",
+  "current_link": "$(json_escape "${current_link:-}")",
+  "current_target": "$(json_escape "${current_target:-}")",
   "platform": "$(json_escape "${platform:-}")"
 }
 EOF
@@ -644,7 +691,30 @@ ensure_powershell() {
     POWERSHELL_AVAILABLE=1
     return 0
   fi
+  if [[ -n "${ROOT:-}" ]]; then
+    local activators=("$ROOT/server/tools/activate-pwsh.sh" "$ROOT/server/tools/activate-toolchains.sh")
+    for activator in "${activators[@]}"; do
+      if [[ -f "$activator" ]]; then
+        local prev_silent="${NOA_ACTIVATE_SILENT:-0}"
+        NOA_ACTIVATE_SILENT=1
+        # shellcheck source=/dev/null
+        if source "$activator" 2>/dev/null; then
+          NOA_ACTIVATE_SILENT="$prev_silent"
+          if [[ -n "${POWERSHELL_BIN:-}" && -x "$POWERSHELL_BIN" ]]; then
+            POWERSHELL_AVAILABLE=1
+            return 0
+          fi
+        else
+          local rc=$?
+          info "PowerShell activator $activator exited $rc"
+          NOA_ACTIVATE_SILENT="$prev_silent"
+        fi
+        NOA_ACTIVATE_SILENT="$prev_silent"
+      fi
+    done
+  fi
   info "PowerShell executable not found; skipping PowerShell-based integrations"
+  info "Run ./server/tools/setup-portable-pwsh.sh to install the portable bundle"
   return 1
 }
 

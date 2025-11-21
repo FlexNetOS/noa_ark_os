@@ -127,6 +127,9 @@ resolve_platforms() {
         return
     fi
     IFS=',' read -r -a out_ref <<< "$input"
+    for idx in "${!out_ref[@]}"; do
+        out_ref[$idx]="$(normalize_platform_alias "${out_ref[$idx]}")"
+    done
 }
 
 ensure_platform_supported() {
@@ -166,6 +169,85 @@ JS
         return
     fi
     echo "Error: python3 or node required to compute relative paths" >&2
+    exit 2
+}
+
+normalize_platform_alias() {
+    local token="$1"
+    if [[ -z "$token" ]]; then
+        echo ""
+        return
+    fi
+    token="${token,,}"
+    case "$token" in
+        linux|linux64|linux-x86_64|linux-amd64)
+            echo "linux-x64"
+            ;;
+        linux-arm|linux-arm64|linux-aarch64)
+            echo "linux-arm64"
+            ;;
+        mac|macos|macosx|darwin|osx|osx64)
+            echo "osx-x64"
+            ;;
+        mac-arm|macarm|mac-arm64|macos-arm64|darwin-arm64|osx-arm64)
+            echo "osx-arm64"
+            ;;
+        win|windows|windows-x64|win64)
+            echo "win-x64"
+            ;;
+        *)
+            echo "$1"
+            ;;
+    esac
+}
+
+emit_manifest_entry() {
+    local platform="$1"
+    local archive="$2"
+    local archive_sha="$3"
+    local bundle_root="$4"
+    local binary="$5"
+    local binary_kind="$6"
+    local source_url="$7"
+    local binary_sha="$8"
+    local generated_at="$9"
+    if command -v python3 >/dev/null 2>&1; then
+        python3 - "$platform" "$archive" "$archive_sha" "$bundle_root" "$binary" "$binary_kind" "$source_url" "$binary_sha" "$generated_at" <<'PY'
+import json
+import sys
+platform, archive, archive_sha, bundle_root, binary, binary_kind, source_url, binary_sha, generated_at = sys.argv[1:10]
+print(json.dumps({
+    "platform": platform,
+    "archive": archive,
+    "archive_sha256": archive_sha,
+    "bundle_root": bundle_root,
+    "binary": binary,
+    "binary_kind": binary_kind,
+    "source_url": source_url,
+    "sha256": binary_sha,
+    "generated_at": generated_at,
+}))
+PY
+        return
+    fi
+    if command -v node >/dev/null 2>&1; then
+        node - "$platform" "$archive" "$archive_sha" "$bundle_root" "$binary" "$binary_kind" "$source_url" "$binary_sha" "$generated_at" <<'JS'
+const [,,platform, archive, archive_sha, bundle_root, binary, binary_kind, source_url, binary_sha, generated_at] = process.argv;
+console.log(JSON.stringify({
+  platform,
+  archive,
+  archive_sha256: archive_sha,
+  bundle_root,
+  binary,
+  binary_kind,
+  source_url,
+  sha256: binary_sha,
+  generated_at,
+}));
+JS
+        return
+    fi
+    echo "Error: python3 or node required to build manifest entries" >&2
     exit 2
 }
 
@@ -244,6 +326,7 @@ for platform in "${REQUESTED_PLATFORMS[@]}"; do
     echo "📦 Preparing PowerShell ${PWSH_VERSION} (${platform})"
     download_archive "$SOURCE_URL" "$ARCHIVE_PATH"
     extract_archive "$ARCHIVE_PATH" "$TMP_DIR" "$ARCHIVE_EXT"
+    ARCHIVE_SHA="$(compute_sha "$ARCHIVE_PATH")"
 
     mapfile -t TMP_ENTRIES < <(find "$TMP_DIR" -mindepth 1 -maxdepth 1 -print)
     mkdir -p "$PLATFORM_DIR"
@@ -298,22 +381,27 @@ for platform in "${REQUESTED_PLATFORMS[@]}"; do
         fi
     fi
 
-    PWSH_SHA="$(compute_sha "$PWSH_BIN")"
-    BINARY_REL="$(relative_to_script "$PWSH_BIN")"
-    cat > "$MANIFEST_DIR/pwsh-${PWSH_VERSION}-${platform}.json" <<JSON
+        PWSH_SHA="$(compute_sha "$PWSH_BIN")"
+        BINARY_REL="$(relative_to_script "$PWSH_BIN")"
+        BUNDLE_REL="$(relative_to_script "$BUNDLE_DIR")"
+        ENTRY_GENERATED_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+        BINARY_KIND=$( [[ "$platform" == win-* ]] && echo "pwsh.exe" || echo "pwsh" )
+        cat > "$MANIFEST_DIR/pwsh-${PWSH_VERSION}-${platform}.json" <<JSON
 {
-  "pwsh_version": "${PWSH_VERSION}",
-  "platform": "${platform}",
-  "archive": "${ARCHIVE_NAME}",
-  "source_url": "${SOURCE_URL}",
-  "binary": "${BINARY_REL}",
-  "sha256": "${PWSH_SHA}",
-  "generated_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+    "pwsh_version": "${PWSH_VERSION}",
+    "platform": "${platform}",
+    "archive": "${ARCHIVE_NAME}",
+    "archive_sha256": "${ARCHIVE_SHA}",
+    "source_url": "${SOURCE_URL}",
+    "bundle_root": "${BUNDLE_REL}",
+    "binary_kind": "${BINARY_KIND}",
+    "binary": "${BINARY_REL}",
+    "sha256": "${PWSH_SHA}",
+    "generated_at": "${ENTRY_GENERATED_AT}"
 }
 JSON
 
-        printf -v manifest_entry '{"platform":"%s","archive":"%s","source_url":"%s","binary":"%s","sha256":"%s"}' \
-                "$platform" "$ARCHIVE_NAME" "$SOURCE_URL" "$BINARY_REL" "$PWSH_SHA"
+        manifest_entry=$(emit_manifest_entry "$platform" "$ARCHIVE_NAME" "$ARCHIVE_SHA" "$BUNDLE_REL" "$BINARY_REL" "$BINARY_KIND" "$SOURCE_URL" "$PWSH_SHA" "$ENTRY_GENERATED_AT")
         MANIFEST_ENTRIES+=("$manifest_entry")
 done
 

@@ -7,6 +7,29 @@ param(
 
 $supportedPlatforms = @("linux-x64", "linux-arm64", "osx-x64", "osx-arm64", "win-x64")
 
+function Normalize-Platform {
+    param([string]$Platform)
+    if (-not $Platform) { return $null }
+    switch ($Platform.ToLowerInvariant()) {
+        "linux" { return "linux-x64" }
+        "linux64" { return "linux-x64" }
+        "linux-arm" { return "linux-arm64" }
+        "linux-arm64" { return "linux-arm64" }
+        "linux-aarch64" { return "linux-arm64" }
+        "mac" { return "osx-x64" }
+        "macos" { return "osx-x64" }
+        "darwin" { return "osx-x64" }
+        "osx" { return "osx-x64" }
+        "mac-arm" { return "osx-arm64" }
+        "macos-arm64" { return "osx-arm64" }
+        "darwin-arm64" { return "osx-arm64" }
+        "windows" { return "win-x64" }
+        "win" { return "win-x64" }
+        "win64" { return "win-x64" }
+        default { return $Platform }
+    }
+}
+
 function Get-HostPlatform {
     $arch = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture
     if ([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)) {
@@ -29,7 +52,7 @@ function Resolve-Platforms {
     param([string[]]$Requested,[switch]$IncludeAll)
     if ($IncludeAll) { return $supportedPlatforms }
     if (-not $Requested -or $Requested.Count -eq 0) { return @(Get-HostPlatform) }
-    return $Requested | Where-Object { $_ } | Select-Object -Unique
+    return $Requested | Where-Object { $_ } | ForEach-Object { Normalize-Platform $_ } | Select-Object -Unique
 }
 
 function Ensure-PlatformSupported {
@@ -128,6 +151,7 @@ foreach ($platform in $resolvedPlatforms) {
     } else {
         Write-Host "ℹ️  Using cached archive $archivePath"
     }
+    $archiveSha = (Get-FileHash -Path $archivePath -Algorithm SHA256).Hash.ToLower()
 
     $tmpDir = Join-Path $pwshRoot (".extract-" + [guid]::NewGuid().ToString())
     $null = New-Item -ItemType Directory -Force -Path $tmpDir
@@ -150,6 +174,7 @@ foreach ($platform in $resolvedPlatforms) {
         }
     }
     Remove-Item -Recurse -Force $tmpDir
+    $bundleRootRel = [System.IO.Path]::GetRelativePath($scriptDir, $bundleDir)
 
     if ($meta.Platform -like "win-*") {
         $pwshBin = Join-Path $bundleDir "pwsh.exe"
@@ -196,12 +221,17 @@ foreach ($platform in $resolvedPlatforms) {
 
     $pwshHash = (Get-FileHash -Path $pwshBin -Algorithm SHA256).Hash.ToLower()
     $binaryRel = [System.IO.Path]::GetRelativePath($scriptDir, $pwshBin)
+    $binaryKind = if ($meta.Platform -like "win-*") { "pwsh.exe" } else { "pwsh" }
     $entry = [ordered]@{
         platform  = $platform
         archive   = $meta.Archive
+        archive_sha256 = $archiveSha
+        bundle_root = $bundleRootRel
         source_url = $meta.SourceUrl
         binary    = $binaryRel
+        binary_kind = $binaryKind
         sha256    = $pwshHash
+        generated_at = (Get-Date -AsUTC).ToString("o")
     }
     $entries += [pscustomobject]$entry
 
@@ -209,7 +239,10 @@ foreach ($platform in $resolvedPlatforms) {
         pwsh_version = $PwshVersion
         platform     = $platform
         archive      = $meta.Archive
+        archive_sha256 = $archiveSha
         source_url   = $meta.SourceUrl
+        bundle_root  = $bundleRootRel
+        binary_kind  = $binaryKind
         binary       = $binaryRel
         sha256       = $pwshHash
         generated_at = (Get-Date -AsUTC).ToString("o")
