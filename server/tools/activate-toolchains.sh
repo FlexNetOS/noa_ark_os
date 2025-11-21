@@ -14,6 +14,15 @@ if [[ "${NOA_TOOLCHAINS_ACTIVATED:-0}" == "1" && "${NOA_TOOLCHAINS_FORCE:-0}" !=
   return 0 2>/dev/null || exit 0
 fi
 
+if [[ "${NOA_TOOLCHAINS_CHAINING:+set}" == "set" ]]; then
+  __NOA_PREV_TOOLCHAIN_CHAINING_SET=1
+  __NOA_PREV_TOOLCHAIN_CHAINING="$NOA_TOOLCHAINS_CHAINING"
+else
+  __NOA_PREV_TOOLCHAIN_CHAINING_SET=0
+  __NOA_PREV_TOOLCHAIN_CHAINING=""
+fi
+export NOA_TOOLCHAINS_CHAINING=1
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 
 if [[ -f "$SCRIPT_DIR/activate-pwsh.sh" ]]; then
@@ -44,6 +53,14 @@ export NOA_TOOLCHAINS_ACTIVATED=1
 if [[ "${NOA_ACTIVATE_SILENT:-0}" != "1" ]]; then
   echo "All toolchains activated (PowerShell/Cargo/Node)."
 fi
+
+if [[ "$__NOA_PREV_TOOLCHAIN_CHAINING_SET" == "1" ]]; then
+  export NOA_TOOLCHAINS_CHAINING="$__NOA_PREV_TOOLCHAIN_CHAINING"
+else
+  unset NOA_TOOLCHAINS_CHAINING
+fi
+unset __NOA_PREV_TOOLCHAIN_CHAINING_SET
+unset __NOA_PREV_TOOLCHAIN_CHAINING
 
 eval "$__NOA_PREV_TOOLCHAIN_OPTS"
 unset __NOA_PREV_TOOLCHAIN_OPTS

@@ -103,6 +103,8 @@ D:\dev\workspaces\noa_ark_os\
 - `scripts/lib/ensure_no_duplicate_tasks.sh` invokes `tools/automation/check_portable_pwsh.py --ensure-exec --require-current`, emitting a manifest claim and failing fast with guidance to rerun `setup-portable-pwsh.sh --include-desktop` if anything drifts.
 - `scripts/full_stack_launch.sh` logs manifest/binary/current-link hashes inside the phase summary, so `pwsh-activation.json` plus console output satisfy Triple-Verification without manual parsing.
 - CUDA + Llama helpers (`scripts/setup/setup-cuda.ps1`, `scripts/dev/setup-llama-cpp.ps1`, `scripts/dev/start-llama-server.ps1`) run in portable PowerShell on Linux, download the Linux llama.cpp binaries, and ship a clearly-marked placeholder GGUF so automation can exercise the phase without a multi-GB model (real deployments must swap in an actual model file).
+- `server/tools/activate-{cargo-wsl,node}.sh` now redirect to `activate-toolchains.sh` (unless explicitly disabled) so even legacy entry points activate all toolchains and feed the launcher with manifest/binary/current evidence plus NOA_* env flags.
+- `tools/automation/check_portable_pwsh.py` emits both the resolved binaries and the symlink paths (pwsh-portable/bin/pwsh + pwsh-portable/current) so duplicate guards/CI logs can assert the actual link topology, not just the targets.
 
 ---
 

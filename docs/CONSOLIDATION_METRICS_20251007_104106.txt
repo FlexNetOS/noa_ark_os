@@ -1,0 +1,34 @@
+# Consolidation Metrics (noa_ark_os)
+timestamp: 20251007_104106
+root_dir: /home/deflex/workspace/repos/noa_ark_os
+
+## services
+files: 34226
+dirs: 5331
+size_bytes: 3506207409
+tree_digest: 738c561c7cc45b69fc6a57e3d0cf01644dd5f00bc8e7ce411c4d0558724f877c
+
+## apps
+files: 38399
+dirs: 4977
+size_bytes: 465029482
+tree_digest: 4771fb5c53ea6879c93f5a75c6def37079b89514a6460f1f69d3427bf10fc4ed
+
+## mono/services
+files: 27
+dirs: 12
+size_bytes: 313423
+tree_digest: 09e559d2902cea5dae56df42d817b09a36935b9b87b45d3ff06777e75eab5636
+
+## mono/apps
+files: 14
+dirs: 5
+size_bytes: 410497
+tree_digest: f760b0fbda12d886d8447b3ff7599bc83f4c905d9ca68ac3d4c43fe564d136f8
+
+## unified
+files: 541
+dirs: 136
+size_bytes: 46787851
+tree_digest: 9088c48afc36d5f204056181a760791fd28d84fb1c11350e498ad30118ad0ca6
+

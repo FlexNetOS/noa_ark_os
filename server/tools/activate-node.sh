@@ -12,6 +12,24 @@ NODE_HOME_ROOT="$SCRIPT_DIR/node-portable"
 CURRENT_LINK="$NODE_HOME_ROOT/current"
 COREPACK_DIR="$NODE_HOME_ROOT/corepack"
 
+if [[ "${NOA_TOOLCHAINS_CHAINING:-0}" != "1" && "${NOA_TOOLCHAINS_REDIRECT_DISABLE:-0}" != "1" ]]; then
+    TOOLCHAIN_ACTIVATOR="$SCRIPT_DIR/activate-toolchains.sh"
+    if [[ -f "$TOOLCHAIN_ACTIVATOR" ]]; then
+        __NOA_REDIRECT_PREV_OPTS="$__NOA_PREV_SHELL_OPTS"
+        if ! source "$TOOLCHAIN_ACTIVATOR"; then
+            rc=$?
+            eval "$__NOA_REDIRECT_PREV_OPTS"
+            unset __NOA_REDIRECT_PREV_OPTS
+            unset __NOA_PREV_SHELL_OPTS
+            return $rc 2>/dev/null || exit $rc
+        fi
+        eval "$__NOA_REDIRECT_PREV_OPTS"
+        unset __NOA_REDIRECT_PREV_OPTS
+        unset __NOA_PREV_SHELL_OPTS
+        return 0 2>/dev/null || exit 0
+    fi
+fi
+
 if [[ -z "${NOA_PWSH_ENV:-}" && "${NOA_SKIP_AUTO_PWSH:-0}" != "1" ]]; then
     PWSH_ACTIVATE_SILENT_SNAPSHOT="${NOA_ACTIVATE_SILENT:-0}"
     NOA_ACTIVATE_SILENT=1
