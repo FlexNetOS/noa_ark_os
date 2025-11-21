@@ -1,0 +1,430 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<todoPlan id="cli-tool-roadmap" version="1.0">
+  <meta>
+    <title>Unified CLI & MCP Tooling Roadmap</title>
+    <description>
+      Task breakdown covering the unified CLI goals from docs/plans/roadmaps/cli_tool_roadmap.md
+      and the outstanding CLI configuration migration gates in
+      docs/plans/roadmaps/cli_config_migration_checklist.md.
+    </description>
+  </meta>
+
+  <phase id="0" name="Inventory and Documentation Alignment">
+    <task id="0.1" status="pending">
+      <title>Embed CLI inventory in server/tools_agent/README.md</title>
+      <details>
+        Expand the README with a table enumerating every workspace operation (read/edit/search,
+        archival, consolidation, todo, command execution) and the matching CLI/MCP tool names so
+        providers know what is already available offline.
+      </details>
+    </task>
+    <task id="0.2" status="pending">
+      <title>Mirror CLI inventory inside apps/cli documentation</title>
+      <details>
+        Update apps/cli/README.md (or create it if missing) with an overview of the subcommands
+        surfaced in src/main.rs, example invocations, and guidance on selecting JSON vs YAML output.
+      </details>
+    </task>
+    <task id="0.3" status="pending">
+      <title>Refresh CODEX.md guidance to emphasize CLI-first workflow</title>
+      <details>
+        Replace residual IDE references with instructions for launching the noa CLI + MCP stack and
+        document when a provider may fall back to an IDE extension.
+      </details>
+    </task>
+    <task id="0.4" status="pending">
+      <title>Add macOS PowerShell and zsh snippets to server/tools/MULTI_PLATFORM.md</title>
+      <details>
+        Publish shell profile fragments for activating the portable toolchains (cargo, node, caddy)
+        so macOS users can source identical CLI workflows as Linux/WSL operators.
+      </details>
+    </task>
+  </phase>
+
+  <phase id="1" name="Catalog and Descriptor Infrastructure">
+    <task id="1.1" status="pending">
+      <title>Extract ToolDescriptor definitions for agent-tools</title>
+      <details>
+        Implement conversions in server/tools_agent so every CLI command (read, grep, glob, semantic,
+        todo, archive, consolidate) emits a noa_plugin_sdk::ToolDescriptor for registry ingestion.
+      </details>
+    </task>
+    <task id="1.2" status="pending">
+      <title>Extract ToolDescriptor definitions for commit-copilot</title>
+      <details>
+        Wrap tools/commit_copilot/cli.ts commands (enforce, check, suggest) in a descriptor module
+        that advertises arguments, output schema, and capability tags.
+      </details>
+    </task>
+    <task id="1.3" status="pending">
+      <title>Generate registry/tooling.catalog.json during build</title>
+      <details>
+        Add a build.rs step (likely in apps/cli) that aggregates all ToolDescriptor providers,
+        serializes them into registry/tooling.catalog.json, and stamps build metadata (version, git
+        SHA, supported runtimes).
+      </details>
+    </task>
+    <task id="1.4" status="pending">
+      <title>Validate catalog generation via integration tests</title>
+      <details>
+        Introduce tests under apps/cli/tests that execute the build script, parse the resulting
+        tooling catalog, and ensure every tool lists binary path, MCP name, and capability tokens.
+      </details>
+    </task>
+    <task id="1.5" status="pending">
+      <title>Ensure apps/cli can proxy agent-tools commands</title>
+      <details>
+        Add hidden subcommands (e.g., noa tools read/grep) that invoke the agent-tools library
+        directly so providers only need the noa binary for local workflows.
+      </details>
+    </task>
+    <task id="1.6" status="pending">
+      <title>Factor shared logic into noa-tools-core crate</title>
+      <details>
+        Create a reusable Rust library that houses common file IO, archival, registry, and telemetry
+        utilities so apps/cli, noa-tools-agent, and noa-mcp depend on the same implementation instead
+        of duplicating code or requiring symlinks.
+      </details>
+    </task>
+    <task id="1.7" status="pending">
+      <title>Publish commit-lint-kit package for commit-copilot</title>
+      <details>
+        Extract the conventional commit helpers from tools/commit_copilot/ into a versioned npm
+        (and optional Rust) package so other tooling can embed the logic without shelling out.
+      </details>
+    </task>
+    <task id="1.8" status="pending">
+      <title>Serve tooling catalog over HTTP</title>
+      <details>
+        Add a lightweight HTTP endpoint (e.g., under server/mcp or apps/cli) that serves
+        registry/tooling.catalog.json so IDE extensions and remote providers can fetch the same
+        manifest without relying on local files.
+      </details>
+    </task>
+  </phase>
+
+  <phase id="2" name="Unified MCP Backbone & Provider Bootstrap">
+    <task id="2.1" status="pending">
+      <title>Teach server/mcp to load tooling.catalog.json</title>
+      <details>
+        Replace the hard-coded tool registry with manifest loading, including hot-reload or startup
+        validation errors when catalog entries are invalid.
+      </details>
+    </task>
+    <task id="2.2" status="pending">
+      <title>Proxy call_tool requests to runtime-specific executors</title>
+      <details>
+        Implement routing modules so Rust tools launch via noa binaries, Node tools run through
+        node-portable, and shell scripts use the portable environment, all with timeout/telemetry.
+      </details>
+    </task>
+    <task id="2.3" status="pending">
+      <title>Attach provider capability metadata to each MCP tool</title>
+      <details>
+        Extend the manifest and server/mcp to encode which providers (Codex, Copilot, Claude, etc.)
+        may call each tool plus Truth Gate requirements, and reject unsupported requests.
+      </details>
+    </task>
+    <task id="2.4" status="pending">
+      <title>Embed MCP client within noa agent subcommands</title>
+      <details>
+        Modify apps/cli::Agent commands to spin up an MCP client session automatically so workflows
+        reuse the same telemetry/tracing and tool routing as external providers.
+      </details>
+    </task>
+    <task id="2.5" status="pending">
+      <title>Publish provider bootstrap scripts</title>
+      <details>
+        Create scripts under server/tools (e.g., start-codex-mcp.sh, start-copilot-mcp.ps1) that
+        launch server/mcp, set NOA_TOOLS_SERVER_URL, and register the provider adapter.
+      </details>
+    </task>
+    <task id="2.6" status="pending">
+      <title>Author provider adapter specifications</title>
+      <details>
+        Document expected RPCs, authentication, and lifecycle for Codex, Copilot, Claude, and other
+        adapters so external teams implement the same bootstrap contract.
+      </details>
+    </task>
+    <task id="2.7" status="pending">
+      <title>Implement noa headless service mode</title>
+      <details>
+        Add a noa daemon (or noa service) subcommand that keeps the CLI running as a local JSON-RPC
+        bridge for providers that cannot host MCP, reusing the same tool catalog and telemetry.
+      </details>
+    </task>
+  </phase>
+
+  <phase id="3" name="Feature Parity & Packaging">
+    <task id="3.1" status="pending">
+      <title>Add AST query and symbol graph services to agent-tools</title>
+      <details>
+        Implement structured parsing modules (e.g., tree-sitter/ra_ap) to power symbol lookup,
+        outline queries, and cross-file references, then expose them through MCP endpoints.
+      </details>
+    </task>
+    <task id="3.2" status="pending">
+      <title>Implement batched edit pipelines</title>
+      <details>
+        Extend agent-tools with a batch edit API that stages multiple file writes/patches with
+        pre-flight validation and archival before committing the transaction.
+      </details>
+    </task>
+    <task id="3.3" status="pending">
+      <title>Wrap cargo/npm/custom tests with problem matchers</title>
+      <details>
+        Add noa pipeline subcommands that execute cargo test, npm test, and custom scripts while
+        emitting structured diagnostics consumable by MCP clients and IDE gutters.
+      </details>
+    </task>
+    <task id="3.4" status="pending">
+      <title>Integrate commit-copilot into noa scm commands</title>
+      <details>
+        Expose noa scm commit --assist that shells out to commit-copilot, returns JSON suggestions,
+        and registers as MCP tool noa.commit with enforcement/validation modes.
+      </details>
+    </task>
+    <task id="3.5" status="pending">
+      <title>Convert server/tools activation scripts into noa env commands</title>
+      <details>
+        Port activate-cargo/node/caddy scripts into noa env install/activate subcommands with status
+        checks, logging, and Windows/macOS parity.
+      </details>
+    </task>
+    <task id="3.6" status="pending">
+      <title>Publish commit-copilot CLI to the internal npm registry</title>
+      <details>
+        Package the CLI with proper bin entries, CI publish workflow, and documentation on how MCP
+        fetches the binary when not already bootstrapped locally.
+      </details>
+    </task>
+    <task id="3.7" status="pending">
+      <title>Expose debugging hooks via headless DAP bridge</title>
+      <details>
+        Implement noa debug launch/attach commands that start debuggers (lldb, gdb, node inspect),
+        surface them as MCP tools, and document the mapping to VS Code debugging UX.
+      </details>
+    </task>
+    <task id="3.8" status="pending">
+      <title>Map VS Code task runner equivalents into noa CLI</title>
+      <details>
+        Provide noa task list/run commands that read workspace task definitions (Makefile targets,
+        npm scripts) and output structured metadata for IDE command palettes.
+      </details>
+    </task>
+    <task id="3.9" status="pending">
+      <title>Ship cross-platform binary artifacts for noa, agent-tools, and noa-mcp</title>
+      <details>
+        Extend the release pipeline to produce signed binaries for Linux, macOS, and Windows,
+        publish checksums, and reference them from server/tools installers.
+      </details>
+    </task>
+    <task id="3.10" status="pending">
+      <title>Publish noa CLI and noa-mcp crates to the internal registry</title>
+      <details>
+        Configure Cargo publishing (or registry mirroring) so noa-cli, noa-mcp, and noa-tools-agent
+        can be versioned artifacts that other workspaces consume without copying sources.
+      </details>
+    </task>
+    <task id="3.11" status="pending">
+      <title>Package dev_env_cli.py as a pipx-installable tool</title>
+      <details>
+        Turn server/tools/dev_env_cli.py into a proper Python package with entry points, publish it
+        to the internal PyPI mirror, and document pipx installation for operators.
+      </details>
+    </task>
+    <task id="3.12" status="pending">
+      <title>Implement remote workspace sync commands</title>
+      <details>
+        Add noa env sync (or similar) subcommands that rsync/relocate workspace state between
+        machines so environment management covers the remote workspace sync promise in the roadmap.
+      </details>
+    </task>
+    <task id="3.13" status="pending">
+      <title>Stand up MinIO-backed artifact store</title>
+      <details>
+        Deploy a self-hosted MinIO cluster for large NOA artifacts (app bundles, notebooks, demos),
+        define bucket layout and retention policies, and wire basic health checks into CI.
+      </details>
+    </task>
+    <task id="3.14" status="pending">
+      <title>Define unified release bundle format</title>
+      <details>
+        Specify per-platform app bundles (Linux/macOS/Windows) and data packs (full notebooks,
+        demos) with manifests including SHA-256 checksums, sizes, and compatibility metadata,
+        stored in the MinIO-backed artifact store.
+      </details>
+    </task>
+  </phase>
+
+  <phase id="4" name="Provider Experience, Observability, and Hardening">
+    <task id="4.1" status="pending">
+      <title>Stream telemetry and evidence ledger events through MCP</title>
+      <details>
+        Wire noa_inference telemetry + docs/evidence ledger appenders into server/mcp so every tool
+        invocation emits auditable events with provider identity.
+      </details>
+    </task>
+    <task id="4.2" status="pending">
+      <title>Implement tool marketplace registration</title>
+      <details>
+        Allow providers to contribute new tools by posting signed descriptors into the registry via
+        noa registry commands, with validation and sandbox enforcement.
+      </details>
+    </task>
+    <task id="4.3" status="pending">
+      <title>Enforce offline/online Truth Gate capability flags</title>
+      <details>
+        Annotate each tool with ONLINE_REQUIRED/ARCHIVE_FIRST metadata and update server/mcp plus
+        agent policy checks to honor those constraints automatically.
+      </details>
+    </task>
+    <task id="4.4" status="pending">
+      <title>Optimize tool performance with caching and streaming</title>
+      <details>
+        Add caching layers for search/semantic operations, file watchers for incremental state, and
+        streaming stdout support for long-running commands.
+      </details>
+    </task>
+    <task id="4.5" status="pending">
+      <title>Standardize multi-runtime JSON-over-stdio adapters</title>
+      <details>
+        Provide reusable adapter libraries for Rust, Node, and Python tools so they expose identical
+        MCP-facing protocols regardless of implementation language.
+      </details>
+    </task>
+    <task id="4.6" status="pending">
+      <title>Extend archival & audit guardrails to all write-capable tools</title>
+      <details>
+        Integrate noa_tools_agent archival routines inside MCP so any tool that edits files is
+        auto-archived and logged before changes are applied.
+      </details>
+    </task>
+    <task id="4.7" status="pending">
+      <title>Add cross-tool integration tests</title>
+      <details>
+        Create an integration test suite that boots server/mcp, exercises representative tools via
+        JSON-RPC, and verifies Codex/Copilot adapters receive expected outputs.
+      </details>
+    </task>
+    <task id="4.8" status="pending">
+      <title>Expose tool metadata to specialist agents</title>
+      <details>
+        Update agents (e.g., agents/src/implementations/specialist/code_generation.rs) to pull from
+        ToolRegistry so they request capabilities dynamically instead of hardcoded lists.
+      </details>
+    </task>
+    <task id="4.9" status="pending">
+      <title>Publish a tooling quick start in Makefile/docs</title>
+      <details>
+        Add Makefile targets (make tools/setup, make tools/test) and documentation pointing newcomers
+        to a single activation command for MCP + CLI tooling.
+      </details>
+    </task>
+    <task id="4.10" status="pending">
+      <title>Implement descriptor signing and verification</title>
+      <details>
+        Define a signing format for tooling catalog entries, add verification logic in server/mcp and
+        noa registry commands, and require signatures for marketplace-submitted tools.
+      </details>
+    </task>
+    <task id="4.11" status="pending">
+      <title>Implement downloads API for app and data bundles</title>
+      <details>
+        Add HTTP endpoints (Rust Axum) that expose a release catalog from MinIO and issue pre-signed
+        URLs or stream artifacts for noa app bundles and large data packs, with audit and rate
+        limiting.
+      </details>
+    </task>
+    <task id="4.12" status="pending">
+      <title>Build authenticated web UI for downloads</title>
+      <details>
+        Implement a Next.js or similar frontend with user login that lists available NOA releases,
+        shows per-platform artifacts, and initiates downloads via the Axum downloads API, replacing
+        IDE/CLI-centric onboarding with a browser-first experience.
+      </details>
+    </task>
+    <task id="4.13" status="pending">
+      <title>Wire CLI and agent stack behind web UI</title>
+      <details>
+        Expose noa CLI and agent workflows as backend services reachable only from the web
+        application, ensuring creators operate entirely from the frontend while the agentic OS
+        manages all workspace, tooling, and MCP interactions.
+      </details>
+    </task>
+  </phase>
+
+  <phase id="5" name="CLI Configuration Migration & Archival Gate">
+    <task id="5.1" status="pending">
+      <title>Run dev_env_cli doctor on Windows</title>
+      <details>
+        Execute python server/tools/dev_env_cli.py doctor on a Windows host, capture stdout/stderr,
+        and append the results to storage/db/evidence/ledger.jsonl with operator metadata.
+      </details>
+    </task>
+    <task id="5.2" status="pending">
+      <title>Run dev_env_cli doctor on WSL</title>
+      <details>
+        Perform the same doctor run inside WSL, ensuring portable paths resolve correctly and the
+        evidence ledger entry references the WSL distro and kernel version.
+      </details>
+    </task>
+    <task id="5.3" status="pending">
+      <title>Run dev_env_cli doctor on native Linux</title>
+      <details>
+        Capture outputs on a native Linux workstation and log them to the evidence ledger, noting any
+        discrepancies vs. Windows/WSL runs.
+      </details>
+    </task>
+    <task id="5.4" status="pending">
+      <title>Automate CLI activation smoke tests in CI</title>
+      <details>
+        Add CI jobs that source each activation command (cargo/node/caddy) and run sanity commands,
+        failing the pipeline if activation scripts regress.
+      </details>
+    </task>
+    <task id="5.5" status="pending">
+      <title>Secure IDE extension maintainer sign-off</title>
+      <details>
+        Collect written confirmation that no active workflows depend on .vscode or .devcontainer,
+        store approvals in docs/plans/roadmaps/cli_config_migration_checklist.md.
+      </details>
+    </task>
+    <task id="5.6" status="pending">
+      <title>Archive evidence for CLI summary run</title>
+      <details>
+        Execute python server/tools/dev_env_cli.py summary --format json, attach the output to the
+        Evidence Ledger, and reference the entry in the checklist before relocating IDE directories.
+      </details>
+    </task>
+    <task id="5.7" status="pending">
+      <title>Relocate .vscode and .devcontainer into archive</title>
+      <details>
+        Compress directories via tar --zstd -cf archive/YYYY/MM/&lt;name&gt;.tar.zst and log SHA-256
+        hashes inside archive/2025/11/ledger.json, ensuring Truth Gate compliance.
+      </details>
+    </task>
+    <task id="5.8" status="pending">
+      <title>Remove residual documentation references to IDE configs</title>
+      <details>
+        Search the repo for ".vscode" and ".devcontainer" mentions and replace them with CLI-first
+        instructions once archival is complete.
+      </details>
+    </task>
+    <task id="5.9" status="pending">
+      <title>Automate CLI configuration review cadence</title>
+      <details>
+        Set up scheduled issues or workflow reminders (weekly/monthly/quarterly) that enforce the
+        checklist's review cadence and verify archived tarballs still decompress successfully.
+      </details>
+    </task>
+    <task id="5.10" status="pending">
+      <title>Generate Base64 bundles for archived IDE configs</title>
+      <details>
+        After compression, encode .vscode and .devcontainer tarballs as Base64 blobs, store them in
+        the evidence ledger entries referenced by the checklist, and validate the hashes match the
+        binary tar archives.
+      </details>
+    </task>
+  </phase>
+</todoPlan>

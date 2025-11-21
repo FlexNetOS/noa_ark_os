@@ -37,16 +37,6 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Fail if the referenced build/test logs are missing or do not match their recorded hashes.",
     )
-        parser.add_argument(
-            "--skip-if-missing",
-            action="store_true",
-            help="Do not fail when the status file is absent (useful for fresh clones or CI).",
-        )
-        parser.add_argument(
-            "--ci-optional",
-            action="store_true",
-            help="Downgrade failures to warnings when running inside GitHub Actions.",
-        )
     return parser.parse_args()
 
 
@@ -96,13 +86,8 @@ def validate_logs(entry: Dict[str, Any], project_root: pathlib.Path, require_log
 def main() -> None:
     args = parse_args()
     status_path = pathlib.Path(args.status_file).resolve()
-        status_exists = status_path.exists()
-        if not status_exists:
-            if args.skip_if_missing:
-                print(f"⚠️  Local pipeline status file '{status_path}' is missing; skipping validation.")
-                return
-            else:
-                fail(f"Local pipeline status file '{status_path}' is missing")
+    if not status_path.exists():
+        fail(f"Local pipeline status file '{status_path}' is missing")
 
     data = json.loads(status_path.read_text())
     status = (data.get("status") or "").lower()

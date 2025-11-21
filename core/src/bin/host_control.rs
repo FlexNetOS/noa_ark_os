@@ -10,7 +10,7 @@ fn main() {
         return;
     }
 
-    let security = SecurityService::new();
+    let security = SecurityService;
     let token = match security.issue_scope_token(
         TokenIssuanceRequest::new(
             "host-operator",

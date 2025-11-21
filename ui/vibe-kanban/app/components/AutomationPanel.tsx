@@ -3,19 +3,14 @@
 import { useMemo, useState } from "react";
 import type { VibeCard, AgentAutomationRun } from "./board-types";
 import { tokens } from "@noa-ark/shared-ui/tokens";
+const palette = tokens.colors;
 
 const STATUS_COLORS: Record<AgentAutomationRun["status"], string> = {
-  queued: tokens.colors["border/subtle"],
-  running: tokens.colors["status/warning"],
-  completed: tokens.colors["status/success"],
-  failed: tokens.colors["status/danger"],
+  queued: palette["status/info"],
+  running: palette["status/warning"],
+  completed: palette["status/success"],
+  failed: palette["status/danger"],
 };
-
-const SURFACE_SECONDARY = "rgba(255, 255, 255, 0.05)";
-const SURFACE_GLOW = "rgba(79, 70, 229, 0.12)";
-const TEXT_MUTED = "rgba(226, 232, 240, 0.6)";
-const BORDER_STRONG = "rgba(255, 255, 255, 0.24)";
-const TEXT_PRIMARY = tokens.colors["text/strong"];
 
 export interface AutomationPanelProps {
   cards: VibeCard[];
@@ -63,14 +58,7 @@ export function AutomationPanel({ cards, onRetry }: AutomationPanelProps) {
   }
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: tokens.spacing.md,
-        padding: tokens.spacing.lg,
-      }}
-    >
+    <div style={{ display: "flex", flexDirection: "column", gap: tokens.spacing.md, padding: tokens.spacing.lg }}>
       {entries.map(({ card, latestRun }) => {
         const automation = card.automation!;
         const hasFailure = latestRun?.status === "failed";
@@ -82,25 +70,17 @@ export function AutomationPanel({ cards, onRetry }: AutomationPanelProps) {
               border: `1px solid ${tokens.colors["border/subtle"]}`,
               padding: tokens.spacing.md,
               background:
-                latestRun?.status === "running" ? SURFACE_GLOW : tokens.colors["surface/primary"],
+                latestRun?.status === "running"
+                  ? palette["surface/glow"]
+                  : palette["surface/primary"],
               display: "flex",
               flexDirection: "column",
               gap: tokens.spacing.sm,
             }}
           >
-            <header
-              style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
-            >
+            <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
-                <p
-                  style={{
-                    fontSize: "0.75rem",
-                    color: tokens.colors["text/subtle"],
-                    marginBottom: 4,
-                  }}
-                >
-                  Goal
-                </p>
+                <p style={{ fontSize: "0.75rem", color: tokens.colors["text/subtle"], marginBottom: 4 }}>Goal</p>
                 <strong style={{ fontSize: "1rem" }}>{card.title}</strong>
               </div>
               <div style={{ textAlign: "right" }}>
@@ -110,7 +90,7 @@ export function AutomationPanel({ cards, onRetry }: AutomationPanelProps) {
                     borderRadius: tokens.radii.full,
                     fontSize: "0.75rem",
                     fontWeight: 600,
-                    color: tokens.colors["background/base"],
+                    color: palette["text/inverse"],
                     background: STATUS_COLORS[latestRun?.status ?? "queued"],
                   }}
                 >
@@ -133,36 +113,28 @@ export function AutomationPanel({ cards, onRetry }: AutomationPanelProps) {
                         justifyContent: "space-between",
                         alignItems: "center",
                         borderRadius: tokens.radii.sm,
-                        background: SURFACE_SECONDARY,
+                        background: palette["surface/secondary"],
                         padding: `${tokens.spacing.xs} ${tokens.spacing.sm}`,
                       }}
                     >
                       <div>
                         <p style={{ fontSize: "0.8rem", fontWeight: 600 }}>{tool.name}</p>
-                        <p style={{ fontSize: "0.75rem", color: tokens.colors["text/subtle"] }}>
-                          {tool.capability}
-                        </p>
+                        <p style={{ fontSize: "0.75rem", color: tokens.colors["text/subtle"] }}>{tool.capability}</p>
                         {tool.error && (
-                          <p style={{ fontSize: "0.75rem", color: tokens.colors["status/danger"] }}>
-                            {tool.error}
-                          </p>
+                          <p style={{ fontSize: "0.75rem", color: palette["status/danger"] }}>{tool.error}</p>
                         )}
                         {tool.output && !tool.error && (
-                          <p style={{ fontSize: "0.75rem", color: TEXT_MUTED }}>{tool.output}</p>
+                          <p style={{ fontSize: "0.75rem", color: palette["text/muted"] }}>{tool.output}</p>
                         )}
                       </div>
-                      <span style={{ fontSize: "0.75rem", textTransform: "capitalize" }}>
-                        {tool.status}
-                      </span>
+                      <span style={{ fontSize: "0.75rem", textTransform: "capitalize" }}>{tool.status}</span>
                     </div>
                   ))}
                 </div>
               </section>
             )}
 
-            <footer
-              style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
-            >
+            <footer style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <p style={{ fontSize: "0.75rem", color: tokens.colors["text/subtle"] }}>
                 Updated {new Date(automation.lastUpdated).toLocaleString()}
               </p>
@@ -172,11 +144,11 @@ export function AutomationPanel({ cards, onRetry }: AutomationPanelProps) {
                 disabled={pending.has(card.id) || (!automation.retryAvailable && !hasFailure)}
                 style={{
                   borderRadius: tokens.radii.full,
-                  border: `1px solid ${BORDER_STRONG}`,
+                  border: `1px solid ${palette["border/strong"]}`,
                   padding: `${tokens.spacing.xs} ${tokens.spacing.md}`,
                   fontSize: "0.8rem",
                   fontWeight: 600,
-                  color: hasFailure ? tokens.colors["status/danger"] : TEXT_PRIMARY,
+                  color: hasFailure ? palette["status/danger"] : palette["text/primary"],
                   background: "transparent",
                   opacity: pending.has(card.id) ? 0.6 : 1,
                   cursor: pending.has(card.id) ? "progress" : "pointer",

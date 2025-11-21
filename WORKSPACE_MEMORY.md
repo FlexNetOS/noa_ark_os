@@ -19,6 +19,13 @@
 
 ---
 
+### Task 1 – Documentation staging cleanup (2025-11-19)
+- Keep only the curated CLI/doc files staged for merge: `docs/guides/dev-environment-cli.md`, `docs/plans/roadmap.md`, `docs/plans/roadmaps/cli_tool_roadmap.{md,todo.xml}`, `docs/roadmap/cli_config_migration_checklist.md`.
+- Treat `docs/api/search.index/**` as generated Docusaurus artifacts; they remain locally generated but are not staged/committed (they already sit behind `.gitignore`).
+- Treat `.venv-notebooks/` as disposable notebook tooling; added explicit ignore to keep the virtualenv strictly local.
+- Treat security scan exports under `tools/security/shim/.workspace/indexes/**` as local cache; ignore and regenerate on demand instead of committing.
+- Next steps after this cleanup: finish notebook conflict resolution, then unblock Go/Cargo builds for launch.
+
 ## 📂 Workspace Structure
 
 ### Location
@@ -89,6 +96,13 @@ D:\dev\workspaces\noa_ark_os\
 - Cargo Test (Portable)
 - Cargo Check (Portable)
 - Activate Portable Cargo
+
+### Portable PowerShell + CUDA/Llama Enablement (2025-11-21)
+- `server/tools/setup-portable-pwsh.{sh,ps1}` now provisions multi-platform bundles (Linux, macOS, Windows) and emits a consolidated manifest (`server/tools/pwsh-portable.manifest.json`) with per-platform hashes for automation evidence.
+- `server/tools/activate-pwsh.{sh,ps1}` surface the resolved platform via `NOA_PWSH_PLATFORM_RESOLVED`, and a new `server/tools/activate-toolchains.sh` chains PowerShell, Cargo, and Node activation for launchers/CI.
+- `scripts/full_stack_launch.sh` ingests the new activator via a dedicated phase, persists `build_output/system-launch/pwsh-activation.json`, and now prints the sentinel JSON inside the phase summary for Truth Gate evidence.
+- `tools/automation/check_portable_pwsh.py` understands the consolidated manifest, can target specific platforms, and optionally runs `pwsh --version`; `scripts/lib/ensure_no_duplicate_tasks.sh` runs it with execution verification so CI fails fast if PowerShell is missing.
+- CUDA + llama.cpp provisioning scripts (`scripts/setup/setup-cuda.ps1`, `scripts/dev/setup-llama-cpp.ps1`, `scripts/dev/start-llama-server.ps1`) now support Linux hosts through the portable PowerShell runtime, enabling the launcher’s CUDA/Llama phases to run outside of Windows.
 
 ---
 

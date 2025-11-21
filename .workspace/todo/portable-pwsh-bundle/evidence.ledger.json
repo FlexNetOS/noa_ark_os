@@ -1,0 +1,98 @@
+{
+  "task": "Portable PowerShell Bundle",
+  "timestamp_utc": "2025-11-21T11:05:00Z",
+  "artifacts": [
+    {
+      "id": "A1-manifest",
+      "path": "server/tools/pwsh-portable.manifest.json",
+      "sha256": "6ff2655ae5773baf86c724964ba74d0aea22ed38e8c90cc77cebeb0f54593a5c",
+      "notes": "Single source manifest for the portable PowerShell bundle."
+    },
+    {
+      "id": "A2-activator-sh",
+      "path": "server/tools/activate-pwsh.sh",
+      "sha256": "8e4fe7f780cd4070dceff097b10687943f5d6d8f17e56729607043995b220a05",
+      "notes": "Exports POWERSHELL_BIN + NOA_PWSH_ENV for shells."
+    },
+    {
+      "id": "A3-activator-ps1",
+      "path": "server/tools/activate-pwsh.ps1",
+      "sha256": "b10bb2aa32b2ddf9d4f38d79e41339794b821aa33c9db98e34de80332f8ddcca",
+      "notes": "Windows/PowerShell equivalent activator."
+    },
+    {
+      "id": "A4-toolchain-hooks",
+      "path": "server/tools/activate-cargo-wsl.sh",
+      "sha256": "6efa93b7feba70b1154466ca7463d5c64116190e0969f505d7890ebf91430c44",
+      "notes": "Now sources the pwsh activator before exporting Cargo vars."
+    },
+    {
+      "id": "A5-node-hook",
+      "path": "server/tools/activate-node.sh",
+      "sha256": "18538e4a06c997b491c9411d08e24b275848c207eda4937911ef5521f317c34d",
+      "notes": "Ensures pnpm environment inherits the portable PowerShell bin."
+    },
+    {
+      "id": "A6-launcher-phase",
+      "path": "scripts/full_stack_launch.sh",
+      "sha256": "8c2af9bea3f0112a492beae0486d7fe6e18633e1e207f9306c1ab15ca78c0204",
+      "notes": "Adds powershell_activation phase + evidence emission."
+    },
+    {
+      "id": "A7-duplicate-guard",
+      "path": "scripts/lib/ensure_no_duplicate_tasks.sh",
+      "sha256": "e38720289c5f09adf21669f57b2a16e21f724cf5159d02c89e3778ee88b5cd5f",
+      "notes": "Now runs the portable PowerShell integrity checker."
+    },
+    {
+      "id": "A8-checker",
+      "path": "tools/automation/check_portable_pwsh.py",
+      "sha256": "0110eaa9d40235a0ce920d9ca427aef45c88a3d2d978e7dbb038c8565158e572",
+      "notes": "CI/automation script that hashes the manifest and binary."
+    },
+    {
+      "id": "A9-registry",
+      "path": ".workspace/registry/toolchains.json",
+      "sha256": "3fd3fe4e20780999146cb99a5ddb5cc035cc5de100bcb2ae7fb03523f50bcbd3",
+      "notes": "Registry component describing the portable PowerShell capability."
+    },
+    {
+      "id": "A10-memory",
+      "path": "WORKSPACE_MEMORY.md",
+      "sha256": "18acdab5bf368070042b5af8c04109588a8918e9bb58a7be27547f188cda95fa",
+      "notes": "Workspace memory entry capturing the bundle + automation story."
+    },
+    {
+      "id": "A11-activation-log",
+      "path": "build_output/system-launch/pwsh-activation.json",
+      "sha256": "478388d567464d90349f2d784a800961f0a6d96a379bd21e3a3acf4aa03a0ed9",
+      "notes": "Launcher evidence showing powershell_activation status=activated."
+    }
+  ],
+  "commands": [
+    {
+      "id": "CMD-checker",
+      "cwd": "/home/noa/dev/workspace/noa_ark_os/noa_ark_os",
+      "command": "tools/automation/check_portable_pwsh.py --output text",
+      "exit_code": 0,
+      "timestamp_utc": "2025-11-21T11:01:00Z",
+      "notes": "Manifest integrity + binary hash verification."
+    },
+    {
+      "id": "CMD-duplicate-guard",
+      "cwd": "/home/noa/dev/workspace/noa_ark_os/noa_ark_os",
+      "command": "scripts/lib/ensure_no_duplicate_tasks.sh",
+      "exit_code": 0,
+      "timestamp_utc": "2025-11-21T11:01:05Z",
+      "notes": "Guard now emits the portable PowerShell claim and would exit 13 if missing."
+    },
+    {
+      "id": "CMD-launcher",
+      "cwd": "/home/noa/dev/workspace/noa_ark_os/noa_ark_os",
+      "command": "bash scripts/full_stack_launch.sh --prepare-only --skip-tests --skip-docker --skip-make --skip-notebook --cuda-mode auto --llama-mode auto --master-controller-mode skip --pipeline-mode skip",
+      "exit_code": 0,
+      "timestamp_utc": "2025-11-21T11:01:45Z",
+      "notes": "Launcher recorded powershell_activation status=activated and completed prepare phase."
+    }
+  ]
+}

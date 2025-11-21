@@ -38,6 +38,7 @@ module.exports = {
     "@typescript-eslint/array-type": "off",
     "jsx-a11y/no-static-element-interactions": "off",
     "jsx-a11y/label-has-associated-control": "off",
+    "react-hooks/set-state-in-effect": "off",
   },
   ignorePatterns: ["next.config.mjs", "tailwind.config.ts", "postcss.config.js"],
 };

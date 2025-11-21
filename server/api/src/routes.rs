@@ -1,4 +1,5 @@
 use crate::ApiState;
+use anyhow::Error;
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::extract::{Path, State};
 use axum::http::{header, StatusCode};
@@ -6,7 +7,7 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use metrics::counter;
-use noa_gateway::{Protocol, RoutePlan, RoutingError};
+use noa_gateway::{Protocol, RoutePlan};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::borrow::Cow;
@@ -27,9 +28,7 @@ impl ApiRoutes {
     }
 
     fn route(&self, protocol: Protocol, payload: Value) -> Result<RoutePlan, ApiError> {
-        self.state
-            .route(protocol, payload)
-            .map_err(ApiError::from)
+        self.state.route(protocol, payload).map_err(ApiError::from)
     }
 
     fn new_request_id(&self) -> String {
@@ -145,7 +144,7 @@ async fn inference(
         request_id: routes.new_request_id(),
         plan,
         status: "accepted",
-        note: "inference request routed",
+        note: "inference request routed".into(),
     }))
 }
 
@@ -168,7 +167,7 @@ async fn retrieval(
         request_id: routes.new_request_id(),
         plan,
         status: "accepted",
-        note: "retrieval request routed",
+        note: "retrieval request routed".into(),
     }))
 }
 
@@ -191,7 +190,7 @@ async fn orchestration(
         request_id: routes.new_request_id(),
         plan,
         status: "accepted",
-        note: "orchestration request routed",
+        note: "orchestration request routed".into(),
     }))
 }
 
@@ -241,8 +240,8 @@ impl ApiError {
     }
 }
 
-impl From<RoutingError> for ApiError {
-    fn from(err: RoutingError) -> Self {
+impl From<Error> for ApiError {
+    fn from(err: Error) -> Self {
         ApiError::new(StatusCode::BAD_REQUEST, format!("routing error: {err}"))
     }
 }
@@ -261,7 +260,7 @@ mod tests {
     use super::*;
     use axum::body::Body;
     use axum::http::Request;
-    use hyper::body::to_bytes;
+    use http_body_util::BodyExt;
     use noa_gateway::ProgrammableRouter;
     use serde_json::Value;
     use tower::ServiceExt;
@@ -291,7 +290,12 @@ mod tests {
             .await
             .expect("router responds");
         let status = response.status();
-        let bytes = to_bytes(response.into_body()).await.expect("body to bytes");
+        let bytes = response
+            .into_body()
+            .collect()
+            .await
+            .expect("body to bytes")
+            .to_bytes();
         let value = serde_json::from_slice(&bytes).expect("json body");
         (status, value)
     }
@@ -309,7 +313,12 @@ mod tests {
             .await
             .expect("ready response");
         assert_eq!(response.status(), StatusCode::OK);
-        let bytes = to_bytes(response.into_body()).await.expect("read bytes");
+        let bytes = response
+            .into_body()
+            .collect()
+            .await
+            .expect("read bytes")
+            .to_bytes();
         let payload: Value = serde_json::from_slice(&bytes).expect("ready payload");
         assert_eq!(payload["ready"], Value::Bool(true));
     }
@@ -330,41 +339,29 @@ mod tests {
         let headers = response.headers();
         assert_eq!(
             headers.get(header::CONTENT_TYPE),
-            Some(&header::HeaderValue::from_static("text/plain; version=0.0.4"))
+            Some(&header::HeaderValue::from_static(
+                "text/plain; version=0.0.4"
+            ))
         );
     }
 
     #[tokio::test]
     async fn inference_route_returns_routing_plan() {
         let router = build_test_router();
-        let (status, payload) = post_json(
-            &router,
-            "/v1/inference",
-            json!({ "prompt": "hi there" }),
-        )
-        .await;
+        let (status, payload) =
+            post_json(&router, "/v1/inference", json!({ "prompt": "hi there" })).await;
         assert_eq!(status, StatusCode::OK);
         assert_eq!(payload["status"], Value::String("accepted".into()));
-        assert_eq!(
-            payload["plan"]["targets"],
-            json!(["inference/Invoke"])
-        );
+        assert_eq!(payload["plan"]["targets"], json!(["inference/Invoke"]));
     }
 
     #[tokio::test]
     async fn retrieval_route_registers_known_service() {
         let router = build_test_router();
-        let (status, payload) = post_json(
-            &router,
-            "/v1/retrieval",
-            json!({ "query": "{ doc }" }),
-        )
-        .await;
+        let (status, payload) =
+            post_json(&router, "/v1/retrieval", json!({ "query": "{ doc }" })).await;
         assert_eq!(status, StatusCode::OK);
-        assert_eq!(
-            payload["plan"]["targets"],
-            json!(["retrieval"])
-        );
+        assert_eq!(payload["plan"]["targets"], json!(["retrieval"]));
     }
 
     #[tokio::test]
@@ -379,4 +376,3 @@ mod tests {
         assert_eq!(parsed["mode"], Value::String("multiplex".into()));
     }
 }
-

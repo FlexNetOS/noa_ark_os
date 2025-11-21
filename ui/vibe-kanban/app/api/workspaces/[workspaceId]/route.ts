@@ -4,7 +4,10 @@ import { assertUser } from "@/app/lib/session";
 import { appendGoalTrace } from "@/server/memory-store";
 import { getWorkspace, upsertWorkspace } from "@/server/workspace-store";
 
-export async function GET(_request: Request, { params }: { params: { workspaceId: string } }) {
+export async function GET(
+  _request: Request,
+  { params }: { params: { workspaceId: string } }
+) {
   const user = assertUser();
   const workspace = await getWorkspace(params.workspaceId);
   if (!workspace || !workspace.members.some((member) => member.id === user.id)) {
@@ -25,7 +28,10 @@ export async function GET(_request: Request, { params }: { params: { workspaceId
   return NextResponse.json({ workspace });
 }
 
-export async function PATCH(request: Request, { params }: { params: { workspaceId: string } }) {
+export async function PATCH(
+  request: Request,
+  { params }: { params: { workspaceId: string } }
+) {
   const user = assertUser();
   const workspace = await getWorkspace(params.workspaceId);
   if (!workspace || !workspace.members.some((member) => member.id === user.id)) {

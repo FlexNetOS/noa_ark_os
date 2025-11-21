@@ -6,7 +6,10 @@ import { workspaceEventHub } from "@/server/workspace-events";
 
 export const runtime = "nodejs";
 
-export async function GET(_request: Request, { params }: { params: { workspaceId: string } }) {
+export async function GET(
+  _request: Request,
+  { params }: { params: { workspaceId: string } }
+) {
   const user = assertUser();
   const workspace = await getWorkspace(params.workspaceId);
   if (!workspace || !workspace.members.some((member) => member.id === user.id)) {

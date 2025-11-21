@@ -60,6 +60,12 @@ agents/
 - Resource allocation
 - Hive mind coordinator
 
+### Policy Enforcement Subject Specialist (pe-ssp)
+- Enforces AGENT.md guardrails across every automation thread
+- Ships dedicated sub-agents (4-D compliance, Truth Gate steward, smoke/self-check sentinels)
+- Generates claims/evidence artifacts and routes remediation tasks back through the gateway
+- Detector → fixer hooks live in `.workspace/registry/pe_ssp.detector_hooks.json` so planners can call the right sub-agent for each failure mode
+
 ### 2. Worker Agents
 - Task execution
 - Parallel processing

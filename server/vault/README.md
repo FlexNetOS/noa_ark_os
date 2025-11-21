@@ -66,7 +66,7 @@ listener "tcp" {
 }
 
 storage "raft" {
-  path    = "D:/dev/workspaces/noa_ark_os/server/vault/data"
+  path    = "{{env \"NOA_VAULT_HOME\"}}/data"
   node_id = "vault-node-1"
 }
 
@@ -79,11 +79,19 @@ telemetry {
 ```
 
 **Key Settings:**
+- **NOA_VAULT_HOME:** Gateway-managed base directory for Vault data/config (defaults to `~/.noa/vault`). Overrides allow each operator to keep data outside the repo while keeping manifests consistent.
 - **UI:** Enabled for browser-based management
 - **Listener:** Bound to loopback (127.0.0.1:8200) - NOT exposed externally
 - **TLS:** Disabled (use Caddy reverse proxy for TLS termination)
 - **Storage:** Raft-based integrated storage (no external database needed)
 - **mlock:** Disabled for WSL compatibility (enable on hardened hosts)
+
+Before starting Vault, export/confirm `NOA_VAULT_HOME` and create its directories:
+
+```bash
+export NOA_VAULT_HOME=${NOA_VAULT_HOME:-"$HOME/.noa/vault"}
+mkdir -p "$NOA_VAULT_HOME/data" "$NOA_VAULT_HOME/runtime"
+```
 
 ### Production Adjustments
 
@@ -135,11 +143,23 @@ New-Item -ItemType Directory -Force -Path "server/vault/data"
 **WSL/Linux:**
 ```bash
 # Using provided scripts
+export NOA_VAULT_HOME=${NOA_VAULT_HOME:-"$HOME/.noa/vault"}
 ./server/vault/start.sh
 
 # OR: Direct command
-vault server -config=/mnt/d/dev/workspaces/noa_ark_os/server/vault/vault.hcl
+vault server -config="$(pwd)/server/vault/vault.hcl"
 ```
+
+#### 1b. Configure Gateway Auth Runtime
+
+The helper script keeps `GATEWAY_AUTH_CONFIG` pointed at the managed runtime directory and seeds it from the repository copy if missing:
+
+```bash
+export NOA_VAULT_HOME=${NOA_VAULT_HOME:-"$HOME/.noa/vault"}
+./server/vault/configure-gateway-auth-simple.sh
+```
+
+Override the managed location by exporting `NOA_VAULT_HOME=/custom/path` before running the script.
 
 #### 2. Initialize Vault (First Time Only)
 
@@ -663,13 +683,6 @@ Write-Host "Vault service installed. Start with: Start-Service $serviceName"
 8. Store first secret: `vault kv put secret/test value=hello`
 9. Integrate with agent-registry (see Integration section)
 10. Install as service (see Installation as Windows Service section)
-
-### Gateway Auth Config
-
-The gateway authenticator now expects a JSON bundle (`server/vault/gateway_auth.example.json`). Load
-it into Vault and set `GATEWAY_VAULT_SECRET_PATH=secret/data/gateway/auth` so the gateway can fetch
-API keys, mTLS fingerprints, and OIDC settings at runtime. See
-`docs/operations/GATEWAY_AUTH_SECRETS.md` for rotation steps.
 
 ---
 
