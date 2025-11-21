@@ -13,7 +13,19 @@
 
 ## 0) Purpose
 
-Establish one strict operating policy for every agent-driven action so each task **heals** the codebase, **upgrades** capability, and **never downgrades nor deletes**. The policy blocks content rot, enforces cross-platform offline-first autonomy, and preserves architectural clarity across NOA ARK OS services, CRC, UI, workflows, storage, and tooling.
+Establish one strict operating policy for every agent-driven action so each task:
+- **heals** the codebase, 
+- **upgrades** capability,
+- **never downgrades nor deletes**,
+- **archives** compress and store superseded assets,
+- **verifies** claims through a structured Truth Gate (strictly truth mode only),
+- **documents** every change in the Evidence Ledger,
+- **preserves** architectural clarity,
+- **operates autonomously** through sub-agents,
+- **ensures tasks are never manually repeated** every execution creates mirrored automation; to ensure that task task can be repeated with full autonomous automation.
+- **adheres** to cross-platform standards,
+- **routes** all dependencies, integrations, internal interactions, and external interactions through the gateway stack,
+- The policy blocks content rot, and preserves architectural clarity across NOA ARK OS.
 
 ---
 
@@ -38,9 +50,9 @@ Establish one strict operating policy for every agent-driven action so each task
 ### Offline-First Ownership (Online via Feature Flag)
 
 * **Default mode:** offline/local execution.
-* **Online operations:** allowed only when `ONLINE_*` feature flags are explicitly enabled and logged.
+* **Online operations:** allowed when `ONLINE_*` feature flags are enabled, needed, and logged. Use when external data, models, or services are essential. Complete offline fallbacks when feasible.
 
-### No Duplication, No Deletion
+### No Duplication, No Deletion - Compress + Archive
 
 * Never duplicate instructions or logic across providers; use **gateways** and shared modules.
 * Never delete files; if superseding content, compress+archive the prior version and document the swap.
@@ -74,18 +86,17 @@ Establish one strict operating policy for every agent-driven action so each task
 8. **Organization Management & Gateway Reuse:** Enforce single sources of truth, re-use assets via gateways, and keep duplicate-check CI passing.
 9. **Provider Instruction Uniformity:** Provider files remain empty pointers that direct readers back to this policy.
 
-### Phase 0.5–10 Operator Patterns
+### Operator Patterns
 
 Detailed execution guidance for the active roadmap phases lives in
 `docs/guides/AGENTIC_OS_GUIDE.md` (sourced from
 `docs/tasks/ROADMAP_AGENTIC_KERNEL_TASK_LINKS.md`). Operators must:
 
-- **Phase 0.5 (CLI-First Foundation):** Drive all actions through CLI targets (`Makefile`, `pnpm`, `cargo`) and record evidence snapshots before state changes.
-- **Phase 1 (Kernel Baseline):** Keep kernel manifests authoritative and trigger `make snapshot` prior to structural migrations.
-- **Phase 2–4 (North Star, Contract Tests, CLI Expansion):** Extend capability registries instead of importing subsystems directly and publish machine-readable evidence for automation replay.
-- **Phase 5 (Gateway Tokens):** Enforce registry-only execution; capability tokens issued via `services/gateway/` gate all runtime launches.
-- **Phase 6–7 (Retrieval Discipline, Reward System):** Update metrics and analytics in lock-step with capability changes to preserve reproducibility.
-- **Phase 8–10 (SBOM Split, Deployment Profiles, Machine-First Pipelines):** Generate SBOM placeholders, promote deployments through gateway-controlled profiles, and document machine-first behaviors in Truth Gate artifacts.
+- **(CLI-First Foundation):** Drive all actions through CLI targets (`Makefile`, `pnpm`, `cargo`) and record evidence snapshots before state changes.
+- **(North Star, Contract Tests, CLI Expansion):** Extend capability registries instead of importing subsystems directly and publish machine-readable evidence for automation replay.
+- **(Gateway Tokens):** Enforce registry-only execution; capability tokens issued via `services/gateway/` gate all runtime launches.
+- **(Retrieval Discipline, Reward System):** Update metrics and analytics in lock-step with capability changes to preserve reproducibility.
+- **(SBOM Split, Deployment Profiles, Machine-First Pipelines):** Generate SBOM placeholders, promote deployments through gateway-controlled profiles, and document machine-first behaviors in Truth Gate artifacts.
 
 ---
 
@@ -595,5 +606,4 @@ Before marking a task complete:
 
 ## Testing
 
-⚠️ Tests not run (documentation-only change).
-
+⚠️ Tests are not optional.

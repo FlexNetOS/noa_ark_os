@@ -1,0 +1,36 @@
+{
+  "$schema": "./registry.schema.json",
+  "registryVersion": "1.0.0",
+  "owners": [
+    {
+      "id": "crew-dev-tooling",
+      "name": "Dev Tooling Crew",
+      "description": "Maintains portable toolchain bundles (Cargo, Node, PowerShell) and their activation automation. Placeholder contact until routing is finalized.",
+      "contacts": ["dev-tooling@noa-ark.example"]
+    }
+  ],
+  "components": [
+    {
+      "id": "toolchain.powershell.portable",
+      "name": "Portable PowerShell Runtime",
+      "version": "0.1.0",
+      "description": "Offline bundle and activation scripts wiring PowerShell 7.4.5 into the NOA Ark OS launcher stack.",
+      "files": [
+        "server/tools/setup-portable-pwsh.sh",
+        "server/tools/setup-portable-pwsh.ps1",
+        "server/tools/activate-pwsh.sh",
+        "server/tools/activate-pwsh.ps1",
+        "server/tools/pwsh-portable.manifest.json",
+        "tools/automation/check_portable_pwsh.py"
+      ],
+      "dependencies": [],
+      "owners": ["crew-dev-tooling"],
+      "tags": ["toolchain", "powershell", "portable"],
+      "links": {
+        "setup": "server/tools/setup-portable-pwsh.sh",
+        "activator": "server/tools/activate-pwsh.sh",
+        "evidence": ".workspace/todo/portable-pwsh-bundle/claims.table.md"
+      }
+    }
+  ]
+}

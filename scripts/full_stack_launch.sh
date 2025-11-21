@@ -43,12 +43,13 @@ MASTER_CONTROLLER_MODE="auto"
 PIPELINE_MODE="auto"
 declare -A PHASE_STATE
 declare -A PHASE_REASON
-PHASE_ORDER=("kernel" "cuda" "llama_server" "master_controller" "pipeline_evidence")
+PHASE_ORDER=("powershell_activation" "kernel" "cuda" "llama_server" "master_controller" "pipeline_evidence")
 PHASE_REASON_TMP=""
 KERNEL_SENTINEL=""
 CUDA_SENTINEL=""
 LLAMA_SENTINEL=""
 PIPELINE_SENTINEL=""
+PWSH_SENTINEL=""
 HOST_OS=""
 IS_WINDOWS=0
 
@@ -308,6 +309,7 @@ initialize_launch_paths() {
   CUDA_SENTINEL="$LOG_DIR/cuda-status.json"
   LLAMA_SENTINEL="$LOG_DIR/llama-status.json"
   PIPELINE_SENTINEL="$LOG_DIR/pipeline-status.json"
+  PWSH_SENTINEL="$LOG_DIR/pwsh-activation.json"
 }
 
 announce_missing_powershell() {
@@ -344,6 +346,84 @@ info() {
 fail() {
   printf '\n[ERROR] %s\n' "$1" >&2
   exit "${2:-1}"
+}
+
+json_escape() {
+  local text="$1"
+  text="${text//\\/\\\\}"
+  text="${text//\"/\\\"}"
+  text="${text//$'\n'/\\n}"
+  printf '%s' "$text"
+}
+
+compute_sha256() {
+  local target="$1"
+  if [[ -z "$target" || ! -f "$target" ]]; then
+    printf 'unavailable'
+    return
+  fi
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$target" | awk '{print $1}'
+  elif command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$target" | awk '{print $1}'
+  else
+    printf 'unavailable'
+  fi
+}
+
+record_pwsh_activation() {
+  local status="$1"
+  local reason="$2"
+  local bin="$3"
+  local manifest="$4"
+  local manifest_sha
+  manifest_sha=$(compute_sha256 "$manifest")
+  if [[ -z "$PWSH_SENTINEL" ]]; then
+    return
+  fi
+  cat >"$PWSH_SENTINEL" <<EOF
+{
+  "status": "$(json_escape "$status")",
+  "reason": "$(json_escape "$reason")",
+  "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "binary": "$(json_escape "${bin:-}")",
+  "manifest": "$(json_escape "${manifest:-}")",
+  "manifest_sha256": "$(json_escape "$manifest_sha")"
+}
+EOF
+}
+
+activate_portable_pwsh() {
+  local activator="$ROOT/server/tools/activate-pwsh.sh"
+  local manifest="$ROOT/server/tools/pwsh-portable.manifest.json"
+  local reason=""
+  local previous_silent="${NOA_ACTIVATE_SILENT:-0}"
+  if [[ -n "${NOA_PWSH_ENV:-}" ]]; then
+    reason="NOA_PWSH_ENV preset ($POWERSHELL_BIN)"
+    record_pwsh_activation "preactivated" "$reason" "$POWERSHELL_BIN" "$manifest"
+    set_phase_status "powershell_activation" "skipped" "$reason"
+    return 0
+  fi
+  if [[ ! -f "$activator" ]]; then
+    reason="missing $activator"
+    record_pwsh_activation "missing_activator" "$reason" "" "$manifest"
+    set_phase_status "powershell_activation" "skipped" "no activator; run setup-portable-pwsh.sh"
+    return 1
+  fi
+  if NOA_ACTIVATE_SILENT=1 source "$activator"; then
+    reason="portable bundle activated"
+    record_pwsh_activation "activated" "$reason" "$POWERSHELL_BIN" "$manifest"
+    set_phase_status "powershell_activation" "ran" "$reason"
+    NOA_ACTIVATE_SILENT="$previous_silent"
+    return 0
+  else
+    local rc=$?
+    reason="activator exit $rc"
+    record_pwsh_activation "failed" "$reason" "$POWERSHELL_BIN" "$manifest"
+    set_phase_status "powershell_activation" "failed" "activator failed; run setup-portable-pwsh.sh"
+    NOA_ACTIVATE_SILENT="$previous_silent"
+    return 1
+  fi
 }
 
 ensure_root() {
@@ -528,6 +608,10 @@ run_make_phase() {
 
 ensure_powershell() {
   if [[ $POWERSHELL_AVAILABLE -eq 1 ]]; then
+    return 0
+  fi
+  if [[ -n "${NOA_PWSH_ENV:-}" && -n "${POWERSHELL_BIN:-}" && -x "$POWERSHELL_BIN" ]]; then
+    POWERSHELL_AVAILABLE=1
     return 0
   fi
   if command -v "$POWERSHELL_BIN" >/dev/null 2>&1; then
@@ -993,6 +1077,7 @@ main() {
   ensure_root
   init_phase_statuses
   initialize_launch_paths
+  activate_portable_pwsh || true
   configure_make_targets
   run_duplicate_task_guard
   trap cleanup EXIT INT TERM

@@ -1,6 +1,6 @@
 # Creating Agents
 
-Learn how to create powerful, interconnected Claude sub-agents using advanced
+Learn how to create powerful, interconnected sub-agents using advanced
 patterns.
 
 ## Quick Start

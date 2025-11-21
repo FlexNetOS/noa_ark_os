@@ -12,6 +12,17 @@ NODE_HOME_ROOT="$SCRIPT_DIR/node-portable"
 CURRENT_LINK="$NODE_HOME_ROOT/current"
 COREPACK_DIR="$NODE_HOME_ROOT/corepack"
 
+if [[ -z "${NOA_PWSH_ENV:-}" && "${NOA_SKIP_AUTO_PWSH:-0}" != "1" ]]; then
+    PWSH_ACTIVATE_SILENT_SNAPSHOT="${NOA_ACTIVATE_SILENT:-0}"
+    NOA_ACTIVATE_SILENT=1
+    if [[ -f "$SCRIPT_DIR/activate-pwsh.sh" ]]; then
+        # shellcheck source=/dev/null
+        source "$SCRIPT_DIR/activate-pwsh.sh" 2>/dev/null || true
+    fi
+    NOA_ACTIVATE_SILENT="$PWSH_ACTIVATE_SILENT_SNAPSHOT"
+    unset PWSH_ACTIVATE_SILENT_SNAPSHOT
+fi
+
 if [[ ! -d "$NODE_HOME_ROOT" ]]; then
     echo "❌ Portable Node directory not found at $NODE_HOME_ROOT" >&2
     echo "Run ./server/tools/setup-portable-node.sh first." >&2

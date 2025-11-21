@@ -27,7 +27,7 @@ npm install -g @context7/mcp-server
 }
 ```
 
-3. Restart Claude Code to activate
+3. Restart Provider (e.g. Claude Code) to activate
 
 ### Benefits
 

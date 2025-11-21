@@ -97,6 +97,13 @@ D:\dev\workspaces\noa_ark_os\
 - Cargo Check (Portable)
 - Activate Portable Cargo
 
+### Portable PowerShell Bundle (2025-11-21)
+- `server/tools/setup-portable-pwsh.{sh,ps1}` downloads PowerShell 7.4.5 into `server/tools/pwsh-portable/current/` with manifest + SHA recorded at `server/tools/pwsh-portable.manifest.json`.
+- `server/tools/activate-pwsh.{sh,ps1}` exports `POWERSHELL_BIN`, appends the bundle to `PATH`, and sets `NOA_PWSH_ENV` so any activator can rely on a consistent runtime.
+- `scripts/full_stack_launch.sh` now adds a `powershell_activation` phase that sources the activator, writes evidence to `build_output/system-launch/pwsh-activation.json`, and surfaces failures that require rerunning the setup script.
+- Existing toolchain activators (`activate-cargo-wsl.sh`, `activate-node.sh`) opportunistically source the PowerShell activator first so downstream helpers inherit the environment automatically.
+- CI/automation guard `tools/automation/check_portable_pwsh.py` validates the manifest hash + binary presence; `scripts/lib/ensure_no_duplicate_tasks.sh` now invokes it so missing bundles fail fast with remediation guidance.
+
 ---
 
 ## 🚀 Quick Commands
