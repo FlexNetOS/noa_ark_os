@@ -8,6 +8,24 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 SILENT="${NOA_ACTIVATE_SILENT:-0}"
 
+if [[ "${NOA_TOOLCHAINS_CHAINING:-0}" != "1" && "${NOA_TOOLCHAINS_REDIRECT_DISABLE:-0}" != "1" ]]; then
+    TOOLCHAIN_ACTIVATOR="$SCRIPT_DIR/activate-toolchains.sh"
+    if [[ -f "$TOOLCHAIN_ACTIVATOR" ]]; then
+        __NOA_REDIRECT_PREV_OPTS="$__NOA_PREV_CARGO_OPTS"
+        if ! source "$TOOLCHAIN_ACTIVATOR"; then
+            rc=$?
+            eval "$__NOA_REDIRECT_PREV_OPTS"
+            unset __NOA_REDIRECT_PREV_OPTS
+            unset __NOA_PREV_CARGO_OPTS
+            return $rc 2>/dev/null || exit $rc
+        fi
+        eval "$__NOA_REDIRECT_PREV_OPTS"
+        unset __NOA_REDIRECT_PREV_OPTS
+        unset __NOA_PREV_CARGO_OPTS
+        return 0 2>/dev/null || exit 0
+    fi
+fi
+
 if [[ -z "${NOA_PWSH_ENV:-}" && "${NOA_SKIP_AUTO_PWSH:-0}" != "1" ]]; then
     if [[ -f "$SCRIPT_DIR/activate-pwsh.sh" ]]; then
         __NOA_PREV_ACTIVATE_SILENT="${NOA_ACTIVATE_SILENT:-0}"

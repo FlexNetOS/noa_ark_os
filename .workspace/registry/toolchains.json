@@ -13,12 +13,14 @@
     {
       "id": "toolchain.powershell.portable",
       "name": "Portable PowerShell Runtime",
-      "version": "0.3.0",
-      "description": "Offline PowerShell 7.4.5 bundles for Linux + macOS + Windows with activators, duplicate-task guard enforcement, and launcher evidence hooks (pwsh-activation.json).",
+      "version": "0.3.1",
+      "description": "Offline PowerShell 7.4.5 bundles for Linux + macOS + Windows with redirect-aware activators, duplicate-task guard enforcement, and launcher evidence hooks (pwsh-activation.json).",
       "files": [
         "server/tools/setup-portable-pwsh.sh",
         "server/tools/setup-portable-pwsh.ps1",
         "server/tools/activate-pwsh.sh",
+        "server/tools/activate-cargo-wsl.sh",
+        "server/tools/activate-node.sh",
         "server/tools/activate-pwsh.ps1",
         "server/tools/activate-toolchains.sh",
         "server/tools/pwsh-portable.manifest.json",
