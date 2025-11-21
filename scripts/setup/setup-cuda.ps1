@@ -4,12 +4,18 @@
 param(
     [switch]$Download,
     [switch]$Install,
-    [switch]$Verify
+    [switch]$Verify,
+    [string]$WorkspaceRoot
 )
 
 $CudaVersion = "13.0.1"
 $CudaUrl = "https://developer.download.nvidia.com/compute/cuda/13.0.1/local_installers/cuda_13.0.1_531.14_windows.exe"
-$ToolsDir = "D:\dev\workspaces\noa_ark_os\server\tools\cuda"
+if (-not $WorkspaceRoot) {
+    $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+    $WorkspaceRoot = Resolve-Path -Path (Join-Path $scriptRoot "..\..")
+}
+
+$ToolsDir = Join-Path $WorkspaceRoot "server/tools/cuda"
 $InstallerPath = Join-Path $ToolsDir "cuda_13.0.1_windows.exe"
 
 Write-Host "🚀 CUDA Toolkit Setup" -ForegroundColor Cyan

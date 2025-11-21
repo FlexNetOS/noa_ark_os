@@ -1,7 +1,6 @@
 use std::io::BufRead;
 use std::path::PathBuf;
 use std::str::FromStr;
-#[cfg(feature = "inference")]
 use std::sync::Arc;
 
 use anyhow::{bail, ensure, Context, Result};
@@ -160,6 +159,11 @@ enum Commands {
     Plugin {
         #[command(flatten)]
         query: RegistryArgs,
+    },
+    /// Manage shared notebook workspaces
+    Notebook {
+        #[command(subcommand)]
+        command: NotebookCommands,
     },
     /// Interact with agents using configured inference providers
     Agent {

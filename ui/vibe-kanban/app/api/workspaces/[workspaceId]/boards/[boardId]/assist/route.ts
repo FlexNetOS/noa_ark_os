@@ -50,7 +50,6 @@ function generateSuggestions(board: WorkspaceBoard) {
   return suggestions;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function buildGoalPayload(
   body: unknown,
   context: { workspaceId: string; boardId: string; userId: string },

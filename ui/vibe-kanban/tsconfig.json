@@ -14,7 +14,7 @@
     "module": "esnext",
     "moduleResolution": "node",
     "resolveJsonModule": true,
-    "baseUrl": "../..",
+    "baseUrl": ".",
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
@@ -28,22 +28,22 @@
     ],
     "paths": {
       "@/*": [
-        "ui/vibe-kanban/*"
+        "./*"
       ],
       "@noa-ark/shared-ui/*": [
-        "ui/shared/src/*"
+        "../shared/src/*"
       ],
       "@noa-ark/shared-ui": [
-        "ui/shared/src/index"
+        "../shared/src/index"
       ],
       "mitt": [
-        "ui/vibe-kanban/types/mitt"
+        "./types/mitt"
       ],
       "@noa-ark/server/*": [
-        "server/*"
+        "./server/*"
       ],
       "zod": [
-        "ui/vibe-kanban/node_modules/zod"
+        "./node_modules/zod"
       ]
     },
     "esModuleInterop": true
@@ -54,7 +54,8 @@
     "**/*.tsx",
     "**/*.js",
     "**/*.jsx",
-    ".next/types/**/*.ts"
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

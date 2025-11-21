@@ -8,6 +8,22 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
 CONFIG_JSON="$ROOT_DIR/tools/devshell/config.json"
+PYTHON_BIN="${PYTHON_BIN:-python3}"
+
+enforce_duplicate_task_guard() {
+  local detector="$ROOT_DIR/tools/automation/check_todo_duplicates.py"
+  if [[ ! -f "$detector" ]]; then
+    echo "[INFO] Duplicate-task detector not found; skipping AGENT.md check" >&2
+    return
+  fi
+  echo "[INFO] Enforcing AGENT.md anti-duplication policy (workspace TODO scan)" >&2
+  if ! "$PYTHON_BIN" "$detector" --output text; then
+    echo "[ERROR] Duplicate TODO entries detected. Resolve them before continuing." >&2
+    exit 12
+  fi
+}
+
+enforce_duplicate_task_guard
 
 detect_pnpm_version() {
   local version=""
@@ -26,7 +42,7 @@ detect_pnpm_version() {
     ' "$CONFIG_JSON" 2>/dev/null || true)
   fi
   if [[ -z "$version" || "$version" == "None" ]]; then
-    version="8.15.4"
+    version="9.11.0"
   fi
   printf '%s' "$version"
 }

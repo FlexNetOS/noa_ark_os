@@ -161,6 +161,14 @@ Reference documents: `HIERARCHY.md`, `WORKSPACE_ORGANIZATION_PLAN.md`, `docs/arc
 
 Resolve conflicts in favor of the highest-priority source.
 
+### Launcher & Tooling Discipline
+
+- `scripts/full_stack_launch.sh` is the canonical “all systems up” entry point. It now exposes `--kernel-mode`, `--cuda-mode`, `--llama-mode`, `--master-controller-mode`, and `--pipeline-mode` flags (values: `auto|force|skip`). Agents must rely on these modes instead of ad-hoc skip flags so the launcher can determine when to harden the kernel, provision CUDA/llama assets, start the inference/master-controller services, and record pipeline evidence.
+- Kernel hardening remains mandatory. The launcher runs `make kernel && make image` automatically whenever `dist/kernel/` is stale, but operators must still treat kernel changes as gated work: inspect the summary table, verify the artifacts, and run the targets manually when working outside the launcher or when CI requires explicit evidence.
+- CUDA, llama.cpp, and master-controller orchestration depend on PowerShell. The launcher surfaces missing prerequisites early; agents must install/configure PowerShell (or set `POWERSHELL_BIN`) before requesting those phases.
+- Every launcher invocation emits a phase summary (kernel/CUDA/llama/master-controller/pipeline). Treat that output as part of the Truth Gate evidence and archive it when signing off on a change.
+- UI/tooling exposure for every script in `./scripts` is tracked in `scripts/INTEGRATION_STATUS.md`. Keep that ledger in sync whenever you add or modify scripts so the frontend can present the correct controls.
+
 ---
 
 ## 6) Verification & Truth Gate

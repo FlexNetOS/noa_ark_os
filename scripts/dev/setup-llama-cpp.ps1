@@ -9,11 +9,19 @@ param(
     [switch]$SkipModelDownload = $false,
     
     [Parameter(Mandatory=$false)]
-    [string]$ModelSize = "3b"  # 3b, 7b, or 8b
+    [string]$ModelSize = "3b",  # 3b, 7b, or 8b
+
+    [Parameter(Mandatory=$false)]
+    [string]$WorkspaceRoot
 )
 
-$WorkspaceRoot = "D:\dev\workspaces\noa_ark_os"
-$ServerAIDir = Join-Path $WorkspaceRoot "server\ai"
+if (-not $WorkspaceRoot) {
+    $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+    $WorkspaceRoot = Resolve-Path -Path (Join-Path $scriptRoot "..\..")
+}
+
+$ServerDir = Join-Path $WorkspaceRoot "server"
+$ServerAIDir = Join-Path $ServerDir "ai"
 $LlamaCppDir = Join-Path $ServerAIDir "llama-cpp"
 
 function Write-Info { param($Message) Write-Host "ℹ️  $Message" -ForegroundColor Cyan }
@@ -27,10 +35,10 @@ Write-Info "Workspace: $WorkspaceRoot"
 # Create directory structure
 Write-Info "Creating directory structure..."
 $directories = @(
-    "$LlamaCppDir\bin",
-    "$LlamaCppDir\models",
-    "$LlamaCppDir\configs",
-    "$LlamaCppDir\logs"
+    (Join-Path $LlamaCppDir "bin"),
+    (Join-Path $LlamaCppDir "models"),
+    (Join-Path $LlamaCppDir "configs"),
+    (Join-Path $LlamaCppDir "logs")
 )
 
 foreach ($dir in $directories) {
@@ -76,7 +84,7 @@ if ($BuildFromSource) {
     
     # Copy binaries
     Write-Info "Copying binaries..."
-    Copy-Item "bin\Release\*" "$LlamaCppDir\bin\" -Force
+    Copy-Item "bin/Release/*" (Join-Path $LlamaCppDir "bin") -Force
     
     Write-Success "Llama.cpp built from source"
     
@@ -104,7 +112,7 @@ if ($BuildFromSource) {
         Invoke-WebRequest -Uri $downloadUrl -OutFile $zipPath
         Write-Success "Downloaded llama.cpp"
         
-        Expand-Archive -Path $zipPath -DestinationPath "$LlamaCppDir\bin" -Force
+        Expand-Archive -Path $zipPath -DestinationPath (Join-Path $LlamaCppDir "bin") -Force
         Remove-Item $zipPath
         
         Write-Success "Llama.cpp binaries installed"
@@ -136,7 +144,7 @@ if (!$SkipModelDownload) {
     }
     
     $modelFileName = Split-Path $modelUrl -Leaf
-    $modelPath = Join-Path "$LlamaCppDir\models" $modelFileName
+    $modelPath = Join-Path (Join-Path $LlamaCppDir "models") $modelFileName
     
     if (Test-Path $modelPath) {
         Write-Info "Model already exists: $modelPath"
@@ -185,7 +193,7 @@ logging:
   rotation: daily
 "@
 
-$configPath = Join-Path "$LlamaCppDir\configs" "server.yaml"
+$configPath = Join-Path (Join-Path $LlamaCppDir "configs") "server.yaml"
 $configContent | Set-Content -Path $configPath -Encoding UTF8
 
 Write-Success "Configuration created: $configPath"
@@ -195,30 +203,59 @@ Write-Info "Creating start script..."
 
 $startScriptContent = @"
 # Start Llama.cpp Server
-`$LlamaCppDir = "D:\dev\workspaces\noa_ark_os\server\ai\llama-cpp"
-`$BinPath = Join-Path `$LlamaCppDir "bin\llama-server.exe"
-`$ModelPath = Join-Path `$LlamaCppDir "models\$modelFileName"
-`$LogPath = Join-Path `$LlamaCppDir "logs\server.log"
+param(
+    [Parameter(Mandatory=$false)]
+    [string]$ModelFile = "$modelFileName",
+    [Parameter(Mandatory=$false)]
+    [string]$Host = "127.0.0.1",
+    [Parameter(Mandatory=$false)]
+    [int]$Port = 8080,
+    [Parameter(Mandatory=$false)]
+    [int]$Threads = 8,
+    [Parameter(Mandatory=$false)]
+    [int]$GpuLayers = 35
+)
+
+$scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$workspaceRoot = Resolve-Path -Path (Join-Path $scriptRoot "..\..")
+$serverDir = Join-Path $workspaceRoot "server"
+$serverAiDir = Join-Path $serverDir "ai"
+$llamaCppDir = Join-Path $serverAiDir "llama-cpp"
+$binDir = Join-Path $llamaCppDir "bin"
+$binPath = Join-Path $binDir "llama-server.exe"
+$modelsDir = Join-Path $llamaCppDir "models"
+$modelPath = Join-Path $modelsDir $ModelFile
+$logDir = Join-Path $llamaCppDir "logs"
+$logPath = Join-Path $logDir "server.log"
 
 Write-Host "Starting Llama.cpp server..." -ForegroundColor Cyan
-Write-Host "Model: `$ModelPath" -ForegroundColor Gray
-Write-Host "Server: http://127.0.0.1:8080" -ForegroundColor Gray
+Write-Host "Model: $modelPath" -ForegroundColor Gray
+Write-Host "Server: http://$Host:$Port" -ForegroundColor Gray
 
-& `$BinPath ``
-    --model `$ModelPath ``
-    --host 127.0.0.1 ``
-    --port 8080 ``
-    --ctx-size 8192 ``
-    --batch-size 512 ``
-    --threads 8 ``
-    --n-gpu-layers 35 ``
-    --log-format text ``
-    --log-file `$LogPath
+if (!(Test-Path $modelPath)) {
+    Write-Host "ERROR: Model not found at $modelPath" -ForegroundColor Red
+    Write-Host "Available models:" -ForegroundColor Yellow
+    Get-ChildItem $modelsDir -Filter "*.gguf" | ForEach-Object { Write-Host "  - $($_.Name)" }
+    exit 1
+}
+
+& $binPath `
+    --model $modelPath `
+    --host $Host `
+    --port $Port `
+    --ctx-size 8192 `
+    --batch-size 512 `
+    --threads $Threads `
+    --n-gpu-layers $GpuLayers `
+    --log-format text `
+    --log-file $logPath
 
 Write-Host "Server stopped" -ForegroundColor Yellow
 "@
 
-$startScriptPath = Join-Path $WorkspaceRoot "scripts\dev\start-llama-server.ps1"
+$scriptsDir = Join-Path $WorkspaceRoot "scripts"
+$devScriptsDir = Join-Path $scriptsDir "dev"
+$startScriptPath = Join-Path $devScriptsDir "start-llama-server.ps1"
 $startScriptContent | Set-Content -Path $startScriptPath -Encoding UTF8
 
 Write-Success "Start script created: $startScriptPath"

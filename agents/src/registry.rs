@@ -1,6 +1,7 @@
 // Agent Registry - Loads and manages agent metadata from CRC drops
 // Integrates the 928-agent directory from the stale/agents drop
 
+use crate::implementations::specialist::PolicyEnforcementAgent;
 use crate::unified_types::{AgentCategory, AgentLayer, AgentMetadata, HealthStatus, RegistryStats};
 use crate::{Error, Result};
 use std::collections::{HashMap, HashSet};
@@ -93,6 +94,16 @@ impl AgentRegistry {
                         agent_id
                     );
                 }
+            }
+        }
+
+        if !agents_write.contains_key("pe-ssp") {
+            let policy_agent = PolicyEnforcementAgent::new().metadata_snapshot();
+            let inserted = agents_write
+                .insert(policy_agent.agent_id.clone(), policy_agent)
+                .is_none();
+            if inserted {
+                count += 1;
             }
         }
 

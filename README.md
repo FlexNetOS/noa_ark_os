@@ -110,6 +110,25 @@ noa_ark_os/
    ./scripts/start-all-services.sh
    ```
 
+### Unified Full-Stack Launch
+
+Use `scripts/full_stack_launch.sh` for the one-command experience that prepares dependencies, hardens the kernel image, launches Docker dependencies, starts runtime services, and emits pipeline evidence. The script now evaluates each sensitive phase automatically and prints a summary so you know what ran and what was skipped.
+
+```bash
+./scripts/full_stack_launch.sh --kernel-mode auto --cuda-mode auto --llama-mode auto \
+  --master-controller-mode auto --pipeline-mode auto
+```
+
+Key behaviors:
+
+- **Kernel hardening**: `make kernel && make image` run automatically whenever the artifacts in `dist/kernel/` are older than the current commit. Force or skip via `--kernel-mode {force|skip}`.
+- **CUDA + llama orchestration**: On Windows hosts with PowerShell, the launcher provisions CUDA (`scripts/setup/setup-cuda.ps1`) and llama.cpp (`scripts/dev/setup-llama-cpp.ps1`) whenever binaries or GGUF models are missing. On Linux hosts these phases are skipped with an explicit reason.
+- **Inference + controller tooling**: The llama PowerShell server and `scripts/autonomous/master-controller.ps1` are treated as phases that can be `auto`, `force`, or `skip`. Each reports its status in the final summary.
+- **Pipeline evidence**: Every pnpm/cargo/make command recorded during the run is published through `scripts/pipeline/record_local_pipeline.sh` unless `--pipeline-mode skip` is set.
+- **Prerequisite surfacing**: If PowerShell is required but not detected, the script emits an actionable hint and automatically marks the affected phases as skipped.
+
+Even though the launcher invokes `make kernel`/`make image` for you when needed, those targets remain available for manual use (for example, inside CI or when you want to harden the kernel before touching other components).
+
 ## 🔄 Development Workflow
 
 ### CRC/CI/CD - Continue ReCode / Continuous Integration / Continuous Development

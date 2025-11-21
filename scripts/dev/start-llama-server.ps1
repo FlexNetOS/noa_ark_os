@@ -1,27 +1,49 @@
 # Start Llama.cpp Server
-$LlamaCppDir = "D:\dev\workspaces\noa_ark_os\server\ai\llama-cpp"
-$BinPath = Join-Path $LlamaCppDir "bin\llama-server.exe"
-$ModelPath = Join-Path $LlamaCppDir "models\llama-3.2-3b-q4.gguf"
-$LogPath = Join-Path $LlamaCppDir "logs\server.log"
+param(
+    [Parameter(Mandatory=$false)]
+    [string]$ModelFile = "llama-3.2-3b-q4.gguf",
+    [Parameter(Mandatory=$false)]
+    [string]$Host = "127.0.0.1",
+    [Parameter(Mandatory=$false)]
+    [int]$Port = 8080,
+    [Parameter(Mandatory=$false)]
+    [int]$Threads = 8,
+    [Parameter(Mandatory=$false)]
+    [int]$GpuLayers = 35
+)
+
+$scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$workspaceRoot = Resolve-Path -Path (Join-Path $scriptRoot "..\..")
+$serverDir = Join-Path $workspaceRoot "server"
+$serverAiDir = Join-Path $serverDir "ai"
+$llamaCppDir = Join-Path $serverAiDir "llama-cpp"
+$binDir = Join-Path $llamaCppDir "bin"
+$binPath = Join-Path $binDir "llama-server.exe"
+$modelsDir = Join-Path $llamaCppDir "models"
+$modelPath = Join-Path $modelsDir $ModelFile
+$logsDir = Join-Path $llamaCppDir "logs"
+$logPath = Join-Path $logsDir "server.log"
 
 Write-Host "Starting Llama.cpp server..." -ForegroundColor Cyan
-Write-Host "Model: $ModelPath" -ForegroundColor Gray
-Write-Host "Server: http://127.0.0.1:8080" -ForegroundColor Gray
+Write-Host "Model: $modelPath" -ForegroundColor Gray
+Write-Host "Server: http://$Host:$Port" -ForegroundColor Gray
 
-if (!(Test-Path $ModelPath)) {
-    Write-Host "ERROR: Model not found at $ModelPath" -ForegroundColor Red
+if (!(Test-Path $modelPath)) {
+    Write-Host "ERROR: Model not found at $modelPath" -ForegroundColor Red
     Write-Host "Available models:" -ForegroundColor Yellow
-    Get-ChildItem (Join-Path $LlamaCppDir "models") -Filter "*.gguf" | ForEach-Object { Write-Host "  - $($_.Name)" }
+    Get-ChildItem $modelsDir -Filter "*.gguf" | ForEach-Object { Write-Host "  - $($_.Name)" }
     exit 1
 }
 
-& $BinPath `
-    --model $ModelPath `
-    --host 127.0.0.1 `
-    --port 8080 `
+& $binPath `
+    --model $modelPath `
+    --host $Host `
+    --port $Port `
     --ctx-size 8192 `
     --batch-size 512 `
-    --threads 8 `
-    --n-gpu-layers 35
+    --threads $Threads `
+    --n-gpu-layers $GpuLayers `
+    --log-format text `
+    --log-file $logPath
 
 Write-Host "Server stopped" -ForegroundColor Yellow
