@@ -2,7 +2,8 @@ param(
     [string]$PwshVersion = "7.4.5",
     [string[]]$Platforms,
     [switch]$AllPlatforms,
-    [string]$DefaultPlatform
+    [string]$DefaultPlatform,
+    [switch]$IncludeDesktop
 )
 
 $supportedPlatforms = @("linux-x64", "linux-arm64", "osx-x64", "osx-arm64", "win-x64")
@@ -132,6 +133,10 @@ $binDir = Join-Path $pwshRoot "bin"
 $null = New-Item -ItemType Directory -Force -Path $downloads, $manifests, $binDir, $platformRoot
 
 $resolvedPlatforms = Resolve-Platforms -Requested $Platforms -IncludeAll:$AllPlatforms
+if ($IncludeDesktop -or $env:PWSH_INCLUDE_DESKTOP -eq "1") {
+    $desktopAppend = @("win-x64","osx-x64","osx-arm64")
+    $resolvedPlatforms = @($resolvedPlatforms + $desktopAppend) | Where-Object { $_ } | Select-Object -Unique
+}
 foreach ($platform in $resolvedPlatforms) { Ensure-PlatformSupported -Platform $platform }
 
 if (-not $DefaultPlatform) { $DefaultPlatform = Get-HostPlatform }

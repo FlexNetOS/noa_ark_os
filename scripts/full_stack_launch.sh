@@ -291,17 +291,25 @@ print_phase_summary() {
   if [[ -f "$PWSH_SENTINEL" ]]; then
     printf 'Portable PowerShell evidence: %s\n' "$PWSH_SENTINEL"
     cat "$PWSH_SENTINEL"
-    local activation_status activation_platform activation_binary activation_current
-    activation_status=$(awk -F'"' '/"status"/{print $4; exit}' "$PWSH_SENTINEL" 2>/dev/null)
-    activation_platform=$(awk -F'"' '/"platform"/{print $4; exit}' "$PWSH_SENTINEL" 2>/dev/null)
-    activation_binary=$(awk -F'"' '/"binary"/{print $4; exit}' "$PWSH_SENTINEL" 2>/dev/null)
-    activation_current=$(awk -F'"' '/"current_target"/{print $4; exit}' "$PWSH_SENTINEL" 2>/dev/null)
+    local activation_status activation_platform activation_binary activation_current activation_manifest activation_manifest_sha
+    activation_status=$(awk -F'"' '$2=="status"{print $4; exit}' "$PWSH_SENTINEL" 2>/dev/null)
+    activation_platform=$(awk -F'"' '$2=="platform"{print $4; exit}' "$PWSH_SENTINEL" 2>/dev/null)
+    activation_binary=$(awk -F'"' '$2=="binary"{print $4; exit}' "$PWSH_SENTINEL" 2>/dev/null)
+    activation_current=$(awk -F'"' '$2=="current_target"{print $4; exit}' "$PWSH_SENTINEL" 2>/dev/null)
+    activation_manifest=$(awk -F'"' '$2=="manifest"{print $4; exit}' "$PWSH_SENTINEL" 2>/dev/null)
+    activation_manifest_sha=$(awk -F'"' '$2=="manifest_sha256"{print $4; exit}' "$PWSH_SENTINEL" 2>/dev/null)
     printf 'Portable PowerShell status: %s (platform=%s)\n' "${activation_status:-unknown}" "${activation_platform:-n/a}"
     if [[ -n "$activation_binary" ]]; then
       printf '  Binary: %s\n' "$activation_binary"
     fi
     if [[ -n "$activation_current" ]]; then
       printf '  Current link target: %s\n' "$activation_current"
+    fi
+    if [[ -n "$activation_manifest" ]]; then
+      printf '  Manifest: %s\n' "$activation_manifest"
+    fi
+    if [[ -n "$activation_manifest_sha" ]]; then
+      printf '  Manifest sha256: %s\n' "$activation_manifest_sha"
     fi
     printf '\n'
   else

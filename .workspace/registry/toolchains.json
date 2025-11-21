@@ -13,8 +13,8 @@
     {
       "id": "toolchain.powershell.portable",
       "name": "Portable PowerShell Runtime",
-      "version": "0.2.0",
-      "description": "Offline, multi-platform PowerShell 7.4.5 bundles plus activation/verification scripts feeding the launcher stack.",
+      "version": "0.3.0",
+      "description": "Offline PowerShell 7.4.5 bundles for Linux + macOS + Windows with activators, duplicate-task guard enforcement, and launcher evidence hooks (pwsh-activation.json).",
       "files": [
         "server/tools/setup-portable-pwsh.sh",
         "server/tools/setup-portable-pwsh.ps1",
@@ -27,6 +27,7 @@
         "scripts/full_stack_launch.sh",
         "scripts/lib/ensure_no_duplicate_tasks.sh"
       ],
+      "platforms": ["linux-x64", "win-x64", "osx-x64", "osx-arm64"],
       "dependencies": [],
       "owners": ["crew-dev-tooling"],
       "tags": ["toolchain", "powershell", "portable"],

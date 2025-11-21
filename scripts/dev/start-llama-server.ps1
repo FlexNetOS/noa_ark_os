@@ -13,12 +13,14 @@ param(
 )
 
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
-$workspaceRoot = Resolve-Path -Path (Join-Path $scriptRoot "..\..")
+$workspaceRoot = [System.IO.Path]::GetFullPath((Join-Path $scriptRoot "../.."))
+$hostIsWindows = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)
+$serverBinary = if ($hostIsWindows) { "llama-server.exe" } else { "llama-server" }
 $serverDir = Join-Path $workspaceRoot "server"
 $serverAiDir = Join-Path $serverDir "ai"
 $llamaCppDir = Join-Path $serverAiDir "llama-cpp"
 $binDir = Join-Path $llamaCppDir "bin"
-$binPath = Join-Path $binDir "llama-server"
+$binPath = Join-Path $binDir $serverBinary
 $modelsDir = Join-Path $llamaCppDir "models"
 $modelPath = Join-Path $modelsDir $ModelFile
 $logDir = Join-Path $llamaCppDir "logs"
@@ -40,6 +42,14 @@ if (!(Test-Path $binPath)) {
     exit 1
 }
 
+if (-not $hostIsWindows) {
+    try {
+        & chmod +x -- $binPath 2>$null
+    } catch {
+        Write-Host "Warning: Unable to mark $binPath executable ($_)." -ForegroundColor Yellow
+    }
+}
+
 & $binPath `
     --model $modelPath `
     --host $Host `
@@ -48,7 +58,6 @@ if (!(Test-Path $binPath)) {
     --batch-size 512 `
     --threads $Threads `
     --n-gpu-layers $GpuLayers `
-    --log-format text `
     --log-file $logPath
 
 Write-Host "Server stopped" -ForegroundColor Yellow

@@ -98,11 +98,11 @@ D:\dev\workspaces\noa_ark_os\
 - Activate Portable Cargo
 
 ### Portable PowerShell + CUDA/Llama Enablement (2025-11-21)
-- `server/tools/setup-portable-pwsh.{sh,ps1}` now provisions multi-platform bundles (Linux, macOS, Windows) and emits a consolidated manifest (`server/tools/pwsh-portable.manifest.json`) with per-platform hashes for automation evidence.
-- `server/tools/activate-pwsh.{sh,ps1}` surface the resolved platform via `NOA_PWSH_PLATFORM_RESOLVED`, and a new `server/tools/activate-toolchains.sh` chains PowerShell, Cargo, and Node activation for launchers/CI.
-- `scripts/full_stack_launch.sh` ingests the new activator via a dedicated phase, persists `build_output/system-launch/pwsh-activation.json`, and now prints the sentinel JSON inside the phase summary for Truth Gate evidence.
-- `tools/automation/check_portable_pwsh.py` understands the consolidated manifest, can target specific platforms, and optionally runs `pwsh --version`; `scripts/lib/ensure_no_duplicate_tasks.sh` runs it with execution verification so CI fails fast if PowerShell is missing.
-- CUDA + llama.cpp provisioning scripts (`scripts/setup/setup-cuda.ps1`, `scripts/dev/setup-llama-cpp.ps1`, `scripts/dev/start-llama-server.ps1`) now support Linux hosts through the portable PowerShell runtime, enabling the launcher’s CUDA/Llama phases to run outside of Windows.
+- `server/tools/setup-portable-pwsh.{sh,ps1}` gained `--include-desktop` / `PWSH_INCLUDE_DESKTOP=1`, so a single run on Linux provisions Linux + macOS (x64/arm64) + Windows bundles and records their hashes in `server/tools/pwsh-portable.manifest.json`.
+- `server/tools/activate-toolchains.sh` now guards against double activation, propagates `NOA_SKIP_AUTO_PWSH` when cascading into Cargo/Node, and exports `NOA_TOOLCHAINS_ACTIVATED` for launchers.
+- `scripts/lib/ensure_no_duplicate_tasks.sh` invokes `tools/automation/check_portable_pwsh.py --ensure-exec --require-current`, emitting a manifest claim and failing fast with guidance to rerun `setup-portable-pwsh.sh --include-desktop` if anything drifts.
+- `scripts/full_stack_launch.sh` logs manifest/binary/current-link hashes inside the phase summary, so `pwsh-activation.json` plus console output satisfy Triple-Verification without manual parsing.
+- CUDA + Llama helpers (`scripts/setup/setup-cuda.ps1`, `scripts/dev/setup-llama-cpp.ps1`, `scripts/dev/start-llama-server.ps1`) run in portable PowerShell on Linux, download the Linux llama.cpp binaries, and ship a clearly-marked placeholder GGUF so automation can exercise the phase without a multi-GB model (real deployments must swap in an actual model file).
 
 ---
 

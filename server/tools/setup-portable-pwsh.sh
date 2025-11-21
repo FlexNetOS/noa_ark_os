@@ -7,6 +7,7 @@ set -euo pipefail
 PWSH_VERSION="${PWSH_VERSION:-7.4.5}"
 TARGET_INPUT="${PWSH_TARGET_PLATFORMS:-host}"
 DEFAULT_PLATFORM="${PWSH_DEFAULT_PLATFORM:-}"
+INCLUDE_DESKTOP="${PWSH_INCLUDE_DESKTOP:-0}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
@@ -18,6 +19,7 @@ BIN_DIR="$PWSH_ROOT/bin"
 mkdir -p "$DOWNLOAD_DIR" "$MANIFEST_DIR" "$BIN_DIR" "$PLATFORM_ROOT"
 
 SUPPORTED_PLATFORMS=("linux-x64" "linux-arm64" "osx-x64" "osx-arm64" "win-x64")
+DESKTOP_PLATFORMS=("win-x64" "osx-x64" "osx-arm64")
 
 usage() {
     cat <<'EOF'
@@ -26,11 +28,13 @@ Usage: ./server/tools/setup-portable-pwsh.sh [--platforms list|all] [--help]
 Options:
   --platforms <csv>   Comma-separated list of platform suffixes to download (e.g. linux-x64,win-x64).
   --platforms all     Download every supported platform archive.
+    --include-desktop   Append Windows + macOS platforms to whatever --platforms selects.
   --help              Show this help message.
 
 Environment:
   PWSH_TARGET_PLATFORMS   Same as --platforms (default: host platform only).
   PWSH_DEFAULT_PLATFORM   Override which platform powers bin/current symlinks (default: host).
+    PWSH_INCLUDE_DESKTOP    When set to 1, automatically append Windows/macOS bundles so manifests enumerate desktop targets.
 EOF
 }
 
@@ -47,6 +51,10 @@ while [[ $# -gt 0 ]]; do
         --help|-h)
             usage
             exit 0
+            ;;
+        --include-desktop)
+            INCLUDE_DESKTOP=1
+            shift
             ;;
         *)
             echo "Unknown option: $1" >&2
@@ -70,6 +78,31 @@ archive_manifest_if_exists() {
     mkdir -p "$archive_dir"
     archive_file="$REPO_ROOT/archive/$year/$month/${manifest_rel}.${timestamp}.tar.zst"
     tar --zstd -cf "$archive_file" -C "$REPO_ROOT" "$manifest_rel"
+}
+
+append_platforms() {
+    local -n arr_ref=$1
+    shift
+    for entry in "$@"; do
+        arr_ref+=("$entry")
+    done
+}
+
+dedupe_platforms() {
+    local -n arr_ref=$1
+    declare -A seen=()
+    local -a unique=()
+    for entry in "${arr_ref[@]}"; do
+        if [[ -z "$entry" ]]; then
+            continue
+        fi
+        if [[ -n "${seen[$entry]:-}" ]]; then
+            continue
+        fi
+        seen["$entry"]=1
+        unique+=("$entry")
+    done
+    arr_ref=("${unique[@]}")
 }
 
 compute_sha() {
@@ -304,6 +337,10 @@ set_platform_metadata() {
 
 declare -a REQUESTED_PLATFORMS
 resolve_platforms "$TARGET_INPUT" REQUESTED_PLATFORMS
+if [[ "$INCLUDE_DESKTOP" == "1" ]]; then
+    append_platforms REQUESTED_PLATFORMS "${DESKTOP_PLATFORMS[@]}"
+fi
+dedupe_platforms REQUESTED_PLATFORMS
 for platform in "${REQUESTED_PLATFORMS[@]}"; do
     ensure_platform_supported "$platform"
 done

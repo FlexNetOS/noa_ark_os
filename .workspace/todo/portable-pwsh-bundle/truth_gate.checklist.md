@@ -1,9 +1,9 @@
 # Truth Gate Checklist — Portable PowerShell Bundle
 
-- [x] Artifacts hashed: manifest + activation/evidence hashes captured in `evidence.ledger.json`.
-- [x] Smoke tests executed: `tools/automation/check_portable_pwsh.py --output text`, `scripts/lib/ensure_no_duplicate_tasks.sh`, and `scripts/full_stack_launch.sh --prepare-only --skip-tests --skip-docker --skip-make --skip-notebook --cuda-mode auto --llama-mode auto --master-controller-mode skip --pipeline-mode skip` all exited 0 on 2025-11-21.
-- [x] Requirements ↔ artifacts mapped in `claims.table.md`.
-- [x] Limits and unsupported paths documented per-claim (Windows/macOS bundle gaps, CUDA/llama Windows-only provisioning).
-- [x] Evidence ledger includes file hashes + command metadata for this task.
-- [x] Gap scan noted the remaining Windows/macOS provisioning TODO plus CUDA/llama platform constraint.
-- [x] Triple-Verification: Pass A (self-check via manifest + activator review), Pass B (reran launcher to confirm activation evidence), Pass C (adversarial guard by forcing duplicate-task checker to verify manifest integrity).
+- [x] Artifacts hashed: manifest + setup scripts + launcher + llama helpers recorded with fresh SHA-256 hashes inside `evidence.ledger.json` (see A1–A10).
+- [x] Smoke tests executed on 2025-11-21: `python3 tools/automation/check_portable_pwsh.py --platform linux-x64 --ensure-exec --require-current --output text`, `scripts/lib/ensure_no_duplicate_tasks.sh`, `$POWERSHELL_BIN -File scripts/dev/setup-llama-cpp.ps1 -SkipModelDownload`, and `bash scripts/full_stack_launch.sh --prepare-only --skip-tests --skip-docker --skip-make --skip-notebook --cuda-mode auto --llama-mode auto --master-controller-mode skip --pipeline-mode skip` all exited 0.
+- [x] Requirements ↔ artifacts mapped in `claims.table.md` with updated manifest hash + launcher evidence + Linux CUDA/Llama coverage.
+- [x] Limits captured per-claim: desktop bundles not yet run on native hosts, placeholder GGUF is non-production, and inference still needs real checkpoints and GPU drivers.
+- [x] Evidence ledger updated with command transcripts + timestamps + notes for checker, duplicate guard, llama setup, and launcher.
+- [x] Gap scan: flagged that desktop archives are packaged but untested locally and that placeholder GGUF must be replaced before production inference.
+- [x] Triple-Verification — Pass A: manifest + activator code review; Pass B: reran launcher/llama setup; Pass C: duplicate-task guard enforces manifest claim before pipeline work.

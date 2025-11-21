@@ -19,6 +19,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 $hostIsWindows = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)
 $hostIsLinux = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Linux)
+$hostIsMac = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::OSX)
 
 if (-not $WorkspaceRoot) {
     $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -33,6 +34,22 @@ function Write-Info { param($Message) Write-Host "ℹ️  $Message" -ForegroundC
 function Write-Success { param($Message) Write-Host "✅ $Message" -ForegroundColor Green }
 function Write-Warning { param($Message) Write-Host "⚠️  $Message" -ForegroundColor Yellow }
 function Write-Error { param($Message) Write-Host "❌ $Message" -ForegroundColor Red }
+
+function Test-CudaToolkit {
+    if ($hostIsWindows) {
+        return Test-Path "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA"
+    }
+    if ($hostIsLinux) {
+        if (Test-Path "/usr/local/cuda") { return $true }
+        try {
+            $null = Get-Command nvcc -ErrorAction Stop
+            return $true
+        } catch {
+            return $false
+        }
+    }
+    return $false
+}
 
 Write-Info "Llama.cpp Setup for NOA ARK OS"
 Write-Info "Workspace: $WorkspaceRoot"
@@ -58,7 +75,11 @@ foreach ($dir in $directories) {
 # Step 1: Install llama.cpp
 if ($BuildFromSource) {
     Write-Info "Building llama.cpp from source..."
-    Write-Warning "This requires CMake and Visual Studio Build Tools"
+    if ($hostIsWindows) {
+        Write-Warning "Building on Windows requires CMake + Visual Studio Build Tools"
+    } elseif ($hostIsLinux -or $hostIsMac) {
+        Write-Warning "Ensure build-essential/clang and cmake are installed before continuing"
+    }
     
     $llamaCppSource = Join-Path $ServerAIDir "llama.cpp-source"
     
@@ -75,17 +96,23 @@ if ($BuildFromSource) {
     Set-Location build
     
     # Check for CUDA
-    $hasCuda = Test-Path "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA"
+    $hasCuda = Test-CudaToolkit
     
+    $cmakeArgs = @("-DCMAKE_BUILD_TYPE=Release")
     if ($hasCuda) {
         Write-Info "CUDA detected, building with GPU support..."
-        cmake .. -DGGML_CUDA=ON -DCMAKE_BUILD_TYPE=Release
+        $cmakeArgs += "-DGGML_CUDA=ON"
     } else {
         Write-Info "Building CPU-only version..."
-        cmake .. -DCMAKE_BUILD_TYPE=Release
     }
-    
-    cmake --build . --config Release
+    & cmake .. @cmakeArgs
+
+    $buildArgs = @("--build", ".", "--config", "Release")
+    $jobs = [Math]::Max([Environment]::ProcessorCount, 1)
+    if (-not $hostIsWindows) {
+        $buildArgs += @("--", "-j$jobs")
+    }
+    & cmake @buildArgs
     
     # Copy binaries
     Write-Info "Copying binaries..."
@@ -102,7 +129,7 @@ if ($BuildFromSource) {
     $llamaCppVersion = "b4315"
     $releaseBaseUrl = "https://github.com/ggml-org/llama.cpp/releases/download/$llamaCppVersion"
     $assetName = if ($hostIsWindows) {
-        $hasCuda = Test-Path "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA"
+        $hasCuda = Test-CudaToolkit
         if ($hasCuda) {
             "llama-$llamaCppVersion-bin-win-cuda-cu12.4-$arch.zip"
         } else {
@@ -223,7 +250,6 @@ Write-Success "Configuration created: $configPath"
 Write-Info "Creating start script..."
 
 # Build start script template without expanding runtime variables
-$serverBinary = if ($hostIsWindows) { "llama-server.exe" } else { "llama-server" }
 $startScriptTemplate = @'
 # Start Llama.cpp Server
 param(
@@ -240,12 +266,14 @@ param(
 )
 
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
-$workspaceRoot = Resolve-Path -Path (Join-Path $scriptRoot "..\..")
+$workspaceRoot = [System.IO.Path]::GetFullPath((Join-Path $scriptRoot "../.."))
+$hostIsWindows = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)
+$serverBinary = if ($hostIsWindows) { "llama-server.exe" } else { "llama-server" }
 $serverDir = Join-Path $workspaceRoot "server"
 $serverAiDir = Join-Path $serverDir "ai"
 $llamaCppDir = Join-Path $serverAiDir "llama-cpp"
 $binDir = Join-Path $llamaCppDir "bin"
-$binPath = Join-Path $binDir "__SERVER_BINARY__"
+$binPath = Join-Path $binDir $serverBinary
 $modelsDir = Join-Path $llamaCppDir "models"
 $modelPath = Join-Path $modelsDir $ModelFile
 $logDir = Join-Path $llamaCppDir "logs"
@@ -267,6 +295,14 @@ if (!(Test-Path $binPath)) {
     exit 1
 }
 
+if (-not $hostIsWindows) {
+    try {
+        & chmod +x -- $binPath 2>$null
+    } catch {
+        Write-Host "Warning: Unable to mark $binPath executable ($_)." -ForegroundColor Yellow
+    }
+}
+
 & $binPath `
     --model $modelPath `
     --host $Host `
@@ -275,7 +311,6 @@ if (!(Test-Path $binPath)) {
     --batch-size 512 `
     --threads $Threads `
     --n-gpu-layers $GpuLayers `
-    --log-format text `
     --log-file $logPath
 
 Write-Host "Server stopped" -ForegroundColor Yellow
@@ -284,7 +319,7 @@ Write-Host "Server stopped" -ForegroundColor Yellow
 $scriptsDir = Join-Path $WorkspaceRoot "scripts"
 $devScriptsDir = Join-Path $scriptsDir "dev"
 $startScriptPath = Join-Path $devScriptsDir "start-llama-server.ps1"
-$startScriptContent = $startScriptTemplate.Replace("__DEFAULT_MODEL_FILE__", $modelFileName).Replace("__SERVER_BINARY__", $serverBinary)
+$startScriptContent = $startScriptTemplate.Replace("__DEFAULT_MODEL_FILE__", $modelFileName)
 $startScriptContent | Set-Content -Path $startScriptPath -Encoding UTF8
 
 Write-Success "Start script created: $startScriptPath"
