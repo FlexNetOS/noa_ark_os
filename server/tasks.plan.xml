@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Tasks>
+  <Task id="1">
+    <Title>Centralize AI provider routing in gateway</Title>
+    <Description>Ensure all AI provider calls (OpenAI, Anthropic, llama.cpp, OpenRouter) flow through NOA gateway/server, not directly from clients or CLIs.</Description>
+    <Category>ai_providers</Category>
+    <Owner>server-gateway</Owner>
+    <Priority>high</Priority>
+    <Phase>design</Phase>
+    <Steps>
+      <Step order="1">Audit server/ai/providers and server/ai/router.ts to confirm all direct external AI calls.</Step>
+      <Step order="2">Define a single AI completion entrypoint in the gateway (e.g., noa.ai.complete) that uses server/ai/router.ts.</Step>
+      <Step order="3">Update UI and internal callers to use the gateway entrypoint instead of calling providers directly.</Step>
+      <Step order="4">Document the routing behavior in server/README.md and relevant docs.</Step>
+    </Steps>
+  </Task>
+
+  <Task id="2">
+    <Title>Implement server-side context and token budget control</Title>
+    <Description>Add centralized limits for prompt length, history depth, and token budgets before any provider call.</Description>
+    <Category>context_management</Category>
+    <Owner>server-ai</Owner>
+    <Priority>high</Priority>
+    <Phase>design</Phase>
+    <Steps>
+      <Step order="1">Introduce configuration keys under server/config for max_tokens_per_call, max_context_chars, and max_history_items.</Step>
+      <Step order="2">Implement a context builder module that trims history and summarizes content to fit configured limits.</Step>
+      <Step order="3">Wire the context builder into server/ai/router.ts so all providers receive constrained prompts.</Step>
+      <Step order="4">Add tests to verify truncation and summarization behavior.</Step>
+    </Steps>
+  </Task>
+
+  <Task id="3">
+    <Title>Add MCP-compatible AI tool interface</Title>
+    <Description>Expose a single MCP tool (e.g., noa.ai.complete) backed by the gateway AI routing so CLIs and IDEs can use it uniformly.</Description>
+    <Category>mcp_integration</Category>
+    <Owner>server-gateway</Owner>
+    <Priority>high</Priority>
+    <Phase>design</Phase>
+    <Steps>
+      <Step order="1">Design a simple MCP schema for an AI completion tool with prompt and optional metadata.</Step>
+      <Step order="2">Implement an HTTP or MCP endpoint in the gateway that dispatches to server/ai/router.ts.</Step>
+      <Step order="3">Ensure capability tokens and rate limiting apply to this tool.</Step>
+      <Step order="4">Document how external MCP clients should call this tool.</Step>
+    </Steps>
+  </Task>
+
+  <Task id="4">
+    <Title>Define sandboxed file and command tools</Title>
+    <Description>Create MCP or gateway tools that perform file reads, writes, and test runs in a controlled sandbox, mirroring Claude Code&apos;s model.</Description>
+    <Category>sandbox</Category>
+    <Owner>agents-runtime</Owner>
+    <Priority>high</Priority>
+    <Phase>design</Phase>
+    <Steps>
+      <Step order="1">Specify allowed filesystem operations (read, write within workspace, no deletes without archival) and allowed commands (tests, linters).</Step>
+      <Step order="2">Implement gateway-backed tools for file read/write and command execution that enforce these constraints.</Step>
+      <Step order="3">Integrate these tools with agents so AI actions always use the sandbox instead of raw shell access.</Step>
+      <Step order="4">Document sandbox behavior and limits for MCP and CLI users.</Step>
+    </Steps>
+  </Task>
+
+  <Task id="5">
+    <Title>Treat external CLIs as front-ends to NOA</Title>
+    <Description>Define patterns for using Codex CLI, Claude Code, Kilocode, GitHub CLI, and similar tools as front-ends to NOA&apos;s MCP/gateway, not as direct AI callers.</Description>
+    <Category>cli_integration</Category>
+    <Owner>devex</Owner>
+    <Priority>medium</Priority>
+    <Phase>design</Phase>
+    <Steps>
+      <Step order="1">Create documentation describing how each CLI should connect to NOA&apos;s MCP endpoint instead of external AI providers.</Step>
+      <Step order="2">Define environment variables or config files that point CLIs to NOA&apos;s MCP URL and tokens.</Step>
+      <Step order="3">Provide example configs for Codex CLI, Claude Code CLI, Kilocode, and GitHub CLI integration.</Step>
+      <Step order="4">Emphasize that external AI API keys should only be configured on the NOA server side.</Step>
+    </Steps>
+  </Task>
+
+  <Task id="6">
+    <Title>Implement offline-first provider defaults</Title>
+    <Description>Ensure the default AI provider configuration uses local/offline engines (e.g., llama.cpp, Candle) and gates cloud providers behind explicit feature flags.</Description>
+    <Category>offline_first</Category>
+    <Owner>server-ai</Owner>
+    <Priority>high</Priority>
+    <Phase>design</Phase>
+    <Steps>
+      <Step order="1">Set AI_PROVIDER default to a local provider (llama.cpp or Candle-based) in configuration.</Step>
+      <Step order="2">Add feature flags such as ONLINE_AI_PROVIDERS to allow cloud provider usage only when explicitly enabled.</Step>
+      <Step order="3">Update server/ai/router.ts to honor these flags and refuse cloud calls when offline mode is active.</Step>
+      <Step order="4">Document offline and online modes in server/README.md and AGENT-aligned docs.</Step>
+    </Steps>
+  </Task>
+
+  <Task id="7">
+    <Title>Centralize provider secrets and configuration</Title>
+    <Description>Route all AI provider secrets and configuration through gateway-managed environment variables and manifests, per AGENT policy.</Description>
+    <Category>configuration</Category>
+    <Owner>security</Owner>
+    <Priority>high</Priority>
+    <Phase>design</Phase>
+    <Steps>
+      <Step order="1">Define canonical env var names for providers (e.g., NOA_AI__OPENAI_API_KEY, NOA_AI__ANTHROPIC_API_KEY).</Step>
+      <Step order="2">Update server/ai/providers to read from gateway-managed envs or config structures.</Step>
+      <Step order="3">Document secret handling and storage in the Evidence Ledger and relevant docs.</Step>
+      <Step order="4">Remove or discourage any ad-hoc .env usage for provider keys.</Step>
+    </Steps>
+  </Task>
+
+  <Task id="8">
+    <Title>Design structured task state to avoid context rot</Title>
+    <Description>Replace long, raw conversational history with a compact, structured task state that agents can rehydrate without heavy token use.</Description>
+    <Category>state_management</Category>
+    <Owner>agents-core</Owner>
+    <Priority>medium</Priority>
+    <Phase>design</Phase>
+    <Steps>
+      <Step order="1">Define a TaskState schema capturing goal, touched files, and concise reasoning steps.</Step>
+      <Step order="2">Store TaskState in workspace memory instead of raw transcripts.</Step>
+      <Step order="3">Update agents to reconstruct prompts from TaskState plus current files rather than replaying entire chat logs.</Step>
+      <Step order="4">Document how TaskState interacts with MCP tools and providers.</Step>
+    </Steps>
+  </Task>
+
+  <Task id="9">
+    <Title>Document MCP and provider integration best practices</Title>
+    <Description>Create a dedicated guide that explains how MCP, providers, CLIs, and the gateway interact in NOA ARK OS.</Description>
+    <Category>documentation</Category>
+    <Owner>docs</Owner>
+    <Priority>medium</Priority>
+    <Phase>design</Phase>
+    <Steps>
+      <Step order="1">Draft docs/mcp_providers.md summarizing gateway-centric routing, sandbox tools, and offline-first defaults.</Step>
+      <Step order="2">Include diagrams showing how CLIs and IDEs connect to NOA as front-ends.</Step>
+      <Step order="3">Reference AGENT.md requirements for gateway-managed environments and archival procedures.</Step>
+      <Step order="4">Link this guide from server/README.md and AGENT-related docs.</Step>
+    </Steps>
+  </Task>
+</Tasks>

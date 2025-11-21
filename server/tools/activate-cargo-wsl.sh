@@ -5,7 +5,19 @@
 __NOA_PREV_CARGO_OPTS="$(set +o)"
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 SILENT="${NOA_ACTIVATE_SILENT:-0}"
+
+if [[ -z "${NOA_PWSH_ENV:-}" && "${NOA_SKIP_AUTO_PWSH:-0}" != "1" ]]; then
+    if [[ -f "$SCRIPT_DIR/activate-pwsh.sh" ]]; then
+        __NOA_PREV_ACTIVATE_SILENT="${NOA_ACTIVATE_SILENT:-0}"
+        NOA_ACTIVATE_SILENT=1
+        # shellcheck source=/dev/null
+        source "$SCRIPT_DIR/activate-pwsh.sh" 2>/dev/null || true
+        NOA_ACTIVATE_SILENT="$__NOA_PREV_ACTIVATE_SILENT"
+        unset __NOA_PREV_ACTIVATE_SILENT
+    fi
+fi
 
 log() {
     if [[ "$SILENT" == "1" ]]; then

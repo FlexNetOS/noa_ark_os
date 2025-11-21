@@ -14,7 +14,6 @@ pub enum WorkspacePersona {
     #[default]
     Developer,
     Executive,
-    Researcher,
 }
 
 /// Navigation items rendered within the global navigation rail.
@@ -260,7 +259,7 @@ mod tests {
 
         store.upsert_workspace(workspace.clone());
         let state = store.read();
-        assert!(state.workspaces.contains_key("dev"));
+        assert!(state.workspaces.get("dev").is_some());
         assert!(state.workspaces.get("dev").unwrap().contains_route("/chat"));
     }
 

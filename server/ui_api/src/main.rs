@@ -3,7 +3,6 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
 use clap::Parser;
-use futures::FutureExt;
 use noa_ui_api::{UiApiServer, UiSchemaGrpc};
 use tokio::net::TcpListener;
 use tokio::sync::Notify;
@@ -60,20 +59,31 @@ async fn main() -> Result<()> {
     let router = server.router();
     let shutdown = Shutdown::new();
 
-    let http_future = axum::serve(listener, router)
-        .with_graceful_shutdown(shutdown.clone().wait())
-        .map_err(|err| anyhow!("HTTP server exited: {err}"));
+    let http_shutdown = shutdown.clone();
+    let http_future = {
+        let router = router;
+        async move {
+            axum::serve(listener, router)
+                .with_graceful_shutdown(http_shutdown.wait_owned())
+                .await
+                .map_err(|err| anyhow!("HTTP server exited: {err}"))
+        }
+    };
 
     let grpc_state = server.state();
     let grpc_service = UiSchemaGrpc::new(grpc_state);
-    let grpc_future = tonic::transport::Server::builder()
-        .add_service(
-            noa_ui_api::grpc::proto::ui_schema_service_server::UiSchemaServiceServer::new(
-                grpc_service,
-            ),
-        )
-        .serve_with_shutdown(grpc_addr, shutdown.clone().wait())
-        .map_err(|err| anyhow!("gRPC server exited: {err}"));
+    let grpc_shutdown = shutdown.clone();
+    let grpc_future = async move {
+        tonic::transport::Server::builder()
+            .add_service(
+                noa_ui_api::grpc::proto::ui_schema_service_server::UiSchemaServiceServer::new(
+                    grpc_service,
+                ),
+            )
+            .serve_with_shutdown(grpc_addr, grpc_shutdown.wait_owned())
+            .await
+            .map_err(|err| anyhow!("gRPC server exited: {err}"))
+    };
 
     let signal_shutdown = shutdown.clone();
     let signal_task = tokio::spawn(async move {
@@ -126,6 +136,13 @@ impl Shutdown {
 
     async fn wait(&self) {
         self.notify.notified().await;
+    }
+
+    fn wait_owned(&self) -> impl std::future::Future<Output = ()> + Send + 'static {
+        let cloned = self.clone();
+        async move {
+            cloned.wait().await;
+        }
     }
 
     fn trigger(&self) {

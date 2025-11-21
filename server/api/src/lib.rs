@@ -7,17 +7,18 @@ pub mod proto {
 
 use crate::grpc::build_grpc_service;
 use crate::routes::build_http_router;
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use axum::body::Body;
 use hyper::{Request, Response};
 use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusHandle};
-use noa_gateway::{ProgrammableRouter, Protocol, RoutePlan, RoutingError};
-use serde_json::Value;
+use noa_gateway::{ProgrammableRouter, Protocol, RoutePlan};
 use routes::ApiRoutes;
+use serde_json::Value;
 use std::net::SocketAddr;
-use std::sync::Arc;
-use std::sync::OnceLock;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::sync::OnceLock;
 use std::time::Instant;
 use tokio::net::TcpListener;
 use tokio::signal;
@@ -60,15 +61,34 @@ struct MetricsHandle {
 impl MetricsHandle {
     fn install() -> Result<Self> {
         static PROM_HANDLE: OnceLock<Arc<PrometheusHandle>> = OnceLock::new();
-        let handle = PROM_HANDLE.get_or_try_init(|| {
+        static INSTALL_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+
+        if let Some(handle) = PROM_HANDLE.get() {
+            return Ok(Self {
+                handle: handle.clone(),
+            });
+        }
+
+        let lock = INSTALL_LOCK
+            .get_or_init(|| Mutex::new(()))
+            .lock()
+            .expect("metrics install lock poisoned");
+
+        if let Some(handle) = PROM_HANDLE.get() {
+            drop(lock);
+            return Ok(Self {
+                handle: handle.clone(),
+            });
+        }
+
+        let handle = Arc::new(
             PrometheusBuilder::new()
                 .install_recorder()
-                .context("failed to install Prometheus recorder")
-                .map(Arc::new)
-        })?;
-        Ok(Self {
-            handle: handle.clone(),
-        })
+                .context("failed to install Prometheus recorder")?,
+        );
+        let _ = PROM_HANDLE.set(handle.clone());
+        drop(lock);
+        Ok(Self { handle })
     }
 
     fn render(&self) -> String {
@@ -88,7 +108,7 @@ impl ApiState {
         }
     }
 
-    pub fn metrics(&self) -> &MetricsHandle {
+    pub(crate) fn metrics(&self) -> &MetricsHandle {
         &self.inner.metrics
     }
 
@@ -104,8 +124,11 @@ impl ApiState {
         self.inner.started_at.elapsed().as_secs()
     }
 
-    pub fn route(&self, protocol: Protocol, payload: Value) -> Result<RoutePlan, RoutingError> {
-        self.inner.router.route(&protocol, &payload)
+    pub fn route(&self, protocol: Protocol, payload: Value) -> Result<RoutePlan> {
+        self.inner
+            .router
+            .route(&protocol, &payload)
+            .map_err(|err| anyhow!("route computation failed: {err}"))
     }
 
     #[cfg(test)]
@@ -159,4 +182,3 @@ async fn shutdown_signal() {
         tracing::warn!(?err, "ctrl-c listener failed");
     }
 }
-

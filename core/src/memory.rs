@@ -46,11 +46,6 @@ fn allocated_inner() -> usize {
 pub struct MemoryManager;
 
 impl MemoryManager {
-    /// Construct a new memory manager capability handle.
-    pub const fn new() -> Self {
-        Self
-    }
-
     /// Reserve memory pages from the global allocator tracking.
     pub fn allocate(&self, size: usize) -> Result<(), &'static str> {
         allocate_inner(size);
@@ -71,17 +66,17 @@ impl MemoryManager {
 
 /// Track memory allocation.
 pub fn allocate(size: usize) -> Result<(), &'static str> {
-    MemoryManager::new().allocate(size)
+    MemoryManager.allocate(size)
 }
 
 /// Track memory deallocation.
 pub fn deallocate(size: usize) -> Result<(), &'static str> {
-    MemoryManager::new().deallocate(size)
+    MemoryManager.deallocate(size)
 }
 
 /// Get total allocated memory.
 pub fn get_allocated() -> usize {
-    MemoryManager::new().total_allocated()
+    MemoryManager.total_allocated()
 }
 
 /// Load registry data from the provided directory path.

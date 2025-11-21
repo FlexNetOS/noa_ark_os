@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # NOA ARK OS - Portable Node + pnpm bootstrapper
-# Downloads Node.js v20.19.5 and prepares pnpm 8.15.4 inside server/tools/node-portable
+# Downloads Node.js v20.19.5 and prepares pnpm 9.11.0 inside server/tools/node-portable
 
 set -euo pipefail
 
 NODE_VERSION="${NODE_VERSION:-20.19.5}"
-PNPM_VERSION="${PNPM_VERSION:-8.15.4}"
+PNPM_VERSION="${PNPM_VERSION:-9.11.0}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 NODE_ROOT="$SCRIPT_DIR/node-portable"
 ARTIFACT_DIR="$NODE_ROOT/artifacts"

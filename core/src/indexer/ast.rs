@@ -3,7 +3,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
-use crate::indexer::{should_skip, IndexerError};
+use crate::indexer::IndexerError;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AstGraph {
@@ -49,9 +49,6 @@ impl AstGraph {
                 .strip_prefix(root)
                 .unwrap_or(entry.path())
                 .to_path_buf();
-            if should_skip(&relative) {
-                continue;
-            }
             let node = build_node(entry.path(), relative, &mut edges)?;
             nodes.push(node);
         }
@@ -70,10 +67,7 @@ fn build_node(
     edges: &mut Vec<AstEdge>,
 ) -> Result<AstNode, IndexerError> {
     let source = fs::read_to_string(path)?;
-    let syntax = syn::parse_file(&source).map_err(|err| {
-        // Attach file path to make upstream kernel errors actionable when parsing fails.
-        syn::Error::new(err.span(), format!("{}: {}", path.display(), err))
-    })?;
+    let syntax = syn::parse_file(&source)?;
     let module_id = relative
         .to_string_lossy()
         .replace('\\', "/")

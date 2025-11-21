@@ -16,13 +16,9 @@ pub type CapabilityResult<T> = Result<T, CapabilityError>;
 /// Dynamic capability object stored inside the registry.
 pub type DynCapability = Arc<dyn Any + Send + Sync>;
 
-/// Initializer hook signature stored in definitions.
-type CapabilityInitHook =
-    Arc<dyn Fn(&CapabilityContext) -> CapabilityResult<DynCapability> + Send + Sync>;
-
-/// Shutdown hook signature stored in definitions.
-type CapabilityShutdownHook =
-    Arc<dyn Fn(&CapabilityContext, DynCapability) -> CapabilityResult<()> + Send + Sync>;
+// Type aliases to reduce type complexity in function traits
+type InitFn = dyn Fn(&CapabilityContext) -> CapabilityResult<DynCapability> + Send + Sync;
+type ShutdownFn = dyn Fn(&CapabilityContext, DynCapability) -> CapabilityResult<()> + Send + Sync;
 
 /// Errors emitted by the capability registry.
 #[derive(Debug, thiserror::Error)]
@@ -56,8 +52,8 @@ enum CapabilityState {
 pub struct CapabilityDefinition {
     id: String,
     dependencies: Vec<String>,
-    initializer: CapabilityInitHook,
-    shutdown: Option<CapabilityShutdownHook>,
+    initializer: Arc<InitFn>,
+    shutdown: Option<Arc<ShutdownFn>>,
     description: Option<String>,
 }
 
@@ -89,8 +85,8 @@ pub struct CapabilityDefinitionBuilder {
     id: String,
     dependencies: Vec<String>,
     description: Option<String>,
-    initializer: Option<CapabilityInitHook>,
-    shutdown: Option<CapabilityShutdownHook>,
+    initializer: Option<Arc<InitFn>>,
+    shutdown: Option<Arc<ShutdownFn>>,
 }
 
 impl CapabilityDefinitionBuilder {

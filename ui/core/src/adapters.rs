@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use serde_json::Value;
 
 use crate::components::ShellChrome;
-use crate::renderer::Renderer;
+use crate::renderer::renderer::Renderer;
 use crate::UIState;
 
 /// Trait describing how shells are mounted on different targets.

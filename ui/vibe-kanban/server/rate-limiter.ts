@@ -6,10 +6,7 @@
 export class RateLimiter {
   private readonly buckets = new Map<string, { tokens: number; updatedAt: number }>();
 
-  constructor(
-    private readonly capacity: number,
-    private readonly refillIntervalMs: number,
-  ) {}
+  constructor(private readonly capacity: number, private readonly refillIntervalMs: number) {}
 
   consume(identity: string) {
     const now = Date.now();

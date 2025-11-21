@@ -12,12 +12,8 @@ export function WorkspaceSwitcher({ state }: { state: BoardState }) {
     <div className="rounded-3xl border border-white/10 bg-surface/70 p-5 text-white/70">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-white/50">
-            Workspace boards
-          </h3>
-          <p className="mt-1 text-xs text-white/40">
-            Switch projects or spin up new canvases instantly.
-          </p>
+          <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-white/50">Workspace boards</h3>
+          <p className="mt-1 text-xs text-white/40">Switch projects or spin up new canvases instantly.</p>
         </div>
         <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-white/50">
           {state.workspace?.billingPlan ?? "starter"}
@@ -47,9 +43,7 @@ export function WorkspaceSwitcher({ state }: { state: BoardState }) {
               }`}
             >
               <div className="font-semibold">{board.projectName}</div>
-              <p className="text-xs text-white/40">
-                Updated {new Date(board.lastUpdated).toLocaleTimeString()}
-              </p>
+              <p className="text-xs text-white/40">Updated {new Date(board.lastUpdated).toLocaleTimeString()}</p>
             </button>
           ))}
         </div>

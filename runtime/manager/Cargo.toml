@@ -8,6 +8,7 @@ license = "MIT"
 
 [dependencies]
 serde = { workspace = true }
+serde_yaml = { workspace = true }
 anyhow = { workspace = true }
 noa_core = { path = "../../core" }
 thiserror = "1.0"
@@ -15,7 +16,6 @@ wasmtime = "16.0.0"
 wasmtime-wasi = "16.0.0"
 cap-std = "2.0.0"
 wasi-common = "16.0.0"
-serde_yaml = { workspace = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }

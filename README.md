@@ -105,92 +105,29 @@ noa_ark_os/
    ```
 
 3. **Run unified services**
-  ```bash
-  # Launch UI API + Vibe Kanban UI with health checks
-  ./scripts/dev/full_system_launch.sh
-  ```
-  If you prefer manual steps instead of the launcher:
+   ```bash
+   # Use the main orchestration script (to be created)
+   ./scripts/start-all-services.sh
+   ```
 
-  ```bash
-  corepack prepare pnpm@8.15.4 --activate
-  corepack pnpm install --frozen-lockfile
-  corepack pnpm --filter vibe-kanban dev
-  ```
+### Unified Full-Stack Launch
 
-  > The workspace enforces pnpm@8.15.4 through `.pnpmfile.cjs`. If you see "Detected agent: unknown", export `npm_config_user_agent="pnpm/8.15.4"` before running the commands above.
-
-### Gateway Quick Start
-
-The NOA Gateway provides self-aware symbol routing and policy enforcement:
+Use `scripts/full_stack_launch.sh` for the one-command experience that prepares dependencies, hardens the kernel image, launches Docker dependencies, starts runtime services, and emits pipeline evidence. The script now evaluates each sensitive phase automatically and prints a summary so you know what ran and what was skipped.
 
 ```bash
-# Build the gateway
-make cargo-build ARGS="-p noa_core"
-
-# Run gateway with default configuration
-cargo run --bin noa_kernel
-
-# Test gateway routing
-curl http://127.0.0.1:3000/route -X POST \
-  -H "Content-Type: application/json" \
-  -d '{"symbol":"test","tier":"premium"}'
-
-# Check gateway health
-curl http://127.0.0.1:3000/health
+./scripts/full_stack_launch.sh --kernel-mode auto --cuda-mode auto --llama-mode auto \
+  --master-controller-mode auto --pipeline-mode auto
 ```
 
-**Gateway Workflows:**
-- **Symbol Registration**: Register connectors with policies and QoS tiers
-- **Intent Routing**: Compile business intents into verified route plans
-- **Policy Enforcement**: Automatic compliance checking and attestation
-- **Federation**: Deploy micro-gateways across regions with consensus sync
-- **Trust Exchange**: Submit telemetry and manage partner trust scores
+Key behaviors:
 
-See [Gateway Documentation](docs/plans/GATEWAY_ROADMAP.md) for complete workflows.
+- **Kernel hardening**: `make kernel && make image` run automatically whenever the artifacts in `dist/kernel/` are older than the current commit. Force or skip via `--kernel-mode {force|skip}`.
+- **CUDA + llama orchestration**: On Windows hosts with PowerShell, the launcher provisions CUDA (`scripts/setup/setup-cuda.ps1`) and llama.cpp (`scripts/dev/setup-llama-cpp.ps1`) whenever binaries or GGUF models are missing. On Linux hosts these phases are skipped with an explicit reason.
+- **Inference + controller tooling**: The llama PowerShell server and `scripts/autonomous/master-controller.ps1` are treated as phases that can be `auto`, `force`, or `skip`. Each reports its status in the final summary.
+- **Pipeline evidence**: Every pnpm/cargo/make command recorded during the run is published through `scripts/pipeline/record_local_pipeline.sh` unless `--pipeline-mode skip` is set.
+- **Prerequisite surfacing**: If PowerShell is required but not detected, the script emits an actionable hint and automatically marks the affected phases as skipped.
 
-### Tools Agent & MCP Execution Layer
-
-Every AI agent, CLI, or automation must interact with the repository through the
-NOA Tools Agent API instead of raw shell access. The tool server enforces the
-allowlisted commands in `tools/allowed_commands.toml`, keeps all file accesses
-inside the workspace root, and logs each call to
-`docs/evidence_ledger.tools.log`.
-
-1. **Start the tool server**
-
-   ```bash
-   cd /home/noa/dev/workspace/noa_ark_os/noa_ark_os
-   cargo run -p noa-tools-agent
-   ```
-
-   Set `NOA_TOOLS_ADDRESS`, `NOA_TOOLS_ALLOWLIST`, or `NOA_TOOLS_LEDGER` to
-   override the defaults if needed.
-
-2. **Exercise tools from the CLI**
-
-   ```bash
-   noa tools run-command --cmd "cargo build --workspace"
-   noa tools apply-patch --file docs/example.md --patch '{"hunks":[{"start_line":1,"end_line":1,"replacement":"# Title\n"}]}'
-   noa tools read-file --file docs/agent_tools/TOOL_API.md
-   ```
-
-   Provide `--server http://host:port/` if the server is not running on the
-   default `127.0.0.1:8910` endpoint.
-
-3. **Bridge MCP-compatible editors**
-
-   ```bash
-   cargo run -p noa-mcp-server
-   ```
-
-   The MCP adapter listens on STDIN/STDOUT, registers tools such as
-   `noa.run_command`, `noa.apply_patch`, `noa.read_file`, `noa.build`, and
-   `noa.test`, and forwards each call through the HTTP tool server. Configure the
-   adapter with `NOA_TOOLS_SERVER_URL` when connecting Copilot, Claude, or other
-   MCP clients.
-
-The full API schema lives in `docs/agent_tools/TOOL_API.md`. Treat the server as
-the single source of truth: external automation must not bypass it.
+Even though the launcher invokes `make kernel`/`make image` for you when needed, those targets remain available for manual use (for example, inside CI or when you want to harden the kernel before touching other components).
 
 ## 🔄 Development Workflow
 
@@ -356,20 +293,17 @@ NOA ARK OS is designed as a fully self-contained operating system with:
 - Service orchestration
 - API gateway
 
-### 10. Gateway System (`/core`) ✅
-- **Self-aware symbol routing** with 99.95% accuracy
-- **Policy enforcement engine** with <1ms latency
-- **Intent compilation** and verification
-- **QoS tiers** (BestEffort/Standard/Premium/Critical)
-- **Hardware acceleration** (SmartNIC/DPU offload)
-- **Tool artifact management** with sandbox support
-- **Semantic knowledge graph** for predictive analytics
-- **Digital twin simulation** for topology validation
-- **Automated playbooks** for incident response
-- **Unified telemetry bus** for event streaming
-- **Federated micro-gateways** with consensus mesh
-- **Trust exchange marketplace** for partners
-- **Partner-facing APIs and SDKs** for onboarding
+### 9. AI Engine (`/ai`)
+- Model management
+- Llama.cpp integration
+- Inference engine
+- Model serving
+
+### 10. Runtime Environments (`/runtime`)
+- Rust runtime
+- Python interpreter (embedded)
+- Go runtime
+- .NET runtime
 
 ### 11. Applications (`/apps`)
 - Built-in system applications
@@ -486,7 +420,7 @@ See [Getting Started Guide](docs/GETTING_STARTED.md) for detailed instructions.
 
 ```
 noa_ark_os/
-├── core/           # OS core, kernel, and gateway system (Rust) 🆕
+├── core/           # OS core and kernel (Rust)
 ├── crc/            # Continuous ReCode (AI-supervised) 🆕
 │   ├── drop-in/    # Drop code here 🆕
 │   ├── archive/    # Compressed archives 🆕
@@ -602,7 +536,7 @@ cargo run --example full_system_demo
   - `make build` runs the workspace `pnpm build`
   - `make test` executes both the UI/Vitest suite and `cargo test -p noa_crc`
   - `make digest` triggers `cargo run -p noa_crc -- ingest` to exercise the CRC pipeline locally
-  - `make run` starts the UI (`corepack pnpm --filter vibe-kanban dev`) and UI API (`cargo run -p noa_ui_api`) side-by-side with automatic teardown
+  - `make run` starts the UI (`pnpm --filter vibe-kanban dev`) and UI API (`cargo run -p noa_ui_api`) side-by-side with automatic teardown
   - `make ci:local` aggregates linting, type checking, formatting, and the test matrix used in CI so contributors can reproduce gates offline.
 - **Environment bootstrap** – Copy `.env.example` to `.env` (or `.env.local`) to apply safe defaults for `OFFLINE_FIRST`, `AI_PROVIDER`, `LLAMA_CPP_ENDPOINT`, `NOA_UI_DROP_ROOT`, `UPLOAD_TMP`, and UI bridge URLs. These values mirror the defaults expected by both the Node services and the Rust CRC/UI API crates.
 - **Structured logging** – UI handlers and Rust services now emit JSON logs with `trace_id`, `component`, and `outcome` fields. TypeScript routes use the shared helper in `@noa-ark/shared-ui/logging`, while Rust components register a `tracing_subscriber` JSON layer through `noa_crc::telemetry`. Update custom scripts to rely on these structured payloads rather than string parsing.

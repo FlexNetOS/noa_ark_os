@@ -1,0 +1,41 @@
+{
+  "$schema": "./registry.schema.json",
+  "registryVersion": "1.0.0",
+  "owners": [
+    {
+      "id": "crew-dev-tooling",
+      "name": "Dev Tooling Crew",
+      "description": "Maintains portable toolchain bundles (Cargo, Node, PowerShell) and their activation automation. Placeholder contact until routing is finalized.",
+      "contacts": ["dev-tooling@noa-ark.example"]
+    }
+  ],
+  "components": [
+    {
+      "id": "toolchain.powershell.portable",
+      "name": "Portable PowerShell Runtime",
+      "version": "0.3.0",
+      "description": "Offline PowerShell 7.4.5 bundles for Linux + macOS + Windows with activators, duplicate-task guard enforcement, and launcher evidence hooks (pwsh-activation.json).",
+      "files": [
+        "server/tools/setup-portable-pwsh.sh",
+        "server/tools/setup-portable-pwsh.ps1",
+        "server/tools/activate-pwsh.sh",
+        "server/tools/activate-pwsh.ps1",
+        "server/tools/activate-toolchains.sh",
+        "server/tools/pwsh-portable.manifest.json",
+        "server/tools/pwsh-portable/manifest.json",
+        "tools/automation/check_portable_pwsh.py",
+        "scripts/full_stack_launch.sh",
+        "scripts/lib/ensure_no_duplicate_tasks.sh"
+      ],
+      "platforms": ["linux-x64", "win-x64", "osx-x64", "osx-arm64"],
+      "dependencies": [],
+      "owners": ["crew-dev-tooling"],
+      "tags": ["toolchain", "powershell", "portable"],
+      "links": {
+        "setup": "server/tools/setup-portable-pwsh.sh",
+        "activator": "server/tools/activate-toolchains.sh",
+        "evidence": ".workspace/todo/portable-pwsh-bundle/claims.table.md"
+      }
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 use anyhow::Context;
 use clap::Parser;
 use noa_api::{ApiConfig, ApiServer};
+use noa_gateway::bootstrap_gateway;
 use noa_orchestrator::UnifiedOrchestrator;
 use tokio::runtime::Builder;
 use tracing::{info, warn};
@@ -25,7 +26,11 @@ impl Cli {
 }
 
 fn init_tracing() {
-    if tracing_subscriber::fmt().with_env_filter("info").try_init().is_err() {
+    if tracing_subscriber::fmt()
+        .with_env_filter("info")
+        .try_init()
+        .is_err()
+    {
         warn!("tracing subscriber already initialised");
     }
 }
@@ -37,6 +42,9 @@ fn main() -> anyhow::Result<()> {
     let orchestrator = UnifiedOrchestrator::default();
     let decision = orchestrator.evaluate_scaling();
     info!(?decision, "orchestrator ready");
+
+    let gateway = bootstrap_gateway().context("failed to bootstrap gateway")?;
+    info!("gateway initialised; unified server wiring API and gateway layers");
 
     let runtime = Builder::new_multi_thread()
         .enable_all()
@@ -52,6 +60,8 @@ fn main() -> anyhow::Result<()> {
         .context("failed to initialise API server")?;
 
         info!("starting Axum + Tonic API server");
+
+        let _gateway = gateway; // Hold gateway wiring for the server lifetime.
         server.run().await
     })
 }

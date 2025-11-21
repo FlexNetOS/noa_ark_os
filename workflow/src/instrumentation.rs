@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::fs::{self, OpenOptions};
-use std::io::{BufRead, Write};
+use std::io::{ErrorKind, Write};
 use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
 
@@ -34,17 +34,6 @@ const GOAL_ANALYTICS_FILE: &str = "goal_kpis.json";
 const METRICS_DIR: &str = "metrics";
 const REWARD_HISTORY_FILE: &str = "reward_history.json";
 const DEPLOYMENT_REPORT_PATH: &str = "docs/reports/AGENT_DEPLOYMENT_OUTCOMES.md";
-const LOG_CHANNELS: [&str; 9] = [
-    RELOCATION_LOG,
-    DOCUMENT_LOG,
-    STAGE_RECEIPT_LOG,
-    TASK_DISPATCH_LOG,
-    AUTO_FIX_LOG,
-    BUDGET_DECISION_LOG,
-    SECURITY_SCAN_LOG,
-    INFERENCE_LOG,
-    PIPELINE_EVENT_LOG,
-];
 
 #[derive(Debug)]
 pub enum InstrumentationError {
@@ -149,32 +138,6 @@ pub struct AutoFixActionReceipt {
     pub plan: Value,
     pub policy: PolicyDecisionRecord,
     pub signed_operation: SignedOperation,
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct BudgetDecisionMetrics {
-    pub tokens_used: f64,
-    pub token_limit: f64,
-    pub latency_ms: f64,
-    pub latency_limit: f64,
-}
-
-#[derive(Debug, Clone)]
-pub struct BudgetDecisionParams<'a> {
-    pub workflow_id: &'a str,
-    pub stage_id: &'a str,
-    pub metrics: BudgetDecisionMetrics,
-    pub action: &'a str,
-    pub rewritten_plan: Option<Value>,
-}
-
-struct BudgetDecisionEvidence<'a> {
-    workflow_id: &'a str,
-    stage_id: &'a str,
-    metrics: BudgetDecisionMetrics,
-    action: &'a str,
-    rewritten_plan: Option<&'a Value>,
-    snapshot: &'a PathBuf,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -652,7 +615,6 @@ pub enum EvidenceLedgerKind {
     TaskDispatch,
     AutoFixAction,
     BudgetDecision,
-    PipelineEvent,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -743,21 +705,33 @@ impl EvidenceLedgerEntry {
         }
     }
 
-    fn budget_decision(context: BudgetDecisionEvidence<'_>, signed: SignedOperation) -> Self {
+    #[allow(clippy::too_many_arguments)]
+    fn budget_decision(
+        workflow_id: &str,
+        stage_id: &str,
+        tokens_used: f64,
+        token_limit: f64,
+        latency_ms: f64,
+        latency_limit: f64,
+        action: &str,
+        rewritten_plan: &Option<Value>,
+        snapshot: &PathBuf,
+        signed: SignedOperation,
+    ) -> Self {
         Self {
             kind: EvidenceLedgerKind::BudgetDecision,
             timestamp: current_timestamp_millis(),
             reference: signed.signature.clone(),
             payload: json!({
-                "workflow_id": context.workflow_id,
-                "stage_id": context.stage_id,
-                "tokens_used": context.metrics.tokens_used,
-                "token_limit": context.metrics.token_limit,
-                "latency_ms": context.metrics.latency_ms,
-                "latency_limit": context.metrics.latency_limit,
-                "action": context.action,
-                "rewritten_plan": context.rewritten_plan,
-                "snapshot": context.snapshot,
+                "workflow_id": workflow_id,
+                "stage_id": stage_id,
+                "tokens_used": tokens_used,
+                "token_limit": token_limit,
+                "latency_ms": latency_ms,
+                "latency_limit": latency_limit,
+                "action": action,
+                "rewritten_plan": rewritten_plan,
+                "snapshot": snapshot,
             }),
             signed_operation: signed,
         }
@@ -773,27 +747,6 @@ impl EvidenceLedgerEntry {
             timestamp: current_timestamp_millis(),
             reference: "GENESIS".to_string(),
             payload: json!({"message": "ledger initialised"}),
-            signed_operation: signed,
-        }
-    }
-
-    fn pipeline_event(
-        actor: &str,
-        subject: &str,
-        event_type: &str,
-        metadata: &Value,
-        signed: SignedOperation,
-    ) -> Self {
-        Self {
-            kind: EvidenceLedgerKind::PipelineEvent,
-            timestamp: current_timestamp_millis(),
-            reference: signed.signature.clone(),
-            payload: json!({
-                "actor": actor,
-                "subject": subject,
-                "event_type": event_type,
-                "metadata": metadata,
-            }),
             signed_operation: signed,
         }
     }
@@ -874,10 +827,6 @@ impl PipelineInstrumentation {
         Ok(instrumentation)
     }
 
-    pub fn log_channels() -> &'static [&'static str] {
-        &LOG_CHANNELS
-    }
-
     fn ensure_genesis(
         &self,
         log_name: &str,
@@ -885,32 +834,64 @@ impl PipelineInstrumentation {
     ) -> Result<(), InstrumentationError> {
         with_log_lock(|| {
             let path = self.log_path(log_name);
-            let needs_genesis = if path.exists() {
-                let content = fs::read_to_string(&path)?;
-                content.trim().is_empty()
-            } else {
-                true
-            };
-
-            if !needs_genesis {
-                return Ok(());
+            // Try to atomically create the file if it doesn't exist
+            let file_result = OpenOptions::new().write(true).create_new(true).open(&path);
+            match file_result {
+                Ok(mut file) => {
+                    // File was created, write genesis entry
+                    let event = PipelineLogEvent {
+                        event_type: format!("{}::genesis", log_name),
+                        actor: "system/bootstrap".to_string(),
+                        scope: "instrumentation".to_string(),
+                        source: None,
+                        target: None,
+                        metadata: json!({"message": "ledger initialised"}),
+                        timestamp: current_timestamp_millis(),
+                    };
+                    let record =
+                        OperationRecord::new(kind.clone(), "system/bootstrap", "instrumentation")
+                            .with_metadata(json!({"initialised": true}));
+                    let signed = security::enforce_operation(record)?;
+                    let entry = ImmutableLogEntry::new(event, signed, "GENESIS".to_string())?;
+                    // Write the entry directly to the new file
+                    let entry_str = serde_json::to_string(&entry)?;
+                    writeln!(file, "{}", entry_str)?;
+                    Ok(())
+                }
+                Err(ref e) if e.kind() == ErrorKind::AlreadyExists => {
+                    // File already exists, check if it is empty
+                    if let Ok(content) = fs::read_to_string(&path) {
+                        if !content.trim().is_empty() {
+                            return Ok(());
+                        }
+                    }
+                    // File exists but is empty, write genesis entry
+                    let event = PipelineLogEvent {
+                        event_type: format!("{}::genesis", log_name),
+                        actor: "system/bootstrap".to_string(),
+                        scope: "instrumentation".to_string(),
+                        source: None,
+                        target: None,
+                        metadata: json!({"message": "ledger initialised"}),
+                        timestamp: current_timestamp_millis(),
+                    };
+                    let record =
+                        OperationRecord::new(kind.clone(), "system/bootstrap", "instrumentation")
+                            .with_metadata(json!({"initialised": true}));
+                    let signed = security::enforce_operation(record)?;
+                    let entry = ImmutableLogEntry::new(event, signed, "GENESIS".to_string())?;
+                    // Open for appending and check again before writing
+                    let mut file = OpenOptions::new().append(true).open(&path)?;
+                    let content = fs::read_to_string(&path)?;
+                    if !content.trim().is_empty() {
+                        return Ok(());
+                    }
+                    let entry_str = serde_json::to_string(&entry)?;
+                    writeln!(file, "{}", entry_str)?;
+                    Ok(())
+                }
+                Err(e) => Err(InstrumentationError::Io(e)),
             }
-
-            let event = PipelineLogEvent {
-                event_type: format!("{}::genesis", log_name),
-                actor: "system/bootstrap".to_string(),
-                scope: "instrumentation".to_string(),
-                source: None,
-                target: None,
-                metadata: json!({"message": "ledger initialised"}),
-                timestamp: current_timestamp_millis(),
-            };
-            let record = OperationRecord::new(kind.clone(), "system/bootstrap", "instrumentation")
-                .with_metadata(json!({"initialised": true}));
-            let signed = security::enforce_operation(record)?;
-            let entry = ImmutableLogEntry::new(event, signed, "GENESIS".to_string())?;
-            self.write_entry(log_name, &entry)?;
-            Ok(())
         })
     }
 
@@ -1050,17 +1031,18 @@ impl PipelineInstrumentation {
         Ok(receipt)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn record_budget_decision(
         &self,
-        params: BudgetDecisionParams<'_>,
+        workflow_id: &str,
+        stage_id: &str,
+        tokens_used: f64,
+        token_limit: f64,
+        latency_ms: f64,
+        latency_limit: f64,
+        action: &str,
+        rewritten_plan: Option<Value>,
     ) -> Result<BudgetDecisionRecord, InstrumentationError> {
-        let BudgetDecisionParams {
-            workflow_id,
-            stage_id,
-            metrics,
-            action,
-            rewritten_plan,
-        } = params;
         let timestamp = current_timestamp_millis();
         let filename = format!(
             "{}-{}-{}-budget.json",
@@ -1077,12 +1059,12 @@ impl PipelineInstrumentation {
             "workflow_id": workflow_id,
             "stage_id": stage_id,
             "recorded_at": timestamp,
-            "tokens_used": metrics.tokens_used,
-            "token_limit": metrics.token_limit,
-            "latency_ms": metrics.latency_ms,
-            "latency_limit": metrics.latency_limit,
+            "tokens_used": tokens_used,
+            "token_limit": token_limit,
+            "latency_ms": latency_ms,
+            "latency_limit": latency_limit,
             "action": action,
-            "rewritten_plan": rewritten_plan.as_ref(),
+            "rewritten_plan": rewritten_plan,
         });
         fs::write(&snapshot_path, serde_json::to_string_pretty(&manifest)?)?;
 
@@ -1101,10 +1083,10 @@ impl PipelineInstrumentation {
             stage_id.to_string(),
         )
         .with_metadata(json!({
-            "tokens_used": metrics.tokens_used,
-            "token_limit": metrics.token_limit,
-            "latency_ms": metrics.latency_ms,
-            "latency_limit": metrics.latency_limit,
+            "tokens_used": tokens_used,
+            "token_limit": token_limit,
+            "latency_ms": latency_ms,
+            "latency_limit": latency_limit,
             "action": action,
             "snapshot": snapshot_path.to_string_lossy(),
         }));
@@ -1112,24 +1094,27 @@ impl PipelineInstrumentation {
         let record = BudgetDecisionRecord {
             workflow_id: workflow_id.to_string(),
             stage_id: stage_id.to_string(),
-            tokens_used: metrics.tokens_used,
-            token_limit: metrics.token_limit,
-            latency_ms: metrics.latency_ms,
-            latency_limit: metrics.latency_limit,
+            tokens_used,
+            token_limit,
+            latency_ms,
+            latency_limit,
             action: action.to_string(),
             rewritten_plan: rewritten_plan.clone(),
             snapshot_path: snapshot_path.clone(),
             signed_operation: signed.clone(),
         };
-        let evidence = BudgetDecisionEvidence {
+        self.append_evidence_ledger(EvidenceLedgerEntry::budget_decision(
             workflow_id,
             stage_id,
-            metrics,
+            tokens_used,
+            token_limit,
+            latency_ms,
+            latency_limit,
             action,
-            rewritten_plan: record.rewritten_plan.as_ref(),
-            snapshot: &record.snapshot_path,
-        };
-        self.append_evidence_ledger(EvidenceLedgerEntry::budget_decision(evidence, signed))?;
+            &record.rewritten_plan,
+            &record.snapshot_path,
+            signed,
+        ))?;
         Ok(record)
     }
 
@@ -1256,8 +1241,6 @@ impl PipelineInstrumentation {
         metadata: Value,
     ) -> Result<SignedOperation, InstrumentationError> {
         let metadata_for_event = metadata.clone();
-        let metadata_for_record = metadata.clone();
-        let metadata_for_ledger = metadata;
         let event = PipelineLogEvent {
             event_type: event_type.to_string(),
             actor: actor.to_string(),
@@ -1270,16 +1253,8 @@ impl PipelineInstrumentation {
         let record =
             OperationRecord::new(OperationKind::Other, actor.to_string(), subject.to_string())
                 .with_context(Some(actor.to_string()), Some(subject.to_string()))
-                .with_metadata(metadata_for_record);
-        let signed = self.append_entry(PIPELINE_EVENT_LOG, event, record)?;
-        self.append_evidence_ledger(EvidenceLedgerEntry::pipeline_event(
-            actor,
-            subject,
-            event_type,
-            &metadata_for_ledger,
-            signed.clone(),
-        ))?;
-        Ok(signed)
+                .with_metadata(metadata);
+        self.append_entry(PIPELINE_EVENT_LOG, event, record)
     }
     pub fn record_deployment_outcome(
         &self,
@@ -1299,17 +1274,19 @@ impl PipelineInstrumentation {
             record.status,
             sanitized_notes
         );
-        if let Some(parent) = self.deployment_report_path.parent() {
-            fs::create_dir_all(parent)?;
-        }
-        let mut file = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&self.deployment_report_path)?;
-        writeln!(file, "{}", row)?;
-        file.flush()?;
-        file.sync_all()?;
-        Ok(())
+        with_log_lock(|| {
+            if let Some(parent) = self.deployment_report_path.parent() {
+                fs::create_dir_all(parent)?;
+            }
+            let mut file = OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&self.deployment_report_path)?;
+            writeln!(file, "{}", row)?;
+            file.flush()?;
+            file.sync_all()?;
+            Ok(())
+        })
     }
 
     pub fn record_goal_outcome(
@@ -1487,26 +1464,28 @@ impl PipelineInstrumentation {
     }
 
     fn ensure_deployment_report(&self) -> Result<(), InstrumentationError> {
-        if self.deployment_report_path.exists() {
-            let content = fs::read_to_string(&self.deployment_report_path)?;
-            if !content.trim().is_empty() {
-                return Ok(());
+        with_log_lock(|| {
+            if self.deployment_report_path.exists() {
+                let content = fs::read_to_string(&self.deployment_report_path)?;
+                if !content.trim().is_empty() {
+                    return Ok(());
+                }
             }
-        }
 
-        if let Some(parent) = self.deployment_report_path.parent() {
-            fs::create_dir_all(parent)?;
-        }
+            if let Some(parent) = self.deployment_report_path.parent() {
+                fs::create_dir_all(parent)?;
+            }
 
-        let mut file = OpenOptions::new()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open(&self.deployment_report_path)?;
-        file.write_all(b"# Agent Deployment Outcomes\n\n| Timestamp | Workflow | Stage | Agent Role | Agent ID | Action | Status | Notes |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n")?;
-        file.flush()?;
-        file.sync_all()?;
-        Ok(())
+            let mut file = OpenOptions::new()
+                .create(true)
+                .write(true)
+                .truncate(true)
+                .open(&self.deployment_report_path)?;
+            file.write_all(b"# Agent Deployment Outcomes\n\n| Timestamp | Workflow | Stage | Agent Role | Agent ID | Action | Status | Notes |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n")?;
+            file.flush()?;
+            file.sync_all()?;
+            Ok(())
+        })
     }
 
     fn persist_goal_metrics(&self) -> Result<(), InstrumentationError> {
@@ -1599,153 +1578,6 @@ impl PipelineInstrumentation {
         }
         Ok(())
     }
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct PipelineStorageLayout {
-    pub index_dir: PathBuf,
-    pub mirror_dir: PathBuf,
-}
-
-impl PipelineStorageLayout {
-    pub fn new() -> Self {
-        Self {
-            index_dir: resolve_path(INDEX_DIR),
-            mirror_dir: resolve_path(STORAGE_MIRROR_DIR),
-        }
-    }
-
-    pub fn log_pair(&self, log_name: &str) -> (PathBuf, PathBuf) {
-        let file = format!("{}.log", log_name);
-        (self.index_dir.join(&file), self.mirror_dir.join(&file))
-    }
-}
-
-impl Default for PipelineStorageLayout {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum StorageDoctorStatus {
-    Healthy,
-    Degraded,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct LogMirrorReport {
-    pub name: String,
-    pub index_path: String,
-    pub storage_path: String,
-    pub index_exists: bool,
-    pub storage_exists: bool,
-    pub index_genesis: Option<bool>,
-    pub storage_genesis: Option<bool>,
-    pub drift: bool,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct StorageDoctorReport {
-    pub status: StorageDoctorStatus,
-    pub mirrors: Vec<LogMirrorReport>,
-    pub drift: Vec<String>,
-}
-
-impl StorageDoctorReport {
-    pub fn is_healthy(&self) -> bool {
-        self.status == StorageDoctorStatus::Healthy
-    }
-}
-
-pub fn run_storage_doctor() -> Result<StorageDoctorReport, InstrumentationError> {
-    let layout = PipelineStorageLayout::new();
-    let mut mirrors = Vec::new();
-    let mut drift_channels = Vec::new();
-    let mut healthy = true;
-
-    for log_name in PipelineInstrumentation::log_channels() {
-        let (index_path, storage_path) = layout.log_pair(log_name);
-        let index_exists = index_path.exists();
-        let storage_exists = storage_path.exists();
-
-        let index_genesis = if index_exists {
-            Some(first_entry_is_genesis(&index_path, log_name)?)
-        } else {
-            None
-        };
-        let storage_genesis = if storage_exists {
-            Some(first_entry_is_genesis(&storage_path, log_name)?)
-        } else {
-            None
-        };
-
-        let drift = if index_exists && storage_exists {
-            fs::read_to_string(&index_path)? != fs::read_to_string(&storage_path)?
-        } else {
-            false
-        };
-
-        if drift {
-            drift_channels.push(log_name.to_string());
-        }
-
-        if !index_exists
-            || !storage_exists
-            || index_genesis != Some(true)
-            || storage_genesis != Some(true)
-            || drift
-        {
-            healthy = false;
-        }
-
-        mirrors.push(LogMirrorReport {
-            name: log_name.to_string(),
-            index_path: index_path.to_string_lossy().to_string(),
-            storage_path: storage_path.to_string_lossy().to_string(),
-            index_exists,
-            storage_exists,
-            index_genesis,
-            storage_genesis,
-            drift,
-        });
-    }
-
-    Ok(StorageDoctorReport {
-        status: if healthy {
-            StorageDoctorStatus::Healthy
-        } else {
-            StorageDoctorStatus::Degraded
-        },
-        mirrors,
-        drift: drift_channels,
-    })
-}
-
-fn first_entry_is_genesis(path: &PathBuf, log_name: &str) -> Result<bool, InstrumentationError> {
-    let file = std::fs::File::open(path)?;
-    let reader = std::io::BufReader::new(file);
-    for line in reader.lines() {
-        let line = line?;
-        let trimmed = line.trim();
-        if trimmed.is_empty() {
-            continue;
-        }
-        let value: serde_json::Value = serde_json::from_str(trimmed)?;
-        let event_type = value
-            .get("event")
-            .and_then(|event| event.get("event_type"))
-            .and_then(|v| v.as_str())
-            .unwrap_or_default();
-        let previous_hash = value
-            .get("previous_hash")
-            .and_then(|v| v.as_str())
-            .unwrap_or_default();
-        let expected_event = format!("{}::genesis", log_name);
-        return Ok(event_type == expected_event && previous_hash == "GENESIS");
-    }
-    Ok(false)
 }
 
 fn log_write_lock() -> &'static Mutex<()> {

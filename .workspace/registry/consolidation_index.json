@@ -1,0 +1,7 @@
+{
+  "last_updated": "2025-11-19T00:00:00Z",
+  "total_consolidations": 0,
+  "entries": [],
+  "_schema_version": "1.0.0",
+  "_description": "Master index tracking all file consolidations in the repository. Each entry represents a canonical file that has had sources merged into it."
+}
