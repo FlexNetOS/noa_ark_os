@@ -21,8 +21,28 @@ fn pushln(buffer: &mut String, args: std::fmt::Arguments<'_>) -> Result<()> {
     Ok(())
 }
 
-fn push_blank(buffer: &mut String) {
+fn push_blank(buffer: &mut String) -> Result<()> {
     buffer.push('\n');
+    Ok(())
+}
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct AgentApprovalRequirement {
+    pub role: String,
+    pub minimum_trust_score: f32,
+    #[serde(default)]
+    pub required_evidence_tags: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct AgentApprovalRecord {
+    pub role: String,
+    pub agent_id: String,
+    pub trust_score: f32,
+    #[serde(default)]
+    pub evidence_tags: Vec<String>,
+    #[serde(default)]
+    pub evidence_references: Vec<String>,
+    pub recorded_at: u64,
 }
 /// Structured output emitted by the documentation pipelines.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -30,8 +50,8 @@ pub struct DocumentationPipelineOutput {
     pub run_id: String,
     pub generated_at: DateTime<Utc>,
     pub diff_summary: String,
-    pub approvals_required: Vec<String>,
-    pub approvals_granted: Vec<String>,
+    pub approvals_required: Vec<AgentApprovalRequirement>,
+    pub approvals_granted: Vec<AgentApprovalRecord>,
     pub services: Vec<ServiceDocumentation>,
     pub sops: Vec<SopDocumentation>,
     pub workflows: Vec<WorkflowDocumentation>,
@@ -110,19 +130,53 @@ impl DocumentationAgent {
             &mut body,
             format_args!("- Diff Summary: {}", output.diff_summary),
         )?;
+        let required_summary = if output.approvals_required.is_empty() {
+            "none".to_string()
+        } else {
+            output
+                .approvals_required
+                .iter()
+                .map(|req| {
+                    let evidence = if req.required_evidence_tags.is_empty() {
+                        "none".to_string()
+                    } else {
+                        req.required_evidence_tags.join(", ")
+                    };
+                    format!(
+                        "{} (trust ≥ {:.2}, evidence: {})",
+                        req.role, req.minimum_trust_score, evidence
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join("; ")
+        };
+        let granted_summary = if output.approvals_granted.is_empty() {
+            "none".to_string()
+        } else {
+            output
+                .approvals_granted
+                .iter()
+                .map(|grant| {
+                    let references = if grant.evidence_references.is_empty() {
+                        "none".to_string()
+                    } else {
+                        grant.evidence_references.join(", ")
+                    };
+                    format!(
+                        "{}@{} (trust {:.2}, evidence: {})",
+                        grant.role, grant.agent_id, grant.trust_score, references
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join("; ")
+        };
         pushln(
             &mut body,
-            format_args!(
-                "- Approvals Required: {}",
-                output.approvals_required.join(", ")
-            ),
+            format_args!("- Approvals Required: {}", required_summary),
         )?;
         pushln(
             &mut body,
-            format_args!(
-                "- Approvals Granted: {}",
-                output.approvals_granted.join(", ")
-            ),
+            format_args!("- Approvals Granted: {}", granted_summary),
         )?;
         push_blank(&mut body)?;
 
@@ -351,8 +405,19 @@ mod tests {
             run_id: "run_123".to_string(),
             generated_at: Utc::now(),
             diff_summary: "Updated services/api and SOP library".to_string(),
-            approvals_required: vec!["doc-lead".to_string(), "release-manager".to_string()],
-            approvals_granted: vec!["doc-lead".to_string()],
+            approvals_required: vec![AgentApprovalRequirement {
+                role: "doc-lead".to_string(),
+                minimum_trust_score: 0.7,
+                required_evidence_tags: vec!["ledger:docs".to_string()],
+            }],
+            approvals_granted: vec![AgentApprovalRecord {
+                role: "doc-lead".to_string(),
+                agent_id: "agent-docs".to_string(),
+                trust_score: 0.82,
+                evidence_tags: vec!["ledger:docs".to_string()],
+                evidence_references: vec!["ledger://docs/123".to_string()],
+                recorded_at: Utc::now().timestamp() as u64,
+            }],
             services: vec![ServiceDocumentation {
                 name: "API Gateway".to_string(),
                 path: "services/api".to_string(),

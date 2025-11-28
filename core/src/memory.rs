@@ -1,21 +1,20 @@
 //! Memory management subsystem with registry graph ingestion
 
-use lazy_static::lazy_static;
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, RwLock};
+use std::sync::{OnceLock, RwLock};
 
 const SUPPORTED_REGISTRY_VERSION: &str = "1.0.0";
 
 static ALLOCATED_MEMORY: AtomicUsize = AtomicUsize::new(0);
+static REGISTRY_GRAPH: OnceLock<RwLock<RegistryGraph>> = OnceLock::new();
 
-lazy_static! {
-    static ref REGISTRY_GRAPH: Arc<RwLock<RegistryGraph>> =
-        Arc::new(RwLock::new(RegistryGraph::default()));
+fn registry_graph() -> &'static RwLock<RegistryGraph> {
+    REGISTRY_GRAPH.get_or_init(|| RwLock::new(RegistryGraph::default()))
 }
 
 /// Initialize memory management and load the registry graph.
@@ -30,21 +29,54 @@ pub fn init() -> Result<(), &'static str> {
     Ok(())
 }
 
-/// Track memory allocation
-pub fn allocate(size: usize) -> Result<(), &'static str> {
+fn allocate_inner(size: usize) {
     ALLOCATED_MEMORY.fetch_add(size, Ordering::SeqCst);
-    Ok(())
 }
 
-/// Track memory deallocation
-pub fn deallocate(size: usize) -> Result<(), &'static str> {
+fn deallocate_inner(size: usize) {
     ALLOCATED_MEMORY.fetch_sub(size, Ordering::SeqCst);
-    Ok(())
 }
 
-/// Get total allocated memory
-pub fn get_allocated() -> usize {
+fn allocated_inner() -> usize {
     ALLOCATED_MEMORY.load(Ordering::SeqCst)
+}
+
+/// Capability wrapper for kernel-managed memory operations.
+#[derive(Clone, Default)]
+pub struct MemoryManager;
+
+impl MemoryManager {
+    /// Reserve memory pages from the global allocator tracking.
+    pub fn allocate(&self, size: usize) -> Result<(), &'static str> {
+        allocate_inner(size);
+        Ok(())
+    }
+
+    /// Release memory back to the allocator tracking.
+    pub fn deallocate(&self, size: usize) -> Result<(), &'static str> {
+        deallocate_inner(size);
+        Ok(())
+    }
+
+    /// Query total allocated memory.
+    pub fn total_allocated(&self) -> usize {
+        allocated_inner()
+    }
+}
+
+/// Track memory allocation.
+pub fn allocate(size: usize) -> Result<(), &'static str> {
+    MemoryManager.allocate(size)
+}
+
+/// Track memory deallocation.
+pub fn deallocate(size: usize) -> Result<(), &'static str> {
+    MemoryManager.deallocate(size)
+}
+
+/// Get total allocated memory.
+pub fn get_allocated() -> usize {
+    MemoryManager.total_allocated()
 }
 
 /// Load registry data from the provided directory path.
@@ -77,7 +109,7 @@ pub fn load_registry<P: AsRef<Path>>(root: P) -> Result<(), RegistryError> {
 
     graph.validate()?;
 
-    let mut global = REGISTRY_GRAPH
+    let mut global = registry_graph()
         .write()
         .map_err(|_| RegistryError::PoisonedState("registry graph".into()))?;
     *global = graph;
@@ -87,7 +119,7 @@ pub fn load_registry<P: AsRef<Path>>(root: P) -> Result<(), RegistryError> {
 
 /// Obtain an immutable snapshot of the registry graph.
 pub fn registry_snapshot() -> Result<RegistryGraph, RegistryError> {
-    REGISTRY_GRAPH
+    registry_graph()
         .read()
         .map(|guard| guard.clone())
         .map_err(|_| RegistryError::PoisonedState("registry graph".into()))
@@ -95,7 +127,7 @@ pub fn registry_snapshot() -> Result<RegistryGraph, RegistryError> {
 
 /// Fetch a component by ID.
 pub fn registry_component(id: &str) -> Option<RegistryNode> {
-    REGISTRY_GRAPH
+    registry_graph()
         .read()
         .ok()
         .and_then(|graph| graph.component(id))
@@ -103,7 +135,7 @@ pub fn registry_component(id: &str) -> Option<RegistryNode> {
 
 /// Fetch the dependencies for a given component ID.
 pub fn registry_dependencies(id: &str) -> Vec<RegistryNode> {
-    REGISTRY_GRAPH
+    registry_graph()
         .read()
         .map(|graph| graph.dependencies_of(id))
         .unwrap_or_default()
@@ -111,7 +143,7 @@ pub fn registry_dependencies(id: &str) -> Vec<RegistryNode> {
 
 /// Fetch the dependents for a given component ID.
 pub fn registry_dependents(id: &str) -> Vec<RegistryNode> {
-    REGISTRY_GRAPH
+    registry_graph()
         .read()
         .map(|graph| graph.dependents_of(id))
         .unwrap_or_default()
@@ -119,7 +151,7 @@ pub fn registry_dependents(id: &str) -> Vec<RegistryNode> {
 
 /// Fetch component nodes associated with a given file.
 pub fn registry_components_for_file(path: &str) -> Vec<RegistryNode> {
-    REGISTRY_GRAPH
+    registry_graph()
         .read()
         .map(|graph| graph.components_for_file(path))
         .unwrap_or_default()
@@ -381,7 +413,9 @@ fn normalize_path(input: &str) -> String {
                     // Don't pop root or prefix
                     match last {
                         Component::RootDir | Component::Prefix(_) => {}
-                        _ => { stack.pop(); }
+                        _ => {
+                            stack.pop();
+                        }
                     }
                 }
             }
@@ -537,7 +571,7 @@ mod tests {
         .unwrap();
 
         load_registry(dir.path()).unwrap();
-        let snapshot = registry_snapshot();
+        let snapshot = registry_snapshot().expect("registry snapshot should be available");
         assert_eq!(snapshot.components().len(), 1);
         assert_eq!(snapshot.owners().len(), 1);
     }

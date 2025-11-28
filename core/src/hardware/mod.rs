@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::process::Command;
-use sysinfo::{CpuExt, System, SystemExt};
+use sysinfo::System;
 
 /// Summary of CPU capabilities discovered on the host system.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -30,6 +30,7 @@ pub enum GpuBackend {
 }
 
 impl GpuBackend {
+    #[cfg_attr(not(test), allow(dead_code))]
     fn from_vendor_hint(vendor_id: Option<&str>, name: &str) -> Self {
         let vendor = vendor_id.unwrap_or("").to_ascii_lowercase();
         if vendor.contains("10de") || name.to_ascii_lowercase().contains("nvidia") {
@@ -125,7 +126,7 @@ pub fn detect_hardware_profile() -> HardwareProfile {
             vendor: cpu.vendor_id().to_string(),
             physical_cores: system.physical_core_count().unwrap_or(logical_cores),
             logical_cores,
-            frequency_mhz: Some(cpu.frequency() as u64),
+            frequency_mhz: Some(cpu.frequency()),
         })
         .unwrap_or(CpuProfile {
             brand: "unknown".to_string(),
@@ -151,22 +152,13 @@ pub fn detect_hardware_profile() -> HardwareProfile {
     }
 }
 
-fn detect_gpus(system: &System) -> Vec<GpuProfile> {
+fn detect_gpus(_system: &System) -> Vec<GpuProfile> {
     let mut gpus = Vec::new();
 
-    for card in system.graphics_cards() {
-        let backend = GpuBackend::from_vendor_hint(card.vendor_id(), card.name());
-        gpus.push(GpuProfile {
-            name: card.name().to_string(),
-            backend,
-            memory_total_bytes: card.memory_total(),
-            driver: card.driver_version().map(|d| d.to_string()),
-        });
-    }
+    // Note: sysinfo graphics_cards() API not available in this version
+    // Falling back to nvidia-smi detection.
 
-    if gpus.is_empty() {
-        gpus.extend(query_nvidia_smi());
-    }
+    gpus.extend(query_nvidia_smi());
 
     gpus
 }
@@ -185,7 +177,9 @@ fn query_nvidia_smi() -> Vec<GpuProfile> {
             let stdout = String::from_utf8_lossy(&output.stdout);
             for line in stdout.lines() {
                 let parts: Vec<_> = line.split(',').map(|s| s.trim()).collect();
-                if parts.is_empty() {
+                // Skip empty lines and lines with empty first field
+                // Also ensure we have at least the name field
+                if parts.is_empty() || parts[0].is_empty() {
                     continue;
                 }
 

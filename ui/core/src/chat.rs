@@ -162,11 +162,11 @@ impl ChatWorkspace {
             }
             ChatAction::Navigate { route } => {
                 self.store.update(|state| {
-                    let mut nav = NavigationState::default();
-                    nav.active_route = Some(route.clone());
-                    nav.primary_items = state.navigation.primary_items.clone();
-                    nav.secondary_items = state.navigation.secondary_items.clone();
-                    state.navigation = nav;
+                    state.navigation = NavigationState {
+                        active_route: Some(route.clone()),
+                        primary_items: state.navigation.primary_items.clone(),
+                        secondary_items: state.navigation.secondary_items.clone(),
+                    };
                 });
                 (self.event_sink)(ShellEvent::RouteActivated {
                     route: route.clone(),

@@ -4,17 +4,12 @@ use std::collections::HashMap;
 use thiserror::Error;
 
 /// Supported protocols by the programmable router.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Protocol {
+    #[default]
     GraphQl,
     Grpc,
     WebSocket,
-}
-
-impl Default for Protocol {
-    fn default() -> Self {
-        Protocol::GraphQl
-    }
 }
 
 /// Routing plan describing downstream targets and behaviour.
@@ -134,13 +129,71 @@ impl ProgrammableRouter {
 impl Default for ProgrammableRouter {
     fn default() -> Self {
         Self::new(
-            vec!["serviceA".into(), "serviceB".into(), "analytics".into()],
-            vec!["workflow".into(), "memory".into(), "security".into()],
+            vec![
+                "retrieval".into(),
+                "orchestration".into(),
+                "analytics".into(),
+                "serviceA".into(),
+                "serviceB".into(),
+            ],
+            vec![
+                "inference".into(),
+                "workflow".into(),
+                "memory".into(),
+                "security".into(),
+            ],
             vec![
                 "agent-activity".into(),
                 "alerts".into(),
                 "workflow-status".into(),
             ],
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn graphql_routing_delegates_known_services() {
+        let router =
+            ProgrammableRouter::new(vec!["serviceA".into(), "serviceB".into()], vec![], vec![]);
+        let payload = json!({
+            "query": "{ serviceA { id } }",
+            "federation": { "services": ["serviceA", "serviceZ"] },
+        });
+
+        let plan = router
+            .route(&Protocol::GraphQl, &payload)
+            .expect("graphql routing succeeds");
+
+        assert_eq!(plan.protocol, Protocol::GraphQl);
+        assert_eq!(plan.targets, vec!["serviceA".to_string()]);
+        assert_eq!(
+            plan.metadata.get("mode"),
+            Some(&Value::String("federated".into())),
+        );
+    }
+
+    #[test]
+    fn grpc_routing_maps_service_and_method() {
+        let router = ProgrammableRouter::new(vec![], vec!["workflow".into()], vec![]);
+        let payload = json!({
+            "service": "workflow",
+            "method": "Run",
+        });
+
+        let plan = router
+            .route(&Protocol::Grpc, &payload)
+            .expect("grpc routing succeeds");
+
+        assert_eq!(plan.protocol, Protocol::Grpc);
+        assert_eq!(plan.targets, vec!["workflow/Run".to_string()]);
+        assert_eq!(
+            plan.metadata.get("mode"),
+            Some(&Value::String("proxy".into())),
+        );
     }
 }

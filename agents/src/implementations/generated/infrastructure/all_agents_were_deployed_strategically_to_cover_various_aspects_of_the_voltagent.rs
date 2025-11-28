@@ -1,5 +1,5 @@
 //! All agents were deployed strategically to cover various aspects of the VoltAgent - Auto-generated
-//! 
+//!
 //! ['Performs Micro Agent functions']
 
 use crate::unified_types::*;
@@ -17,8 +17,12 @@ impl AllAgentsWereDeployedStrategicallyToCoverVariousAspectsOfTheVoltagent {
     pub fn new() -> Self {
         let metadata = AgentMetadata {
             id: Uuid::new_v4(),
-            agent_id: "all_agents_were_deployed_strategically_to_cover_various_aspects_of_the_voltagent".to_string(),
-            name: "All agents were deployed strategically to cover various aspects of the VoltAgent".to_string(),
+            agent_id:
+                "all_agents_were_deployed_strategically_to_cover_various_aspects_of_the_voltagent"
+                    .to_string(),
+            name:
+                "All agents were deployed strategically to cover various aspects of the VoltAgent"
+                    .to_string(),
             layer: AgentLayer::L5Infrastructure,
             category: AgentCategory::Other,
             agent_type: AgentType::Worker,
@@ -48,22 +52,22 @@ impl AllAgentsWereDeployedStrategicallyToCoverVariousAspectsOfTheVoltagent {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Ready;
         Ok(())
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -78,16 +82,20 @@ impl Default for AllAgentsWereDeployedStrategicallyToCoverVariousAspectsOfTheVol
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = AllAgentsWereDeployedStrategicallyToCoverVariousAspectsOfTheVoltagent::new();
-        assert_eq!(agent.metadata().name, "All agents were deployed strategically to cover various aspects of the VoltAgent");
+        assert_eq!(
+            agent.metadata().name,
+            "All agents were deployed strategically to cover various aspects of the VoltAgent"
+        );
     }
-    
+
     #[tokio::test]
     async fn test_agent_initialization() {
-        let mut agent = AllAgentsWereDeployedStrategicallyToCoverVariousAspectsOfTheVoltagent::new();
+        let mut agent =
+            AllAgentsWereDeployedStrategicallyToCoverVariousAspectsOfTheVoltagent::new();
         agent.initialize().await.unwrap();
         assert_eq!(agent.state().await, AgentState::Ready);
     }

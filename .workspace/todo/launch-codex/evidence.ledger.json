@@ -1,0 +1,54 @@
+{
+  "task": "Launch Codex",
+  "timestamp_utc": "2025-11-20T05:54:28Z",
+  "artifacts": [
+    {
+      "id": "C1-files",
+      "path": "server/bins/noa-unified-server/Cargo.toml",
+      "sha256": "be4281812ff4cd218239ebb8c4691542669e65cdc78a22cac58ff05d807a06ac",
+      "notes": "Merged gateway + API dependencies and removed conflict markers."
+    },
+    {
+      "id": "C1-src",
+      "path": "server/bins/noa-unified-server/src/main.rs",
+      "sha256": "694c65fa27e27305adcb272d4cd94662582c7e898c1d9d1d05fd03e8713bc4fa",
+      "notes": "CLI now builds the orchestrator decision, bootstraps the gateway, and runs the Axum + Tonic server."
+    },
+    {
+      "id": "C4-server-workspace",
+      "path": "server/Cargo.toml",
+      "sha256": "d355d5f3fedf31cd9dae08f548ca0c215c853ce54455e331d52fd246f80268a4",
+      "notes": "Added server/mcp to the workspace members/default-members arrays."
+    },
+    {
+      "id": "C2-bootstrap",
+      "path": "scripts/codex-bootstrap.sh",
+      "sha256": "191397b9b395a021f21ca8e1bc5de33a1b5aef71e5d4929ea55a85866be23039",
+      "notes": "Trap no longer references an unset mktemp variable; script is idempotent."
+    },
+    {
+      "id": "C3-health",
+      "path": "cicd/scripts/codex-mcp-health.sh",
+      "sha256": "cbc66f9eb5068cb9b1d2ca7be6bfc2cd212b99918c97782e3a453caacb785a3a",
+      "notes": "Uses the correct noa-tools-agent package/bin names when launching the server."
+    }
+  ],
+  "commands": [
+    {
+      "id": "CMD-bootstrap",
+      "cwd": "/home/noa/dev/workspace/noa_ark_os/noa_ark_os",
+      "command": "bash scripts/codex-bootstrap.sh",
+      "exit_code": 0,
+      "timestamp_utc": "2025-11-20T05:54:28Z",
+      "notes": "Installed Codex CLI and noa-mcp-server, updated ~/.codex/config.toml, and warned about $PATH."
+    },
+    {
+      "id": "CMD-health",
+      "cwd": "/home/noa/dev/workspace/noa_ark_os/noa_ark_os",
+      "command": "PATH=\"$HOME/.local/bin:$PATH\" bash cicd/scripts/codex-mcp-health.sh",
+      "exit_code": 0,
+      "timestamp_utc": "2025-11-20T05:54:28Z",
+      "notes": "Verified codex mcp list, noa-tools-agent /list_files, and MCP stdio JSON-RPC calls."
+    }
+  ]
+}

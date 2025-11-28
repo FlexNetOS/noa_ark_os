@@ -1,0 +1,2 @@
+-- Placeholder model defining deployment frequency aggregations.
+-- Replace with SQL that summarises promotions per environment and service.

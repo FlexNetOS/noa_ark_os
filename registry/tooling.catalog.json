@@ -1,0 +1,386 @@
+{
+  "metadata": {
+    "build_timestamp": "2025-11-21T06:45:20.074693308+00:00",
+    "descriptor_sources": [
+      "tools-agent"
+    ],
+    "git_sha": "2dc6011f5",
+    "tool_count": 5,
+    "version": "0.1.0"
+  },
+  "tools": [
+    {
+      "aliases": [
+        "exec"
+      ],
+      "api": {
+        "grpc": "",
+        "rest": {
+          "method": "POST",
+          "operation_id": "run_command",
+          "path": "/run_command"
+        }
+      },
+      "automation": {
+        "approvals_required": [],
+        "events": [],
+        "runbooks": []
+      },
+      "budgets": {
+        "cpu_millis": 200,
+        "max_duration_seconds": 30,
+        "memory_mebibytes": 64,
+        "network_class": "offline",
+        "storage_mebibytes": 0
+      },
+      "category": "execution",
+      "cli_mappings": [
+        {
+          "arguments": [
+            "--cmd"
+          ],
+          "command": [
+            "noa-tools-agent",
+            "run"
+          ],
+          "description": "Invoke run_command",
+          "example": "noa-tools-agent run --cmd cargo -- --version",
+          "flags": [
+            "--timeout"
+          ]
+        }
+      ],
+      "description": "Runs a single command from the allowlist with optional timeout and environment variables.",
+      "id": "run_command",
+      "layer": "workspace",
+      "lifecycle": "active",
+      "maturity": "beta",
+      "name": "Run Command",
+      "outputs": [
+        {
+          "description": "Command result",
+          "format": "json",
+          "schema": "{\"properties\":{\"exit_code\":{\"type\":\"integer\"},\"stderr\":{\"type\":\"string\"},\"stdout\":{\"type\":\"string\"}},\"type\":\"object\"}"
+        }
+      ],
+      "owner": "tools-agent",
+      "parameters": [
+        {
+          "data_type": "string",
+          "default": null,
+          "description": "Bare executable name",
+          "example": "cargo",
+          "name": "command",
+          "required": true,
+          "source": null
+        },
+        {
+          "data_type": "string[]",
+          "default": null,
+          "description": "List of arguments",
+          "example": "['--version']",
+          "name": "args",
+          "required": false,
+          "source": null
+        },
+        {
+          "data_type": "int",
+          "default": "30",
+          "description": "Max execution time",
+          "example": "10",
+          "name": "timeout_seconds",
+          "required": false,
+          "source": null
+        }
+      ],
+      "side_effects": [
+        {
+          "description": "May spawn short-lived process",
+          "impact": "cpu",
+          "mitigation": "enforced timeout",
+          "scope": "process"
+        }
+      ],
+      "summary": "Execute an allowlisted command with arguments"
+    },
+    {
+      "aliases": [
+        "write_file"
+      ],
+      "api": {
+        "grpc": "",
+        "rest": {
+          "method": "POST",
+          "operation_id": "edit_file",
+          "path": "/edit_file"
+        }
+      },
+      "automation": {
+        "approvals_required": [],
+        "events": [],
+        "runbooks": []
+      },
+      "budgets": {
+        "cpu_millis": 200,
+        "max_duration_seconds": 30,
+        "memory_mebibytes": 64,
+        "network_class": "offline",
+        "storage_mebibytes": 0
+      },
+      "category": "filesystem",
+      "cli_mappings": [
+        {
+          "arguments": [
+            "--path"
+          ],
+          "command": [
+            "noa-tools-agent",
+            "edit"
+          ],
+          "description": "Edit file",
+          "example": null,
+          "flags": []
+        }
+      ],
+      "description": "Creates or overwrites a file at a relative path.",
+      "id": "edit_file",
+      "layer": "workspace",
+      "lifecycle": "active",
+      "maturity": "beta",
+      "name": "Edit File",
+      "outputs": [
+        {
+          "description": "Write result",
+          "format": "json",
+          "schema": null
+        }
+      ],
+      "owner": "tools-agent",
+      "parameters": [
+        {
+          "data_type": "string",
+          "default": null,
+          "description": "Relative file path",
+          "example": "server/README.md",
+          "name": "path",
+          "required": true,
+          "source": null
+        },
+        {
+          "data_type": "string",
+          "default": null,
+          "description": "Full file contents",
+          "example": "Hello",
+          "name": "contents",
+          "required": true,
+          "source": null
+        }
+      ],
+      "side_effects": [
+        {
+          "description": "Overwrites file on disk",
+          "impact": "write",
+          "mitigation": "archival pre-write",
+          "scope": "filesystem"
+        }
+      ],
+      "summary": "Write contents to a file"
+    },
+    {
+      "aliases": [
+        "ls"
+      ],
+      "api": {
+        "grpc": "",
+        "rest": {
+          "method": "POST",
+          "operation_id": "list_files",
+          "path": "/list_files"
+        }
+      },
+      "automation": {
+        "approvals_required": [],
+        "events": [],
+        "runbooks": []
+      },
+      "budgets": {
+        "cpu_millis": 200,
+        "max_duration_seconds": 30,
+        "memory_mebibytes": 64,
+        "network_class": "offline",
+        "storage_mebibytes": 0
+      },
+      "category": "filesystem",
+      "cli_mappings": [
+        {
+          "arguments": [
+            "--path"
+          ],
+          "command": [
+            "noa-tools-agent",
+            "ls"
+          ],
+          "description": "List files",
+          "example": null,
+          "flags": []
+        }
+      ],
+      "description": "Lists non-recursive entries in a directory.",
+      "id": "list_files",
+      "layer": "workspace",
+      "lifecycle": "active",
+      "maturity": "beta",
+      "name": "List Files",
+      "outputs": [
+        {
+          "description": "File entries",
+          "format": "json",
+          "schema": null
+        }
+      ],
+      "owner": "tools-agent",
+      "parameters": [
+        {
+          "data_type": "string",
+          "default": ".",
+          "description": "Directory path",
+          "example": "server",
+          "name": "path",
+          "required": false,
+          "source": null
+        }
+      ],
+      "side_effects": [],
+      "summary": "Enumerate directory entries"
+    },
+    {
+      "aliases": [
+        "cat"
+      ],
+      "api": {
+        "grpc": "",
+        "rest": {
+          "method": "POST",
+          "operation_id": "read_file",
+          "path": "/read_file"
+        }
+      },
+      "automation": {
+        "approvals_required": [],
+        "events": [],
+        "runbooks": []
+      },
+      "budgets": {
+        "cpu_millis": 200,
+        "max_duration_seconds": 30,
+        "memory_mebibytes": 64,
+        "network_class": "offline",
+        "storage_mebibytes": 0
+      },
+      "category": "filesystem",
+      "cli_mappings": [
+        {
+          "arguments": [
+            "--path"
+          ],
+          "command": [
+            "noa-tools-agent",
+            "read"
+          ],
+          "description": "Read file",
+          "example": null,
+          "flags": []
+        }
+      ],
+      "description": "Reads an entire UTF-8 file.",
+      "id": "read_file",
+      "layer": "workspace",
+      "lifecycle": "active",
+      "maturity": "beta",
+      "name": "Read File",
+      "outputs": [
+        {
+          "description": "File read result",
+          "format": "json",
+          "schema": null
+        }
+      ],
+      "owner": "tools-agent",
+      "parameters": [
+        {
+          "data_type": "string",
+          "default": null,
+          "description": "File path",
+          "example": "README.md",
+          "name": "path",
+          "required": true,
+          "source": null
+        }
+      ],
+      "side_effects": [],
+      "summary": "Return file contents"
+    },
+    {
+      "aliases": [
+        "tests"
+      ],
+      "api": {
+        "grpc": "",
+        "rest": {
+          "method": "POST",
+          "operation_id": "run_tests",
+          "path": "/run_tests"
+        }
+      },
+      "automation": {
+        "approvals_required": [],
+        "events": [],
+        "runbooks": []
+      },
+      "budgets": {
+        "cpu_millis": 200,
+        "max_duration_seconds": 30,
+        "memory_mebibytes": 64,
+        "network_class": "offline",
+        "storage_mebibytes": 0
+      },
+      "category": "execution",
+      "cli_mappings": [
+        {
+          "arguments": [],
+          "command": [
+            "noa-tools-agent",
+            "test"
+          ],
+          "description": "Run tests",
+          "example": null,
+          "flags": []
+        }
+      ],
+      "description": "Runs the workspace test suite (cargo test).",
+      "id": "run_tests",
+      "layer": "workspace",
+      "lifecycle": "active",
+      "maturity": "alpha",
+      "name": "Run Tests",
+      "outputs": [
+        {
+          "description": "Test run summary",
+          "format": "json",
+          "schema": null
+        }
+      ],
+      "owner": "tools-agent",
+      "parameters": [],
+      "side_effects": [
+        {
+          "description": "May spawn compiler jobs",
+          "impact": "cpu",
+          "mitigation": "resource budgets",
+          "scope": "process"
+        }
+      ],
+      "summary": "Execute test suite"
+    }
+  ]
+}

@@ -6,11 +6,12 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use tokio::fs;
-use tracing::{debug, error, info, instrument, warn};
+use tracing::{debug, info, instrument, warn};
 
 use crate::{
+    archive::{ArchiveConfig, ArchiveManager},
     build::{self, BuildArtifact},
-    AdaptationResult, AnalysisResult, CRCState, Dependency, Error, Priority, Result, SandboxModel,
+    AdaptationResult, AnalysisResult, Dependency, OriginalArtifact, Result, SandboxModel,
     SourceType,
 };
 
@@ -47,8 +48,14 @@ impl DropProcessor {
         drop_id: &str,
         source_type: SourceType,
         source_path: PathBuf,
+        original_artifact: Option<OriginalArtifact>,
     ) -> Result<ProcessingResult> {
         info!("Starting full pipeline for drop: {}", drop_id);
+
+        let cleanup_after_processing = original_artifact
+            .as_ref()
+            .map(|artifact| artifact.cleanup_after_processing)
+            .unwrap_or(false);
 
         // Stage 1: Analysis
         let analysis = self.analyze(&source_path, &source_type).await?;
@@ -74,11 +81,12 @@ impl DropProcessor {
 
         // Stage 3: Validation
         let validation = self.validate(&source_path, &adaptation).await?;
-        let validation_confidence = validation.confidence;
         info!(
             "✓ Validation complete (confidence: {:.1}%)",
-            validation_confidence * 100.0
+            validation.confidence * 100.0
         );
+
+        let validation_confidence = validation.confidence;
 
         // Stage 4: Determine sandbox assignment
         let sandbox = self.assign_sandbox(&source_type, validation_confidence);
@@ -103,15 +111,68 @@ impl DropProcessor {
             );
         }
 
+        let archive_root = self.base_path.join("archive");
+        let mut archive_manager = ArchiveManager::new(archive_root, ArchiveConfig::default());
+        let archive_result = archive_manager
+            .archive_drop(drop_id, &source_path, source_type.clone())
+            .await;
+
+        if cleanup_after_processing {
+            // Always attempt cleanup, even if archiving failed
+            if let Err(e) = archive_manager.cleanup_source(&source_path).await {
+                warn!(
+                    "Failed to remove temporary extraction directory {}: {}",
+                    source_path.display(),
+                    e
+                );
+            } else {
+                info!(
+                    "✓ Removed temporary extraction directory {}",
+                    source_path.display()
+                );
+            }
+        }
+
+        let archive_info = match archive_result {
+            Ok(info) => info,
+            Err(e) => {
+                // Propagate the original error after cleanup
+                return Err(e);
+            }
+        };
+
+        info!(
+            "✓ Archived drop at {} (hash: {})",
+            archive_info.archive_path.display(),
+            archive_info.hash
+        );
+
         let mut metadata = validation.metadata;
         match serde_json::to_string(&build_artifacts) {
             Ok(serialized) => {
                 metadata.insert("build_artifacts".to_string(), serialized);
             }
             Err(e) => {
-                warn!("Failed to serialize build_artifacts for drop {}: {}", drop_id, e);
+                warn!(
+                    "Failed to serialize build_artifacts for drop {}: {}",
+                    drop_id, e
+                );
             }
         }
+
+        metadata.insert(
+            "archive_path".to_string(),
+            archive_info.archive_path.display().to_string(),
+        );
+        metadata.insert("archive_hash".to_string(), archive_info.hash);
+        metadata.insert(
+            "archive_size_bytes".to_string(),
+            archive_info.size.to_string(),
+        );
+        metadata.insert(
+            "extracted_cleanup_performed".to_string(),
+            cleanup_after_processing.to_string(),
+        );
 
         let errors = validation.errors;
         let warnings = validation.warnings;
@@ -257,7 +318,7 @@ impl DropProcessor {
                 }
                 Err(e) => {
                     warn!("  ✗ Cargo check failed: {}", e);
-                    warnings.push(format!("Cargo check failed: {}", e));
+                    errors.push(format!("Cargo check failed: {}", e));
                     metadata.insert("cargo_check".to_string(), "failed".to_string());
                 }
             }
@@ -360,6 +421,7 @@ impl DropProcessor {
 
     async fn count_files_and_lines(&self, path: &Path) -> Result<(usize, usize)> {
         // Simplified - would recursively count
+        debug!("Counting files within {}", path.display());
         Ok((100, 10000)) // Placeholder
     }
 
@@ -395,6 +457,12 @@ impl DropProcessor {
         if cargo_toml.exists() {
             // Would parse Cargo.toml here
             debug!("Found Cargo.toml, analyzing dependencies");
+            dependencies.push(Dependency {
+                name: "workspace-cargo".to_string(),
+                version: None,
+                source: cargo_toml.display().to_string(),
+                embedded_alternative: None,
+            });
         }
 
         Ok(dependencies)

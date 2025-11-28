@@ -1,0 +1,83 @@
+{
+  "$schema": "./world.graph.schema.json",
+  "version": "0.1.0",
+  "metadata": {
+    "generated": "2024-05-20T00:00:00Z",
+    "description": "Seeded world model for top-level kernel and documentation alignment",
+    "source": "manual-seed"
+  },
+  "nodes": [
+    {
+      "id": "repo-root",
+      "kind": "directory",
+      "path": ".",
+      "summary": "Root of the NOA ARK OS repository",
+      "layer": "root",
+      "tags": ["repository"],
+      "owner": "core"
+    },
+    {
+      "id": "core-crate",
+      "kind": "directory",
+      "path": "core",
+      "summary": "Rust core crate implementing kernel capabilities",
+      "layer": "core",
+      "tags": ["rust", "kernel"],
+      "owner": "core"
+    },
+    {
+      "id": "core-library",
+      "kind": "file",
+      "path": "core/src/lib.rs",
+      "summary": "Library entrypoint exposing kernel capabilities",
+      "layer": "core",
+      "tags": ["rust"],
+      "owner": "core"
+    },
+    {
+      "id": "kernel-world-model",
+      "kind": "directory",
+      "path": "kernel/world",
+      "summary": "World graph assets consumed by the reconciler",
+      "layer": "kernel",
+      "tags": ["graph", "model"],
+      "owner": "kernel"
+    },
+    {
+      "id": "roadmap-agentic-kernel",
+      "kind": "file",
+      "path": "docs/projects/ROADMAP_AGENTIC_KERNEL.md",
+      "summary": "Roadmap describing acceptance criteria for the agentic kernel",
+      "layer": "docs",
+      "tags": ["docs", "roadmap"],
+      "owner": "kernel"
+    }
+  ],
+  "edges": [
+    {
+      "source": "repo-root",
+      "target": "core-crate",
+      "relationship": "contains"
+    },
+    {
+      "source": "core-crate",
+      "target": "core-library",
+      "relationship": "contains"
+    },
+    {
+      "source": "repo-root",
+      "target": "kernel-world-model",
+      "relationship": "contains"
+    },
+    {
+      "source": "repo-root",
+      "target": "roadmap-agentic-kernel",
+      "relationship": "documents"
+    },
+    {
+      "source": "kernel-world-model",
+      "target": "roadmap-agentic-kernel",
+      "relationship": "informs"
+    }
+  ]
+}

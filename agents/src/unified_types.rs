@@ -1,5 +1,5 @@
 //! Unified Type System for NOA Agent Architecture
-//! Merges factory types (lib.rs) with registry types (types.rs)
+//! Provides the complete type system for agent factory and registry
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -9,20 +9,37 @@ use uuid::Uuid;
 // ENUMS - Single Source of Truth
 // ============================================================================
 
-/// Agent layer in NOA 5-layer architecture
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+/// Agent layer in NOA's five-layer architecture.
+///
+/// This enum represents the hierarchical organization of agents in the NOA ARK OS system,
+/// from strategic governance down to infrastructure tasks. The L1-L5 naming convention
+/// replaced the legacy Executive → Micro hierarchy to provide a clearer technical model,
+/// though the registry parser still accepts both naming schemes for backward compatibility.
+///
+/// ## Layer Hierarchy (L1 → L5)
+///
+/// - **L1Autonomy** (Executive): Constitutional oversight and highest-level decision making.
+/// - **L2Reasoning** (Board): Strategic planning, policy formation, and governance agents.
+/// - **L3Orchestration** (Stack-Chief): Cross-domain coordination and workflow orchestration.
+/// - **L4Operations** (Specialist): Operational execution and domain expertise.
+/// - **L5Infrastructure** (Micro): Fine-grained task execution and infrastructure services.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+///   Agent layer in NOA's five-layer hierarchy.
+///
+/// The naming scheme maps legacy terms (Executive, Board, Stack-Chief,
+/// Specialist, Micro) to the new L1–L5 architecture used by the registry.
 pub enum AgentLayer {
-    L1Autonomy,      // Root CECCA, Constitutional
-    L2Reasoning,     // Board & Executive agents
-    L3Orchestration, // Chief Commanders, Orchestrators
-    L4Operations,    // Specialists, Workers
-    L5Infrastructure,// Micro agents, Subject domain
-}
-
-impl Default for AgentLayer {
-    fn default() -> Self {
-        Self::L4Operations
-    }
+    /// L1: Root CECCA, Constitutional authority (formerly "Executive")
+    L1Autonomy,
+    /// L2: Board agents, high-level governance (formerly "Board")
+    L2Reasoning,
+    /// L3: Chief Commanders, Orchestrators, tactical coordination (formerly "Stack-Chief")
+    L3Orchestration,
+    /// L4: Specialists, Workers, operational execution (formerly "Specialist")
+    #[default]
+    L4Operations,
+    /// L5: Micro agents, Subject domain, infrastructure tasks (formerly "Micro")
+    L5Infrastructure,
 }
 
 impl AgentLayer {
@@ -38,7 +55,7 @@ impl AgentLayer {
 }
 
 /// Agent category/domain
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 pub enum AgentCategory {
     Analysis,
     Code,
@@ -54,18 +71,14 @@ pub enum AgentCategory {
     Plugins,
     ModelSelection,
     Orchestration,
+    #[default]
     Other,
 }
 
-impl Default for AgentCategory {
-    fn default() -> Self {
-        Self::Other
-    }
-}
-
 /// Agent runtime state
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum AgentState {
+    #[default]
     Created,
     Initializing,
     Ready,
@@ -75,55 +88,34 @@ pub enum AgentState {
     Terminated,
 }
 
-impl Default for AgentState {
-    fn default() -> Self {
-        Self::Created
-    }
-}
-
 /// Agent health status
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum HealthStatus {
     Healthy,
     Degraded,
     NeedsRepair,
     Error,
+    #[default]
     Unknown,
 }
 
-impl Default for HealthStatus {
-    fn default() -> Self {
-        Self::Unknown
-    }
-}
-
 /// Agent type classification
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum AgentType {
-    Master,      // CECCA, Board, Executive
-    Worker,      // Specialists, Operators
-    SubAgent,    // Micro agents
-    Swarm,       // Coordinated groups
-}
-
-impl Default for AgentType {
-    fn default() -> Self {
-        Self::Worker
-    }
+    Master, // CECCA, Board, Executive
+    #[default]
+    Worker, // Specialists, Operators
+    SubAgent, // Micro agents
+    Swarm,  // Coordinated groups
 }
 
 /// Agent language/runtime
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum AgentLanguage {
+    #[default]
     Rust,
     Python,
     Go,
-}
-
-impl Default for AgentLanguage {
-    fn default() -> Self {
-        Self::Rust
-    }
 }
 
 // ============================================================================
@@ -137,50 +129,50 @@ pub struct AgentMetadata {
     pub id: Uuid,
     pub agent_id: String,
     pub name: String,
-    
+
     // Classification
     pub layer: AgentLayer,
     pub category: AgentCategory,
     pub agent_type: AgentType,
     pub language: AgentLanguage,
-    
+
     // Description
     pub description: String,
     pub role: String,
     pub purpose: String,
-    
+
     // Status
     pub state: AgentState,
     pub health_status: HealthStatus,
-    
+
     // Relationships
     pub parent_id: Option<String>,
     pub escalation_to: Option<String>,
     pub stack: Option<String>,
-    
+
     // Capabilities
     pub capabilities: Vec<String>,
     pub tools: Vec<String>,
     pub tags: Vec<String>,
-    
+
     // I/O
     pub inputs: Vec<String>,
     pub outputs: Vec<String>,
     pub dependencies: Vec<String>,
-    
+
     // Resources
     pub cpu_min: String,
     pub ram_min: String,
     pub disk_min: String,
-    
+
     // Behavior
     pub autonomy_level: String,
     pub disposable: bool,
-    
+
     // Diagnostics
     pub issues_identified: Vec<String>,
     pub repair_recommendations: Vec<String>,
-    
+
     // Metadata
     pub created_at: Option<String>,
     pub last_updated: Option<String>,
@@ -224,7 +216,7 @@ impl AgentMetadata {
             version: Some("0.1.0".to_string()),
         }
     }
-    
+
     /// Create from registry data
     pub fn from_registry(agent_name: String, agent_id: String) -> Self {
         Self {
@@ -261,7 +253,7 @@ impl AgentMetadata {
             version: None,
         }
     }
-    
+
     /// Backwards compatibility - old factory signature
     pub fn new(name: String, description: String, category: String) -> Self {
         let cat = match category.to_lowercase().as_str() {
@@ -273,22 +265,25 @@ impl AgentMetadata {
             "analysis" => AgentCategory::Analysis,
             _ => AgentCategory::Other,
         };
-        
+
         Self::minimal(name, description, cat)
     }
-    
+
     pub fn is_healthy(&self) -> bool {
         matches!(self.health_status, HealthStatus::Healthy)
     }
-    
+
     pub fn needs_repair(&self) -> bool {
-        matches!(self.health_status, HealthStatus::NeedsRepair | HealthStatus::Error)
+        matches!(
+            self.health_status,
+            HealthStatus::NeedsRepair | HealthStatus::Error
+        )
     }
-    
+
     pub fn layer_name(&self) -> &str {
         self.layer.name()
     }
-    
+
     pub fn set_layer(&mut self, layer: String) {
         // Parse string to enum
         self.layer = match layer.to_lowercase().as_str() {
@@ -300,7 +295,7 @@ impl AgentMetadata {
             _ => AgentLayer::L4Operations,
         };
     }
-    
+
     pub fn set_status(&mut self, status: String) {
         self.health_status = match status.to_lowercase().as_str() {
             "healthy" => HealthStatus::Healthy,
@@ -310,7 +305,7 @@ impl AgentMetadata {
             _ => HealthStatus::Unknown,
         };
     }
-    
+
     pub fn full_id(&self) -> String {
         format!("{}::{}", self.layer_name(), self.agent_id)
     }
@@ -334,12 +329,7 @@ pub struct Agent {
 }
 
 impl Agent {
-    pub fn new(
-        id: String,
-        name: String,
-        agent_type: AgentType,
-        language: AgentLanguage,
-    ) -> Self {
+    pub fn new(id: String, name: String, agent_type: AgentType, language: AgentLanguage) -> Self {
         Self {
             id,
             name,
@@ -351,7 +341,7 @@ impl Agent {
             disposable: false,
         }
     }
-    
+
     pub fn make_disposable(mut self) -> Self {
         self.disposable = true;
         self

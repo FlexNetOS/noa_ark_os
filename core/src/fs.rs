@@ -4,7 +4,7 @@ use crate::memory;
 use crate::memory::{RegistryGraph, RegistryNode};
 use std::collections::HashMap;
 use std::fmt;
-use std::sync::{Arc, Mutex};
+use std::sync::{Mutex, OnceLock};
 
 const DEFAULT_FILE_MODE: u32 = 0o644;
 
@@ -47,9 +47,9 @@ pub struct FileDescriptor {
     pub metadata: FileMetadata,
 }
 
-lazy_static::lazy_static! {
-    static ref FILE_TABLE: Arc<Mutex<HashMap<String, FileDescriptor>>> =
-        Arc::new(Mutex::new(HashMap::new()));
+fn file_table() -> &'static Mutex<HashMap<String, FileDescriptor>> {
+    static FILE_TABLE: OnceLock<Mutex<HashMap<String, FileDescriptor>>> = OnceLock::new();
+    FILE_TABLE.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
 /// Errors surfaced by the virtual file system module.
@@ -80,7 +80,7 @@ pub fn init() -> Result<(), &'static str> {
         metadata: FileMetadata::default(),
     };
 
-    let mut table = FILE_TABLE.lock().unwrap();
+    let mut table = file_table().lock().unwrap();
     table.insert("/".to_string(), root);
     drop(table);
 
@@ -92,8 +92,7 @@ pub fn init() -> Result<(), &'static str> {
     Ok(())
 }
 
-/// Create a file
-pub fn create_file(path: String, permissions: u32) -> Result<(), &'static str> {
+fn create_file_inner(path: String, permissions: u32) -> Result<(), &'static str> {
     let descriptor = FileDescriptor {
         path: path.clone(),
         permissions,
@@ -101,16 +100,21 @@ pub fn create_file(path: String, permissions: u32) -> Result<(), &'static str> {
         metadata: FileMetadata::default(),
     };
 
-    let mut table = FILE_TABLE.lock().unwrap();
+    let mut table = file_table().lock().unwrap();
     table.insert(path, descriptor);
 
     Ok(())
 }
 
+fn get_file_inner(path: &str) -> Option<FileDescriptor> {
+    let table = file_table().lock().unwrap();
+    table.get(path).cloned()
+}
+
 /// Synchronise file descriptors with registry metadata.
 pub fn sync_registry_metadata() -> Result<(), FsError> {
-    let snapshot = memory::registry_snapshot();
-    let mut table = FILE_TABLE.lock().map_err(|_| FsError::StatePoisoned)?;
+    let snapshot = memory::registry_snapshot().map_err(|_| FsError::StatePoisoned)?;
+    let mut table = file_table().lock().map_err(|_| FsError::StatePoisoned)?;
 
     for descriptor in table.values_mut() {
         descriptor.metadata.clear();
@@ -149,10 +153,36 @@ fn to_component_metadata(graph: &RegistryGraph, node: &RegistryNode) -> Componen
     }
 }
 
-/// Get file descriptor
+/// Kernel-managed file-system capability.
+#[derive(Clone, Default)]
+pub struct FileSystemService;
+
+impl FileSystemService {
+    /// Create a file entry tracked by the kernel registry.
+    pub fn create_file(&self, path: String, permissions: u32) -> Result<(), &'static str> {
+        create_file_inner(path, permissions)
+    }
+
+    /// Lookup a file descriptor.
+    pub fn get_file(&self, path: &str) -> Option<FileDescriptor> {
+        get_file_inner(path)
+    }
+
+    /// List all tracked descriptors.
+    pub fn list(&self) -> Vec<FileDescriptor> {
+        let table = file_table().lock().unwrap();
+        table.values().cloned().collect()
+    }
+}
+
+/// Create a file.
+pub fn create_file(path: String, permissions: u32) -> Result<(), &'static str> {
+    FileSystemService.create_file(path, permissions)
+}
+
+/// Get file descriptor.
 pub fn get_file(path: &str) -> Option<FileDescriptor> {
-    let table = FILE_TABLE.lock().unwrap();
-    table.get(path).cloned()
+    FileSystemService.get_file(path)
 }
 
 /// Move a file to a new destination path.
@@ -161,7 +191,7 @@ pub fn move_file(source: &str, destination: String) -> Result<FileDescriptor, &'
         return Err("cannot_move_root");
     }
 
-    let mut table = FILE_TABLE.lock().unwrap();
+    let mut table = file_table().lock().unwrap();
 
     if !table.contains_key(source) {
         return Err("source_not_found");
@@ -184,7 +214,7 @@ pub fn delete_file(path: &str) -> Result<(), &'static str> {
         return Err("cannot_delete_root");
     }
 
-    let mut table = FILE_TABLE.lock().unwrap();
+    let mut table = file_table().lock().unwrap();
 
     table.remove(path).ok_or("file_not_found")?;
 
@@ -193,6 +223,6 @@ pub fn delete_file(path: &str) -> Result<(), &'static str> {
 
 /// List all tracked files.
 pub fn list_files() -> Vec<FileDescriptor> {
-    let table = FILE_TABLE.lock().unwrap();
+    let table = file_table().lock().unwrap();
     table.values().cloned().collect()
 }

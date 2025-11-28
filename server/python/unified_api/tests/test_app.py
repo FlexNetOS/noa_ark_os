@@ -3,18 +3,14 @@ from __future__ import annotations
 from typing import Dict
 
 import asyncio
-import pathlib
-import sys
 
 import pytest
 from httpx import AsyncClient
 
-PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[2]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
+pytest.importorskip("fastapi")
 
-from unified_api.app import create_app
-from unified_api.routers.workflows import RUN_HISTORY
+from server.python.unified_api.app import create_app
+from server.python.unified_api.routers.workflows import RUN_HISTORY
 
 
 @pytest.fixture(autouse=True)

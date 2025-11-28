@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { clearUserSession, readUserFromCookies, setUserSession } from "../../lib/session";
+import { clearUserSession, readUserFromCookies, setUserSession } from "@/app/lib/session";
 
 export async function GET() {
   const user = readUserFromCookies();

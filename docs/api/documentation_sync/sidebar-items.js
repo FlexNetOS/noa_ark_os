@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["build_output_from_diff","collect_services","collect_sops","collect_workflows","main","run"],"trait":["ToTitleCase"]};

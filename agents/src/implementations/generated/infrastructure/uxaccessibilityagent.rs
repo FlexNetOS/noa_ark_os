@@ -1,5 +1,5 @@
 //! UXAccessibilityAgent - Auto-generated
-//! 
+//!
 //! Tests and improves agent user experience and accessibility; escalates for new accessibility requirements or legal compliance.
 
 use crate::unified_types::*;
@@ -48,22 +48,22 @@ impl Uxaccessibilityagent {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Ready;
         Ok(())
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -78,13 +78,13 @@ impl Default for Uxaccessibilityagent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = Uxaccessibilityagent::new();
         assert_eq!(agent.metadata().name, "UXAccessibilityAgent");
     }
-    
+
     #[tokio::test]
     async fn test_agent_initialization() {
         let mut agent = Uxaccessibilityagent::new();

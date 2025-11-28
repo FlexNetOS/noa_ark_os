@@ -1,0 +1,10 @@
+{
+  "total_entries": 0,
+  "average_reward": 0.0,
+  "coverage_average": 0.0,
+  "flake_average": 0.0,
+  "token_average": 0.0,
+  "rollback_average": 0.0,
+  "best_agents": [],
+  "riskiest_agents": []
+}
