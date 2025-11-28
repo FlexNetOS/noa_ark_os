@@ -1,0 +1,5 @@
+{"timestamp":"2024-03-15T11:59:58Z","route":"/v1/chat/completions","client_id":"synthetic-dev","otel_span":{"tokens_total":512,"latency_ms":128.4,"model":"gpt-sample","status":"ok"}}
+{"timestamp":"2024-03-15T11:59:59Z","route":"/v1/tools/execute","client_id":"synthetic-dev","otel_span":{"tokens_total":256,"latency_ms":221.7,"tool":"shell","status":"ok"}}
+{"timestamp":"2024-03-15T12:00:01Z","route":"/v1/chat/completions","client_id":"synthetic-ci","otel_span":{"tokens_total":768,"latency_ms":342.1,"model":"gpt-sample","status":"ok"}}
+{"timestamp":"2024-03-15T12:00:03Z","route":"/v1/actions/plan","client_id":"synthetic-ci","otel_span":{"tokens_total":384,"latency_ms":412.9,"planner":"alpha","status":"ok"}}
+{"timestamp":"2024-03-15T12:00:04Z","route":"/v1/chat/completions","client_id":"synthetic-ci","otel_span":{"tokens_total":640,"latency_ms":198.3,"model":"gpt-sample","status":"ok"}}

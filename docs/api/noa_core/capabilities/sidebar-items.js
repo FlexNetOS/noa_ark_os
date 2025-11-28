@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["CapabilityError","CapabilityState"],"mod":["builtin"],"struct":["CapabilityContext","CapabilityDefinition","CapabilityDefinitionBuilder","CapabilityRegistry","KernelHandle","RegisteredCapability"],"type":["CapabilityResult","DynCapability"]};

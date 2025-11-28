@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["NodeKind","WorldGraphError"],"struct":["Edge","Metadata","Node","WorldGraph"]};

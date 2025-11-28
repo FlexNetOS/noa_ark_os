@@ -1,0 +1,16 @@
+%% Orchestration (v3 auto-generated)
+graph TB
+  CECCA[CECCA]
+  subgraph BOARD[Board Agents]
+  BOARDN[...from CSV...]
+  end
+  subgraph EXECS[Executive Agents]
+  EXN[...from CSV...]
+  end
+  subgraph STACKS[MicroAgentStacks]
+    Subject_001["Subject-001"]
+  end
+
+  CECCA --> BOARD
+  CECCA --> EXECS
+  EXECS --> Subject_001

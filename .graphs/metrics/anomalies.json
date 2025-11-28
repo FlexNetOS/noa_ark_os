@@ -1,0 +1,22 @@
+{
+  "detections_last_24h": 4,
+  "active_alerts": 1,
+  "recent_anomalies": [
+    {
+      "id": "ANOM-204",
+      "severity": "medium",
+      "metric": "doc_pipeline_latency",
+      "delta": 0.27,
+      "detected": "2025-01-12T08:20:00Z",
+      "status": "investigating"
+    },
+    {
+      "id": "ANOM-198",
+      "severity": "low",
+      "metric": "relocation_throughput",
+      "delta": 0.12,
+      "detected": "2025-01-11T21:05:00Z",
+      "status": "mitigated"
+    }
+  ]
+}

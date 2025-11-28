@@ -1,0 +1,5 @@
+{
+  "id": "ecosystem",
+  "version": "0.3.0",
+  "interfaces": ["feature-toggle", "analytics"]
+}

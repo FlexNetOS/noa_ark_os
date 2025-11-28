@@ -4,19 +4,17 @@ use std::sync::{Arc, Mutex};
 use crate::adapters::{
     PlatformAdapter, ReactAdapter, ReactNativeAdapter, ServerAdapter, SpatialAdapter, TauriAdapter,
 };
-use crate::analytics::{AnalyticsEngine, Metric};
+use crate::analytics::{
+    AgentEfficiency, AnalyticsEngine, HeatmapPoint, Metric, ModelRoi, TelemetryInsights,
+};
 use crate::chat::ChatWorkspace;
 use crate::components::{KnowledgeOverlay, NavigationRail, ShellChrome, WorkspaceSwitcher};
-use crate::adapters::{PlatformAdapter, ReactAdapter, ServerAdapter, SpatialAdapter};
-use crate::analytics::{AnalyticsEngine, Metric};
-use crate::chat::ChatWorkspace;
-use crate::components::{NavigationRail, ShellChrome, WorkspaceSwitcher};
 use crate::events::ShellEvent;
 use crate::module::{default_modules, ModuleContext, ShellModule};
 use crate::renderer::renderer::Renderer;
 use crate::renderer::RenderFrame;
+use crate::services::ShellServices;
 use crate::state::{GlobalState, GlobalStore, KnowledgeArticle, UserSession, WorkspacePersona};
-use crate::state::{GlobalState, GlobalStore, UserSession, WorkspacePersona};
 use crate::workflows::WorkflowCatalog;
 use crate::{init, Platform, UIContext, UIState};
 
@@ -52,8 +50,6 @@ impl ShellBuilder {
             self.modules.unwrap_or_else(default_modules),
             self.session,
         )
-    pub fn build(self) -> Result<UnifiedShell, &'static str> {
-        UnifiedShell::new(self.platform, self.modules.unwrap_or_else(default_modules))
     }
 }
 
@@ -68,6 +64,7 @@ pub struct UnifiedShell {
     chat_workspace: Arc<Mutex<ChatWorkspace>>,
     analytics: Mutex<AnalyticsEngine>,
     event_log: Arc<Mutex<Vec<ShellEvent>>>,
+    services: ShellServices,
 }
 
 impl UnifiedShell {
@@ -76,27 +73,31 @@ impl UnifiedShell {
         modules: Vec<Arc<dyn ShellModule>>,
         session: Option<UserSession>,
     ) -> Result<Self, &'static str> {
-    fn new(platform: Platform, modules: Vec<Arc<dyn ShellModule>>) -> Result<Self, &'static str> {
         let context = init(platform.clone())?;
         let renderer = Renderer::new(context.clone());
         let state = UIState::new(context.clone());
-        let store = GlobalStore::new(GlobalState {
-            session: session.unwrap_or(UserSession {
-                user_id: "ops-admin".into(),
-                display_name: "Ops Admin".into(),
-                roles: vec!["admin".into(), "developer".into(), "operator".into()],
-                active_workspace: None,
-                auth_token: None,
-            }),
-            session: UserSession {
-                user_id: "ops-admin".into(),
-                display_name: "Ops Admin".into(),
-                roles: vec!["admin".into(), "developer".into()],
-                active_workspace: None,
-                auth_token: None,
-            },
-            ..GlobalState::default()
-        });
+        // Each shell instance holds its own store to avoid test interference when run in parallel.
+        let store = GlobalStore::new(GlobalState::default());
+
+        if let Some(session) = session {
+            store.update(|state| state.session = session);
+        } else {
+            store.update(|state| {
+                state.session = UserSession {
+                    user_id: "ops-admin".into(),
+                    display_name: "Ops Admin".into(),
+                    roles: vec![
+                        "admin".into(),
+                        "developer".into(),
+                        "operator".into(),
+                        "executive".into(),
+                    ],
+                    active_workspace: None,
+                    auth_token: None,
+                };
+            });
+        }
+
         let workflow_catalog = WorkflowCatalog::default();
         let event_log: Arc<Mutex<Vec<ShellEvent>>> = Arc::new(Mutex::new(vec![]));
         let event_sink = {
@@ -106,6 +107,7 @@ impl UnifiedShell {
             })
         };
 
+        let services = ShellServices::new(store.clone(), event_sink.clone());
         let chat_workspace = Arc::new(Mutex::new(ChatWorkspace::new(
             store.clone(),
             workflow_catalog.clone(),
@@ -122,6 +124,7 @@ impl UnifiedShell {
             chat_workspace,
             analytics: Mutex::new(AnalyticsEngine::default()),
             event_log,
+            services,
         };
 
         shell.bootstrap_modules(event_sink);
@@ -135,7 +138,8 @@ impl UnifiedShell {
         let context = ModuleContext {
             store: self.store.clone(),
             workflows: self.workflow_catalog.clone(),
-            emit: event_sink,
+            emit: event_sink.clone(),
+            services: self.services.clone(),
         };
 
         let mut commands = vec![];
@@ -150,7 +154,6 @@ impl UnifiedShell {
                 chat.register_command(command);
             }
 
-            // Provide fallback command to resume work.
             chat.register_command(crate::chat::ChatCommandDescriptor {
                 command: "continue work".into(),
                 description: "Continue the last development workflow".into(),
@@ -162,12 +165,11 @@ impl UnifiedShell {
             });
         }
 
-        // Ensure navigation sorted by persona priority.
         self.store.update(|state| {
             state
                 .navigation
                 .primary_items
-                .sort_by_key(|item| item.label.clone());
+                .sort_by(|a, b| a.label.cmp(&b.label));
             if state.session.active_workspace.is_none() {
                 state.session.active_workspace = state.workspaces.keys().next().cloned();
             }
@@ -187,6 +189,28 @@ impl UnifiedShell {
             label: "Infrastructure Cost".into(),
             value: 44.0,
             unit: "credits/week".into(),
+        });
+        analytics.ingest(Metric {
+            id: "agent_efficiency_index".into(),
+            label: "Agent Efficiency Index".into(),
+            value: 87.0,
+            unit: "score".into(),
+        });
+        analytics.layer_insights(TelemetryInsights {
+            usage_heatmap: vec![HeatmapPoint {
+                area: "ai-studio.command-canvas".into(),
+                intensity: 0.78,
+            }],
+            agent_efficiency: vec![AgentEfficiency {
+                agent_id: "deploy-coordinator".into(),
+                utilization: 0.92,
+                impact_score: 8.8,
+            }],
+            model_roi: vec![ModelRoi {
+                model: "ops-orchestrator".into(),
+                generated_value: 128_400.0,
+                operational_cost: 36_500.0,
+            }],
         });
         analytics.sync_to_state(&self.store);
     }
@@ -258,6 +282,7 @@ impl UnifiedShell {
                     store: self.store.clone(),
                     workflows: self.workflow_catalog.clone(),
                     emit: Arc::new(|_| {}),
+                    services: self.services.clone(),
                 },
             );
         }
@@ -285,10 +310,10 @@ impl UnifiedShell {
     }
 
     pub fn render(&self, adapter: &dyn PlatformAdapter) -> Result<(), String> {
-        let state = self.store.read();
-        let session_roles = state.session.roles.clone();
-        let nav_state = state.navigation.clone();
-        let mut nav_items: Vec<_> = nav_state
+        let state_snapshot = self.store.read();
+        let session_roles = state_snapshot.session.roles.clone();
+        let mut nav_items: Vec<_> = state_snapshot
+            .navigation
             .primary_items
             .into_iter()
             .filter(|item| {
@@ -299,18 +324,20 @@ impl UnifiedShell {
                         .any(|role| session_roles.iter().any(|r| r == role))
             })
             .collect();
-        nav_items.sort_by_key(|item| item.label.clone());
+        nav_items.sort_by(|a, b| a.label.cmp(&b.label));
 
-        let active_route = nav_items
-            .iter()
-            .find(|item| Some(item.route.clone()) == nav_state.active_route)
-            .map(|item| item.route.clone())
-            .or_else(|| nav_items.first().map(|item| item.route.clone()));
+        let mut active_route = state_snapshot
+            .navigation
+            .active_route
+            .clone()
+            .filter(|route| nav_items.iter().any(|item| &item.route == route));
+        if active_route.is_none() {
+            active_route = nav_items.first().map(|item| item.route.clone());
+        }
 
-        let mut workspaces: Vec<_> = state
+        let mut workspaces: Vec<_> = state_snapshot
             .workspaces
             .values()
-            .cloned()
             .filter(|workspace| {
                 workspace.allowed_roles.is_empty()
                     || workspace
@@ -318,15 +345,15 @@ impl UnifiedShell {
                         .iter()
                         .any(|role| session_roles.iter().any(|r| r == role))
             })
+            .cloned()
             .collect();
-        workspaces.sort_by_key(|workspace| workspace.label.clone());
+        workspaces.sort_by(|a, b| a.label.cmp(&b.label));
 
-        let mut active_workspace = state
+        let mut active_workspace = state_snapshot
             .session
             .active_workspace
             .clone()
             .filter(|id| workspaces.iter().any(|workspace| &workspace.id == id));
-
         if active_workspace.is_none() {
             active_workspace = workspaces.first().map(|workspace| workspace.id.clone());
         }
@@ -335,32 +362,24 @@ impl UnifiedShell {
             self.store.set_active_workspace(active.clone());
         }
 
+        self.store.update(|state| {
+            state.navigation.active_route = active_route.clone();
+        });
+
         let persona = active_workspace
             .as_ref()
             .and_then(|id| workspaces.iter().find(|workspace| &workspace.id == id))
             .map(|workspace| workspace.persona)
             .unwrap_or(WorkspacePersona::Developer);
 
-        let knowledge_articles = state
-            .knowledge_base
-            .get(&persona)
-            .cloned()
-            .unwrap_or_default();
+        let knowledge_articles = self.store.knowledge_for(persona);
 
-        let navigation = NavigationRail::new(nav_items, active_route);
-        let workspace_switcher = WorkspaceSwitcher::new(workspaces, active_workspace);
-        let chrome = ShellChrome::new(
-            navigation,
-            workspace_switcher,
-            KnowledgeOverlay::new(persona, knowledge_articles),
-        );
-        let frame = RenderFrame { chrome: &chrome };
+        let navigation = NavigationRail::new(nav_items, active_route.clone());
+        let workspace_switcher = WorkspaceSwitcher::new(workspaces, active_workspace.clone());
+        let knowledge = KnowledgeOverlay::new(persona, knowledge_articles);
+        let chrome = ShellChrome::new(navigation, workspace_switcher, knowledge);
         adapter.mount(&self.renderer, &chrome, &self.state)?;
-        let navigation = NavigationRail::from_state(&state.navigation);
-        let workspaces = WorkspaceSwitcher::new(state.workspaces.values().cloned().collect());
-        let chrome = ShellChrome::new(navigation, workspaces);
         let frame = RenderFrame { chrome: &chrome };
-        adapter.mount(&self.renderer, &chrome, &self.state);
         self.renderer.render_frame(&frame)
     }
 
@@ -371,8 +390,6 @@ impl UnifiedShell {
             Platform::Web => Box::new(ReactAdapter),
             Platform::Mobile => Box::new(ReactNativeAdapter::default()),
             Platform::ARGlasses | Platform::XRHeadset => Box::new(SpatialAdapter::default()),
-            Platform::Desktop | Platform::Web | Platform::Mobile => Box::new(ReactAdapter),
-            Platform::ARGlasses | Platform::XRHeadset => Box::new(SpatialAdapter),
         }
     }
 
@@ -395,6 +412,10 @@ impl UnifiedShell {
 
     pub fn store_handle(&self) -> GlobalStore {
         self.store.clone()
+    }
+
+    pub fn services(&self) -> ShellServices {
+        self.services.clone()
     }
 }
 

@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "POP",
+  "type": "object",
+  "properties": {
+    "node_id": {
+      "type": "string"
+    },
+    "checkpoint_hash": {
+      "type": "string"
+    },
+    "side_effect_log_hash": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "node_id",
+    "checkpoint_hash",
+    "side_effect_log_hash"
+  ]
+}

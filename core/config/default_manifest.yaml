@@ -1,0 +1,70 @@
+version: "1.0"
+capabilities:
+  - id: core.process
+    version: "0.1.0"
+    autostart: true
+  - id: core.memory
+    version: "0.1.0"
+    autostart: true
+  - id: core.ipc
+    version: "0.1.0"
+    autostart: true
+  - id: core.fs
+    version: "0.1.0"
+    autostart: true
+  - id: core.security
+    version: "0.1.0"
+    autostart: true
+  - id: core.gateway
+    version: "0.1.0"
+    autostart: true
+    depends_on:
+      - core.process
+      - core.memory
+      - core.security
+  - id: core.runtime.manager
+    version: "0.1.0"
+    autostart: true
+    depends_on:
+      - core.process
+      - core.memory
+      - core.security
+  - id: agents.factory
+    version: "0.1.0"
+    autostart: false
+    depends_on:
+      - core.process
+      - core.memory
+      - core.security
+      - core.gateway
+token_policies:
+  - scope: host.environment.takeover
+    description: "Allows an actor to request exclusive control over a managed environment"
+    ttl_seconds: 600
+    capabilities:
+      - core.process
+      - core.security
+  - scope: host.resource.arbitrate
+    description: "Allows an actor to arbitrate CPU/memory allocations for an environment"
+    ttl_seconds: 600
+    capabilities:
+      - core.process
+      - core.memory
+      - core.security
+runtimes:
+  - name: rust
+    kind: rust
+    version: "1.75"
+    entrypoint: bin/noa_kernel
+  - name: python
+    kind: python
+    version: "3.11"
+    entrypoint: python runtime/bootstrap.py
+  - name: go
+    kind: go
+    version: "1.21"
+    entrypoint: go/bin/runtime
+  - name: dotnet
+    kind: dot_net
+    version: "8.0"
+    entrypoint: dotnet/Noa.Runtime.dll

@@ -1,0 +1,211 @@
+{
+  "generated_at": 1763507084267,
+  "files": [
+    {
+      "file": ".workspace/sop/registry-onboarding.md",
+      "components": [
+        {
+          "id": "docs.architecture.registry",
+          "name": "Registry Knowledge Graph Reference",
+          "owners": [
+            {
+              "id": "crew-documentation",
+              "name": "Architecture & Docs Guild",
+              "contacts": [
+                "docs@noa-ark.example"
+              ]
+            }
+          ],
+          "tags": [
+            "docs",
+            "architecture"
+          ],
+          "dependencies": [
+            "core.memory.graph",
+            "core.fs.registry-sync"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "apps/cli/src/main.rs",
+      "components": [
+        {
+          "id": "ai.inference.router",
+          "name": "Provider Router & Telemetry",
+          "owners": [
+            {
+              "id": "crew-mlops",
+              "name": "Inference MLOps Crew",
+              "contacts": [
+                "mlops@noa-ark.example"
+              ]
+            }
+          ],
+          "tags": [
+            "ai",
+            "inference",
+            "observability"
+          ],
+          "dependencies": [
+            "core.fs.registry-sync"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "core/src/fs.rs",
+      "components": [
+        {
+          "id": "core.fs.registry-sync",
+          "name": "Registry-Aware VFS Sync",
+          "owners": [
+            {
+              "id": "crew-vfs",
+              "name": "Virtual Filesystem Crew",
+              "contacts": [
+                "vfs@noa-ark.example"
+              ]
+            }
+          ],
+          "tags": [
+            "core",
+            "filesystem",
+            "graph"
+          ],
+          "dependencies": [
+            "core.memory.graph"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "core/src/memory.rs",
+      "components": [
+        {
+          "id": "core.memory.graph",
+          "name": "Registry Graph Memory Service",
+          "owners": [
+            {
+              "id": "crew-systems-memory",
+              "name": "Systems Memory Crew",
+              "contacts": [
+                "systems-memory@noa-ark.example"
+              ]
+            }
+          ],
+          "tags": [
+            "core",
+            "memory",
+            "graph"
+          ],
+          "dependencies": []
+        }
+      ]
+    },
+    {
+      "file": "docs/architecture/inference/README.md",
+      "components": [
+        {
+          "id": "ai.inference.router",
+          "name": "Provider Router & Telemetry",
+          "owners": [
+            {
+              "id": "crew-mlops",
+              "name": "Inference MLOps Crew",
+              "contacts": [
+                "mlops@noa-ark.example"
+              ]
+            }
+          ],
+          "tags": [
+            "ai",
+            "inference",
+            "observability"
+          ],
+          "dependencies": [
+            "core.fs.registry-sync"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "docs/architecture/registry-knowledge-graph.md",
+      "components": [
+        {
+          "id": "docs.architecture.registry",
+          "name": "Registry Knowledge Graph Reference",
+          "owners": [
+            {
+              "id": "crew-documentation",
+              "name": "Architecture & Docs Guild",
+              "contacts": [
+                "docs@noa-ark.example"
+              ]
+            }
+          ],
+          "tags": [
+            "docs",
+            "architecture"
+          ],
+          "dependencies": [
+            "core.memory.graph",
+            "core.fs.registry-sync"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "server/ai/inference/src/providers",
+      "components": [
+        {
+          "id": "ai.inference.router",
+          "name": "Provider Router & Telemetry",
+          "owners": [
+            {
+              "id": "crew-mlops",
+              "name": "Inference MLOps Crew",
+              "contacts": [
+                "mlops@noa-ark.example"
+              ]
+            }
+          ],
+          "tags": [
+            "ai",
+            "inference",
+            "observability"
+          ],
+          "dependencies": [
+            "core.fs.registry-sync"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "server/ai/inference/src/router.rs",
+      "components": [
+        {
+          "id": "ai.inference.router",
+          "name": "Provider Router & Telemetry",
+          "owners": [
+            {
+              "id": "crew-mlops",
+              "name": "Inference MLOps Crew",
+              "contacts": [
+                "mlops@noa-ark.example"
+              ]
+            }
+          ],
+          "tags": [
+            "ai",
+            "inference",
+            "observability"
+          ],
+          "dependencies": [
+            "core.fs.registry-sync"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,25 +1,22 @@
 use std::collections::HashMap;
+use std::fs;
+use std::path::Path;
 use std::sync::{Arc, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-/// Represents the persona-driven workspace groupings that
-/// drive contextual layouts in the unified shell.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
+/// Personas describe the lens through which a workspace is configured.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash, Default)]
 pub enum WorkspacePersona {
     Operator,
+    #[default]
     Developer,
     Executive,
 }
 
-impl Default for WorkspacePersona {
-    fn default() -> Self {
-        WorkspacePersona::Developer
-    }
-}
-
-/// Navigation items rendered in the global navigation rail.
+/// Navigation items rendered within the global navigation rail.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct NavigationItem {
     pub id: String,
@@ -29,15 +26,15 @@ pub struct NavigationItem {
     pub allowed_roles: Vec<String>,
 }
 
-/// Container for navigation state shared across modules.
-#[derive(Debug, Clone, Default)]
+/// Aggregated navigation state shared across modules.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct NavigationState {
     pub primary_items: Vec<NavigationItem>,
     pub secondary_items: Vec<NavigationItem>,
     pub active_route: Option<String>,
 }
 
-/// Workspace definitions that group modules and dashboards by persona.
+/// Workspace definitions that group dashboards and modules by persona.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Workspace {
     pub id: String,
@@ -53,8 +50,8 @@ impl Workspace {
     }
 }
 
-/// Represents knowledge base entries surfaced in the contextual overlay.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Knowledge base articles surfaced via the contextual overlay.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct KnowledgeArticle {
     pub id: String,
     pub title: String,
@@ -72,7 +69,7 @@ pub enum NotificationLevel {
 }
 
 /// Notification model surfaced to users across the unified shell.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Notification {
     pub id: String,
     pub level: NotificationLevel,
@@ -82,9 +79,8 @@ pub struct Notification {
 
 impl Notification {
     pub fn new(level: NotificationLevel, message: impl Into<String>) -> Self {
-        let id = format!("{}-{}", level as u8, uuid());
         Self {
-            id,
+            id: format!("{}-{}", level as u8, uuid()),
             level,
             message: message.into(),
             timestamp: unix_time(),
@@ -92,8 +88,8 @@ impl Notification {
     }
 }
 
-/// User session and contextual metadata consumed by every module.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// User session metadata consumed across every module.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct UserSession {
     pub user_id: String,
     pub display_name: String,
@@ -115,7 +111,7 @@ impl Default for UserSession {
 }
 
 /// Global state aggregated by the unified shell.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct GlobalState {
     pub session: UserSession,
     pub navigation: NavigationState,
@@ -123,77 +119,6 @@ pub struct GlobalState {
     pub notifications: Vec<Notification>,
     pub data: HashMap<String, serde_json::Value>,
     pub knowledge_base: HashMap<WorkspacePersona, Vec<KnowledgeArticle>>,
-}
-
-impl Default for GlobalState {
-    fn default() -> Self {
-        Self {
-}
-
-/// Notification model surfaced to users across the unified shell.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Notification {
-    pub id: String,
-    pub level: NotificationLevel,
-    pub message: String,
-    pub timestamp: u64,
-}
-
-impl Notification {
-    pub fn new(level: NotificationLevel, message: impl Into<String>) -> Self {
-        let id = format!("{}-{}", level as u8, uuid());
-        Self {
-            id,
-            level,
-            message: message.into(),
-            timestamp: unix_time(),
-        }
-    }
-}
-
-/// User session and contextual metadata consumed by every module.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UserSession {
-    pub user_id: String,
-    pub display_name: String,
-    pub roles: Vec<String>,
-    pub active_workspace: Option<String>,
-    pub auth_token: Option<String>,
-}
-
-impl Default for UserSession {
-    fn default() -> Self {
-        Self {
-            user_id: "anonymous".into(),
-            display_name: "Guest".into(),
-            roles: vec![],
-            active_workspace: None,
-            auth_token: None,
-        }
-    }
-}
-
-/// Global state aggregated by the unified shell.
-#[derive(Debug, Clone)]
-pub struct GlobalState {
-    pub session: UserSession,
-    pub navigation: NavigationState,
-    pub workspaces: HashMap<String, Workspace>,
-    pub notifications: Vec<Notification>,
-    pub data: HashMap<String, serde_json::Value>,
-}
-
-impl Default for GlobalState {
-    fn default() -> Self {
-        Self {
-            session: UserSession::default(),
-            navigation: NavigationState::default(),
-            workspaces: HashMap::new(),
-            notifications: vec![],
-            data: HashMap::new(),
-            knowledge_base: HashMap::new(),
-        }
-    }
 }
 
 /// Thread-safe wrapper around [`GlobalState`].
@@ -207,6 +132,11 @@ impl GlobalStore {
         Self {
             inner: Arc::new(RwLock::new(state)),
         }
+    }
+
+    pub fn global() -> &'static GlobalStore {
+        static STORE: Lazy<GlobalStore> = Lazy::new(|| GlobalStore::new(GlobalState::default()));
+        &STORE
     }
 
     pub fn read(&self) -> GlobalState {
@@ -234,13 +164,36 @@ impl GlobalStore {
     }
 
     pub fn set_navigation(&self, nav: NavigationState) {
-        self.update(|state| state.navigation = nav);
+        self.update(|state| {
+            state.navigation = nav;
+        });
     }
 
     pub fn put_data(&self, key: impl Into<String>, value: serde_json::Value) {
         self.update(|state| {
             state.data.insert(key.into(), value);
         });
+    }
+
+    pub fn persist_to_file<P: AsRef<Path>>(&self, path: P) -> Result<(), std::io::Error> {
+        let snapshot = self.read();
+        let json = serde_json::to_string_pretty(&snapshot)
+            .unwrap_or_else(|_| serde_json::json!({}).to_string());
+        if let Some(parent) = path.as_ref().parent() {
+            if !parent.as_os_str().is_empty() {
+                fs::create_dir_all(parent)?;
+            }
+        }
+        fs::write(path, json)
+    }
+
+    pub fn load_from_file<P: AsRef<Path>>(&self, path: P) -> Result<(), std::io::Error> {
+        let contents = fs::read_to_string(path)?;
+        let parsed: GlobalState = serde_json::from_str(&contents).unwrap_or_default();
+        self.update(|state| {
+            *state = parsed;
+        });
+        Ok(())
     }
 
     pub fn set_active_workspace(&self, workspace_id: impl Into<String>) {
@@ -308,5 +261,48 @@ mod tests {
         let state = store.read();
         assert!(state.workspaces.get("dev").is_some());
         assert!(state.workspaces.get("dev").unwrap().contains_route("/chat"));
+    }
+
+    #[test]
+    fn persist_and_restore_global_state() {
+        let store = GlobalStore::new(GlobalState::default());
+        store.update(|state| {
+            state.session.user_id = "persist-user".into();
+            state
+                .data
+                .insert("key".into(), serde_json::json!({"value": 42}));
+        });
+
+        let path = std::env::temp_dir().join("noa_state_test.json");
+        store.persist_to_file(&path).expect("persist state");
+
+        let restored = GlobalStore::new(GlobalState::default());
+        restored
+            .load_from_file(&path)
+            .expect("load persisted state");
+
+        let snapshot = restored.read();
+        assert_eq!(snapshot.session.user_id, "persist-user");
+        assert_eq!(snapshot.data.get("key").unwrap()["value"], 42);
+
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn knowledge_base_lookup_returns_articles() {
+        let store = GlobalStore::new(GlobalState::default());
+        store.set_knowledge_base(
+            WorkspacePersona::Developer,
+            vec![KnowledgeArticle {
+                id: "dev".into(),
+                title: "Dev".into(),
+                summary: "Developer guide".into(),
+                link: "docs/dev.md".into(),
+            }],
+        );
+
+        let articles = store.knowledge_for(WorkspacePersona::Developer);
+        assert_eq!(articles.len(), 1);
+        assert_eq!(articles[0].id, "dev");
     }
 }

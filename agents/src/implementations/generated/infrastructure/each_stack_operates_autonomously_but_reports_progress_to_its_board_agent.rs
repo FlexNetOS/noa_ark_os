@@ -1,5 +1,5 @@
 //! Each stack operates autonomously but reports progress to its Board Agent - Auto-generated
-//! 
+//!
 //! ['Performs Micro Agent functions']
 
 use crate::unified_types::*;
@@ -17,8 +17,10 @@ impl EachStackOperatesAutonomouslyButReportsProgressToItsBoardAgent {
     pub fn new() -> Self {
         let metadata = AgentMetadata {
             id: Uuid::new_v4(),
-            agent_id: "each_stack_operates_autonomously_but_reports_progress_to_its_board_agent".to_string(),
-            name: "Each stack operates autonomously but reports progress to its Board Agent".to_string(),
+            agent_id: "each_stack_operates_autonomously_but_reports_progress_to_its_board_agent"
+                .to_string(),
+            name: "Each stack operates autonomously but reports progress to its Board Agent"
+                .to_string(),
             layer: AgentLayer::L5Infrastructure,
             category: AgentCategory::Other,
             agent_type: AgentType::Worker,
@@ -48,22 +50,22 @@ impl EachStackOperatesAutonomouslyButReportsProgressToItsBoardAgent {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Ready;
         Ok(())
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -78,13 +80,16 @@ impl Default for EachStackOperatesAutonomouslyButReportsProgressToItsBoardAgent 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = EachStackOperatesAutonomouslyButReportsProgressToItsBoardAgent::new();
-        assert_eq!(agent.metadata().name, "Each stack operates autonomously but reports progress to its Board Agent");
+        assert_eq!(
+            agent.metadata().name,
+            "Each stack operates autonomously but reports progress to its Board Agent"
+        );
     }
-    
+
     #[tokio::test]
     async fn test_agent_initialization() {
         let mut agent = EachStackOperatesAutonomouslyButReportsProgressToItsBoardAgent::new();

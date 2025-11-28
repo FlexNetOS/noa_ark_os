@@ -1,0 +1,22 @@
+# SOP: Three-Plane Migration
+
+1) Sandbox Plane
+   - Put inputs in sandbox/inputs/
+   - `make tri-run` then `make merge`
+   - Review parent/fitness-report.json
+
+2) Contracts & SBOM
+   - Update contracts/*.capnp; add golden samples
+   - `make gen-sbom && make sign && make verify`
+   - `make contract-test`
+
+3) Orchestrator Plane
+   - `make hooks-install` (strict pre-push)
+   - Policies in orchestrator/policies/
+   - Keys in orchestrator/keys/ (offline)
+
+4) Execution Plane
+   - `make anchor`
+   - `make promote` (if gates pass)
+
+Rollback: revert to previous anchor; artifacts immutable.

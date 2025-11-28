@@ -1,0 +1,12 @@
+{
+    "pwsh_version": "7.4.5",
+    "platform": "linux-x64",
+    "archive": "powershell-7.4.5-linux-x64.tar.gz",
+    "archive_sha256": "c23509cc4d08c62b9ff6ea26f579ee4c50f978aa34269334a85eda2fec36f45b",
+    "source_url": "https://github.com/PowerShell/PowerShell/releases/download/v7.4.5/powershell-7.4.5-linux-x64.tar.gz",
+    "bundle_root": "pwsh-portable/platforms/linux-x64/powershell-7.4.5-linux-x64",
+    "binary_kind": "pwsh",
+    "binary": "pwsh-portable/platforms/linux-x64/powershell-7.4.5-linux-x64/pwsh",
+    "sha256": "e274c1ed6047243ec1da305dc2d4ed955393d820a369f82e81b2b3850cc219c5",
+    "generated_at": "2025-11-21T15:24:25Z"
+}

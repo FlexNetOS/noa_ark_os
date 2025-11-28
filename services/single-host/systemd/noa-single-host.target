@@ -1,0 +1,7 @@
+[Unit]
+Description=NOA ARK OS single-host profile
+After=network-online.target
+Wants=noa-single-host@api-gateway.service noa-single-host@mcp.service noa-single-host@workflow.service noa-single-host@sandbox.service
+
+[Install]
+WantedBy=multi-user.target

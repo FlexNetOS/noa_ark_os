@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["build_node","flatten_use_tree"],"struct":["AstEdge","AstGraph","AstNode"]};

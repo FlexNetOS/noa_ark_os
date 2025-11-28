@@ -1,0 +1,24 @@
+{
+  "alerts": [
+    {
+      "name": "GatewayPolicyRejectionSpike",
+      "description": "Policy rejections exceeded expected baseline",
+      "metric": "gateway_policy_rejections_total",
+      "threshold": 20,
+      "window": "5m",
+      "annotations": {
+        "runbook": "services/gateway/RUNBOOK.md#policy-rejections"
+      }
+    },
+    {
+      "name": "GatewayLatencyElevated",
+      "description": "P95 latency above 500ms",
+      "metric": "gateway_latency_ms_p95",
+      "threshold": 500,
+      "window": "10m",
+      "annotations": {
+        "runbook": "services/gateway/RUNBOOK.md#latency"
+      }
+    }
+  ]
+}

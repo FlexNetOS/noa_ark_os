@@ -1,0 +1,31 @@
+[server]
+host = "127.0.0.1"
+port = 8080
+workers = 4
+
+# [server.tls]
+# cert_path = "server/vault/runtime/tls/dev-cert.pem"
+# key_path = "server/vault/runtime/tls/dev-key.pem"
+# client_ca_path = "server/vault/runtime/tls/ca.pem"
+# 
+[database]
+url = "postgresql://localhost:5432/noa"
+max_connections = 20
+
+[cache]
+url = "redis://localhost:6379"
+
+[qdrant]
+url = "http://localhost:6333"
+# api_key = "your-key-here"
+
+[inference]
+device = "auto"
+model_path = "./models"
+
+[observability]
+log_level = "info"
+log_format = "pretty"
+metrics_bind = "127.0.0.1"
+metrics_port = 9100
+otlp_endpoint = "http://127.0.0.1:4317"

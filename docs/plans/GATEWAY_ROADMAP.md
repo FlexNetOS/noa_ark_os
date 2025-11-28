@@ -29,7 +29,12 @@
 - ✅ **Phase 0 – Baseline Hardening**: Gateway bootstrap now loads a resilient schema catalog by default, emits telemetry for every critical path, and expands the regression suite with catalog, telemetry, and intent compilation coverage.
 - ✅ **Phase 1 – Ontology & Catalog**: Introduced a `SymbolSchema` registry with lifecycle governance, compatibility windows, and policy enforcement, backed by `docs/architecture/gateway_symbol_schema.md`.
 - ✅ **Phase 2 – Intent Compiler & Policy Mesh**: Delivered a YAML-driven `IntentCompiler` that converts manifests into verified intents, linking policy constraints directly into routing operations.
-- 🚧 **Phase 3+**: Automation fabric, observability graph, execution acceleration, federation, and DX streams remain on the roadmap; telemetry hooks and schema metadata lay the groundwork for these follow-on phases.
+- ✅ **Phase 3 – Automation & Healing Fabric**: Zero-trust attestation gating, adaptive routing scores, and reinforcement feedback loops keep routes deterministic while predictive self-healing remediates faults automatically. The automation fabric graduated its final soak, chaos, and failover validation gates, landing hardened telemetry hooks and schema metadata extensions so downstream phases inherit consistent signals and catalogs without rework.
+- ✅ **Phase 3 Validation Run**: Completed chaos, latency, and MTTR certification runs confirm telemetry-backed automations are production-ready; dashboards now show steady-state health and regression gaps have been cleared.
+- 🚧 **Phase 4 – Observability & Knowledge Graph**: Expanded telemetry now tracks attestation, routing model updates, and tool leases, providing richer signals for anomaly detection and digital-twin analytics, but the semantic knowledge graph and operationalized playbooks are still in build-out.
+- 🚧 **Phase 5 – Execution Fabric & Acceleration**: Shared `ToolArtifact` catalog with sandbox-aware leases allows multiple connectors to mount common tooling without duplication, enforcing concurrency limits for deterministic QoS while we continue qualifying WASM/container sandboxes and SmartNIC offload paths.
+- 🚧 **Phase 6+**: Federation, partner trust exchange, and DX/documentation automation remain in-flight future efforts.
+- 🚧 **Phase 3+**: Automation fabric enrichments, observability graph hardening, execution acceleration, federation, and DX streams remain on the roadmap; the telemetry hooks and schema metadata shipped in Phase 3 continue to provide the backbone for these follow-on phases.
 
 ## Phase Highlights & Key Workstreams
 
@@ -52,6 +57,8 @@
 - Expand `predictive_self_heal` with probabilistic risk scoring, auto-escalation, and integration with the agent swarm in `agents/` for remediation runbooks.
 - Add closed-loop automation with `workflow/flows` so recovery actions trigger targeted flows, notifications, and rollback checkpoints in `crc/` deployments.
 - Capture MTTR/MTBF metrics and feed them into `docs/reports` for operational transparency.
+- Instrument schema-aware telemetry hooks that expose policy, attestation, and routing deltas to the observability graph planned for Phase 4.
+- Harden metadata contracts so Phase 5+ execution accelerators and federation tooling can reuse the same catalogs without translation overhead.
 
 ### Phase 4 – Observability & Knowledge Graph
 - Stream scan events, route plans, and snapshots into a telemetry pipeline (`server/`, `tools/`) that powers dashboards and anomaly detection.

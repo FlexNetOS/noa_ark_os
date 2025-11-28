@@ -1,27 +1,16 @@
-"""Integration coverage for the unified FastAPI gateway."""
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Dict
+
+import asyncio
 
 import pytest
 from httpx import AsyncClient
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-import sys
+pytest.importorskip("fastapi")
 
-import asyncio
-import pathlib
-import sys
-
-from httpx import AsyncClient
-
-PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[2]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
-
-from unified_api.app import create_app
-from unified_api.routers.workflows import RUN_HISTORY
+from server.python.unified_api.app import create_app
+from server.python.unified_api.routers.workflows import RUN_HISTORY
 
 
 @pytest.fixture(autouse=True)
@@ -41,68 +30,92 @@ async def test_health_endpoint() -> None:
 
 
 @pytest.mark.asyncio
-async def test_trigger_workflow_records_run() -> None:
+async def test_workflow_trigger_and_override() -> None:
     app = create_app()
     async with AsyncClient(app=app, base_url="http://test") as client:
-        response = await client.post(
-            "/api/workflows/build/trigger", json={"branch": "main"}
+        trigger = await client.post(
+            "/api/workflows/build/trigger", json={"payload": {"branch": "main"}}
         )
-    assert response.status_code == 200
-    payload: Dict[str, object] = response.json()
-    assert payload["workflow_id"] == "build"
-    assert RUN_HISTORY
+        assert trigger.status_code == 200
+        run_id = trigger.json()["id"]
+        override = await client.post(
+            f"/api/workflows/build/runs/{run_id}/override",
+            json={"stage_id": "lint", "status": "success", "notes": "Manual fix"},
+        )
+    assert override.status_code == 200
+    payload: Dict[str, object] = override.json()
+    assert payload["overrides"]
+    assert payload["stages"][1]["status"] == "success"
 
 
 @pytest.mark.asyncio
-async def test_analytics_metrics_available() -> None:
+async def test_agent_filters_and_kill() -> None:
     app = create_app()
     async with AsyncClient(app=app, base_url="http://test") as client:
-        response = await client.get("/api/analytics/metrics")
-    assert response.status_code == 200
-    metrics = response.json()
-    assert any(metric["id"] == "developer_productivity" for metric in metrics)
+        listing = await client.get("/api/agents/?family=builder&status=running")
+        assert listing.status_code == 200
+        agents = listing.json()
+        assert agents
+        agent_id = agents[0]["id"]
+        kill = await client.post(f"/api/agents/{agent_id}/kill")
+        assert kill.status_code == 200
+        stats = await client.get("/api/agents/stats")
+    assert stats.status_code == 200
+    data = stats.json()
+    assert data["total"] >= 360
 
 
 @pytest.mark.asyncio
-async def test_ci_rerun_validates_pipeline() -> None:
+async def test_ci_merge_and_validation_endpoints() -> None:
     app = create_app()
     async with AsyncClient(app=app, base_url="http://test") as client:
-        missing = await client.post("/api/ci/pipelines/unknown/rerun")
-    assert missing.status_code == 404
+        merges = await client.get("/api/ci/merges")
+        assert merges.status_code == 200
+        merge_id = merges.json()[0]["id"]
+        promote = await client.post(f"/api/ci/merges/{merge_id}/promote", json={"notes": "Deploy"})
+        assert promote.status_code == 200
+        validations = await client.get("/api/ci/validations")
+        assert validations.status_code == 200
+        validation_id = validations.json()[0]["id"]
+        rerun = await client.post(f"/api/ci/validations/{validation_id}/run", json={})
+    assert rerun.status_code == 200
 
 
 @pytest.mark.asyncio
-async def test_agent_scale_requires_known_agent() -> None:
+async def test_inference_model_and_session_flow() -> None:
     app = create_app()
     async with AsyncClient(app=app, base_url="http://test") as client:
-        response = await client.post(
-            "/api/agents/builder-1/scale", json={"replicas": 2}
+        models = await client.get("/api/inference/models")
+        assert models.status_code == 200
+        deploy = await client.post("/api/inference/models/noa-coder/deploy")
+        assert deploy.status_code == 200
+        session = await client.post(
+            "/api/inference/sessions",
+            json={"model_id": "noa-coder", "owner": "qa", "gpu_id": "gpu-a40"},
         )
-        missing = await client.post(
-            "/api/agents/unknown/scale", json={"replicas": 1}
-        )
-    assert response.status_code == 200
-    assert missing.status_code == 404
+        assert session.status_code == 200
+        session_id = session.json()["session"]["id"]
+        stop = await client.post(f"/api/inference/sessions/{session_id}/stop")
+    assert stop.status_code == 200
 
 
-def test_health_endpoint() -> None:
+@pytest.mark.asyncio
+async def test_storage_audit_updates_on_retain() -> None:
+    app = create_app()
+    async with AsyncClient(app=app, base_url="http://test") as client:
+        retain = await client.post("/api/storage/artifacts/artifact-1/retain")
+        assert retain.status_code == 200
+        audit = await client.get("/api/storage/audit")
+    assert audit.status_code == 200
+    assert audit.json()[0]["action"] in {"retain", "purge"}
+
+
+def test_health_endpoint_sync() -> None:
     async def _run() -> None:
         app = create_app()
         async with AsyncClient(app=app, base_url="http://test") as client:
             response = await client.get("/api/health")
         assert response.status_code == 200
         assert response.json() == {"status": "ok"}
-
-    asyncio.run(_run())
-
-
-def test_trigger_workflow() -> None:
-    async def _run() -> None:
-        app = create_app()
-        async with AsyncClient(app=app, base_url="http://test") as client:
-            response = await client.post("/api/workflows/build/trigger", json={"branch": "main"})
-        assert response.status_code == 200
-        payload = response.json()
-        assert payload["workflow_id"] == "build"
 
     asyncio.run(_run())
