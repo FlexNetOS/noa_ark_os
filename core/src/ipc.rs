@@ -57,11 +57,6 @@ fn receive_message_inner(channel_id: ChannelId) -> Option<Message> {
 pub struct IpcService;
 
 impl IpcService {
-    /// Construct a new IPC service handle.
-    pub const fn new() -> Self {
-        Self
-    }
-
     /// Register a new communication channel.
     pub fn create_channel(&self, channel_id: ChannelId) -> Result<(), &'static str> {
         create_channel_inner(channel_id)
@@ -84,15 +79,15 @@ impl IpcService {
 
 /// Create a new channel.
 pub fn create_channel(channel_id: ChannelId) -> Result<(), &'static str> {
-    IpcService::new().create_channel(channel_id)
+    IpcService.create_channel(channel_id)
 }
 
 /// Send a message.
 pub fn send_message(channel_id: ChannelId, message: Message) -> Result<(), &'static str> {
-    IpcService::new().send_message(channel_id, message)
+    IpcService.send_message(channel_id, message)
 }
 
 /// Receive a message.
 pub fn receive_message(channel_id: ChannelId) -> Option<Message> {
-    IpcService::new().receive_message(channel_id)
+    IpcService.receive_message(channel_id)
 }

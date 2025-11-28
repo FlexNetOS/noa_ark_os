@@ -4,7 +4,7 @@ This guide describes how to enable the Kanban AI Assist endpoint and switch betw
 
 ## Environment variables
 
-Set the following variables before running `corepack pnpm dev` or `corepack pnpm start` from `ui/vibe-kanban/`:
+Set the following variables before running `pnpm dev` or `pnpm start` from `ui/vibe-kanban/`:
 
 | Variable | Description |
 | --- | --- |
@@ -36,7 +36,7 @@ Set the following variables before running `corepack pnpm dev` or `corepack pnpm
    ```bash
    export AI_PROVIDER=llama.cpp
    export LLAMA_CPP_ENDPOINT=http://127.0.0.1:8080/v1
-   corepack pnpm --filter vibe-kanban dev
+   pnpm dev --filter vibe-kanban
    ```
 4. Open the Kanban UI, click the **AI** button on any card, and copy the generated prompt into your IDE or provider client.
 

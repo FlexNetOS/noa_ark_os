@@ -20,7 +20,7 @@ use redis::Client as RedisClient;
 use serde::Deserialize;
 use serde_json::Value;
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
-use tokio::signal;
+use tokio::{net::TcpListener, signal};
 use tracing::{error, info};
 use url::Url;
 use uuid::Uuid;
@@ -76,7 +76,7 @@ async fn main() -> Result<()> {
     let log_format = if let Some(fmt_str) = cli.log_format.clone() {
         LogFormat::from_str(&fmt_str)?
     } else {
-        server_config.observability.log_format
+        LogFormat::from_str(&server_config.observability.log_format)?
     };
     let log_level = cli
         .log_level
@@ -125,16 +125,16 @@ async fn main() -> Result<()> {
 
     if metrics_addr != addr {
         let metrics_state = state.clone();
+        let metrics_router = Router::new()
+            .route("/metrics", get(metrics_handler))
+            .with_state(metrics_state);
+        let metrics_listener = TcpListener::bind(metrics_addr)
+            .await
+            .with_context(|| format!("failed to bind metrics endpoint on {metrics_addr}"))?;
         tokio::spawn(async move {
             info!(?metrics_addr, "starting dedicated metrics listener");
-            if let Err(err) = axum::Server::bind(&metrics_addr)
-                .serve(
-                    Router::new()
-                        .route("/metrics", get(metrics_handler))
-                        .with_state(metrics_state)
-                        .into_make_service(),
-                )
-                .await
+            if let Err(err) =
+                axum::serve(metrics_listener, metrics_router.into_make_service()).await
             {
                 error!(?err, "metrics server terminated");
             }
@@ -142,15 +142,23 @@ async fn main() -> Result<()> {
     }
     if let Some(tls) = load_rustls(server_config.server.tls.as_ref()).await? {
         info!(?addr, "starting TLS gateway server");
+        let handle = axum_server::Handle::new();
+        let shutdown_handle = handle.clone();
+        tokio::spawn(async move {
+            shutdown_signal().await;
+            shutdown_handle.graceful_shutdown(None);
+        });
         axum_server::bind_rustls(addr, tls)
+            .handle(handle)
             .serve(router.into_make_service())
-            .with_graceful_shutdown(shutdown_signal())
             .await
             .context("gateway server exited")?;
     } else {
+        let listener = TcpListener::bind(addr)
+            .await
+            .with_context(|| format!("failed to bind gateway address {addr}"))?;
         info!(?addr, "starting HTTP gateway server");
-        axum::Server::bind(&addr)
-            .serve(router.into_make_service())
+        axum::serve(listener, router.into_make_service())
             .with_graceful_shutdown(shutdown_signal())
             .await
             .context("gateway server exited")?;
@@ -276,9 +284,17 @@ struct AppState {
     dependencies: Arc<DependencyClients>,
 }
 
-#[derive(Clone, Default)]
+#[derive(Default)]
 struct ReadinessState {
     ready: AtomicBool,
+}
+
+impl Clone for ReadinessState {
+    fn clone(&self) -> Self {
+        Self {
+            ready: AtomicBool::new(self.ready.load(Ordering::Relaxed)),
+        }
+    }
 }
 
 impl ReadinessState {
@@ -399,10 +415,6 @@ async fn load_rustls(tls: Option<&config::ServerTlsConfig>) -> Result<Option<Rus
     Ok(None)
 }
 
-fn parse_log_format(value: String) -> Result<LogFormat> {
-    LogFormat::from_str(&value)
-}
-
 async fn shutdown_signal() {
     let ctrl_c = async {
         signal::ctrl_c()
@@ -424,5 +436,26 @@ async fn shutdown_signal() {
     tokio::select! {
         _ = ctrl_c => {},
         _ = terminate => {},
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_permissions_case_insensitively() {
+        assert_eq!(permission_from_str("read"), Some(Permission::Read));
+        assert_eq!(permission_from_str("WRITE"), Some(Permission::Write));
+        assert_eq!(permission_from_str("Execute"), Some(Permission::Execute));
+        assert_eq!(permission_from_str("ADMIN"), Some(Permission::Admin));
+        assert_eq!(permission_from_str("unknown"), None);
+    }
+
+    #[test]
+    fn parses_log_format_variants() {
+        assert_eq!(LogFormat::from_str("json").unwrap(), LogFormat::Json);
+        assert_eq!(LogFormat::from_str("pretty").unwrap(), LogFormat::Pretty);
+        assert!(LogFormat::from_str("??").is_err());
     }
 }

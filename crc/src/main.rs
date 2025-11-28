@@ -135,7 +135,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 async fn cas_cli(args: CasArgs) -> Result<(), Box<dyn std::error::Error>> {
-    let cas = Cas::from_env()?;
+    let cas = Cas::from_env_or_default()?;
     match args.command {
         CasCommand::Put { input } => {
             let bytes = async_fs::read(&input).await?;

@@ -1,0 +1,12 @@
+drop_id: drop_cafafeeb-56cd-4578-ba9b-bccc67b0a96c
+profile: server
+source_path: crc/temp/extracts/f69a8b43-a57e-4800-ad1c-3dc7df443d6a
+optimization_flags:
+- -C
+- opt-level=3
+- -C
+- lto=thin
+feature_gates:
+- throughput
+- gpu-offload
+timestamp: 1763500198

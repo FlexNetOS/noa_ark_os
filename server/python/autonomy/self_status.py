@@ -17,9 +17,6 @@ from typing import Any, Dict, List, Optional
 
 DRIFT_REPORT_PATH = Path("cicd/ml/reports/drift_report.jsonl")
 GOAL_METRICS_PATH = Path("storage/db/analytics/goal_kpis.json")
-BUDGET_GUARDIAN_SUMMARY_PATH = Path(
-    "storage/db/budget_guardian/rolling_summary.json"
-)
 GATEWAY_METRICS_PATH = Path("storage/telemetry/gateway_metrics.json")
 
 
@@ -82,7 +79,6 @@ class SelfStatusAggregator:
         telemetry = {
             "gateway": self._load_gateway_metrics(),
             "goal_metrics": self._summarise_goal_metrics(goal_metrics),
-            "budget_guardian": self._load_budget_guardian_summary(),
         }
         return SelfStatus(
             drift=drift,
@@ -130,44 +126,36 @@ class SelfStatusAggregator:
             payload = json.loads(raw)
         except json.JSONDecodeError:
             return []
+        if isinstance(payload, dict):
+            goals = payload.get("goals", {})
+            snapshots: List[Dict[str, Any]] = []
+            for goal_id, entry in goals.items():
+                snapshots.append(
+                    {
+                        "goal_id": goal_id,
+                        "workflow_id": entry.get("workflow_id", "unknown"),
+                        "total_runs": entry.get("total_runs", 0),
+                        "successful_runs": entry.get("successful_runs", 0),
+                        "average_lead_time_ms": entry.get("total_duration_ms", 0)
+                        / max(1, entry.get("total_runs", 1)),
+                        "success_rate": entry.get("successful_runs", 0)
+                        / max(1, entry.get("total_runs", 1)),
+                    }
+                )
+            return snapshots
         if isinstance(payload, list):
             return [self._normalise_goal_snapshot(item) for item in payload]
         return []
 
-    def _load_budget_guardian_summary(self) -> Dict[str, Any]:
-        summary_path = self.repo_root / BUDGET_GUARDIAN_SUMMARY_PATH
-        if not summary_path.exists():
-            return {}
-        try:
-            raw = summary_path.read_text(encoding="utf-8")
-        except OSError:
-            return {}
-        if not raw.strip():
-            return {}
-        try:
-            payload = json.loads(raw)
-        except json.JSONDecodeError:
-            return {}
-        if isinstance(payload, dict):
-            return payload
-        return {"raw": payload}
-
     def _normalise_goal_snapshot(self, item: Dict[str, Any]) -> Dict[str, Any]:
-        snapshot = {
+        return {
             "goal_id": item.get("goal_id", "unknown"),
             "workflow_id": item.get("workflow_id", "unknown"),
             "total_runs": int(item.get("total_runs", 0)),
             "successful_runs": int(item.get("successful_runs", 0)),
             "average_lead_time_ms": float(item.get("average_lead_time_ms", 0.0)),
             "success_rate": float(item.get("success_rate", 0.0)),
-            "context_penalty_score": float(item.get("context_penalty_score", 0.0)),
-            "context_p95_bytes": int(item.get("context_p95_bytes", 0)),
-            "context_p95_latency_ms": int(item.get("context_p95_latency_ms", 0)),
-            "reward_total": float(item.get("reward_total", 0.0)),
-            "reward_average": float(item.get("reward_average", 0.0)),
-            "reward_recent": float(item.get("reward_recent", 0.0)),
         }
-        return snapshot
 
     def _derive_hot_paths(self, metrics: List[Dict[str, Any]]) -> List[HotPath]:
         ranked = sorted(
@@ -255,41 +243,17 @@ class SelfStatusAggregator:
                 "goal_count": 0,
                 "avg_success_rate": 0.0,
                 "avg_lead_time_ms": 0.0,
-                "avg_context_penalty_score": 0.0,
-                "max_context_p95_bytes": 0,
-                "max_context_p95_latency_ms": 0,
-                "total_reward": 0.0,
-                "avg_reward": 0.0,
-                "avg_recent_reward": 0.0,
             }
         total_runs = sum(item.get("total_runs", 0) for item in metrics)
         avg_success = sum(item.get("success_rate", 0.0) for item in metrics) / len(metrics)
         avg_lead_time = sum(
             item.get("average_lead_time_ms", 0.0) for item in metrics
         ) / len(metrics)
-        avg_penalty = sum(
-            item.get("context_penalty_score", 0.0) for item in metrics
-        ) / len(metrics)
-        max_p95_bytes = max(item.get("context_p95_bytes", 0) for item in metrics)
-        max_p95_latency = max(
-            item.get("context_p95_latency_ms", 0) for item in metrics
-        )
-        total_reward = sum(item.get("reward_total", 0.0) for item in metrics)
-        avg_reward = total_reward / len(metrics) if metrics else 0.0
-        avg_recent_reward = sum(
-            item.get("reward_recent", 0.0) for item in metrics
-        ) / len(metrics)
         return {
             "goal_count": len(metrics),
             "total_runs": total_runs,
             "avg_success_rate": avg_success,
             "avg_lead_time_ms": avg_lead_time,
-            "avg_context_penalty_score": avg_penalty,
-            "max_context_p95_bytes": max_p95_bytes,
-            "max_context_p95_latency_ms": max_p95_latency,
-            "total_reward": total_reward,
-            "avg_reward": avg_reward,
-            "avg_recent_reward": avg_recent_reward,
         }
 
 

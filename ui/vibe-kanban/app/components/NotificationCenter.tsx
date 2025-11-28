@@ -34,16 +34,12 @@ export function NotificationCenter({ notifications, onDismiss }: NotificationCen
   return (
     <div className="pointer-events-none fixed bottom-6 right-6 flex flex-col gap-3">
       <div className="pointer-events-auto w-80 rounded-3xl border border-white/10 bg-surface/80 p-4 shadow-lg backdrop-blur-xl">
-        <div
-          className={`h-1 w-full rounded-full bg-gradient-to-r ${severityStyles[latest.severity]}`}
-        />
+        <div className={`h-1 w-full rounded-full bg-gradient-to-r ${severityStyles[latest.severity]}`} />
         <div className="mt-3 text-sm font-semibold text-white">{latest.message}</div>
         {latest.casKeys && latest.casKeys.length > 0 && (
           <ul className="mt-2 space-y-1 font-mono text-[10px] text-white/60">
             {latest.casKeys.map((hash) => (
-              <li key={hash} className="truncate">
-                {hash}
-              </li>
+              <li key={hash} className="truncate">{hash}</li>
             ))}
           </ul>
         )}
@@ -62,10 +58,7 @@ export function NotificationCenter({ notifications, onDismiss }: NotificationCen
         </p>
       </div>
       {rest.slice(0, 2).map((notification) => (
-        <div
-          key={notification.id}
-          className="pointer-events-none w-72 rounded-3xl border border-white/5 bg-surface/60 p-3 text-xs text-white/50 backdrop-blur"
-        >
+        <div key={notification.id} className="pointer-events-none w-72 rounded-3xl border border-white/5 bg-surface/60 p-3 text-xs text-white/50 backdrop-blur">
           <div>{notification.message}</div>
           {notification.casKeys && notification.casKeys.length > 0 && (
             <div className="mt-1 font-mono text-[10px] text-white/40">

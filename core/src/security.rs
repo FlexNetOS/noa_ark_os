@@ -35,7 +35,6 @@ pub enum OperationKind {
     DocumentUpdate,
     StageReceipt,
     SecurityScan,
-    GatewayPolicy,
     #[serde(other)]
     Other,
 }
@@ -283,11 +282,6 @@ pub fn audit_trail() -> Vec<SignedOperation> {
 pub struct SecurityService;
 
 impl SecurityService {
-    /// Construct a new security service handle.
-    pub const fn new() -> Self {
-        Self
-    }
-
     /// Register or update a user.
     pub fn register_user(&self, user: User) {
         if let Err(err) = register_user_inner(user.clone()) {
@@ -321,22 +315,22 @@ impl SecurityService {
 
 /// Check if user has permission.
 pub fn check_permission(user_id: UserId, permission: Permission) -> bool {
-    SecurityService::new().check_permission(user_id, permission)
+    SecurityService.check_permission(user_id, permission)
 }
 
 /// Issue a capability token for the provided actor and scopes.
 pub fn issue_scope_token(request: TokenIssuanceRequest) -> Result<ScopeToken, TokenError> {
-    SecurityService::new().issue_scope_token(request)
+    SecurityService.issue_scope_token(request)
 }
 
 /// Validate that a capability token contains the requested scope.
 pub fn validate_scope_token(token: &str, scope: &str) -> Result<ScopeToken, TokenError> {
-    SecurityService::new().validate_scope(token, scope)
+    SecurityService.validate_scope(token, scope)
 }
 
 /// Revoke a capability token.
 pub fn revoke_scope_token(token: &str) -> Result<(), TokenError> {
-    SecurityService::new().revoke_token(token)
+    SecurityService.revoke_token(token)
 }
 
 #[cfg(test)]

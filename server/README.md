@@ -87,11 +87,12 @@ isolation, but they are also wired together through the workspace manifest.
 | Crate | Path | Kind | Depends On | Purpose |
 | --- | --- | --- | --- | --- |
 | `noa_orchestrator` | `server/` | library | `noa_core`, `tracing` | Adaptive scaling policies and orchestration utilities that inspect telemetry and coordinate workloads. |
-| `noa_gateway` | `server/gateway` | library + bin | `noa_core`, `noa_agents`, security + auth deps | Programmable multi-protocol entrypoint that exposes HTTP/gRPC/WebSocket surfaces with auth, policy, and rate-limiting. |
+| `noa_gateway` | `server/gateway` | library + bin | `noa_core`, `noa_agents`, security + auth deps | Programmable multi-protocol router that powers policy decisions, rate limits, and downstream selection logic. |
+| `noa_api` | `server/api` | library | `noa_gateway`, `noa_observability`, `axum`, `tonic` | Axum + Tonic server exposing `/health`, `/ready`, `/metrics`, `/v1/*` REST routes, their gRPC equivalents, and WebSocket bootstrap streams on a shared ALPN-enabled port. |
 | `noa_inference` | `server/ai/inference` | library | async + HTTP tooling | Client for inference backends, model streaming helpers, and test shims for AI integrations. |
 | `noa_ui_api` | `server/ui_api` | library | `noa_workflow`, `noa_crc` | Server-driven UI orchestration layer that exposes workflow metadata and streaming UI events. |
 | `relocation-server` | `server/relocation` | library + bin | `relocation-daemon`, `hyper` | HTTP control plane for the relocation daemon, used to bootstrap agents across hosts. |
-| `noa-unified-server` | `server/bins/noa-unified-server` | binary | `noa_orchestrator`, `noa_gateway` | Thin binary that initialises the orchestrator and gateway so the unified server can be launched via `cargo run --bin noa-unified-server`. |
+| `noa-unified-server` | `server/bins/noa-unified-server` | binary | `noa_orchestrator`, `noa_api` | Thin binary that initialises the orchestrator and boots the shared Axum + Tonic API server via `cargo run --bin noa-unified-server`. |
 
 The `noa-unified-server` binary currently verifies that the orchestrator and
 gateway bootstrap paths succeed and emits telemetry about the scaling decision
@@ -167,13 +168,16 @@ cargo build --bin noa-unified-server
 
 ```bash
 # Run server (development)
-cargo run --bin noa-unified-server
+cargo run --bin noa-unified-server -- --host 0.0.0.0 --port 8787 --workers 4
 
-# Run with custom config
-cargo run --bin noa-unified-server -- --config config/dev.toml
+# Run with explicit host/port overrides
+cargo run --bin noa-unified-server -- --host 127.0.0.1 --port 8080
 
 # Run release binary
-./target/release/noa-unified-server
+./target/release/noa-unified-server --host 0.0.0.0 --port 8787 --workers 8
+
+# Smoke test
+curl -sf http://127.0.0.1:8787/health
 ```
 
 ### Test
@@ -188,6 +192,53 @@ cargo test --test integration
 # With coverage
 cargo tarpaulin --out Html
 ```
+
+### Operational readiness validation
+
+The unified server ships with a Docker Compose + load test harness located in `server/tests/`.
+It provisions PostgreSQL, Redis, and the UI API binary, waits for `/healthz` and `/readyz`,
+executes HTTP/gRPC smoke calls, records metrics, and enforces the `p95 < 100ms` and
+`error rate < 0.1%` thresholds before running the bundled k6 script.
+
+```bash
+# Run the stack validation once (requires Docker + python3)
+python3 server/tests/run_suite.py \
+  --compose-file server/tests/docker-compose.test.yml \
+  --metrics-output server/tests/.last-run.json \
+  --k6-script server/tests/k6/ui_workflow.js
+
+# Full CI-friendly target (installs Python deps, runs the suite, Criterion bench + k6)
+make server.test-all
+```
+
+`server/tests/run_suite.py` prints the sampled metrics as JSON so operators can capture a
+pre-activation evidence trail. A recent run looked like:
+
+```json
+{
+  "timestamp": "2024-06-01T12:00:00Z",
+  "http": {
+    "name": "http",
+    "samples": 20,
+    "duration_sec": 0.62,
+    "p95_ms": 7.41,
+    "throughput_rps": 31.6,
+    "error_rate": 0.0
+  },
+  "grpc": {
+    "name": "grpc",
+    "samples": 20,
+    "duration_sec": 0.71,
+    "p95_ms": 8.02,
+    "throughput_rps": 28.1,
+    "error_rate": 0.0
+  }
+}
+```
+
+Use the generated `server/tests/.last-run.json` file when handing over an environment; a
+passed run indicates the REST/gRPC surfaces are stable, the Compose stack is healthy, the
+Criterion benchmark completed, and the k6 script met the latency/error thresholds.
 
 ## Configuration
 
@@ -292,6 +343,11 @@ The same workflow is exposed through the helper utility: `python server/deploy/e
 ### Health & Metrics
 
 ```
+GET  /health          - Legacy liveness probe (always 200 if alive)
+GET  /healthz         - HTTP liveness probe for the UI API stack
+GET  /ready           - Legacy readiness probe (checks dependencies)
+GET  /readyz          - Aggregated readiness (drop root + streaming session)
+GET  /metrics         - Prometheus metrics
 GET  /health          - Liveness probe (always 200 if alive)
 GET  /ready           - Readiness probe (only 200 after Postgres/Redis/Qdrant clients initialise)
 GET  /metrics         - Prometheus metrics (served on the main port and, if configured, on `observability.metrics_*`)

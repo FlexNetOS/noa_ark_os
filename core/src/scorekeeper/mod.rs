@@ -166,7 +166,8 @@ pub struct Scorekeeper {
 
 impl Scorekeeper {
     /// Create a scorekeeper using the default storage path or overridden by NOA_TRUST_METRICS_PATH.
-    pub fn from_env() -> Result<Self, ScorekeeperError> {
+    #[allow(clippy::should_implement_trait)]
+    pub fn default() -> Result<Self, ScorekeeperError> {
         let storage_path = std::env::var("NOA_TRUST_METRICS_PATH")
             .map(PathBuf::from)
             .unwrap_or_else(|_| PathBuf::from(DEFAULT_STORAGE_PATH));
@@ -372,7 +373,7 @@ impl Scorekeeper {
 
     /// Convenience helper returning the current scope directive from disk.
     pub fn current_scope_directive() -> ScopeDirective {
-        let keeper = Self::from_env().expect("failed to construct scorekeeper");
+        let keeper = Self::default().expect("failed to construct scorekeeper");
         keeper
             .load_snapshot()
             .ok()

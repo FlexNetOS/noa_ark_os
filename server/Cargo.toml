@@ -9,19 +9,23 @@ description = "Runtime orchestration utilities and adaptive scaling policies for
 [workspace]
 resolver = "2"
 members = [
+    "api",
     "gateway",
     "ui_api",
     "relocation",
     "ai/inference",
     "bins/noa-unified-server",
+    "mcp",
 ]
 default-members = [
     ".",
+    "api",
     "gateway",
     "ui_api",
     "relocation",
     "ai/inference",
     "bins/noa-unified-server",
+    "mcp",
 ]
 
 [dependencies]
@@ -36,7 +40,7 @@ license = "MIT"
 
 [workspace.dependencies]
 # Web & Networking
-axum = "0.7"
+axum = { version = "0.7", features = ["macros", "ws"] }
 hyper = { version = "1.0", features = ["full"] }
 tower = "0.4"
 tower-http = { version = "0.5", features = ["trace", "cors"] }

@@ -1,7 +1,7 @@
 {
   "$schema": "./config.schema.json",
   "pnpm": {
-    "requiredVersion": "8.15.4",
+    "requiredVersion": "9.11.0",
     "defaultStoreDir": "node_modules/.pnpm",
     "aliases": {
       "pn": "pnpm",

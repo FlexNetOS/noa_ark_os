@@ -1,25 +1,23 @@
-use std::fs;
-use std::io::{BufRead, Write};
-use std::path::{Path, PathBuf};
+use std::io::BufRead;
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::{bail, ensure, Context, Result};
-use clap::{Args, Parser, Subcommand, ValueEnum};
-use futures::StreamExt;
+use clap::{Args, Parser, Subcommand};
 use noa_caddy_manager::{CaddyManager, HealthProbe, RateLimitConfig, ReverseProxyRoute};
+#[cfg(feature = "cicd")]
 use noa_cicd::CICDSystem;
-use noa_core::security::verify_signed_operation;
-use noa_core::utils::simple_hash;
+#[cfg(feature = "inference")]
 use noa_inference::{
     CompletionRequest, ProviderRouter, TelemetryEvent, TelemetryHandle, TelemetrySink,
     TelemetryStatus,
 };
 use noa_plugin_sdk::{ToolDescriptor, ToolRegistry};
-use noa_workflow::{
-    run_storage_doctor, EvidenceLedgerEntry, EvidenceLedgerKind, InferenceMetric,
-    PipelineInstrumentation, StorageDoctorStatus,
-};
+use noa_workflow::EvidenceLedgerEntry;
+#[cfg(feature = "inference")]
+use noa_workflow::InferenceMetric;
+use noa_workflow::PipelineInstrumentation;
 use relocation_daemon::{ExecutionMode, RelocationDaemon};
 use serde::Serialize;
 use serde_json::json;
@@ -37,6 +35,7 @@ enum OutputMode {
 #[command(
     name = "noa",
     about = "NOA Ark OS unified CLI (kernel, world, registry, trust, snapshot, agent, policy, sbom, pipeline, profile)",
+    long_about = "NOA Ark OS relocation daemon tooling",
     version
 )]
 struct Cli {
@@ -78,51 +77,6 @@ struct RegistryArgs {
     /// Optional tool identifier, alias, or CLI command string to filter on.
     #[arg(long)]
     tool: Option<String>,
-}
-
-#[derive(Args, Clone)]
-struct EvidenceArgs {
-    /// Optional workflow identifier to filter by (matches payload.workflow_id)
-    #[arg(long)]
-    workflow: Option<String>,
-    /// Filter by ledger entry kind (comma separated or repeated)
-    #[arg(long = "kind", value_enum, value_delimiter = ',', num_args = 0..)]
-    kinds: Vec<EvidenceKindArg>,
-    /// Only include entries generated at or after this timestamp (milliseconds)
-    #[arg(long)]
-    since: Option<u128>,
-    /// Only include entries generated at or before this timestamp (milliseconds)
-    #[arg(long)]
-    until: Option<u128>,
-    /// Limit number of displayed entries (most recent first)
-    #[arg(long)]
-    limit: Option<usize>,
-    /// Recompute hashes, signatures, and chain integrity for displayed entries
-    #[arg(long = "verify-signatures")]
-    verify_signatures: bool,
-}
-
-#[derive(Clone, Debug, ValueEnum)]
-enum EvidenceKindArg {
-    Genesis,
-    StageReceipt,
-    SecurityScan,
-    TaskDispatch,
-    AutoFixAction,
-    BudgetDecision,
-}
-
-impl EvidenceKindArg {
-    fn into_kind(self) -> EvidenceLedgerKind {
-        match self {
-            EvidenceKindArg::Genesis => EvidenceLedgerKind::Genesis,
-            EvidenceKindArg::StageReceipt => EvidenceLedgerKind::StageReceipt,
-            EvidenceKindArg::SecurityScan => EvidenceLedgerKind::SecurityScan,
-            EvidenceKindArg::TaskDispatch => EvidenceLedgerKind::TaskDispatch,
-            EvidenceKindArg::AutoFixAction => EvidenceLedgerKind::AutoFixAction,
-            EvidenceKindArg::BudgetDecision => EvidenceLedgerKind::BudgetDecision,
-        }
-    }
 }
 
 #[derive(Subcommand)]
@@ -176,8 +130,10 @@ enum Commands {
 
     /// Inspect the evidence ledger
     Evidence {
-        #[command(flatten)]
-        filters: EvidenceArgs,
+        #[arg(long)]
+        workflow: Option<String>,
+        #[arg(long)]
+        limit: Option<usize>,
     },
     /// Surface observability tooling from the shared registry
     Observability {
@@ -204,20 +160,15 @@ enum Commands {
         #[command(flatten)]
         query: RegistryArgs,
     },
-    /// Storage utilities for instrumentation mirrors
-    Storage {
+    /// Manage shared notebook workspaces
+    Notebook {
         #[command(subcommand)]
-        command: StorageCommands,
+        command: NotebookCommands,
     },
     /// Interact with agents using configured inference providers
     Agent {
         #[command(subcommand)]
         command: AgentCommands,
-    },
-    /// Manage notebook scaffolding and hygiene
-    Notebook {
-        #[command(subcommand)]
-        command: NotebookCommands,
     },
     /// Manage the embedded Caddy reverse proxy
     Caddy {
@@ -293,6 +244,20 @@ enum CaddyCommands {
     Reload {
         #[arg(long, default_value = "http://127.0.0.1:2019")]
         admin_endpoint: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum NotebookCommands {
+    /// Ensure the shared notebook workspace exists and has metadata
+    Init {
+        #[arg(long, default_value = "notebooks")]
+        path: PathBuf,
+    },
+    /// Summarise the number of tracked notebooks under the workspace
+    Status {
+        #[arg(long, default_value = "notebooks")]
+        path: PathBuf,
     },
 }
 
@@ -394,230 +359,6 @@ enum AgentCommands {
 }
 
 #[derive(Subcommand)]
-enum NotebookCommands {
-    /// Scaffold the default notebook directories and placeholder notebooks
-    Init,
-    /// Ensure notebooks have no execution counts or embedded outputs
-    Lint,
-    /// Strip execution counts and outputs from notebooks in-place
-    Clean,
-}
-
-#[derive(Clone, Copy)]
-struct NotebookMeta {
-    file: &'static str,
-    title: &'static str,
-    summary: &'static str,
-}
-
-#[derive(Clone, Copy)]
-struct NotebookCategorySpec {
-    directory: &'static str,
-    display_name: &'static str,
-    purpose: &'static str,
-    notebooks: &'static [NotebookMeta],
-}
-
-struct NotebookLintOutcome {
-    payload: serde_json::Value,
-    clean: bool,
-}
-
-const NOTEBOOK_ROOT: &str = "notebooks";
-
-const DEVELOPMENT_NOTEBOOKS: [NotebookMeta; 5] = [
-    NotebookMeta {
-        file: "01_core_os_development.ipynb",
-        title: "Core OS Development",
-        summary: "Core OS development",
-    },
-    NotebookMeta {
-        file: "02_crc_testing.ipynb",
-        title: "CRC System Testing",
-        summary: "CRC system testing",
-    },
-    NotebookMeta {
-        file: "03_agent_debugging.ipynb",
-        title: "Agent Debugging",
-        summary: "Agent debugging",
-    },
-    NotebookMeta {
-        file: "04_workflow_design.ipynb",
-        title: "Workflow Design",
-        summary: "Workflow design",
-    },
-    NotebookMeta {
-        file: "05_sandbox_validation.ipynb",
-        title: "Sandbox Validation",
-        summary: "Sandbox validation",
-    },
-];
-
-const ANALYSIS_NOTEBOOKS: [NotebookMeta; 5] = [
-    NotebookMeta {
-        file: "performance_analysis.ipynb",
-        title: "Performance Analysis",
-        summary: "Performance metrics",
-    },
-    NotebookMeta {
-        file: "deployment_analysis.ipynb",
-        title: "Deployment Analysis",
-        summary: "Deployment statistics",
-    },
-    NotebookMeta {
-        file: "code_quality_metrics.ipynb",
-        title: "Code Quality Metrics",
-        summary: "Code quality analysis",
-    },
-    NotebookMeta {
-        file: "ai_confidence_trends.ipynb",
-        title: "AI Confidence Trends",
-        summary: "AI confidence tracking",
-    },
-    NotebookMeta {
-        file: "resource_utilization.ipynb",
-        title: "Resource Utilization",
-        summary: "Resource usage analysis",
-    },
-];
-
-const EXPERIMENT_NOTEBOOKS: [NotebookMeta; 4] = [
-    NotebookMeta {
-        file: "ml_model_experiments.ipynb",
-        title: "ML Model Experiments",
-        summary: "ML model testing",
-    },
-    NotebookMeta {
-        file: "optimization_experiments.ipynb",
-        title: "Optimization Experiments",
-        summary: "Performance optimization",
-    },
-    NotebookMeta {
-        file: "new_algorithms.ipynb",
-        title: "New Algorithms",
-        summary: "Algorithm research",
-    },
-    NotebookMeta {
-        file: "integration_prototypes.ipynb",
-        title: "Integration Prototypes",
-        summary: "Integration prototypes",
-    },
-];
-
-const TUTORIAL_NOTEBOOKS: [NotebookMeta; 5] = [
-    NotebookMeta {
-        file: "01_getting_started.ipynb",
-        title: "Getting Started",
-        summary: "Getting started",
-    },
-    NotebookMeta {
-        file: "02_crc_workflow.ipynb",
-        title: "CRC Workflow Tutorial",
-        summary: "CRC workflow tutorial",
-    },
-    NotebookMeta {
-        file: "03_agent_creation.ipynb",
-        title: "Agent Creation",
-        summary: "Agent creation",
-    },
-    NotebookMeta {
-        file: "04_ci_cd_pipeline.ipynb",
-        title: "CI/CD Pipeline",
-        summary: "CI/CD tutorial",
-    },
-    NotebookMeta {
-        file: "05_observability.ipynb",
-        title: "Observability",
-        summary: "Monitoring setup",
-    },
-];
-
-const DEMO_NOTEBOOKS: [NotebookMeta; 4] = [
-    NotebookMeta {
-        file: "complete_system_demo.ipynb",
-        title: "Complete System Demo",
-        summary: "Full system demo",
-    },
-    NotebookMeta {
-        file: "code_drop_demo.ipynb",
-        title: "Code Drop Demo",
-        summary: "Code drop workflow",
-    },
-    NotebookMeta {
-        file: "sandbox_merge_demo.ipynb",
-        title: "Sandbox Merge Demo",
-        summary: "Sandbox merge",
-    },
-    NotebookMeta {
-        file: "deployment_demo.ipynb",
-        title: "Deployment Demo",
-        summary: "Deployment process",
-    },
-];
-
-const REPORT_NOTEBOOKS: [NotebookMeta; 4] = [
-    NotebookMeta {
-        file: "weekly_metrics_report.ipynb",
-        title: "Weekly Metrics Report",
-        summary: "Weekly metrics",
-    },
-    NotebookMeta {
-        file: "deployment_report.ipynb",
-        title: "Deployment Report",
-        summary: "Deployment summary",
-    },
-    NotebookMeta {
-        file: "system_health_report.ipynb",
-        title: "System Health Report",
-        summary: "Health status",
-    },
-    NotebookMeta {
-        file: "security_audit_report.ipynb",
-        title: "Security Audit Report",
-        summary: "Security audit",
-    },
-];
-
-const NOTEBOOK_CATEGORIES: [NotebookCategorySpec; 6] = [
-    NotebookCategorySpec {
-        directory: "development",
-        display_name: "Development",
-        purpose: "Development and debugging workflows",
-        notebooks: &DEVELOPMENT_NOTEBOOKS,
-    },
-    NotebookCategorySpec {
-        directory: "analysis",
-        display_name: "Analysis",
-        purpose: "Data analysis and metrics",
-        notebooks: &ANALYSIS_NOTEBOOKS,
-    },
-    NotebookCategorySpec {
-        directory: "experiments",
-        display_name: "Experiments",
-        purpose: "Research and experimentation",
-        notebooks: &EXPERIMENT_NOTEBOOKS,
-    },
-    NotebookCategorySpec {
-        directory: "tutorials",
-        display_name: "Tutorials",
-        purpose: "Learning and onboarding",
-        notebooks: &TUTORIAL_NOTEBOOKS,
-    },
-    NotebookCategorySpec {
-        directory: "demos",
-        display_name: "Demos",
-        purpose: "Interactive demonstrations",
-        notebooks: &DEMO_NOTEBOOKS,
-    },
-    NotebookCategorySpec {
-        directory: "reports",
-        display_name: "Reports",
-        purpose: "Generated reports and documentation",
-        notebooks: &REPORT_NOTEBOOKS,
-    },
-];
-
-#[derive(Subcommand)]
 enum PipelineCommands {
     /// Approve a pipeline using agent trust policies
     Approve {
@@ -636,12 +377,6 @@ enum PipelineCommands {
         #[arg(long)]
         workspace: Option<PathBuf>,
     },
-}
-
-#[derive(Subcommand)]
-enum StorageCommands {
-    /// Validate mirrored instrumentation logs
-    Doctor,
 }
 
 fn parse_mode(value: &str) -> std::result::Result<ExecutionMode, String> {
@@ -776,8 +511,8 @@ fn main() -> Result<()> {
                     }
                 }
             }
-            Commands::Evidence { filters } => {
-                show_evidence(filters)?;
+            Commands::Evidence { workflow, limit } => {
+                show_evidence(workflow, limit)?;
             }
             Commands::Observability { query } => {
                 handle_registry_category("observability", query)?;
@@ -794,17 +529,54 @@ fn main() -> Result<()> {
             Commands::Plugin { query } => {
                 handle_registry_category("plugin", query)?;
             }
-            Commands::Storage { command } => match command {
-                StorageCommands::Doctor => {
-                    let report = run_storage_doctor()
-                        .context("failed to inspect storage mirrors")?;
-                    let payload = serde_json::to_value(&report)?;
-                    print_obj(out_mode, &payload)?;
-                    if report.status != StorageDoctorStatus::Healthy {
-                        bail!("storage doctor detected drift or missing mirrors");
+            Commands::Notebook { command } => match command {
+                NotebookCommands::Init { path } => {
+                    std::fs::create_dir_all(&path)
+                        .with_context(|| format!("failed to create {:?}", path))?;
+                    let manifest = path.join("README.noa.md");
+                    if !manifest.exists() {
+                        let contents = "# NOA Notebook Workspace\nThis directory is managed via `noa notebook`.\n";
+                        std::fs::write(&manifest, contents)?;
                     }
+                    let payload = json!({
+                        "component": "notebook",
+                        "action": "init",
+                        "path": path.display().to_string(),
+                        "status": "ok",
+                    });
+                    print_obj(out_mode, &payload)?;
+                }
+                NotebookCommands::Status { path } => {
+                    let mut notebooks = 0usize;
+                    let mut checkpoints = 0usize;
+                    for entry in WalkDir::new(&path).into_iter().filter_map(|entry| entry.ok()) {
+                        if entry.file_type().is_file()
+                            && entry
+                                .path()
+                                .extension()
+                                .and_then(|ext| ext.to_str())
+                                == Some("ipynb")
+                        {
+                            notebooks += 1;
+                        }
+                        if entry.file_type().is_dir()
+                            && entry.file_name() == ".ipynb_checkpoints"
+                        {
+                            checkpoints += 1;
+                        }
+                    }
+                    let payload = json!({
+                        "component": "notebook",
+                        "action": "status",
+                        "path": path.display().to_string(),
+                        "notebooks": notebooks,
+                        "checkpoint_dirs": checkpoints,
+                        "status": "ok",
+                    });
+                    print_obj(out_mode, &payload)?;
                 }
             },
+            #[cfg(feature = "inference")]
             Commands::Agent { command } => {
                 let instrumentation = Arc::new(
                     PipelineInstrumentation::new()
@@ -817,8 +589,9 @@ fn main() -> Result<()> {
                     }
                 }
             }
-            Commands::Notebook { command } => {
-                handle_notebook_command(out_mode, command)?;
+            #[cfg(not(feature = "inference"))]
+            Commands::Agent { .. } => {
+                print_obj(out_mode, &json!({"component":"agent","status":"inference_disabled"}))?;
             }
             Commands::Caddy { command } => match command {
                 CaddyCommands::PushRoute {
@@ -891,6 +664,7 @@ fn main() -> Result<()> {
                     print_obj(out_mode, &payload)?;
                 }
             },
+            #[cfg(feature = "inference")]
             Commands::Query { prompt, stream } => {
                 let instrumentation = Arc::new(
                     PipelineInstrumentation::new()
@@ -899,6 +673,7 @@ fn main() -> Result<()> {
                 let telemetry = inference_telemetry_handle(instrumentation);
                 handle_query(prompt, stream, telemetry).await?;
             }
+            #[cfg(feature = "cicd")]
             Commands::Pipeline { command } => match command {
                 PipelineCommands::Approve {
                     pipeline,
@@ -925,7 +700,7 @@ fn main() -> Result<()> {
                             tags.clone(),
                             evidence.clone(),
                         )
-                        .map_err(anyhow::Error::msg)?;
+                        .map_err(Error::msg)?;
                     let payload = json!({
                         "pipeline_id": pipeline,
                         "status": format!("{:?}", status),
@@ -937,6 +712,14 @@ fn main() -> Result<()> {
                     println!("{}", serde_json::to_string_pretty(&payload)?);
                 }
             },
+            #[cfg(not(feature = "inference"))]
+            Commands::Query { .. } => {
+                print_obj(out_mode, &json!({"component":"query","status":"inference_disabled"}))?;
+            }
+            #[cfg(not(feature = "cicd"))]
+            Commands::Pipeline { .. } => {
+                print_obj(out_mode, &json!({"component":"pipeline","status":"cicd_disabled"}))?;
+            }
         }
 
         Ok(())
@@ -986,178 +769,53 @@ fn handle_registry_category(category: &str, query: RegistryArgs) -> Result<()> {
     Ok(())
 }
 
-#[derive(Clone, Debug)]
-struct SignatureVerification {
-    hash_valid: bool,
-    signature_valid: bool,
-    chain_valid: bool,
-}
-
-fn show_evidence(filters: EvidenceArgs) -> Result<()> {
+fn show_evidence(workflow_filter: Option<String>, limit: Option<usize>) -> Result<()> {
     let path = PathBuf::from("storage/db/evidence/ledger.jsonl");
     if !path.exists() {
-        anyhow::bail!("evidence ledger not found at {}", path.display());
+        bail!("evidence ledger not found at {}", path.display());
     }
     let file = std::fs::File::open(&path)?;
     let reader = std::io::BufReader::new(file);
-    if let (Some(since), Some(until)) = (filters.since, filters.until) {
-        ensure!(
-            since <= until,
-            "`--since` must be less than or equal to `--until` ({} > {})",
-            since,
-            until
-        );
-    }
-
-    let kind_filters: Vec<EvidenceLedgerKind> = filters
-        .kinds
-        .clone()
-        .into_iter()
-        .map(EvidenceKindArg::into_kind)
-        .collect();
-
-    let mut all_entries = Vec::new();
+    let mut entries = Vec::new();
     for line in reader.lines() {
         let line = line?;
         if line.trim().is_empty() {
             continue;
         }
         let entry: EvidenceLedgerEntry = serde_json::from_str(&line)?;
-        all_entries.push(entry);
+        if let Some(workflow) = &workflow_filter {
+            let payload_workflow = entry
+                .payload
+                .get("workflow_id")
+                .and_then(|value| value.as_str());
+            if payload_workflow != Some(workflow.as_str()) {
+                continue;
+            }
+        }
+        entries.push(entry);
     }
 
-    let verifications_all = if filters.verify_signatures {
-        Some(verify_entries(&all_entries))
-    } else {
-        None
-    };
-
-    let mut display_rows: Vec<(EvidenceLedgerEntry, Option<SignatureVerification>)> = all_entries
-        .into_iter()
-        .enumerate()
-        .filter_map(|(idx, entry)| {
-            if let Some(workflow) = &filters.workflow {
-                let payload_workflow = entry
-                    .payload
-                    .get("workflow_id")
-                    .and_then(|value| value.as_str());
-                if payload_workflow != Some(workflow.as_str()) {
-                    return None;
-                }
-            }
-            if !kind_filters.is_empty() && !kind_filters.contains(&entry.kind) {
-                return None;
-            }
-            if let Some(since) = filters.since {
-                if entry.timestamp < since {
-                    return None;
-                }
-            }
-            if let Some(until) = filters.until {
-                if entry.timestamp > until {
-                    return None;
-                }
-            }
-            let verification = verifications_all
-                .as_ref()
-                .and_then(|statuses| statuses.get(idx).cloned());
-            Some((entry, verification))
-        })
-        .collect();
-
-    let to_print = filters.limit.unwrap_or(display_rows.len());
-
-    display_rows.reverse();
-    display_rows.truncate(to_print);
-
-    let mut invalid_verifications = 0usize;
-
-    for (entry, verification) in display_rows.iter() {
-        if let Some(status) = verification {
-            if !(status.hash_valid && status.signature_valid && status.chain_valid) {
-                invalid_verifications += 1;
-            }
-            println!(
-                "{} | kind={:?} | reference={} | {}",
-                entry.timestamp,
-                entry.kind,
-                entry.reference,
-                format_signature_status(status)
-            );
-        } else {
-            println!(
-                "{} | kind={:?} | reference={}",
-                entry.timestamp, entry.kind, entry.reference
-            );
-        }
+    let to_print = limit.unwrap_or(entries.len());
+    for entry in entries.into_iter().rev().take(to_print) {
+        println!(
+            "{} | kind={:?} | reference={}",
+            entry.timestamp, entry.kind, entry.reference
+        );
         println!("{}", serde_json::to_string_pretty(&entry.payload)?);
     }
-
-    if filters.verify_signatures && invalid_verifications > 0 {
-        eprintln!(
-            "{} ledger entr{} failed signature verification",
-            invalid_verifications,
-            if invalid_verifications == 1 {
-                "y"
-            } else {
-                "ies"
-            }
-        );
-    }
     Ok(())
-}
-
-fn verify_entries(entries: &[EvidenceLedgerEntry]) -> Vec<SignatureVerification> {
-    let mut last_signature = String::from("GENESIS");
-    entries
-        .iter()
-        .map(|entry| {
-            let serialised = serde_json::to_string(&entry.signed_operation.record)
-                .unwrap_or_else(|_| String::new());
-            let expected_hash = if serialised.is_empty() {
-                String::new()
-            } else {
-                simple_hash(&serialised)
-            };
-            let hash_valid = !serialised.is_empty() && expected_hash == entry.signed_operation.hash;
-            let signature_valid = verify_signed_operation(&entry.signed_operation);
-            let chain_valid = entry.signed_operation.previous_signature == last_signature;
-            last_signature = entry.signed_operation.signature.clone();
-            SignatureVerification {
-                hash_valid,
-                signature_valid,
-                chain_valid,
-            }
-        })
-        .collect()
-}
-
-fn format_signature_status(status: &SignatureVerification) -> String {
-    if status.hash_valid && status.signature_valid && status.chain_valid {
-        "signature=verified".to_string()
-    } else {
-        let mut issues = Vec::new();
-        if !status.hash_valid {
-            issues.push("hash");
-        }
-        if !status.signature_valid {
-            issues.push("signature");
-        }
-        if !status.chain_valid {
-            issues.push("chain");
-        }
-        format!("signature=INVALID({})", issues.join(","))
-    }
 }
 
 async fn build_daemon(config: DaemonArgs) -> Result<RelocationDaemon> {
     RelocationDaemon::new(config.policy, config.registry, config.backups).await
 }
 
+#[cfg(feature = "inference")]
 struct InferenceTelemetryBridge {
     instrumentation: Arc<PipelineInstrumentation>,
 }
 
+#[cfg(feature = "inference")]
 impl TelemetrySink for InferenceTelemetryBridge {
     fn record(&self, event: TelemetryEvent) {
         let status = match event.status {
@@ -1180,15 +838,23 @@ impl TelemetrySink for InferenceTelemetryBridge {
     }
 }
 
+#[cfg(feature = "inference")]
 fn inference_telemetry_handle(instrumentation: Arc<PipelineInstrumentation>) -> TelemetryHandle {
     Arc::new(InferenceTelemetryBridge { instrumentation }) as TelemetryHandle
 }
+#[cfg(not(feature = "inference"))]
+#[allow(dead_code)]
+fn inference_telemetry_handle(_instrumentation: Arc<PipelineInstrumentation>) -> () {
+    ()
+}
 
+#[cfg(feature = "inference")]
 async fn build_router(telemetry: TelemetryHandle) -> Result<ProviderRouter> {
     let router = ProviderRouter::from_env()?;
     Ok(router.with_telemetry(telemetry))
 }
 
+#[cfg(feature = "inference")]
 async fn handle_invoke(prompt: String, stream: bool, telemetry: TelemetryHandle) -> Result<()> {
     let router = build_router(telemetry).await?;
     let request = CompletionRequest {
@@ -1216,6 +882,7 @@ async fn handle_invoke(prompt: String, stream: bool, telemetry: TelemetryHandle)
     Ok(())
 }
 
+#[cfg(feature = "inference")]
 async fn handle_query(prompt: String, stream: bool, telemetry: TelemetryHandle) -> Result<()> {
     let router = build_router(telemetry).await?;
     let request = CompletionRequest {
@@ -1243,370 +910,4 @@ async fn handle_query(prompt: String, stream: bool, telemetry: TelemetryHandle) 
     }
 
     Ok(())
-}
-
-fn handle_notebook_command(out_mode: OutputMode, command: NotebookCommands) -> Result<()> {
-    let root = Path::new(NOTEBOOK_ROOT);
-    match command {
-        NotebookCommands::Init => {
-            let payload = init_notebooks(root)?;
-            print_obj(out_mode, &payload)?;
-        }
-        NotebookCommands::Lint => {
-            let outcome = lint_notebooks(root)?;
-            print_obj(out_mode, &outcome.payload)?;
-            if !outcome.clean {
-                bail!("notebook outputs detected");
-            }
-        }
-        NotebookCommands::Clean => {
-            let payload = clean_notebooks(root)?;
-            print_obj(out_mode, &payload)?;
-        }
-    }
-    Ok(())
-}
-
-fn render_notebook(category: &NotebookCategorySpec, spec: &NotebookMeta) -> serde_json::Value {
-    let header = vec![
-        format!("# {}\\n", spec.title),
-        "\\n".to_string(),
-        format!("**Category**: {}  \\n", category.display_name),
-        format!("**Category Purpose**: {}  \\n", category.purpose),
-        format!("**Purpose**: {}  \\n", spec.summary),
-        "**Status**: Placeholder generated by `noa notebook init`\\n".to_string(),
-    ];
-
-    let guidance = vec![
-        "## Getting Started\\n".to_string(),
-        "\\n".to_string(),
-        "- Replace this template with project-specific context.\\n".to_string(),
-        "- Document hypotheses, assumptions, and results.\\n".to_string(),
-        "- Use `noa notebook clean` before committing changes.\\n".to_string(),
-    ];
-
-    let setup = vec![
-        "# Environment setup\\n".to_string(),
-        "import sys\\n".to_string(),
-        "from pathlib import Path\\n".to_string(),
-        "\\n".to_string(),
-        "# Treat the repository root as a module path\\n".to_string(),
-        "PROJECT_ROOT = Path.cwd().resolve()\\n".to_string(),
-        "if str(PROJECT_ROOT) not in sys.path:\\n".to_string(),
-        "    sys.path.append(str(PROJECT_ROOT))\\n".to_string(),
-        "\\n".to_string(),
-        "print(\"Notebook environment initialised for NOA Ark OS\")\\n".to_string(),
-    ];
-
-    let checklist = vec![
-        "## Next Steps\\n".to_string(),
-        "\\n".to_string(),
-        "- [ ] Fill in context-specific markdown sections.\\n".to_string(),
-        "- [ ] Replace placeholder code with reproducible steps.\\n".to_string(),
-        "- [ ] Attach supporting evidence in the Evidence Ledger when appropriate.\\n".to_string(),
-        "- [ ] Run `noa notebook clean` to strip outputs before committing.\\n".to_string(),
-    ];
-
-    json!({
-        "cells": [
-            {
-                "cell_type": "markdown",
-                "metadata": json!({}),
-                "source": header,
-            },
-            {
-                "cell_type": "markdown",
-                "metadata": json!({}),
-                "source": guidance,
-            },
-            {
-                "cell_type": "code",
-                "metadata": json!({"tags": ["parameters"]}),
-                "execution_count": serde_json::Value::Null,
-                "outputs": json!([]),
-                "source": setup,
-            },
-            {
-                "cell_type": "markdown",
-                "metadata": json!({}),
-                "source": checklist,
-            }
-        ],
-        "metadata": {
-            "kernelspec": {
-                "display_name": "Python 3 (ipykernel)",
-                "language": "python",
-                "name": "python3",
-            },
-            "language_info": {
-                "name": "python",
-                "version": "3.11"
-            },
-            "nbstripout": {
-                "enforced_by": "noa notebook clean",
-                "status": "outputs stripped"
-            }
-        },
-        "nbformat": 4,
-        "nbformat_minor": 5,
-    })
-}
-
-fn init_notebooks(root: &Path) -> Result<serde_json::Value> {
-    fs::create_dir_all(root).with_context(|| {
-        format!(
-            "failed to create notebook root directory {}",
-            root.display()
-        )
-    })?;
-
-    let mut created = Vec::new();
-    let mut updated = Vec::new();
-    let mut skipped = Vec::new();
-
-    for category in NOTEBOOK_CATEGORIES.iter() {
-        let dir_path = root.join(category.directory);
-        fs::create_dir_all(&dir_path).with_context(|| {
-            format!("failed to create notebook directory {}", dir_path.display())
-        })?;
-
-        for spec in category.notebooks.iter() {
-            let path = dir_path.join(spec.file);
-            let notebook = render_notebook(category, spec);
-            let mut content = serde_json::to_string_pretty(&notebook)?;
-            content.push('\n');
-
-            if path.exists() {
-                match fs::read_to_string(&path) {
-                    Ok(existing) => {
-                        if existing == content {
-                            skipped.push(notebook_display_path(&path));
-                            continue;
-                        }
-
-                        if existing.contains("Placeholder generated by `noa notebook init`") {
-                            fs::write(&path, &content).with_context(|| {
-                                format!("failed to refresh notebook template at {}", path.display())
-                            })?;
-                            updated.push(notebook_display_path(&path));
-                            continue;
-                        }
-
-                        skipped.push(notebook_display_path(&path));
-                        continue;
-                    }
-                    Err(err) => {
-                        skipped.push(notebook_display_path(&path));
-                        eprintln!(
-                            "skipping notebook {} due to read error: {err}",
-                            path.display()
-                        );
-                        continue;
-                    }
-                }
-            }
-
-            fs::write(&path, &content).with_context(|| {
-                format!("failed to write notebook template to {}", path.display())
-            })?;
-            created.push(notebook_display_path(&path));
-        }
-    }
-
-    Ok(json!({
-        "component": "notebook",
-        "action": "init",
-        "created": created,
-        "updated": updated,
-        "skipped": skipped,
-    }))
-}
-
-fn lint_notebooks(root: &Path) -> Result<NotebookLintOutcome> {
-    if !root.exists() {
-        return Ok(NotebookLintOutcome {
-            payload: json!({
-                "component": "notebook",
-                "action": "lint",
-                "status": "clean",
-                "violations": [],
-            }),
-            clean: true,
-        });
-    }
-
-    let mut violations = Vec::new();
-
-    for path in gather_notebook_paths(root)? {
-        let display = notebook_display_path(&path);
-        let data =
-            fs::read(&path).with_context(|| format!("failed to read notebook {}", display))?;
-        let notebook: serde_json::Value = serde_json::from_slice(&data)
-            .with_context(|| format!("notebook {} is not valid JSON", display))?;
-
-        if let Some(cells) = notebook.get("cells").and_then(|value| value.as_array()) {
-            for (idx, cell) in cells.iter().enumerate() {
-                let Some(cell_type) = cell.get("cell_type").and_then(|value| value.as_str()) else {
-                    continue;
-                };
-
-                if cell_type != "code" {
-                    continue;
-                }
-
-                if cell
-                    .get("outputs")
-                    .and_then(|value| value.as_array())
-                    .map(|outputs| !outputs.is_empty())
-                    .unwrap_or(false)
-                {
-                    violations.push(json!({
-                        "path": display,
-                        "cell_index": idx,
-                        "issue": "outputs_present",
-                    }));
-                }
-
-                if cell
-                    .get("execution_count")
-                    .map(|value| !value.is_null())
-                    .unwrap_or(false)
-                {
-                    violations.push(json!({
-                        "path": display,
-                        "cell_index": idx,
-                        "issue": "execution_count_set",
-                    }));
-                }
-            }
-        }
-    }
-
-    let clean = violations.is_empty();
-    let payload = json!({
-        "component": "notebook",
-        "action": "lint",
-        "status": if clean { "clean" } else { "dirty" },
-        "violations": violations,
-    });
-
-    Ok(NotebookLintOutcome { payload, clean })
-}
-
-fn clean_notebooks(root: &Path) -> Result<serde_json::Value> {
-    if !root.exists() {
-        return Ok(json!({
-            "component": "notebook",
-            "action": "clean",
-            "modified": [],
-            "untouched": [],
-        }));
-    }
-
-    let mut modified = Vec::new();
-    let mut untouched = Vec::new();
-
-    for path in gather_notebook_paths(root)? {
-        let display = notebook_display_path(&path);
-        let data =
-            fs::read(&path).with_context(|| format!("failed to read notebook {}", display))?;
-        let mut notebook: serde_json::Value = serde_json::from_slice(&data)
-            .with_context(|| format!("notebook {} is not valid JSON", display))?;
-        let mut changed = false;
-
-        if let Some(cells) = notebook
-            .get_mut("cells")
-            .and_then(|value| value.as_array_mut())
-        {
-            for cell in cells.iter_mut() {
-                let Some(cell_type) = cell.get("cell_type").and_then(|value| value.as_str()) else {
-                    continue;
-                };
-
-                if cell_type != "code" {
-                    continue;
-                }
-
-                if let Some(obj) = cell.as_object_mut() {
-                    if obj
-                        .get("outputs")
-                        .and_then(|value| value.as_array())
-                        .map(|outputs| !outputs.is_empty())
-                        .unwrap_or(false)
-                    {
-                        obj.insert("outputs".to_string(), serde_json::Value::Array(vec![]));
-                        changed = true;
-                    } else {
-                        obj.entry("outputs")
-                            .or_insert_with(|| serde_json::Value::Array(vec![]));
-                    }
-
-                    if obj
-                        .get("execution_count")
-                        .map(|value| !value.is_null())
-                        .unwrap_or(false)
-                    {
-                        obj.insert("execution_count".to_string(), serde_json::Value::Null);
-                        changed = true;
-                    } else {
-                        obj.entry("execution_count")
-                            .or_insert(serde_json::Value::Null);
-                    }
-                }
-            }
-        }
-
-        if changed {
-            let mut content = serde_json::to_string_pretty(&notebook)?;
-            content.push('\n');
-            fs::write(&path, content)
-                .with_context(|| format!("failed to write notebook {}", display))?;
-            modified.push(notebook_display_path(&path));
-        } else {
-            untouched.push(notebook_display_path(&path));
-        }
-    }
-
-    Ok(json!({
-        "component": "notebook",
-        "action": "clean",
-        "modified": modified,
-        "untouched": untouched,
-    }))
-}
-
-fn gather_notebook_paths(root: &Path) -> Result<Vec<PathBuf>> {
-    if !root.exists() {
-        return Ok(Vec::new());
-    }
-
-    let mut paths = Vec::new();
-
-    for entry in WalkDir::new(root)
-        .into_iter()
-        .filter_entry(|entry| entry.file_name() != ".ipynb_checkpoints")
-    {
-        let entry = entry?;
-        if !entry.file_type().is_file() {
-            continue;
-        }
-
-        if entry
-            .path()
-            .extension()
-            .and_then(|extension| extension.to_str())
-            != Some("ipynb")
-        {
-            continue;
-        }
-
-        paths.push(entry.into_path());
-    }
-
-    paths.sort();
-    Ok(paths)
-}
-
-fn notebook_display_path(path: &Path) -> String {
-    path.to_string_lossy().replace('\\', "/")
 }

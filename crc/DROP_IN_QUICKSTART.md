@@ -43,45 +43,6 @@ crc/drop-in/incoming/
 
 ---
 
-## 🧪 Research Notebook Ready Bundle
-
-Cleaned and validated notebooks that completed the intake pipeline live under `crc/drop-in/ready/research-notebook/`. The directory mirrors the intake structure so automation can promote the same way it ingests:
-
-```
-crc/drop-in/ready/research-notebook/
-├── manifest.json                # Family manifest consumed by CRC orchestration
-├── repos/                       # Ready notebook bundles sourced from active repos
-├── forks/                       # Reserved for fork-sourced bundles (empty placeholder)
-├── mirrors/                     # Reserved for mirror-sourced bundles (empty placeholder)
-└── stale/                       # Reserved for legacy bundles (empty placeholder)
-```
-
-### Current Ready Bundle: `research-notebook-bundle`
-
-Location: `crc/drop-in/ready/research-notebook/repos/research-notebook-bundle/`
-
-**Installation steps (run from repository root):**
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r notebooks/requirements.txt
-jupyter nbextension enable --py widgetsnbextension
-```
-
-**Promotion checks:**
-
-1. Review `manifest.json` and `evidence/ledger.json` inside the bundle for sanitization metadata.
-2. Execute the CRC digest smoke test to validate ingestion:
-   ```bash
-   cargo test -p noa_crc --test digest_smoke -- --nocapture
-   ```
-3. Append test output references to the bundle ledger before final promotion.
-
-Operators can load the bundle immediately by copying it into their working environment and following the commands above. The family-level `manifest.json` (same directory) lists the tests and datasets required for downstream automation.
-
----
-
 ## 🚀 Quick Drop Instructions
 
 ### Option 1: Drop a Folder

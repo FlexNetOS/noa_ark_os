@@ -16,8 +16,7 @@ function listRouters(): string[] {
   return output
     .split("\n")
     .map((line) => line.trim())
-    .filter((line) => line.length > 0)
-    .filter((line) => !line.startsWith("archive/"));
+    .filter((line) => line.length > 0);
 }
 
 function main() {

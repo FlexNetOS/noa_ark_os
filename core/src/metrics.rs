@@ -92,27 +92,27 @@ impl TelemetryRegistry {
             return None;
         }
 
-        let len = self.history.len() as f64;
-        let mut cpu = 0.0f64;
-        let mut memory = 0.0f64;
-        let mut concurrency = 0.0f64;
-        let mut inference_queue = 0.0f64;
-        let mut sandbox_queue = 0.0f64;
+        let len = self.history.len() as f32;
+        let mut cpu = 0.0;
+        let mut memory = 0.0;
+        let mut concurrency = 0.0;
+        let mut inference_queue = 0.0;
+        let mut sandbox_queue = 0.0;
 
         for snapshot in &self.history {
-            cpu += snapshot.cpu_utilisation as f64;
-            memory += snapshot.memory_utilisation as f64;
-            concurrency += snapshot.agent_concurrency as f64;
-            inference_queue += snapshot.inference_queue_depth as f64;
-            sandbox_queue += snapshot.sandbox_queue_depth as f64;
+            cpu += snapshot.cpu_utilisation;
+            memory += snapshot.memory_utilisation;
+            concurrency += snapshot.agent_concurrency as f32;
+            inference_queue += snapshot.inference_queue_depth as f32;
+            sandbox_queue += snapshot.sandbox_queue_depth as f32;
         }
 
         Some((
-            (cpu / len) as f32,
-            (memory / len) as f32,
-            (concurrency / len) as f32,
-            (inference_queue / len) as f32,
-            (sandbox_queue / len) as f32,
+            cpu / len,
+            memory / len,
+            concurrency / len,
+            inference_queue / len,
+            sandbox_queue / len,
         ))
     }
 
@@ -182,19 +182,9 @@ pub fn reset() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::{Mutex, OnceLock};
-
-    fn test_guard() -> std::sync::MutexGuard<'static, ()> {
-        static TEST_MUTEX: OnceLock<Mutex<()>> = OnceLock::new();
-        TEST_MUTEX
-            .get_or_init(|| Mutex::new(()))
-            .lock()
-            .expect("metrics test mutex poisoned")
-    }
 
     #[test]
     fn load_levels_follow_thresholds() {
-        let _guard = test_guard();
         reset();
         record(TelemetrySnapshot::now(0.20, 0.25, 4, 4, 4));
         assert_eq!(current_load_level(), LoadLevel::Idle);
@@ -214,7 +204,6 @@ mod tests {
 
     #[test]
     fn aggregated_returns_recent_snapshot() {
-        let _guard = test_guard();
         reset();
         let s1 = TelemetrySnapshot::now(0.20, 0.20, 4, 4, 4);
         let s2 = TelemetrySnapshot::now(0.40, 0.35, 6, 6, 6);
@@ -224,10 +213,9 @@ mod tests {
         let aggregated = aggregated().expect("expected aggregated telemetry");
         assert_eq!(aggregated.recent.timestamp, s2.timestamp);
         let expected_avg = (s1.cpu_utilisation + s2.cpu_utilisation) / 2.0;
-        let tolerance = 1e-6;
-        assert!((aggregated.rolling_cpu_utilisation - expected_avg).abs() <= tolerance);
+        assert!((aggregated.rolling_cpu_utilisation - expected_avg).abs() < 1e-6);
         assert!(
-            (aggregated.rolling_cpu_utilisation - 0.30).abs() <= tolerance,
+            (aggregated.rolling_cpu_utilisation - 0.30).abs() < f32::EPSILON,
             "unexpected rolling cpu utilisation: {}",
             aggregated.rolling_cpu_utilisation
         );

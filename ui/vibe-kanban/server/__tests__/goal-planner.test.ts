@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createWorkflowFromGoal, planGoal, slugifyStage, type GoalPayload } from "../goal-planner";
+import {
+  createWorkflowFromGoal,
+  planGoal,
+  slugifyStage,
+  type GoalPayload,
+} from "../goal-planner";
 
 describe("goal-planner", () => {
   it("creates deterministic workflow definitions", () => {
@@ -45,7 +50,9 @@ describe("goal-planner", () => {
           issuedAt: "2024-06-01T00:00:00.000Z",
           expiresAt: "2024-06-01T04:00:00.000Z",
         },
-        stages: [{ id: "goal-intake", name: "Goal Intake", state: "pending" }],
+        stages: [
+          { id: "goal-intake", name: "Goal Intake", state: "pending" },
+        ],
       }),
     });
 
@@ -53,7 +60,7 @@ describe("goal-planner", () => {
 
     expect(fetchImpl).toHaveBeenCalledWith(
       "http://localhost:8787/ui/workflows",
-      expect.objectContaining({ method: "POST" }),
+      expect.objectContaining({ method: "POST" })
     );
     expect(result.workflowId).toBe("goal-123");
     expect(result.resumeToken?.workflowId).toBe("goal-123");

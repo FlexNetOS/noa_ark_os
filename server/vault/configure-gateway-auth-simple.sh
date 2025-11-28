@@ -5,8 +5,23 @@
 echo "🔐 Configuring Gateway Authentication..."
 echo "========================================"
 
-# Set the path to the auth config file
-AUTH_CONFIG_FILE="/home/noa/dev/workspace/noa_ark_os/noa_ark_os/server/vault/runtime/gateway_auth.json"
+# Resolve base Vault home (defaults to ~/.noa/vault) and allow overrides via NOA_VAULT_HOME
+NOA_VAULT_HOME="${NOA_VAULT_HOME:-"$HOME/.noa/vault"}"
+export NOA_VAULT_HOME
+
+echo "📁 Using Vault home: $NOA_VAULT_HOME"
+echo "   (override by exporting NOA_VAULT_HOME=/custom/path before running this script)"
+
+# Set the path to the auth config file under the managed Vault home
+AUTH_CONFIG_FILE="$NOA_VAULT_HOME/runtime/gateway_auth.json"
+REPO_FALLBACK_AUTH_CONFIG="$(dirname "$0")/runtime/gateway_auth.json"
+
+# Seed the managed runtime file from the repository copy when needed
+if [ ! -f "$AUTH_CONFIG_FILE" ] && [ -f "$REPO_FALLBACK_AUTH_CONFIG" ]; then
+    mkdir -p "$(dirname "$AUTH_CONFIG_FILE")"
+    cp "$REPO_FALLBACK_AUTH_CONFIG" "$AUTH_CONFIG_FILE"
+    echo "📄 Seeded $AUTH_CONFIG_FILE from $REPO_FALLBACK_AUTH_CONFIG"
+fi
 
 if [ -f "$AUTH_CONFIG_FILE" ]; then
     echo "✅ Found local auth config: $AUTH_CONFIG_FILE"

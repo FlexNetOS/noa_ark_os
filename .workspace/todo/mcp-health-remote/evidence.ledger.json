@@ -1,0 +1,68 @@
+{
+  "task": "Fork MCP Health Guard",
+  "timestamp_utc": "2025-11-20T06:07:43Z",
+  "artifacts": [
+    {
+      "id": "A1-health-script",
+      "path": "cicd/scripts/codex-mcp-health.sh",
+      "sha256": "a9c88daaed15c520e5a4d33abe2081ba389da5e3d39e22fdfa8a6759e491e192",
+      "notes": "Remote-aware guard with explicit MCP tool validation and remote-only mode."
+    },
+    {
+      "id": "A2-bootstrap",
+      "path": "scripts/codex-bootstrap.sh",
+      "sha256": "2c402e35c23a06cc2feafff26fc71562d9a44609fee0a402915d51e2aff3f807",
+      "notes": "Python interpreter detection ensures macOS/Windows shells run the config patcher."
+    },
+    {
+      "id": "A3-workflow",
+      "path": ".github/workflows/noa-mcp-health.yml",
+      "sha256": "399ca575f7e22d07c526061e4fd71516cf6bd8aeb2badd64c06a863c8677193b",
+      "notes": "Fork-only matrix workflow that boots noa_tools_agent and runs the health guard on ubuntu/macos/win."
+    },
+    {
+      "id": "A4-docs",
+      "path": "docs/guides/dev-environment-cli.md",
+      "sha256": "fc9e2f518c6d0f9ad25ac068a5c8fbf11521306d9dbcecf26d85e2e2c2393149",
+      "notes": "Guide now records macOS/Windows bootstrap steps, remote env instructions, and the new workflow."
+    },
+    {
+      "id": "A5-local-log",
+      "path": "logs/codex-mcp-health/local.log",
+      "sha256": "5ea80c5a199e1db36d37b1e03069adb574aa0132e6be6c8cbf8889c23eadcd58",
+      "notes": "Successful local run capturing codex mcp list + noa.list_files output."
+    },
+    {
+      "id": "A6-remote-log",
+      "path": "logs/codex-mcp-health/remote.log",
+      "sha256": "4bca87059e6294397f0e0f1dab947079eefcdb3447393e6f7cad75e9460efef6",
+      "notes": "Remote-only mode pass while an external noa_tools_agent provided the HTTP surface."
+    }
+  ],
+  "commands": [
+    {
+      "id": "CMD-bootstrap",
+      "cwd": "/home/noa/dev/workspace/noa_ark_os/noa_ark_os",
+      "command": "source ./server/tools/activate-cargo-wsl.sh && scripts/codex-bootstrap.sh",
+      "exit_code": 0,
+      "timestamp_utc": "2025-11-20T06:02:00Z",
+      "notes": "Reinstalled codex + noa-mcp-server after adding PYTHON_BIN fallback."
+    },
+    {
+      "id": "CMD-health-local",
+      "cwd": "/home/noa/dev/workspace/noa_ark_os/noa_ark_os",
+      "command": "source ./server/tools/activate-cargo-wsl.sh && PATH=\"$HOME/.local/bin:$PATH\" cicd/scripts/codex-mcp-health.sh",
+      "exit_code": 0,
+      "timestamp_utc": "2025-11-20T06:04:30Z",
+      "notes": "Default mode validates codex mcp list + noa.list_files via locally spawned noa_tools_agent."
+    },
+    {
+      "id": "CMD-health-remote",
+      "cwd": "/home/noa/dev/workspace/noa_ark_os/noa_ark_os",
+      "command": "source ./server/tools/activate-cargo-wsl.sh && PATH=\"$HOME/.local/bin:$PATH\" bash -c 'export NOA_WORKSPACE_ROOT=\"$PWD\"; export NOA_TOOLS_ADDRESS=127.0.0.1:8910; cargo run -p noa-tools-agent --bin noa-tools-agent --quiet > logs/codex-mcp-health/remote-agent.log 2>&1 & AGENT_PID=$!; sleep 5; NOA_MCP_REMOTE_ONLY=1 NOA_TOOLS_SERVER_URL=\"http://127.0.0.1:8910/\" cicd/scripts/codex-mcp-health.sh; kill $AGENT_PID'",
+      "exit_code": 0,
+      "timestamp_utc": "2025-11-20T06:06:10Z",
+      "notes": "Simulated a remote-only deployment by running noa_tools_agent separately and pointing the guard at it."
+    }
+  ]
+}

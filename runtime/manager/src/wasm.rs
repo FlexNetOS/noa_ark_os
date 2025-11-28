@@ -1,3 +1,8 @@
+type ProbeStorePipes = (
+    Store<ProbeState>,
+    WritePipe<Cursor<Vec<u8>>>,
+    WritePipe<Cursor<Vec<u8>>>,
+);
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
@@ -10,12 +15,6 @@ use wasmtime::ResourceLimiter;
 use wasmtime::{Config, Engine, Linker, Module, Store};
 use wasmtime_wasi::sync::{add_to_linker, WasiCtxBuilder};
 use wasmtime_wasi::{I32Exit, WasiCtx};
-
-type ProbeStore = (
-    Store<ProbeState>,
-    WritePipe<Cursor<Vec<u8>>>,
-    WritePipe<Cursor<Vec<u8>>>,
-);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WasmProbeConfig {
@@ -149,7 +148,7 @@ impl WasmProbeRunner {
         })
     }
 
-    fn build_store(&self, args: &[String]) -> Result<ProbeStore, WasmProbeError> {
+    fn build_store(&self, args: &[String]) -> Result<ProbeStorePipes, WasmProbeError> {
         let stdout_pipe = WritePipe::new_in_memory();
         let stderr_pipe = WritePipe::new_in_memory();
 
