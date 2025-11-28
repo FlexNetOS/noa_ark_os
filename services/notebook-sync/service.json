@@ -1,0 +1,5 @@
+{
+  "id": "notebook-sync",
+  "version": "0.1.0",
+  "interfaces": ["notebook-sync-api"]
+}

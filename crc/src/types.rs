@@ -25,10 +25,10 @@ pub enum Priority {
 /// Sandbox model assignment
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum SandboxModel {
-    ModelA,  // Feature development
-    ModelB,  // Bug fixes
-    ModelC,  // Experimental
-    ModelD,  // Integration
+    ModelA, // Feature development
+    ModelB, // Bug fixes
+    ModelC, // Experimental
+    ModelD, // Integration
 }
 
 /// Drop manifest

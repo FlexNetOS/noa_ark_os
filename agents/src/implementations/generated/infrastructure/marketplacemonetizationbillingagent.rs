@@ -1,5 +1,5 @@
 //! MarketplaceMonetizationBillingAgent - Auto-generated
-//! 
+//!
 //! Manages billing, licensing, and payment for commercial plugins and services; escalates for payment errors or unlicensed use.
 
 use crate::unified_types::*;
@@ -48,22 +48,22 @@ impl Marketplacemonetizationbillingagent {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Ready;
         Ok(())
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -78,13 +78,13 @@ impl Default for Marketplacemonetizationbillingagent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = Marketplacemonetizationbillingagent::new();
         assert_eq!(agent.metadata().name, "MarketplaceMonetizationBillingAgent");
     }
-    
+
     #[tokio::test]
     async fn test_agent_initialization() {
         let mut agent = Marketplacemonetizationbillingagent::new();

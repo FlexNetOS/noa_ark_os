@@ -1,0 +1,28 @@
+<svg width="720" height="220" viewBox="0 0 720 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="720" height="220" rx="24" fill="#040109"/>
+  <g transform="translate(24 28)">
+    <text x="0" y="16" fill="#F8FAFC" font-family="Inter" font-size="14" opacity="0.8">Shared components mapped to platform renderers</text>
+    <g transform="translate(0 40)">
+      <rect width="200" height="140" rx="20" fill="rgba(20,17,38,0.8)" stroke="rgba(99,102,241,0.4)" stroke-width="2"/>
+      <text x="20" y="32" fill="#F8FAFC" font-family="Inter" font-size="16">Button.Primary</text>
+      <text x="20" y="60" fill="#F8FAFC" font-family="Inter" font-size="12" opacity="0.6">web ➜ React gradient</text>
+      <text x="20" y="80" fill="#F8FAFC" font-family="Inter" font-size="12" opacity="0.6">desktop ➜ Tauri renderer</text>
+      <text x="20" y="100" fill="#F8FAFC" font-family="Inter" font-size="12" opacity="0.6">mobile ➜ RN TouchableOpacity</text>
+      <text x="20" y="120" fill="#F8FAFC" font-family="Inter" font-size="12" opacity="0.6">XR ➜ Spatial badge</text>
+    </g>
+    <g transform="translate(240 40)">
+      <rect width="200" height="140" rx="20" fill="rgba(20,17,38,0.8)" stroke="rgba(99,102,241,0.4)" stroke-width="2"/>
+      <text x="20" y="32" fill="#F8FAFC" font-family="Inter" font-size="16">Surface.Glass</text>
+      <text x="20" y="60" fill="#F8FAFC" font-family="Inter" font-size="12" opacity="0.6">Blurred overlay</text>
+      <text x="20" y="80" fill="#F8FAFC" font-family="Inter" font-size="12" opacity="0.6">WCAG AA contrast</text>
+      <text x="20" y="100" fill="#F8FAFC" font-family="Inter" font-size="12" opacity="0.6">XR depth = 0.1m</text>
+    </g>
+    <g transform="translate(480 40)">
+      <rect width="200" height="140" rx="20" fill="rgba(20,17,38,0.8)" stroke="rgba(99,102,241,0.4)" stroke-width="2"/>
+      <text x="20" y="32" fill="#F8FAFC" font-family="Inter" font-size="16">PresenceBar</text>
+      <text x="20" y="60" fill="#F8FAFC" font-family="Inter" font-size="12" opacity="0.6">Real-time avatars</text>
+      <text x="20" y="80" fill="#F8FAFC" font-family="Inter" font-size="12" opacity="0.6">WebSocket presence</text>
+      <text x="20" y="100" fill="#F8FAFC" font-family="Inter" font-size="12" opacity="0.6">HRTF audio focus</text>
+    </g>
+  </g>
+</svg>

@@ -13,6 +13,11 @@ pub mod state;
 pub mod workflows;
 
 use std::collections::HashMap;
+use std::sync::Arc;
+
+use noa_core::capabilities::{CapabilityError, KernelHandle};
+use noa_core::config::manifest::CAPABILITY_PROCESS;
+use noa_core::process::ProcessService;
 
 pub use module::{ModuleCapability, ModuleDescriptor, ShellModule};
 pub use shell::{ShellBuilder, UnifiedShell};
@@ -134,6 +139,31 @@ pub fn init(platform: Platform) -> Result<UIContext, &'static str> {
     };
 
     Ok(context)
+}
+
+/// Kernel-aware bridge for UI modules to request capabilities lazily.
+#[derive(Clone)]
+pub struct KernelUiBridge {
+    kernel: KernelHandle,
+}
+
+impl KernelUiBridge {
+    pub fn new(kernel: KernelHandle) -> Self {
+        Self { kernel }
+    }
+
+    pub fn request_process_service(&self) -> Result<Arc<ProcessService>, CapabilityError> {
+        self.kernel.request::<ProcessService>(CAPABILITY_PROCESS)
+    }
+}
+
+/// Initialize the UI system and attach a kernel handle for capability requests.
+pub fn init_with_kernel(
+    platform: Platform,
+    kernel: KernelHandle,
+) -> Result<(UIContext, KernelUiBridge), &'static str> {
+    let context = init(platform)?;
+    Ok((context, KernelUiBridge::new(kernel)))
 }
 
 /// Convenience helper to bootstrap the unified shell and synchronise data into [`UIState`].

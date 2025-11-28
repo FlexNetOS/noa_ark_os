@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://noa.local/schema/archive.ledger.schema.json",
+  "title": "Audit / Archival Ledger Entry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["timestamp", "drop_id", "sandbox", "action", "details", "artifacts"],
+  "properties": {
+    "timestamp": {"type": "integer", "minimum": 0},
+    "drop_id": {"type": "string", "minLength": 4},
+    "sandbox": {"type": "string"},
+    "action": {"type": "string"},
+    "actor": {"type": ["string", "null"]},
+    "trust_score": {"type": ["number", "integer", "null"]},
+    "details": {"type": "string"},
+    "artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"type": "string"}
+    }
+  }
+}

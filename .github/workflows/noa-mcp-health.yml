@@ -1,0 +1,72 @@
+name: Fork MCP Health Guard
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+
+permissions:
+  contents: read
+
+jobs:
+  codex-mcp-health:
+    if: github.event.pull_request.head.repo.fork == true
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+      fail-fast: false
+    defaults:
+      run:
+        shell: bash
+    env:
+      NOA_TOOLS_SERVER_URL: http://127.0.0.1:8910/
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Add local bin to PATH
+        run: echo "${HOME}/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Bootstrap Codex CLI
+        run: scripts/codex-bootstrap.sh
+
+      - name: Build noa-tools-agent
+        run: cargo build -p noa-tools-agent --bin noa-tools-agent
+
+      - name: Start noa-tools-agent (remote target)
+        run: |
+          set -euo pipefail
+          export NOA_WORKSPACE_ROOT="$PWD"
+          export NOA_TOOLS_ADDRESS="127.0.0.1:8910"
+          cargo run -p noa-tools-agent --bin noa-tools-agent --quiet > noa-tools-agent.log 2>&1 &
+          echo $! > noa-tools-agent.pid
+          sleep 5
+
+      - name: Run Codex MCP health check (remote-only)
+        env:
+          NOA_MCP_REMOTE_ONLY: '1'
+        run: cicd/scripts/codex-mcp-health.sh
+
+      - name: Stop noa-tools-agent
+        if: always()
+        run: |
+          if [[ -f noa-tools-agent.pid ]]; then
+            AGENT_PID=$(cat noa-tools-agent.pid)
+            kill "$AGENT_PID" >/dev/null 2>&1 || true
+            wait "$AGENT_PID" 2>/dev/null || true
+          fi
+          if [[ -f noa-tools-agent.log ]]; then
+            tail -n 200 noa-tools-agent.log || true
+          fi

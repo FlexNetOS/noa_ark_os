@@ -7,9 +7,17 @@ description = "Core operating system layer for NOA ARK OS"
 license = "MIT"
 
 [dependencies]
-lazy_static = "1.4"
-serde = { version = "1.0", features = ["derive"] }
+serde = { workspace = true }
 serde_yaml = "0.9"
+serde_json = { workspace = true }
+thiserror = "1.0"
+sysinfo = { version = "0.30", features = ["serde"] }
+walkdir = "2.5"
+syn = { version = "2.0", features = ["full", "visit"] }
+axum = { version = "0.7", features = ["json"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal"] }
+clap = { version = "4.5", features = ["derive"] }
+toml = "0.8"
 
 [lib]
 name = "noa_core"
@@ -19,7 +27,13 @@ path = "src/lib.rs"
 name = "noa_kernel"
 path = "src/bin/kernel.rs"
 
-[profile.release]
-opt-level = 3
-lto = true
-codegen-units = 1
+[[bin]]
+name = "noa_host_control"
+path = "src/bin/host_control.rs"
+
+[[bin]]
+name = "noa_world"
+path = "src/bin/world.rs"
+
+[dev-dependencies]
+tempfile = "3.8"

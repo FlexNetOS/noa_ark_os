@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "noa-server.fullname" . }}
+  labels:
+    {{- include "noa-server.labels" . | nindent 4 }}
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    app.kubernetes.io/name: {{ include "noa-server.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: http
+<<<<<<< Updated upstream
+=======
+<<<<<<< HEAD
+>>>>>>> Stashed changes
+      protocol: TCP
+    - name: metrics
+      port: {{ .Values.service.metricsPort }}
+      targetPort: metrics
+      protocol: TCP
+<<<<<<< Updated upstream
+=======
+=======
+    - name: metrics
+      port: {{ .Values.service.metricsPort }}
+      targetPort: metrics
+>>>>>>> 4931f485 (server: add docker-compose stack, Helm chart, env_manager helper; README: document containerized deployment)
+>>>>>>> Stashed changes

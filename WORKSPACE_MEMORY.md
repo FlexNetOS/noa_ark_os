@@ -19,6 +19,13 @@
 
 ---
 
+### Task 1 – Documentation staging cleanup (2025-11-19)
+- Keep only the curated CLI/doc files staged for merge: `docs/guides/dev-environment-cli.md`, `docs/plans/roadmap.md`, `docs/plans/roadmaps/cli_tool_roadmap.{md,todo.xml}`, `docs/roadmap/cli_config_migration_checklist.md`.
+- Treat `docs/api/search.index/**` as generated Docusaurus artifacts; they remain locally generated but are not staged/committed (they already sit behind `.gitignore`).
+- Treat `.venv-notebooks/` as disposable notebook tooling; added explicit ignore to keep the virtualenv strictly local.
+- Treat security scan exports under `tools/security/shim/.workspace/indexes/**` as local cache; ignore and regenerate on demand instead of committing.
+- Next steps after this cleanup: finish notebook conflict resolution, then unblock Go/Cargo builds for launch.
+
 ## 📂 Workspace Structure
 
 ### Location
@@ -90,6 +97,15 @@ D:\dev\workspaces\noa_ark_os\
 - Cargo Check (Portable)
 - Activate Portable Cargo
 
+### Portable PowerShell + CUDA/Llama Enablement (2025-11-21)
+- `server/tools/setup-portable-pwsh.{sh,ps1}` gained `--include-desktop` / `PWSH_INCLUDE_DESKTOP=1`, so a single run on Linux provisions Linux + macOS (x64/arm64) + Windows bundles and records their hashes in `server/tools/pwsh-portable.manifest.json`.
+- `server/tools/activate-toolchains.sh` now guards against double activation, propagates `NOA_SKIP_AUTO_PWSH` when cascading into Cargo/Node, and exports `NOA_TOOLCHAINS_ACTIVATED` for launchers.
+- `scripts/lib/ensure_no_duplicate_tasks.sh` invokes `tools/automation/check_portable_pwsh.py --ensure-exec --require-current`, emitting a manifest claim and failing fast with guidance to rerun `setup-portable-pwsh.sh --include-desktop` if anything drifts.
+- `scripts/full_stack_launch.sh` logs manifest/binary/current-link hashes inside the phase summary, so `pwsh-activation.json` plus console output satisfy Triple-Verification without manual parsing.
+- CUDA + Llama helpers (`scripts/setup/setup-cuda.ps1`, `scripts/dev/setup-llama-cpp.ps1`, `scripts/dev/start-llama-server.ps1`) run in portable PowerShell on Linux, download the Linux llama.cpp binaries, and ship a clearly-marked placeholder GGUF so automation can exercise the phase without a multi-GB model (real deployments must swap in an actual model file).
+- `server/tools/activate-{cargo-wsl,node}.sh` now redirect to `activate-toolchains.sh` (unless explicitly disabled) so even legacy entry points activate all toolchains and feed the launcher with manifest/binary/current evidence plus NOA_* env flags.
+- `tools/automation/check_portable_pwsh.py` emits both the resolved binaries and the symlink paths (pwsh-portable/bin/pwsh + pwsh-portable/current) so duplicate guards/CI logs can assert the actual link topology, not just the targets.
+
 ---
 
 ## 🚀 Quick Commands
@@ -135,6 +151,15 @@ cargo test
 # 6. Run
 cargo run
 ```
+
+---
+
+## 🧠 Memory Indexes & Retrieval Performance
+
+- **Hierarchical Stores:** Long-term context is persisted to `.workspace/memory/long_term.cbor` while active sessions stream to `session_<id>.cbor` using compact CBOR encoding.
+- **Indexer Output:** Every core bootstrap now regenerates `ast_graph.json`, `ownership_graph.json`, and `config_graph.json` under `.workspace/indexes/`, keeping dependency views fresh for planners.
+- **Retrieval SLA:** Incremental fetch APIs guarantee <100 ms p95 retrieval across combined session + long-term windows (validated in automated tests).
+- **Scorekeeper Hooks:** Workflow instrumentation records context byte usage and retrieval latency, penalising workflows that exceed the 16 KiB default budget. Penalty and p95 stats surface in goal metric snapshots for downstream automation.
 
 ---
 

@@ -1,5 +1,5 @@
 //! PCOperatorAgent_DevOps - Auto-generated
-//! 
+//!
 //! Executes system-level and Docker operations for DevOps stack.
 
 use crate::unified_types::*;
@@ -23,7 +23,8 @@ impl PcoperatoragentDevops {
             category: AgentCategory::Other,
             agent_type: AgentType::Worker,
             language: AgentLanguage::Rust,
-            description: "Executes system-level and Docker operations for DevOps stack.".to_string(),
+            description: "Executes system-level and Docker operations for DevOps stack."
+                .to_string(),
             role: "Micro Agent".to_string(),
             purpose: "Executes system-level and Docker operations for DevOps stack.".to_string(),
             state: AgentState::Created,
@@ -48,22 +49,22 @@ impl PcoperatoragentDevops {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Ready;
         Ok(())
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -78,13 +79,13 @@ impl Default for PcoperatoragentDevops {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = PcoperatoragentDevops::new();
         assert_eq!(agent.metadata().name, "PCOperatorAgent_DevOps");
     }
-    
+
     #[tokio::test]
     async fn test_agent_initialization() {
         let mut agent = PcoperatoragentDevops::new();

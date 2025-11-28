@@ -1,0 +1,23 @@
+name: Validate .todo schema
+on:
+  pull_request:
+    paths: [ "agentaskit-production/.todo" ]
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate .todo lines
+        run: |
+          awk 'BEGIN{e=0}
+            /^- \[ \]/{
+              line=$0;
+              if (line !~ /\[REF:[^]]+\]/) {print "Missing [REF]: " line; e=1}
+              if (line !~ /owner:@[A-Za-z0-9_\-]+/) {print "Missing owner:@user: " line; e=1}
+              if (line !~ /deps:\[[^]]*\]/) {print "Missing deps:[...]: " line; e=1}
+              if (line !~ /acc:\"[^"]+\"/) {print "Missing acc:\"...\": " line; e=1}
+              if (line !~ /evid:\"[^"]+\"/) {print "Missing evid:\"...\": " line; e=1}
+            }
+            END{exit e}' agentaskit-production/.todo

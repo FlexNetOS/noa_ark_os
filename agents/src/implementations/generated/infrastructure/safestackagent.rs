@@ -1,5 +1,5 @@
 //! SafeStackAgent - Auto-generated
-//! 
+//!
 //! Performs security scans and dependency checks; escalates for unpatchable vulnerabilities or zero-days.
 
 use crate::unified_types::*;
@@ -48,22 +48,22 @@ impl Safestackagent {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Ready;
         Ok(())
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -78,13 +78,13 @@ impl Default for Safestackagent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = Safestackagent::new();
         assert_eq!(agent.metadata().name, "SafeStackAgent");
     }
-    
+
     #[tokio::test]
     async fn test_agent_initialization() {
         let mut agent = Safestackagent::new();

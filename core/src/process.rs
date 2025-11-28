@@ -1,7 +1,8 @@
 //! Process management subsystem
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Mutex, OnceLock};
 
 pub type ProcessId = u64;
 
@@ -20,12 +21,17 @@ pub enum ProcessState {
     Terminated,
 }
 
-lazy_static::lazy_static! {
-    static ref PROCESS_TABLE: Arc<Mutex<HashMap<ProcessId, Process>>> = 
-        Arc::new(Mutex::new(HashMap::new()));
+fn process_table() -> &'static Mutex<HashMap<ProcessId, Process>> {
+    static PROCESS_TABLE: OnceLock<Mutex<HashMap<ProcessId, Process>>> = OnceLock::new();
+    PROCESS_TABLE.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
-static mut NEXT_PID: ProcessId = 1;
+fn next_pid() -> ProcessId {
+    static NEXT_PID: OnceLock<AtomicU64> = OnceLock::new();
+    NEXT_PID
+        .get_or_init(|| AtomicU64::new(1))
+        .fetch_add(1, Ordering::SeqCst)
+}
 
 /// Initialize process management
 pub fn init() -> Result<(), &'static str> {
@@ -33,28 +39,53 @@ pub fn init() -> Result<(), &'static str> {
     Ok(())
 }
 
-/// Create a new process
-pub fn create_process(name: String) -> Result<ProcessId, &'static str> {
-    let pid = unsafe {
-        let pid = NEXT_PID;
-        NEXT_PID += 1;
-        pid
-    };
-    
+fn create_process_inner(name: String) -> Result<ProcessId, &'static str> {
+    let pid = next_pid();
     let process = Process {
         id: pid,
         name,
         state: ProcessState::Ready,
     };
-    
-    let mut table = PROCESS_TABLE.lock().unwrap();
+
+    let mut table = process_table().lock().unwrap();
     table.insert(pid, process);
-    
+
     Ok(pid)
 }
 
-/// Get process by ID
-pub fn get_process(pid: ProcessId) -> Option<Process> {
-    let table = PROCESS_TABLE.lock().unwrap();
+fn get_process_inner(pid: ProcessId) -> Option<Process> {
+    let table = process_table().lock().unwrap();
     table.get(&pid).cloned()
+}
+
+/// Capability handle wrapping process-management operations.
+#[derive(Clone, Default)]
+pub struct ProcessService;
+
+impl ProcessService {
+    /// Create a new process through the kernel-managed capability.
+    pub fn create_process(&self, name: String) -> Result<ProcessId, &'static str> {
+        create_process_inner(name)
+    }
+
+    /// Fetch a process record by identifier.
+    pub fn get_process(&self, pid: ProcessId) -> Option<Process> {
+        get_process_inner(pid)
+    }
+
+    /// List all tracked processes.
+    pub fn list_processes(&self) -> Vec<Process> {
+        let table = process_table().lock().unwrap();
+        table.values().cloned().collect()
+    }
+}
+
+/// Create a new process.
+pub fn create_process(name: String) -> Result<ProcessId, &'static str> {
+    ProcessService.create_process(name)
+}
+
+/// Get process by ID.
+pub fn get_process(pid: ProcessId) -> Option<Process> {
+    ProcessService.get_process(pid)
 }

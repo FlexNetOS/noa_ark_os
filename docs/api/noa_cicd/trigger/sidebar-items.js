@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Error","PipelineStatus","SandboxModel"],"struct":["PipelineResult","TriggerConfig","TriggerEvent","TriggerManager","TrustDecision"],"type":["Result"]};

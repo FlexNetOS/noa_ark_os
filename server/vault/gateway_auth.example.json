@@ -1,0 +1,13 @@
+{
+  "api_keys": ["key-123", "key-ops", "key-agents"],
+  "mtls": {
+    "allowed_fingerprints": ["agent-cert", "control-plane"],
+    "agent_san_prefix": "agent:",
+    "control_plane_san": "gateway.noaark"
+  },
+  "oidc": {
+    "issuer": "https://auth.noaark.dev",
+    "audience": "noa-gateway",
+    "hs256_secret": "replace-with-prod-secret"
+  }
+}

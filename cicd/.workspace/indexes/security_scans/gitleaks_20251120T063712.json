@@ -1,0 +1,11 @@
+{
+  "findings": [
+    {
+      "description": "secret-like token 'SECRET=' detected",
+      "file": "secrets.env",
+      "severity": "critical"
+    }
+  ],
+  "generated_at": "2025-11-20T06:37:12.697375160Z",
+  "tool": "gitleaks"
+}

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["GraphError"],"fn":["collect_rust_symbol","collect_symbol","collect_typescript_symbol","extract_identifier","find_enclosing_function","language_for","normalise_signature","relative_file","write_jsonl"],"mod":["notebook"],"struct":["SymbolEdge","SymbolGraph","SymbolGraphBuilder","SymbolNode"]};

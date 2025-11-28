@@ -1,18 +1,44 @@
 """CI/CD orchestration endpoints."""
-"""Continuous integration and sandbox orchestration endpoints."""
-
 from __future__ import annotations
 
 from datetime import datetime
 from typing import Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
 from pydantic import BaseModel, Field
 
 from ..event_bus import GLOBAL_EVENT_BUS
 
 router = APIRouter()
+
+
+class AgentApprovalRequirement(BaseModel):
+    """Agent role and trust requirement."""
+
+    role: str
+    minimum_trust_score: float
+    evidence_tags: List[str] = Field(default_factory=list)
+
+
+class AgentApproval(BaseModel):
+    """Recorded approval from an automation agent."""
+
+    role: str
+    agent_id: str
+    trust_score: float
+    evidence_tags: List[str] = Field(default_factory=list)
+    evidence_references: List[str] = Field(default_factory=list)
+    recorded_at: datetime
+
+
+class AgentApprovalRequest(BaseModel):
+    """Request payload for approving a pipeline."""
+
+    role: str
+    agent_id: str
+    trust_score: float
+    evidence_tags: List[str] = Field(default_factory=list)
+    evidence_references: List[str] = Field(default_factory=list)
 
 
 class Pipeline(BaseModel):
@@ -25,6 +51,8 @@ class Pipeline(BaseModel):
     coverage: float
     queued_runs: int
     health_score: float
+    agent_requirements: List[AgentApprovalRequirement] = Field(default_factory=list)
+    agent_approvals: List[AgentApproval] = Field(default_factory=list)
 
 
 class MergePlan(BaseModel):
@@ -68,15 +96,25 @@ PIPELINES: Dict[str, Pipeline] = {
         coverage=92.4,
         queued_runs=1,
         health_score=0.98,
+        agent_requirements=[],
+        agent_approvals=[],
     ),
     "pipeline-develop": Pipeline(
         id="pipeline-develop",
         branch="develop",
-        status="failing",
+        status="agent-review",
         last_run=datetime.fromisoformat("2025-01-14T09:45:00"),
         coverage=87.1,
         queued_runs=3,
         health_score=0.74,
+        agent_requirements=[
+            AgentApprovalRequirement(
+                role="release-agent",
+                minimum_trust_score=0.8,
+                evidence_tags=["ledger:deploy"],
+            )
+        ],
+        agent_approvals=[],
     ),
     "pipeline-experimental": Pipeline(
         id="pipeline-experimental",
@@ -86,6 +124,8 @@ PIPELINES: Dict[str, Pipeline] = {
         coverage=81.2,
         queued_runs=0,
         health_score=0.88,
+        agent_requirements=[],
+        agent_approvals=[],
     ),
 }
 
@@ -199,7 +239,68 @@ async def rerun_pipeline(pipeline_id: str) -> RerunResponse:
         {"type": "ci_rerun", "pipeline_id": pipeline_id},
     )
     return {"status": "queued", "pipeline_id": pipeline_id}
-    return RerunResponse(status="queued", pipeline_id=pipeline_id)
+
+
+@router.post("/pipelines/{pipeline_id}/approve", response_model=Pipeline)
+async def approve_pipeline_agent(
+    pipeline_id: str, request: AgentApprovalRequest
+) -> Pipeline:
+    """Approve a pipeline via agent trust policies."""
+
+    pipeline = PIPELINES.get(pipeline_id)
+    if pipeline is None:
+        raise HTTPException(status_code=404, detail="Pipeline not found")
+
+    requirement = next(
+        (req for req in pipeline.agent_requirements if req.role == request.role),
+        None,
+    )
+    if requirement is None:
+        raise HTTPException(status_code=400, detail="Agent role not required")
+
+    missing_tags = [
+        tag for tag in requirement.evidence_tags if tag not in request.evidence_tags
+    ]
+    if request.trust_score < requirement.minimum_trust_score or missing_tags:
+        PIPELINES[pipeline_id] = pipeline.model_copy(update={"status": "agent-escalated"})
+        reason = (
+            "trust score below requirement"
+            if request.trust_score < requirement.minimum_trust_score
+            else f"missing evidence tags: {', '.join(missing_tags)}"
+        )
+        raise HTTPException(status_code=409, detail=reason)
+
+    approvals = [
+        approval
+        for approval in pipeline.agent_approvals
+        if not (approval.role == request.role and approval.agent_id == request.agent_id)
+    ]
+    approvals.append(
+        AgentApproval(
+            role=request.role,
+            agent_id=request.agent_id,
+            trust_score=request.trust_score,
+            evidence_tags=request.evidence_tags,
+            evidence_references=request.evidence_references,
+            recorded_at=datetime.utcnow(),
+        )
+    )
+    outstanding = [
+        req.role
+        for req in pipeline.agent_requirements
+        if not any(
+            approval.role == req.role
+            and approval.trust_score >= req.minimum_trust_score
+            and all(tag in approval.evidence_tags for tag in req.evidence_tags)
+            for approval in approvals
+        )
+    ]
+    new_status = "agent-approved" if not outstanding else "agent-review"
+    updated = pipeline.model_copy(
+        update={"agent_approvals": approvals, "status": new_status}
+    )
+    PIPELINES[pipeline_id] = updated
+    return updated
 
 
 @router.get("/merges", response_model=List[MergePlan])

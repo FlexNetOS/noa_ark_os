@@ -1,5 +1,5 @@
 //! MarketplaceDiscoveryAgent - Auto-generated
-//! 
+//!
 //! Discovers and catalogs plugins/apps from public and private marketplaces; escalates for new marketplace integrations or credentialed API access.
 
 use crate::unified_types::*;
@@ -48,22 +48,22 @@ impl Marketplacediscoveryagent {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Ready;
         Ok(())
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -78,13 +78,13 @@ impl Default for Marketplacediscoveryagent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = Marketplacediscoveryagent::new();
         assert_eq!(agent.metadata().name, "MarketplaceDiscoveryAgent");
     }
-    
+
     #[tokio::test]
     async fn test_agent_initialization() {
         let mut agent = Marketplacediscoveryagent::new();
