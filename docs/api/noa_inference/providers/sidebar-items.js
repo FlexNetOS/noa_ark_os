@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["anthropic","llama_cpp","openai"],"struct":["ProviderMetadata"],"trait":["Provider"]};

@@ -165,13 +165,13 @@ export async function planGoal(goal: GoalPayload, options: PlannerOptions = {}):
   const mergedStages = payload.stages.map((stage) => {
     const definition = stageMap.get(stage.id);
     return (
-      definition ?? {
+      definition ?? ({
         id: stage.id,
         name: stage.name,
         stageType: "sequential",
         dependsOn: [],
         tasks: [],
-      }
+      } as WorkflowStageDefinition)
     );
   });
 

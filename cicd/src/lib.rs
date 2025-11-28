@@ -1,5 +1,6 @@
 //! CI/CD System - Continuous Delivery focused with CRC integration
 
+pub mod ledger;
 pub mod trigger;
 pub mod validation;
 
@@ -137,23 +138,12 @@ impl Pipeline {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ScannerFlags {
     pub syft: bool,
     pub grype: bool,
     pub trivy: bool,
     pub gitleaks: bool,
-}
-
-impl Default for ScannerFlags {
-    fn default() -> Self {
-        Self {
-            syft: false,
-            grype: false,
-            trivy: false,
-            gitleaks: false,
-        }
-    }
 }
 
 fn map_scan_status(status: &ScanStatus) -> SecurityScanStatus {
@@ -978,13 +968,13 @@ impl CICDSystem {
         pipeline_id: &str,
         tool: &str,
         runner: Runner,
-        workspace: &PathBuf,
+        workspace: &Path,
     ) -> Result<SecurityScanReport, String>
     where
         Runner: Fn(&ScanConfig) -> Result<ScanResult, noa_security_shim::ShimError>,
     {
         let config = ScanConfig {
-            target: workspace.clone(),
+            target: workspace.to_path_buf(),
             ..ScanConfig::default()
         };
         let result = runner(&config).map_err(|err| format!("{} scan failed: {}", tool, err))?;

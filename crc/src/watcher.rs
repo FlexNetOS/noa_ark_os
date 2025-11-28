@@ -232,7 +232,7 @@ impl CRCWatcher {
                 manifest,
                 prepared.original_artifact.clone(),
             )
-            .map_err(|e| Error::SystemError(e))?;
+            .map_err(Error::SystemError)?;
 
         info!("✓ Drop registered: {} ({})", drop_id, config.name);
         info!("  Source type: {:?}", source_type);

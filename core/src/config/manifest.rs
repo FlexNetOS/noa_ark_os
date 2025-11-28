@@ -55,17 +55,15 @@ pub struct KernelManifest {
     pub token_policies: Vec<TokenPolicyManifestEntry>,
 }
 
-impl KernelManifest {
-    /// Load a manifest from a YAML file.
-    pub fn load_from_yaml(path: impl AsRef<Path>) -> Result<Self, ManifestError> {
-        let content = fs::read_to_string(path).map_err(ManifestError::Io)?;
-        let manifest: Self = serde_yaml::from_str(&content).map_err(ManifestError::Parse)?;
-        manifest.validate()?;
-        Ok(manifest)
+impl Default for KernelManifest {
+    fn default() -> Self {
+        // Delegate to the canonical constructor to avoid duplication.
+        Self::manifest_default()
     }
+}
 
-    /// Provide a manifest populated with the built-in capabilities and runtimes.
-    pub fn default() -> Self {
+impl KernelManifest {
+    fn manifest_default() -> Self {
         let mut capabilities = vec![
             CapabilityManifestEntry::new(CAPABILITY_PROCESS),
             CapabilityManifestEntry::new(CAPABILITY_MEMORY),
@@ -154,6 +152,19 @@ impl KernelManifest {
             metadata: HashMap::new(),
             token_policies,
         }
+    }
+    /// Load a manifest from a YAML file.
+    pub fn load_from_yaml(path: impl AsRef<Path>) -> Result<Self, ManifestError> {
+        let content = fs::read_to_string(path).map_err(ManifestError::Io)?;
+        let manifest: Self = serde_yaml::from_str(&content).map_err(ManifestError::Parse)?;
+        manifest.validate()?;
+        Ok(manifest)
+    }
+
+    /// Provide a manifest populated with the built-in capabilities and runtimes.
+    #[allow(clippy::should_implement_trait)]
+    pub fn default() -> Self {
+        Self::manifest_default()
     }
 
     /// Validate manifest invariants.

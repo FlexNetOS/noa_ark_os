@@ -23,8 +23,8 @@ use uuid::Uuid;
 /// - **L3Orchestration** (Stack-Chief): Cross-domain coordination and workflow orchestration.
 /// - **L4Operations** (Specialist): Operational execution and domain expertise.
 /// - **L5Infrastructure** (Micro): Fine-grained task execution and infrastructure services.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-/// Agent layer in NOA's five-layer hierarchy.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+///   Agent layer in NOA's five-layer hierarchy.
 ///
 /// The naming scheme maps legacy terms (Executive, Board, Stack-Chief,
 /// Specialist, Micro) to the new L1–L5 architecture used by the registry.
@@ -36,15 +36,10 @@ pub enum AgentLayer {
     /// L3: Chief Commanders, Orchestrators, tactical coordination (formerly "Stack-Chief")
     L3Orchestration,
     /// L4: Specialists, Workers, operational execution (formerly "Specialist")
+    #[default]
     L4Operations,
     /// L5: Micro agents, Subject domain, infrastructure tasks (formerly "Micro")
     L5Infrastructure,
-}
-
-impl Default for AgentLayer {
-    fn default() -> Self {
-        Self::L4Operations
-    }
 }
 
 impl AgentLayer {
@@ -60,7 +55,7 @@ impl AgentLayer {
 }
 
 /// Agent category/domain
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 pub enum AgentCategory {
     Analysis,
     Code,
@@ -76,18 +71,14 @@ pub enum AgentCategory {
     Plugins,
     ModelSelection,
     Orchestration,
+    #[default]
     Other,
 }
 
-impl Default for AgentCategory {
-    fn default() -> Self {
-        Self::Other
-    }
-}
-
 /// Agent runtime state
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum AgentState {
+    #[default]
     Created,
     Initializing,
     Ready,
@@ -97,55 +88,34 @@ pub enum AgentState {
     Terminated,
 }
 
-impl Default for AgentState {
-    fn default() -> Self {
-        Self::Created
-    }
-}
-
 /// Agent health status
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum HealthStatus {
     Healthy,
     Degraded,
     NeedsRepair,
     Error,
+    #[default]
     Unknown,
 }
 
-impl Default for HealthStatus {
-    fn default() -> Self {
-        Self::Unknown
-    }
-}
-
 /// Agent type classification
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum AgentType {
-    Master,   // CECCA, Board, Executive
-    Worker,   // Specialists, Operators
+    Master, // CECCA, Board, Executive
+    #[default]
+    Worker, // Specialists, Operators
     SubAgent, // Micro agents
-    Swarm,    // Coordinated groups
-}
-
-impl Default for AgentType {
-    fn default() -> Self {
-        Self::Worker
-    }
+    Swarm,  // Coordinated groups
 }
 
 /// Agent language/runtime
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum AgentLanguage {
+    #[default]
     Rust,
     Python,
     Go,
-}
-
-impl Default for AgentLanguage {
-    fn default() -> Self {
-        Self::Rust
-    }
 }
 
 // ============================================================================

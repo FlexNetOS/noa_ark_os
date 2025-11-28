@@ -1,6 +1,6 @@
 param(
     [string]$NodeVersion = "20.19.5",
-    [string]$PnpmVersion = "8.15.4"
+    [string]$PnpmVersion = "9.11.0"
 )
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path

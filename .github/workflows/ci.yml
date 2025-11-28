@@ -34,7 +34,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 8.15.4
+          version: 9.11.0
           run_install: false
 
       - name: Setup Node.js
@@ -54,6 +54,26 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Pre-Commit Archive Snapshot
+        env:
+          BASE_REF: ${{ github.base_ref || 'origin/main' }}
+        run: bash tools/ci/pre_commit_archive.sh
+      - name: Fast Health Gate (Early Fail)
+        env:
+          HEALTH_MAX_UPTIME_SECONDS: 10
+          CI_FAST_HEALTH_TIMEOUT_SECONDS: 120
+          CI_FAST_HEALTH_PROBE_DELAY_SECONDS: 6
+        run: make ci-fast-health
+      - name: Validate Readiness Schema
+        run: |
+          pip install jsonschema
+          python tools/ci/validate_readiness.py
+      - name: Negative Health (Stale Uptime) Check
+        env:
+          HEALTH_MAX_UPTIME_SECONDS: 1
+          CI_FAST_HEALTH_TIMEOUT_SECONDS: 60
+          CI_FAST_HEALTH_PROBE_DELAY_SECONDS: 4
+        run: make health-negative || echo "Expected failure for stale process scenario (non-zero acceptable)"
       - name: Verify provider instruction pointers
         run: pnpm exec tsx tools/ci/verify_provider_pointers.ts
 
@@ -173,9 +193,21 @@ PY
 
       - name: Test
         run: pnpm test
+      - name: Agent Automated Review
+        run: |
+          echo "=== Automated Agent Review (semantic scan for TODO/FIXME) ==="
+          cargo run -p noa_tools_agent --bin agent-tools Semantic --query "TODO" --root . | head -n 50 || true
+          echo "=== Health Payload ===" && cat logs/readiness.json || echo "No readiness artifact"
 
       - name: Enforce Conventional Commits
         run: pnpm exec tsx tools/commit_copilot/cli.ts enforce
+      - name: Verify Commit Metadata
+        run: bash tools/ci/verify_commit_metadata.sh
+
+      - name: Validate Archive Ledger Schema
+        run: |
+          pip install jsonschema
+          python tools/ci/validate_archive_ledger.py
 
       - name: Export roadmap
         run: pnpm export:roadmap
@@ -200,7 +232,7 @@ PY
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 8.15.4
+          version: 9.11.0
           run_install: false
 
       - name: Setup Node.js

@@ -4,7 +4,6 @@ use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 
 use noa_core::symbols::stable_symbol_id;
-use noa_core::utils::simple_hash;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tree_sitter::{Language, Node, Parser};

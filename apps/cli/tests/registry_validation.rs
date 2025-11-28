@@ -9,12 +9,16 @@ fn tool_registry_is_validated_for_cli_usage() -> anyhow::Result<()> {
         .parent()
         .and_then(|dir| dir.parent())
         .expect("workspace root for cli");
-    let registry_path = workspace_root
-        .join("registry")
-        .join("tools.registry.json");
+    let registry_path = workspace_root.join("registry").join("tools.registry.json");
 
     let registry = ToolRegistry::from_path(&registry_path)?;
-    registry.ensure_categories(&["observability", "automation", "analysis", "collaboration", "plugin"])?;
+    registry.ensure_categories(&[
+        "observability",
+        "automation",
+        "analysis",
+        "collaboration",
+        "plugin",
+    ])?;
 
     for tool in registry.tools {
         assert!(
@@ -28,7 +32,9 @@ fn tool_registry_is_validated_for_cli_usage() -> anyhow::Result<()> {
             tool.id
         );
         assert!(
-            tool.outputs.iter().any(|output| output.format.contains("json")),
+            tool.outputs
+                .iter()
+                .any(|output| output.format.contains("json")),
             "tool {} must emit a JSON-compatible output",
             tool.id
         );

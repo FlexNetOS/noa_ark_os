@@ -1,3 +1,8 @@
+type ProbeStorePipes = (
+    Store<ProbeState>,
+    WritePipe<Cursor<Vec<u8>>>,
+    WritePipe<Cursor<Vec<u8>>>,
+);
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
@@ -124,7 +129,6 @@ impl WasmProbeRunner {
                     }
                 }
             }
-            start_fn.call(&mut store, ())?;
         }
         let duration = start.elapsed();
 
@@ -144,17 +148,7 @@ impl WasmProbeRunner {
         })
     }
 
-    fn build_store(
-        &self,
-        args: &[String],
-    ) -> Result<
-        (
-            Store<ProbeState>,
-            WritePipe<Cursor<Vec<u8>>>,
-            WritePipe<Cursor<Vec<u8>>>,
-        ),
-        WasmProbeError,
-    > {
+    fn build_store(&self, args: &[String]) -> Result<ProbeStorePipes, WasmProbeError> {
         let stdout_pipe = WritePipe::new_in_memory();
         let stderr_pipe = WritePipe::new_in_memory();
 

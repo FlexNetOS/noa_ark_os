@@ -1,0 +1,22 @@
+{
+  "algorithm": "HMAC-SHA256",
+  "generated_at": "2025-11-18T21:59:39Z",
+  "key_fingerprint": "cfd2ba94a7be5c21f93d98d60c93aa9b50ef908bf9b11faf3edf6f61049df307",
+  "signatures": [
+    {
+      "signature": "audit/artifacts.manifest.json.sig",
+      "source": "audit/artifacts.manifest.json",
+      "value": "19db444485dde0ce2e148282b24dfc44a2aa13d830b7d8d6479d86cd1769308c"
+    },
+    {
+      "signature": "audit/SBOM.kernel.cdx.json.sig",
+      "source": "audit/SBOM.kernel.cdx.json",
+      "value": "aeb1fa8042721c3133c67f4cc9d0c39917dbdd392c5dad32308dcbb84ecee2aa"
+    },
+    {
+      "signature": "audit/SBOM.extensions.cdx.json.sig",
+      "source": "audit/SBOM.extensions.cdx.json",
+      "value": "42c0ced9e24b1cc85f5b256fe290f4bcf33d867332f2bb182427b68eec4dc3a0"
+    }
+  ]
+}

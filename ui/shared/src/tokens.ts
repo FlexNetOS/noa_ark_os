@@ -2,13 +2,20 @@ export type ColorToken =
   | "background/base"
   | "background/elevated"
   | "surface/primary"
+  | "surface/secondary"
   | "surface/glass"
+  | "surface/glow"
   | "accent/primary"
   | "accent/secondary"
   | "accent/tertiary"
   | "text/strong"
+  | "text/primary"
   | "text/subtle"
+  | "text/muted"
+  | "text/inverse"
   | "border/subtle"
+  | "border/strong"
+  | "status/info"
   | "status/success"
   | "status/warning"
   | "status/danger";
@@ -43,13 +50,20 @@ export const tokens: DesignTokens = {
     "background/base": "#040109",
     "background/elevated": "#0E0A19",
     "surface/primary": "#141126",
+    "surface/secondary": "#1E1633",
     "surface/glass": "rgba(31, 20, 63, 0.6)",
+    "surface/glow": "rgba(99, 102, 241, 0.18)",
     "accent/primary": "#6366F1",
     "accent/secondary": "#A855F7",
     "accent/tertiary": "#22D3EE",
     "text/strong": "#F8FAFC",
+    "text/primary": "#F8FAFC",
     "text/subtle": "rgba(226, 232, 240, 0.64)",
+    "text/muted": "rgba(226, 232, 240, 0.5)",
+    "text/inverse": "#060313",
     "border/subtle": "rgba(99, 102, 241, 0.24)",
+    "border/strong": "rgba(99, 102, 241, 0.5)",
+    "status/info": "#38BDF8",
     "status/success": "#34D399",
     "status/warning": "#FBBF24",
     "status/danger": "#F87171",

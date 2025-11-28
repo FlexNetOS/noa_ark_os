@@ -1,0 +1,132 @@
+version: "3.9"
+services:
+  research-agent:
+    build: ./agents/ResearchAgent
+    container_name: research-agent
+    ports:
+      - "8100:8000"
+  alternatives-comparison-agent:
+    build: ./agents/AlternativesComparisonAgent
+    container_name: alternatives-comparison-agent
+    ports:
+      - "8101:8000"
+  knowledge-base-agent:
+    build: ./agents/KnowledgeBaseAgent
+    container_name: knowledge-base-agent
+    ports:
+      - "8102:8000"
+  execution-planning-agent:
+    build: ./agents/ExecutionPlanningAgent
+    container_name: execution-planning-agent
+    ports:
+      - "8103:8000"
+  test-validation-agent:
+    build: ./agents/TestValidationAgent
+    container_name: test-validation-agent
+    ports:
+      - "8104:8000"
+  performance-resource-agent:
+    build: ./agents/PerformanceResourceAgent
+    container_name: performance-resource-agent
+    ports:
+      - "8105:8000"
+  safe-stack-agent:
+    build: ./agents/SafeStackAgent
+    container_name: safe-stack-agent
+    ports:
+      - "8106:8000"
+  monitoring-alerting-agent:
+    build: ./agents/MonitoringAlertingAgent
+    container_name: monitoring-alerting-agent
+    ports:
+      - "8107:8000"
+  documentation-listener-agent:
+    build: ./agents/DocumentationListenerAgent
+    container_name: documentation-listener-agent
+    ports:
+      - "8108:8000"
+  cost-estimation-agent:
+    build: ./agents/CostEstimationAgent
+    container_name: cost-estimation-agent
+    ports:
+      - "8109:8000"
+  ux-accessibility-agent:
+    build: ./agents/UXAccessibilityAgent
+    container_name: ux-accessibility-agent
+    ports:
+      - "8110:8000"
+  credentials-env-agent:
+    build: ./agents/CredentialsEnvAgent
+    container_name: credentials-env-agent
+    ports:
+      - "8111:8000"
+  versioning-rollback-agent:
+    build: ./agents/VersioningRollbackAgent
+    container_name: versioning-rollback-agent
+    ports:
+      - "8112:8000"
+  feedback-continuous-improvement-agent:
+    build: ./agents/FeedbackContinuousImprovementAgent
+    container_name: feedback-continuous-improvement-agent
+    ports:
+      - "8113:8000"
+  upgrade-patch-agent:
+    build: ./agents/UpgradePatchAgent
+    container_name: upgrade-patch-agent
+    ports:
+      - "8114:8000"
+  agent-self-upgrade-retirement-agent:
+    build: ./agents/AgentSelfUpgradeRetirementAgent
+    container_name: agent-self-upgrade-retirement-agent
+    ports:
+      - "8115:8000"
+  registry-discovery-agent:
+    build: ./agents/RegistryDiscoveryAgent
+    container_name: registry-discovery-agent
+    ports:
+      - "8116:8000"
+  agent-supervisor-heartbeat-agent:
+    build: ./agents/AgentSupervisorHeartbeatAgent
+    container_name: agent-supervisor-heartbeat-agent
+    ports:
+      - "8117:8000"
+  policy-enforcement-agent:
+    build: ./agents/PolicyEnforcementAgent
+    container_name: policy-enforcement-agent
+    ports:
+      - "8118:8000"
+  simulation-risk-analysis-agent:
+    build: ./agents/SimulationRiskAnalysisAgent
+    container_name: simulation-risk-analysis-agent
+    ports:
+      - "8119:8000"
+  enhanced-observability-tracing-agent:
+    build: ./agents/EnhancedObservabilityTracingAgent
+    container_name: enhanced-observability-tracing-agent
+    ports:
+      - "8120:8000"
+  backup-restore-agent:
+    build: ./agents/BackupRestoreAgent
+    container_name: backup-restore-agent
+    ports:
+      - "8121:8000"
+  sdk-plugin-manager-agent:
+    build: ./agents/SDKPluginManagerAgent
+    container_name: sdk-plugin-manager-agent
+    ports:
+      - "8122:8000"
+  orchestrator-federation-agent:
+    build: ./agents/OrchestratorFederationAgent
+    container_name: orchestrator-federation-agent
+    ports:
+      - "8123:8000"
+  multi-tenant-isolation-agent:
+    build: ./agents/MultiTenantIsolationAgent
+    container_name: multi-tenant-isolation-agent
+    ports:
+      - "8124:8000"
+  governance-audit-agent:
+    build: ./agents/GovernanceAuditAgent
+    container_name: governance-audit-agent
+    ports:
+      - "8125:8000"

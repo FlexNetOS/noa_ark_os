@@ -208,7 +208,10 @@ impl CapabilityTokenService {
         let (ttl_ceiling, ttl_scope) = unique_scopes
             .iter()
             .filter_map(|scope| {
-                store.policies.get(scope).map(|policy| (policy.ttl_seconds, scope))
+                store
+                    .policies
+                    .get(scope)
+                    .map(|policy| (policy.ttl_seconds, scope))
             })
             .min_by_key(|(ttl, _scope)| *ttl)
             .map(|(ttl, scope)| (ttl, scope.clone()))

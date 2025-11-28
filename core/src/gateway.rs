@@ -154,19 +154,14 @@ impl Symbol {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum LifecycleStage {
+    #[default]
     Prototype,
     Active,
     Deprecated,
     Retired,
-}
-
-impl Default for LifecycleStage {
-    fn default() -> Self {
-        LifecycleStage::Prototype
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -413,7 +408,7 @@ impl IntentControlPlane {
 /// Observed state of a connector.
 #[derive(Debug, Clone)]
 struct SymbolGenome {
-    blueprint: HashMap<String, String>,
+    _blueprint: HashMap<String, String>,
     performance_score: f32,
     mutation_history: Vec<String>,
 }
@@ -425,7 +420,7 @@ impl SymbolGenome {
         blueprint.insert("kind".into(), symbol.kind.to_string());
         blueprint.insert("schema".into(), symbol.schema_hash.clone());
         Self {
-            blueprint,
+            _blueprint: blueprint,
             performance_score: 0.75,
             mutation_history: Vec::new(),
         }
@@ -625,7 +620,7 @@ impl VerificationReport {
         }
 
         let failover_proved =
-            schematic.failover_paths.iter().any(|path| path.len() >= 1) || connectors.len() > 1;
+            schematic.failover_paths.iter().any(|path| !path.is_empty()) || connectors.len() > 1;
         if !failover_proved {
             issues.push("no failover path available".to_string());
         }
@@ -769,7 +764,7 @@ struct EvolutionState {
 
 #[derive(Debug, Clone)]
 struct ConnectorSnapshot {
-    id: String,
+    _id: String,
     provider_id: String,
     state: ConnectionState,
     health_score: f32,
@@ -789,7 +784,7 @@ struct ConnectorRecord {
     genome: SymbolGenome,
     provider_id: String,
     schematic: ExecutionSchematic,
-    verification_cache: VerificationReport,
+    _verification_cache: VerificationReport,
 }
 
 impl ConnectorRecord {
@@ -809,13 +804,13 @@ impl ConnectorRecord {
             genome,
             provider_id,
             schematic,
-            verification_cache: VerificationReport::success(),
+            _verification_cache: VerificationReport::success(),
         }
     }
 
     fn snapshot(&self) -> ConnectorSnapshot {
         ConnectorSnapshot {
-            id: self.symbol.id.clone(),
+            _id: self.symbol.id.clone(),
             provider_id: self.provider_id.clone(),
             state: self.state,
             health_score: self.health_score,
@@ -1232,6 +1227,12 @@ impl QuantumSecurityPosture {
             .unwrap()
             .get(connector)
             .map(|material| material.algorithm.clone())
+    }
+}
+
+impl Default for QuantumSecurityPosture {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -1746,6 +1747,11 @@ impl Gateway {
             .take(3)
             .map(|view| view.id.clone())
             .collect();
+        let provider_mix: Vec<String> = candidates
+            .iter()
+            .take(3)
+            .map(|view| view.provider_id.clone())
+            .collect();
 
         let predicted_latency_ms = candidates
             .iter()
@@ -1763,6 +1769,7 @@ impl Gateway {
             .map(|view| view.snapshot.clone())
             .collect();
 
+        let snapshot_ids: Vec<String> = snapshots.iter().map(|view| view._id.clone()).collect();
         let verification =
             VerificationReport::evaluate(intent, &schematic, &snapshots, &reliability);
 
@@ -1773,6 +1780,7 @@ impl Gateway {
                 ("intent".into(), intent.description.clone()),
                 ("success".into(), verification.is_success().to_string()),
                 ("issues".into(), verification.issues.join("|")),
+                ("snapshots".into(), snapshot_ids.join(",")),
             ]),
         );
         self.emit_event(
@@ -1803,9 +1811,10 @@ impl Gateway {
             self.emit_event(
                 TelemetryKind::RouteCompiled,
                 format!(
-                    "intent:{} connectors:{}",
+                    "intent:{} connectors:{} providers:{}",
                     intent.description,
-                    plan.connectors.len()
+                    plan.connectors.len(),
+                    provider_mix.join("|")
                 ),
             )?;
             self.emit_event(
@@ -2483,28 +2492,13 @@ mod tests {
         register_sample_symbol(&gateway, "analytics.primary");
         register_sample_symbol(&gateway, "analytics.secondary");
 
-        let connectors = gateway.connectors_read().unwrap();
-        let provider = connectors
-            .values()
-            .next()
-            .map(|record| record.provider_id.clone())
-            .expect("connector provider available");
-        drop(connectors);
-
-        gateway
-            .update_reliability_feed(ReliabilityFeed {
-                provider_id: provider,
         let provider_id = gateway
             .connectors_read()
             .expect("connectors accessible")
             .values()
             .next()
-            .map(|record| record.provider_id.clone());
-        assert!(
-            provider_id.is_some(),
-            "Test requires at least one connector in the registry"
-        );
-        let provider_id = provider_id.unwrap();
+            .map(|record| record.provider_id.clone())
+            .expect("connector provider available");
 
         gateway
             .update_reliability_feed(ReliabilityFeed {

@@ -2,13 +2,13 @@ use std::collections::HashMap;
 use std::env;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
+use std::time::Instant;
 
 use anyhow::{Context, Result};
 use axum::extract::ws::{Message, WebSocket};
 use axum::extract::{Multipart, Path as AxumPath, State, WebSocketUpgrade};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::response::Response;
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use bytes::Bytes;
@@ -21,7 +21,7 @@ use noa_crc::ir::Lane;
 use noa_crc::{CRCState, CRCSystem, DropManifest, OriginalArtifact, Priority, SourceType};
 use noa_workflow::{StageState, Workflow, WorkflowEngine, WorkflowState};
 use serde::{Deserialize, Serialize};
-use serde_json::Value as JsonValue;
+use serde_json::{json, Value as JsonValue};
 use tokio::fs;
 use tokio::sync::RwLock;
 use tokio::task;
@@ -69,6 +69,7 @@ pub struct UiApiState {
     drop_registry: Arc<dyn DropRegistry>,
     drop_root: PathBuf,
     workflow_engine: Arc<WorkflowEngine>,
+    started_at: Instant,
 }
 
 impl UiApiState {
@@ -87,6 +88,7 @@ impl UiApiState {
             drop_registry,
             drop_root,
             workflow_engine,
+            started_at: Instant::now(),
         }
     }
 
@@ -127,6 +129,12 @@ impl UiApiState {
     }
 }
 
+impl Default for UiApiState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Clone)]
 pub struct UiApiServer {
     state: UiApiState,
@@ -137,6 +145,10 @@ impl UiApiServer {
         Self {
             state: UiApiState::new(),
         }
+    }
+
+    pub fn state(&self) -> UiApiState {
+        self.state.clone()
     }
 
     pub fn with_session(self, bridge: SessionBridge) -> Self {
@@ -164,9 +176,12 @@ impl UiApiServer {
 
     pub fn router(&self) -> Router {
         Router::new()
+            .route("/health", get(Self::health))
             .route("/ui/pages/:page_id", get(Self::get_page))
             .route("/ui/pages/:page_id/events", get(Self::stream_events))
             .route("/ui/workflows", post(Self::start_workflow))
+            .route("/healthz", get(Self::health))
+            .route("/readyz", get(Self::ready))
             // Upload → Digest
             .route("/ui/drop-in/upload", post(Self::upload_drop))
             .route("/api/uploads", post(Self::upload_drop))
@@ -176,6 +191,70 @@ impl UiApiServer {
             .with_state(self.state.clone())
     }
 
+    async fn ready(State(state): State<UiApiState>) -> impl IntoResponse {
+        let drop_root_exists = fs::try_exists(state.drop_root()).await.unwrap_or(false);
+        let session_ready = state
+            .session()
+            .lock()
+            .map(|guard| guard.is_some())
+            .unwrap_or(false);
+
+        let ready = drop_root_exists && session_ready;
+        let status = if ready {
+            StatusCode::OK
+        } else {
+            StatusCode::SERVICE_UNAVAILABLE
+        };
+
+        let payload = json!({
+            "status": if ready { "ready" } else { "initializing" },
+            "drop_root": {
+                "path": state.drop_root(),
+                "exists": drop_root_exists,
+            },
+            "session_stream": session_ready,
+            "timestamp": Utc::now().to_rfc3339(),
+        });
+
+        (status, Json(payload))
+    }
+
+    async fn health(State(state): State<UiApiState>) -> Json<JsonValue> {
+        let uptime = state.started_at.elapsed().as_secs();
+        let mut flags: Vec<String> = Vec::new();
+        if std::env::var("OFFLINE_FIRST").ok().as_deref() == Some("true") {
+            flags.push("offline-first".into());
+        }
+        if std::env::var("ONLINE_GITHUB_MODE").ok().as_deref() == Some("true") {
+            flags.push("online-github-mode".into());
+        }
+        if std::env::var("AI_PROVIDER").is_ok() {
+            flags.push("ai-provider".into());
+        }
+        flags.push("fast-health-gate".into());
+        // Load registry feature flags if present
+        if let Ok(bytes) = std::fs::read("registry/feature_flags.json") {
+            if let Ok(json) = serde_json::from_slice::<JsonValue>(&bytes) {
+                if let Some(arr) = json.get("feature_flags").and_then(|v| v.as_array()) {
+                    for v in arr {
+                        if let Some(s) = v.as_str() {
+                            if !flags.contains(&s.to_string()) {
+                                flags.push(s.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Json(serde_json::json!({
+            "status": "ok",
+            "version": env!("CARGO_PKG_VERSION"),
+            "version_hash": env!("GIT_HASH"),
+            "build_timestamp": env!("BUILD_TIMESTAMP"),
+            "uptime_seconds": uptime,
+            "feature_flags": flags
+        }))
+    }
     async fn upload_panel() -> impl IntoResponse {
         const HTML: &str = r#"<!doctype html><html><head><meta charset=\"utf-8\"><title>Upload → Digest</title></head>
 <body style=\"font-family: system-ui; margin:2rem;\">
@@ -408,19 +487,19 @@ struct DropUploadResponse {
     receipt_url: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 struct WorkflowStartRequest {
     workflow: Workflow,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 struct WorkflowStageSnapshot {
     id: String,
     name: String,
     state: StageState,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 struct WorkflowStartResponse {
     workflow_id: String,
     state: WorkflowState,
@@ -488,6 +567,12 @@ fn format_crc_state(state: &CRCState) -> String {
     }
 }
 
+impl Default for UiApiServer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Clone, Serialize)]
 struct UploadReceiptEntry {
     hash: String,
@@ -533,7 +618,7 @@ async fn prepare_upload_receipt(
     drop_id: &str,
     original_bytes: &[u8],
 ) -> Result<UploadProcessingResult> {
-    let cas = Cas::default().context("initializing CAS")?;
+    let cas = Cas::from_env_or_default().context("initializing CAS")?;
 
     let mut cas_objects = Vec::new();
 
@@ -753,7 +838,7 @@ mod tests {
     use axum::http::{Request, StatusCode as HttpStatus};
     use http_body_util::BodyExt;
     use noa_workflow::{Stage, StageType, Task, Workflow};
-    use serde::Deserialize;
+    use serde::{Deserialize, Serialize};
     use serde_json::Value;
     use std::sync::Mutex as StdMutex;
     use tower::ServiceExt;
@@ -794,6 +879,38 @@ mod tests {
 
         fn recorded_manifest(&self) -> Option<DropManifest> {
             self.registered_manifest.lock().unwrap().clone()
+        }
+    }
+
+    #[derive(Serialize)]
+    struct WorkflowStartRequestPayload<'a> {
+        #[serde(borrow)]
+        workflow: &'a Workflow,
+    }
+
+    impl<'a> WorkflowStartRequestPayload<'a> {
+        fn new(workflow: &'a Workflow) -> Self {
+            Self { workflow }
+        }
+
+        fn into_body(&self) -> Vec<u8> {
+            serde_json::to_vec(self).expect("serialize workflow request")
+        }
+    }
+
+    #[derive(Deserialize)]
+    struct WorkflowStartResponsePayload {
+        #[serde(flatten)]
+        response: WorkflowStartResponse,
+    }
+
+    impl WorkflowStartResponsePayload {
+        fn from_slice(bytes: &[u8]) -> Self {
+            serde_json::from_slice(bytes).expect("parse workflow response")
+        }
+
+        fn into_inner(self) -> WorkflowStartResponse {
+            self.response
         }
     }
 
@@ -880,7 +997,7 @@ mod tests {
             .uri("/ui/workflows")
             .header("content-type", "application/json")
             .body(Body::from(
-                serde_json::to_vec(&WorkflowStartRequest { workflow }).unwrap(),
+                WorkflowStartRequestPayload::new(&workflow).into_body(),
             ))
             .unwrap();
 
@@ -888,7 +1005,7 @@ mod tests {
         assert_eq!(response.status(), HttpStatus::OK);
 
         let bytes = response.into_body().collect().await.unwrap().to_bytes();
-        let payload: WorkflowStartResponse = serde_json::from_slice(&bytes).unwrap();
+        let payload = WorkflowStartResponsePayload::from_slice(&bytes).into_inner();
 
         assert_eq!(payload.workflow_id, "plan-test");
         assert_eq!(payload.state, WorkflowState::Pending);
@@ -930,7 +1047,7 @@ mod tests {
 
         let receipt_path = PathBuf::from(&parsed.receipt_path);
         assert!(receipt_path.exists());
-        let receipt: serde_json::Value =
+        let receipt: Value =
             serde_json::from_str(&std::fs::read_to_string(&receipt_path).unwrap()).unwrap();
         assert_eq!(
             receipt.get("drop_id").and_then(|v| v.as_str()),
@@ -1014,5 +1131,94 @@ mod tests {
         let bytes = response.into_body().collect().await.unwrap().to_bytes();
         let error: ErrorResponse = serde_json::from_slice(&bytes).unwrap();
         assert!(error.message.contains("failed to register drop"));
+    }
+
+    #[tokio::test]
+    async fn health_endpoint_returns_ok() {
+        let server = UiApiServer::new();
+        let router = server.router();
+        let request = Request::builder()
+            .method("GET")
+            .uri("/health")
+            .body(Body::empty())
+            .unwrap();
+        let response = router.oneshot(request).await.unwrap();
+        assert_eq!(response.status(), HttpStatus::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let value: Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(value.get("status").and_then(|v| v.as_str()), Some("ok"));
+        assert!(value.get("version").and_then(|v| v.as_str()).is_some());
+        assert!(value
+            .get("uptime_seconds")
+            .and_then(|v| v.as_u64())
+            .is_some());
+        assert!(value.get("version_hash").and_then(|v| v.as_str()).is_some());
+        assert!(value
+            .get("build_timestamp")
+            .and_then(|v| v.as_str())
+            .is_some());
+        assert!(value
+            .get("feature_flags")
+            .and_then(|v| v.as_array())
+            .map(|a| !a.is_empty())
+            .unwrap_or(false));
+    }
+
+    #[tokio::test]
+    async fn health_endpoint_merges_env_and_registry_flags() {
+        use std::fs;
+        use std::path::Path;
+        // Set env flags
+        std::env::set_var("OFFLINE_FIRST", "true");
+        std::env::set_var("AI_PROVIDER", "test-provider");
+        // Create mock registry file
+        let registry_dir = Path::new("registry");
+        if !registry_dir.exists() {
+            fs::create_dir_all(registry_dir).unwrap();
+        }
+        let mock = serde_json::json!({"feature_flags": ["schema-validation", "commit-metadata-verification"]});
+        fs::write(
+            registry_dir.join("feature_flags.json"),
+            serde_json::to_vec(&mock).unwrap(),
+        )
+        .unwrap();
+
+        let server = UiApiServer::new();
+        let router = server.router();
+        let request = Request::builder()
+            .method("GET")
+            .uri("/health")
+            .body(Body::empty())
+            .unwrap();
+        let response = router.oneshot(request).await.unwrap();
+        assert_eq!(response.status(), HttpStatus::OK);
+        let bytes = response.into_body().collect().await.unwrap().to_bytes();
+        let value: Value = serde_json::from_slice(&bytes).unwrap();
+        let flags = value
+            .get("feature_flags")
+            .and_then(|v| v.as_array())
+            .expect("feature_flags array");
+        let as_set: std::collections::HashSet<_> =
+            flags.iter().filter_map(|v| v.as_str()).collect();
+        assert!(
+            as_set.contains("offline-first"),
+            "offline-first from env missing"
+        );
+        assert!(
+            as_set.contains("ai-provider"),
+            "ai-provider from env missing"
+        );
+        assert!(
+            as_set.contains("schema-validation"),
+            "schema-validation from registry missing"
+        );
+        assert!(
+            as_set.contains("commit-metadata-verification"),
+            "commit-metadata-verification from registry missing"
+        );
+        assert!(
+            as_set.contains("fast-health-gate"),
+            "built-in fast-health-gate missing"
+        );
     }
 }

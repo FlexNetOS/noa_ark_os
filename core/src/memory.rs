@@ -66,17 +66,17 @@ impl MemoryManager {
 
 /// Track memory allocation.
 pub fn allocate(size: usize) -> Result<(), &'static str> {
-    MemoryManager::default().allocate(size)
+    MemoryManager.allocate(size)
 }
 
 /// Track memory deallocation.
 pub fn deallocate(size: usize) -> Result<(), &'static str> {
-    MemoryManager::default().deallocate(size)
+    MemoryManager.deallocate(size)
 }
 
 /// Get total allocated memory.
 pub fn get_allocated() -> usize {
-    MemoryManager::default().total_allocated()
+    MemoryManager.total_allocated()
 }
 
 /// Load registry data from the provided directory path.
@@ -572,7 +572,6 @@ mod tests {
 
         load_registry(dir.path()).unwrap();
         let snapshot = registry_snapshot().expect("registry snapshot should be available");
-        let snapshot = registry_snapshot().expect("registry snapshot available");
         assert_eq!(snapshot.components().len(), 1);
         assert_eq!(snapshot.owners().len(), 1);
     }

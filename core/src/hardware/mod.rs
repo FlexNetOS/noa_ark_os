@@ -30,6 +30,7 @@ pub enum GpuBackend {
 }
 
 impl GpuBackend {
+    #[cfg_attr(not(test), allow(dead_code))]
     fn from_vendor_hint(vendor_id: Option<&str>, name: &str) -> Self {
         let vendor = vendor_id.unwrap_or("").to_ascii_lowercase();
         if vendor.contains("10de") || name.to_ascii_lowercase().contains("nvidia") {
@@ -125,7 +126,7 @@ pub fn detect_hardware_profile() -> HardwareProfile {
             vendor: cpu.vendor_id().to_string(),
             physical_cores: system.physical_core_count().unwrap_or(logical_cores),
             logical_cores,
-            frequency_mhz: Some(cpu.frequency() as u64),
+            frequency_mhz: Some(cpu.frequency()),
         })
         .unwrap_or(CpuProfile {
             brand: "unknown".to_string(),

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["LONG_TERM_FILE","SESSION_SUFFIX"],"enum":["MemoryError"],"fn":["build_retrieval"],"struct":["LongTermMemory","PersistedStore","SessionMemory"],"trait":["MemoryStore"]};

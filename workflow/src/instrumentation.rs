@@ -1,7 +1,7 @@
+use crate::reward::RewardError;
 use crate::reward::{
     AgentApprovalStatus, AgentStandingSummary, RewardAgentSnapshot, RewardInputs, RewardScorekeeper,
 };
-use crate::{reward::RewardError, Stage, StageType, Task, TaskDispatchReceipt};
 use crate::{Stage, StageType, Task, TaskDispatchReceipt};
 use chrono::Utc;
 use noa_core::security::{self, OperationKind, OperationRecord, SignedOperation};
@@ -21,6 +21,10 @@ const DOCUMENT_LOG: &str = "documentation";
 const STAGE_RECEIPT_LOG: &str = "stage_receipts";
 const SECURITY_SCAN_LOG: &str = "security_scans";
 const TASK_DISPATCH_LOG: &str = "task_dispatches";
+const AUTO_FIX_LOG: &str = "auto_fix_actions";
+const BUDGET_DECISION_LOG: &str = "budget_guardian";
+const AUTO_FIX_DIR: &str = "auto_fix";
+const BUDGET_GUARDIAN_DIR: &str = "budget_guardian";
 const INFERENCE_LOG: &str = "inference_metrics";
 const PIPELINE_EVENT_LOG: &str = "pipeline_events";
 const EVIDENCE_LEDGER_DIR: &str = "storage/db/evidence";
@@ -114,6 +118,41 @@ impl ImmutableLogEntry {
             entry_hash,
         })
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PolicyDecisionRecord {
+    pub decision: String,
+    pub reason: String,
+    #[serde(default)]
+    pub signals: Vec<String>,
+    #[serde(default)]
+    pub metadata: Value,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AutoFixActionReceipt {
+    pub fixer: String,
+    pub target: String,
+    pub snapshot_path: PathBuf,
+    pub plan: Value,
+    pub policy: PolicyDecisionRecord,
+    pub signed_operation: SignedOperation,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BudgetDecisionRecord {
+    pub workflow_id: String,
+    pub stage_id: String,
+    pub tokens_used: f64,
+    pub token_limit: f64,
+    pub latency_ms: f64,
+    pub latency_limit: f64,
+    pub action: String,
+    #[serde(default)]
+    pub rewritten_plan: Option<Value>,
+    pub snapshot_path: PathBuf,
+    pub signed_operation: SignedOperation,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -253,7 +292,7 @@ impl GoalAggregate {
         }
     }
 
-    fn to_snapshot(&self) -> GoalMetricSnapshot {
+    fn to_snapshot(&self, penalty: Option<ContextPenaltySummary>) -> GoalMetricSnapshot {
         let average_lead_time_ms = if self.total_runs == 0 {
             0.0
         } else {
@@ -275,7 +314,7 @@ impl GoalAggregate {
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
 
-        GoalMetricSnapshot {
+        let mut snapshot = GoalMetricSnapshot {
             goal_id: self.goal_id.clone(),
             workflow_id: self.workflow_id.clone(),
             total_runs: self.total_runs,
@@ -284,13 +323,144 @@ impl GoalAggregate {
             success_rate,
             agents,
             updated_at: Utc::now().to_rfc3339(),
+            context_penalty_score: 0.0,
+            context_p95_bytes: 0,
+            context_p95_latency_ms: 0,
+        };
+
+        if let Some(penalty) = penalty {
+            snapshot.context_penalty_score = penalty.penalty_score;
+            snapshot.context_p95_bytes = penalty.p95_bytes;
+            snapshot.context_p95_latency_ms = penalty.p95_latency_ms;
+        }
+
+        snapshot
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct ContextUsageSample {
+    agent: String,
+    context_bytes: usize,
+    penalty: f64,
+    retrieval_ms: u128,
+    timestamp: u128,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+struct ContextPenaltyAggregate {
+    workflow_id: String,
+    samples: Vec<ContextUsageSample>,
+}
+
+impl ContextPenaltyAggregate {
+    fn new(workflow_id: &str) -> Self {
+        Self {
+            workflow_id: workflow_id.to_string(),
+            samples: Vec::new(),
         }
     }
+
+    fn record(&mut self, agent: &str, context_bytes: usize, threshold: usize, retrieval_ms: u128) {
+        let penalty = if context_bytes > threshold {
+            (context_bytes.saturating_sub(threshold)) as f64 / threshold as f64
+        } else {
+            0.0
+        };
+
+        self.samples.push(ContextUsageSample {
+            agent: agent.to_string(),
+            context_bytes,
+            penalty,
+            retrieval_ms,
+            timestamp: current_timestamp_millis(),
+        });
+
+        self.trim();
+    }
+
+    fn push_summary(&mut self, penalty_score: f64, context_bytes: usize, retrieval_ms: u64) {
+        self.samples.push(ContextUsageSample {
+            agent: "scorekeeper/restore".into(),
+            context_bytes,
+            penalty: penalty_score,
+            retrieval_ms: retrieval_ms as u128,
+            timestamp: current_timestamp_millis(),
+        });
+        self.trim();
+    }
+
+    fn trim(&mut self) {
+        if self.samples.len() > 256 {
+            let overflow = self.samples.len() - 256;
+            self.samples.drain(0..overflow);
+        }
+    }
+
+    fn summary(&self) -> ContextPenaltySummary {
+        if self.samples.is_empty() {
+            return ContextPenaltySummary {
+                workflow_id: self.workflow_id.clone(),
+                penalty_score: 0.0,
+                p95_bytes: 0,
+                p95_latency_ms: 0,
+            };
+        }
+
+        let mut bytes: Vec<usize> = self
+            .samples
+            .iter()
+            .map(|sample| sample.context_bytes)
+            .collect();
+        bytes.sort_unstable();
+        let mut latency: Vec<u128> = self
+            .samples
+            .iter()
+            .map(|sample| sample.retrieval_ms)
+            .collect();
+        latency.sort_unstable();
+
+        // Use p95 as a standard metric for tail latency/usage. Change PERCENTILE to adjust.
+        const PERCENTILE: f64 = 0.95;
+        let percentile_index = |len: usize| -> usize {
+            if len == 0 {
+                return 0;
+            }
+            let raw = ((len as f64) * PERCENTILE).ceil() as usize;
+            raw.saturating_sub(1).min(len - 1)
+        };
+
+        let idx_bytes = percentile_index(bytes.len());
+        let idx_latency = percentile_index(latency.len());
+        let avg_penalty = self
+            .samples
+            .iter()
+            .map(|sample| sample.penalty)
+            .sum::<f64>()
+            / (self.samples.len() as f64);
+
+        ContextPenaltySummary {
+            workflow_id: self.workflow_id.clone(),
+            penalty_score: avg_penalty,
+            p95_bytes: bytes[idx_bytes],
+            p95_latency_ms: latency[idx_latency] as u64,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct ContextPenaltySummary {
+    workflow_id: String,
+    penalty_score: f64,
+    p95_bytes: usize,
+    p95_latency_ms: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 struct GoalMetricStore {
     goals: HashMap<String, GoalAggregate>,
+    #[serde(default)]
+    context: HashMap<String, ContextPenaltyAggregate>,
 }
 
 impl GoalMetricStore {
@@ -301,11 +471,31 @@ impl GoalMetricStore {
             .record(outcome);
     }
 
+    fn penalize_context(
+        &mut self,
+        workflow_id: &str,
+        agent: &str,
+        context_bytes: usize,
+        threshold: usize,
+        retrieval_ms: u128,
+    ) {
+        self.context
+            .entry(workflow_id.to_string())
+            .or_insert_with(|| ContextPenaltyAggregate::new(workflow_id))
+            .record(agent, context_bytes, threshold, retrieval_ms);
+    }
+
     fn snapshots(&self) -> Vec<GoalMetricSnapshot> {
         let mut entries: Vec<GoalMetricSnapshot> = self
             .goals
             .values()
-            .map(GoalAggregate::to_snapshot)
+            .map(|aggregate| {
+                let penalty = self
+                    .context
+                    .get(&aggregate.workflow_id)
+                    .map(ContextPenaltyAggregate::summary);
+                aggregate.to_snapshot(penalty)
+            })
             .collect();
         entries.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
         entries
@@ -330,6 +520,12 @@ pub struct GoalMetricSnapshot {
     pub success_rate: f64,
     pub agents: Vec<GoalAgentMetric>,
     pub updated_at: String,
+    #[serde(default)]
+    pub context_penalty_score: f64,
+    #[serde(default)]
+    pub context_p95_bytes: usize,
+    #[serde(default)]
+    pub context_p95_latency_ms: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -417,6 +613,8 @@ pub enum EvidenceLedgerKind {
     StageReceipt,
     SecurityScan,
     TaskDispatch,
+    AutoFixAction,
+    BudgetDecision,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -484,6 +682,61 @@ impl EvidenceLedgerEntry {
         }
     }
 
+    fn auto_fix_action(
+        fixer: &str,
+        target: &str,
+        snapshot: &PathBuf,
+        plan: &Value,
+        policy: &PolicyDecisionRecord,
+        signed: SignedOperation,
+    ) -> Self {
+        Self {
+            kind: EvidenceLedgerKind::AutoFixAction,
+            timestamp: current_timestamp_millis(),
+            reference: signed.signature.clone(),
+            payload: json!({
+                "fixer": fixer,
+                "target": target,
+                "snapshot": snapshot,
+                "plan": plan,
+                "policy": policy,
+            }),
+            signed_operation: signed,
+        }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn budget_decision(
+        workflow_id: &str,
+        stage_id: &str,
+        tokens_used: f64,
+        token_limit: f64,
+        latency_ms: f64,
+        latency_limit: f64,
+        action: &str,
+        rewritten_plan: &Option<Value>,
+        snapshot: &PathBuf,
+        signed: SignedOperation,
+    ) -> Self {
+        Self {
+            kind: EvidenceLedgerKind::BudgetDecision,
+            timestamp: current_timestamp_millis(),
+            reference: signed.signature.clone(),
+            payload: json!({
+                "workflow_id": workflow_id,
+                "stage_id": stage_id,
+                "tokens_used": tokens_used,
+                "token_limit": token_limit,
+                "latency_ms": latency_ms,
+                "latency_limit": latency_limit,
+                "action": action,
+                "rewritten_plan": rewritten_plan,
+                "snapshot": snapshot,
+            }),
+            signed_operation: signed,
+        }
+    }
+
     fn genesis() -> Self {
         let record =
             OperationRecord::new(OperationKind::Other, "system/bootstrap", "evidence_ledger")
@@ -504,6 +757,8 @@ pub struct PipelineInstrumentation {
     index_dir: PathBuf,
     mirror_dir: PathBuf,
     evidence_dir: PathBuf,
+    auto_fix_dir: PathBuf,
+    budget_guardian_dir: PathBuf,
     evidence_ledger_path: PathBuf,
     goal_metrics_path: PathBuf,
     deployment_report_path: PathBuf,
@@ -524,6 +779,10 @@ impl PipelineInstrumentation {
         fs::create_dir_all(&mirror_dir)?;
         fs::create_dir_all(&evidence_dir)?;
         fs::create_dir_all(&analytics_dir)?;
+        let auto_fix_dir = mirror_dir.join(AUTO_FIX_DIR);
+        let budget_guardian_dir = mirror_dir.join(BUDGET_GUARDIAN_DIR);
+        fs::create_dir_all(&auto_fix_dir)?;
+        fs::create_dir_all(&budget_guardian_dir)?;
         fs::create_dir_all(&metrics_dir)?;
 
         let evidence_ledger_path = evidence_dir.join(EVIDENCE_LEDGER_FILE);
@@ -540,6 +799,8 @@ impl PipelineInstrumentation {
             index_dir,
             mirror_dir,
             evidence_dir,
+            auto_fix_dir,
+            budget_guardian_dir,
             evidence_ledger_path,
             goal_metrics_path,
             deployment_report_path,
@@ -553,6 +814,8 @@ impl PipelineInstrumentation {
         instrumentation.ensure_genesis(DOCUMENT_LOG, OperationKind::DocumentUpdate)?;
         instrumentation.ensure_genesis(STAGE_RECEIPT_LOG, OperationKind::StageReceipt)?;
         instrumentation.ensure_genesis(TASK_DISPATCH_LOG, OperationKind::Other)?;
+        instrumentation.ensure_genesis(AUTO_FIX_LOG, OperationKind::Other)?;
+        instrumentation.ensure_genesis(BUDGET_DECISION_LOG, OperationKind::Other)?;
         instrumentation.ensure_genesis(SECURITY_SCAN_LOG, OperationKind::SecurityScan)?;
         instrumentation.ensure_genesis(INFERENCE_LOG, OperationKind::Other)?;
         instrumentation.ensure_genesis(PIPELINE_EVENT_LOG, OperationKind::Other)?;
@@ -768,6 +1031,155 @@ impl PipelineInstrumentation {
         Ok(receipt)
     }
 
+    #[allow(clippy::too_many_arguments)]
+    pub fn record_budget_decision(
+        &self,
+        workflow_id: &str,
+        stage_id: &str,
+        tokens_used: f64,
+        token_limit: f64,
+        latency_ms: f64,
+        latency_limit: f64,
+        action: &str,
+        rewritten_plan: Option<Value>,
+    ) -> Result<BudgetDecisionRecord, InstrumentationError> {
+        let timestamp = current_timestamp_millis();
+        let filename = format!(
+            "{}-{}-{}-budget.json",
+            timestamp,
+            workflow_id,
+            stage_id.replace('/', "_")
+        );
+        let snapshot_path = self.budget_guardian_dir.join(filename);
+        if let Some(parent) = snapshot_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        let manifest = json!({
+            "workflow_id": workflow_id,
+            "stage_id": stage_id,
+            "recorded_at": timestamp,
+            "tokens_used": tokens_used,
+            "token_limit": token_limit,
+            "latency_ms": latency_ms,
+            "latency_limit": latency_limit,
+            "action": action,
+            "rewritten_plan": rewritten_plan,
+        });
+        fs::write(&snapshot_path, serde_json::to_string_pretty(&manifest)?)?;
+
+        let event = PipelineLogEvent {
+            event_type: "budget.guardian".to_string(),
+            actor: workflow_id.to_string(),
+            scope: stage_id.to_string(),
+            source: None,
+            target: Some(snapshot_path.to_string_lossy().to_string()),
+            metadata: manifest.clone(),
+            timestamp,
+        };
+        let record = OperationRecord::new(
+            OperationKind::Other,
+            workflow_id.to_string(),
+            stage_id.to_string(),
+        )
+        .with_metadata(json!({
+            "tokens_used": tokens_used,
+            "token_limit": token_limit,
+            "latency_ms": latency_ms,
+            "latency_limit": latency_limit,
+            "action": action,
+            "snapshot": snapshot_path.to_string_lossy(),
+        }));
+        let signed = self.append_entry(BUDGET_DECISION_LOG, event, record)?;
+        let record = BudgetDecisionRecord {
+            workflow_id: workflow_id.to_string(),
+            stage_id: stage_id.to_string(),
+            tokens_used,
+            token_limit,
+            latency_ms,
+            latency_limit,
+            action: action.to_string(),
+            rewritten_plan: rewritten_plan.clone(),
+            snapshot_path: snapshot_path.clone(),
+            signed_operation: signed.clone(),
+        };
+        self.append_evidence_ledger(EvidenceLedgerEntry::budget_decision(
+            workflow_id,
+            stage_id,
+            tokens_used,
+            token_limit,
+            latency_ms,
+            latency_limit,
+            action,
+            &record.rewritten_plan,
+            &record.snapshot_path,
+            signed,
+        ))?;
+        Ok(record)
+    }
+
+    pub fn record_auto_fix_action(
+        &self,
+        fixer: &str,
+        target: &str,
+        plan: &Value,
+        policy: &PolicyDecisionRecord,
+    ) -> Result<AutoFixActionReceipt, InstrumentationError> {
+        let timestamp = current_timestamp_millis();
+        let filename = format!("{}-{}-auto-fix.json", timestamp, fixer.replace('/', "_"));
+        let snapshot_path = self.auto_fix_dir.join(filename);
+        if let Some(parent) = snapshot_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        let manifest = json!({
+            "fixer": fixer,
+            "target": target,
+            "recorded_at": timestamp,
+            "plan": plan,
+            "policy": policy,
+        });
+        fs::write(&snapshot_path, serde_json::to_string_pretty(&manifest)?)?;
+
+        let plan_serialised = serde_json::to_string(plan)?;
+        let policy_serialised = serde_json::to_string(policy)?;
+
+        let event = PipelineLogEvent {
+            event_type: "auto_fix.action".to_string(),
+            actor: fixer.to_string(),
+            scope: target.to_string(),
+            source: None,
+            target: Some(snapshot_path.to_string_lossy().to_string()),
+            metadata: manifest.clone(),
+            timestamp,
+        };
+        let record =
+            OperationRecord::new(OperationKind::Other, fixer.to_string(), target.to_string())
+                .with_metadata(json!({
+                    "snapshot": snapshot_path.to_string_lossy(),
+                    "plan_digest": simple_hash(&plan_serialised),
+                    "policy_digest": simple_hash(&policy_serialised),
+                }));
+        let signed = self.append_entry(AUTO_FIX_LOG, event, record)?;
+        let receipt = AutoFixActionReceipt {
+            fixer: fixer.to_string(),
+            target: target.to_string(),
+            snapshot_path: snapshot_path.clone(),
+            plan: plan.clone(),
+            policy: policy.clone(),
+            signed_operation: signed.clone(),
+        };
+        self.append_evidence_ledger(EvidenceLedgerEntry::auto_fix_action(
+            fixer,
+            target,
+            &snapshot_path,
+            plan,
+            policy,
+            signed,
+        ))?;
+        Ok(receipt)
+    }
+
     pub fn log_security_scan(
         &self,
         subject: &str,
@@ -843,6 +1255,7 @@ impl PipelineInstrumentation {
                 .with_context(Some(actor.to_string()), Some(subject.to_string()))
                 .with_metadata(metadata);
         self.append_entry(PIPELINE_EVENT_LOG, event, record)
+    }
     pub fn record_deployment_outcome(
         &self,
         record: DeploymentOutcomeRecord,
@@ -900,7 +1313,7 @@ impl PipelineInstrumentation {
                 inputs,
                 &agent_snapshots,
             );
-            self.persist_reward_history(&*keeper)?;
+            self.persist_reward_history(&keeper)?;
             drop(keeper);
             println!(
                 "[REWARD] {}::{} delta={:.2} coverage={:.2} flake={:.2} tokens={:.2} rollback={:.2}",
@@ -912,6 +1325,21 @@ impl PipelineInstrumentation {
                 delta.token_delta,
                 delta.rollback_delta
             );
+        }
+        self.persist_goal_metrics()
+    }
+
+    pub fn record_context_usage(
+        &self,
+        workflow_id: &str,
+        agent: &str,
+        context_bytes: usize,
+        threshold: usize,
+        retrieval_ms: u128,
+    ) -> Result<(), InstrumentationError> {
+        {
+            let mut store = self.goal_metrics.lock().unwrap();
+            store.penalize_context(workflow_id, agent, context_bytes, threshold, retrieval_ms);
         }
         self.persist_goal_metrics()
     }
@@ -929,6 +1357,8 @@ impl PipelineInstrumentation {
     pub fn flagged_agents(&self) -> Vec<AgentStandingSummary> {
         let keeper = self.reward_scorekeeper.lock().unwrap();
         keeper.flagged_agents()
+    }
+
     pub fn log_inference_metric(
         &self,
         metric: InferenceMetric,
@@ -1029,6 +1459,10 @@ impl PipelineInstrumentation {
             }
             let keeper = self.reward_scorekeeper.lock().unwrap();
             keeper.save()?;
+            Ok(())
+        })
+    }
+
     fn ensure_deployment_report(&self) -> Result<(), InstrumentationError> {
         with_log_lock(|| {
             if self.deployment_report_path.exists() {
@@ -1137,11 +1571,7 @@ impl PipelineInstrumentation {
 
         for base in [&self.index_dir, &self.mirror_dir] {
             let path = base.join(format!("{}.log", log_name));
-            let mut file = OpenOptions::new()
-                .create(true)
-                .write(true)
-                .append(true)
-                .open(path)?;
+            let mut file = OpenOptions::new().create(true).append(true).open(path)?;
             file.write_all(payload.as_bytes())?;
             file.flush()?;
             file.sync_all()?;
@@ -1160,7 +1590,7 @@ fn with_log_lock<T>(
 ) -> Result<T, InstrumentationError> {
     let _guard = log_write_lock()
         .lock()
-        .map_err(|_| std::io::Error::new(ErrorKind::Other, "log write lock poisoned"))?;
+        .map_err(|_| std::io::Error::other("log write lock poisoned"))?;
     f()
 }
 
@@ -1221,6 +1651,8 @@ impl Clone for PipelineInstrumentation {
             index_dir: self.index_dir.clone(),
             mirror_dir: self.mirror_dir.clone(),
             evidence_dir: self.evidence_dir.clone(),
+            auto_fix_dir: self.auto_fix_dir.clone(),
+            budget_guardian_dir: self.budget_guardian_dir.clone(),
             evidence_ledger_path: self.evidence_ledger_path.clone(),
             goal_metrics_path: self.goal_metrics_path.clone(),
             deployment_report_path: self.deployment_report_path.clone(),
@@ -1273,6 +1705,18 @@ fn load_goal_metrics(path: &PathBuf) -> Result<GoalMetricStore, InstrumentationE
                     );
                 }
                 store.goals.insert(snapshot.goal_id.clone(), aggregate);
+                if snapshot.context_penalty_score > 0.0
+                    || snapshot.context_p95_bytes > 0
+                    || snapshot.context_p95_latency_ms > 0
+                {
+                    let mut context = ContextPenaltyAggregate::new(&snapshot.workflow_id);
+                    context.push_summary(
+                        snapshot.context_penalty_score,
+                        snapshot.context_p95_bytes,
+                        snapshot.context_p95_latency_ms,
+                    );
+                    store.context.insert(snapshot.workflow_id.clone(), context);
+                }
             }
             Ok(store)
         }
@@ -1333,7 +1777,6 @@ mod tests {
                 parameters: HashMap::from([("target".to_string(), json!({"path": "src/main.rs"}))]),
                 tool_requirements: Vec::new(),
                 agent_role: None,
-                tool_requirements: vec![],
             }],
         }
     }

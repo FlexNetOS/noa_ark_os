@@ -15,11 +15,8 @@
 cargo-clippy.exe is not installed for the custom toolchain
 ```
 
-**Solution Applied**: 
-Changed `.vscode/settings.json` to use `check` instead of `clippy`:
-```json
-"rust-analyzer.check.command": "check"
-```
+**Solution Applied**:
+Updated `tools/devshell/config.json` to set `rust-analyzer.check.command` to `check`, replacing the earlier `.vscode`-only tweak.
 
 **Result**: Cargo watcher will now work with portable toolchain. You won't get clippy lints, but you'll get compiler checks and rust-analyzer diagnostics.
 

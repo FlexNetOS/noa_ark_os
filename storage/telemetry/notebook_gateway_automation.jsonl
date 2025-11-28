@@ -1,0 +1,2 @@
+{"timestamp":"2024-05-10T08:00:00Z","event":"notebook_automation_invocation","notebook_id":"nbk_42","workspace_id":"ws_12","access_scope":{"fs":"read","network":"restricted"},"token_rate_limit":120,"trigger_source":"scheduler","status":"success"}
+{"timestamp":"2024-05-10T08:05:00Z","event":"notebook_automation_invocation","notebook_id":"nbk_42","workspace_id":"ws_12","access_scope":{"fs":"write","network":"restricted"},"token_rate_limit":60,"trigger_source":"user-api","status":"throttled","throttle_reason":"rate_limit_exceeded"}

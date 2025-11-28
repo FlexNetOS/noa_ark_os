@@ -4,7 +4,6 @@ use std::path::PathBuf;
 
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use serde_json;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -360,7 +359,8 @@ impl RewardScorekeeper {
 
     fn rebuild_standings(&mut self) {
         self.standings.clear();
-        for delta in &self.history {
+        let history = self.history.clone();
+        for delta in &history {
             self.update_standings(delta);
         }
     }
@@ -372,10 +372,7 @@ impl RewardScorekeeper {
         let agent_count = delta.agents.len() as f64;
         let shared_reward = delta.total_reward / agent_count;
         for agent in &delta.agents {
-            let entry = self
-                .standings
-                .entry(agent.agent.clone())
-                .or_insert_with(AgentStanding::default);
+            let entry = self.standings.entry(agent.agent.clone()).or_default();
             let mut reward = shared_reward;
             if !agent.success {
                 reward -= self.config.failure_penalty;
@@ -386,7 +383,7 @@ impl RewardScorekeeper {
 
     fn requires_manual_approval_for(&self, standing: &AgentStanding) -> bool {
         standing.total_reward < self.config.gating_threshold
-            || standing.recent_average() < self.config.gating_recent_threshold
+            && standing.recent_average() < self.config.gating_recent_threshold
     }
 }
 

@@ -53,6 +53,8 @@ export type VibeColumn = {
   title: string;
   accent: string;
   goals: Goal[];
+  // Back-compat: some code/tests still reference `cards`
+  cards?: Goal[];
 };
 
 export type BoardMoodSample = {
@@ -67,6 +69,10 @@ export type BoardMetrics = {
   completedGoals: number;
   activeGoals: number;
   goalMomentum: number;
+  // Back-compat / optional metrics referenced in legacy code
+  completedCards?: number;
+  activeCards?: number;
+  vibeMomentum?: number;
   cycleTimeDays?: number;
   flowEfficiency?: number;
   goalLeadTimeHours?: number;
@@ -221,4 +227,48 @@ export type GoalMemoryInsights = {
   similarGoals: GoalMemorySimilarGoal[];
   insightSummary?: string;
   updatedAt: string;
+};
+
+// Aliases and planning types used across the UI
+export type Goal = VibeCard;
+
+export type PlannerStageState = "pending" | "running" | "completed" | "failed" | "skipped";
+export type PlannerWorkflowStatus = "pending" | "running" | "paused" | "completed" | "failed";
+export type PlannerStage = { id: string; name: string; state: PlannerStageState };
+export type PlannerPlan = {
+  goalId: string;
+  goalTitle?: string;
+  workflowId: string;
+  status: PlannerWorkflowStatus;
+  stages: PlannerStage[];
+  updatedAt?: string;
+  resumeToken?: ResumeToken;
+};
+export type PlannerState = {
+  status: "idle" | "ready" | "planning" | "error";
+  plans: PlannerPlan[];
+  activePlanId?: string | null;
+  lastError?: string | null;
+};
+
+export type RealTimeEvent = {
+  eventType?: string;
+  payload?: Record<string, unknown>;
+  timestamp?: string;
+  workflowId?: string;
+};
+
+export type GoalPayload = {
+  id?: string;
+  workspaceId: string;
+  boardId: string;
+  createdBy: string;
+  title: string;
+  summary: string;
+  focusCardId?: string;
+  context: {
+    boardSnapshot: WorkspaceBoard;
+    focusCard: Goal | null;
+    suggestions: { title: string; detail: string }[];
+  };
 };

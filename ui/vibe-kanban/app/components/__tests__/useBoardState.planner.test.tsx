@@ -13,6 +13,7 @@ vi.mock("@noa-ark/shared-ui/session", async () => {
     static last: MockSessionContinuityClient | null = null;
     private listeners = new Map<string, Set<(value: unknown) => void>>();
     public requested: ResumeToken[] = [];
+    private connected = false;
 
     constructor() {
       MockSessionContinuityClient.last = this;
@@ -29,14 +30,22 @@ vi.mock("@noa-ark/shared-ui/session", async () => {
       set?.delete(handler);
     }
 
-    connectWebSocket() {}
-    disconnect() {}
+    connectWebSocket() {
+      this.connected = true;
+      this.emit("connection:open", undefined);
+    }
+
+    disconnect() {
+      if (!this.connected) return;
+      this.connected = false;
+      this.emit("connection:closed", undefined);
+    }
 
     requestResume(token: ResumeToken) {
       this.requested.push(token);
     }
 
-    emit(event: string, payload: unknown) {
+    emit(event: string, payload?: unknown) {
       const set = this.listeners.get(event);
       set?.forEach((handler) => handler(payload));
     }
@@ -53,8 +62,12 @@ const fetchMock = vi.fn();
 
 global.fetch = fetchMock as unknown as typeof fetch;
 
+type LastClientAccessor = { __getLastClient?: () => unknown };
+type LastClientLike = { disconnect?: () => void; emit?: (event: string, payload: unknown) => void; requested?: unknown[] };
 const getLastClient = () =>
-  (sessionModule as unknown as { __getLastClient?: () => any }).__getLastClient?.();
+  (sessionModule as unknown as LastClientAccessor).__getLastClient?.() as LastClientLike | undefined;
+
+const NOW = new Date().toISOString();
 
 describe("useBoardState planner integration", () => {
   const board: WorkspaceBoard = {
@@ -66,6 +79,15 @@ describe("useBoardState planner integration", () => {
         id: "todo",
         title: "To Do",
         accent: "from-indigo-500 via-purple-500 to-blue-500",
+        goals: [
+          {
+            id: "card-1",
+            title: "Prototype kanban drag",
+            notes: "Polish easing curve + inertia for drag transitions.",
+            createdAt: new Date().toISOString(),
+            mood: "focus",
+          },
+        ],
         cards: [
           {
             id: "card-1",
@@ -80,26 +102,46 @@ describe("useBoardState planner integration", () => {
         id: "in-progress",
         title: "In Progress",
         accent: "from-sky-500 via-cyan-400 to-emerald-400",
+        goals: [],
         cards: [],
       },
       {
         id: "done",
         title: "Done",
         accent: "from-violet-500 via-indigo-400 to-fuchsia-500",
+        goals: [],
         cards: [],
       },
     ],
     lastUpdated: new Date().toISOString(),
   };
 
+  const workspace = {
+    id: "studio",
+    name: "Studio",
+    accent: "from-indigo-500 via-purple-500 to-blue-500",
+    createdAt: NOW,
+    billingPlan: "starter",
+    members: [],
+    boards: [board],
+    activity: [],
+    notifications: [],
+    uploadReceipts: [],
+  };
+
   beforeEach(() => {
     fetchMock.mockImplementation(async (input: RequestInfo) => {
       const url = typeof input === "string" ? input : input.url;
       if (url.endsWith("/api/workspaces")) {
-        return { ok: true, json: async () => ({ workspaces: [{ ...board, boards: [board] }] }) } as Response;
+        return { ok: true, json: async () => ({ workspaces: [workspace] }) } as Response;
       }
       if (url.endsWith("/api/workspaces/studio")) {
-        return { ok: true, json: async () => ({ workspace: { id: "studio", members: [], boards: [board] } }) } as Response;
+        return {
+          ok: true,
+          json: async () => ({
+            workspace,
+          }),
+        } as Response;
       }
       if (url.endsWith("/api/workspaces/studio/boards/launchpad")) {
         return { ok: true, json: async () => ({ board }) } as Response;
@@ -115,7 +157,7 @@ describe("useBoardState planner integration", () => {
           ok: true,
           json: async () => ({
             suggestions: [],
-            focusCard: board.columns[0].cards[0],
+            focusCard: board.columns[0]!.goals[0]!,
             plan: {
               goalId: "goal-1",
               goalTitle: "Prototype kanban drag",
@@ -161,11 +203,13 @@ describe("useBoardState planner integration", () => {
     expect(plan.stages[0].state).toBe("pending");
 
     const client = getLastClient();
-    client?.emit("workflow:update", {
-      eventType: "workflow/stage",
-      workflowId: plan.workflowId,
-      payload: { stage_id: "Goal Intake", state: "Running" },
-      timestamp: new Date().toISOString(),
+    await act(async () => {
+      client?.emit?.("workflow:update", {
+        eventType: "workflow/stage",
+        workflowId: plan.workflowId,
+        payload: { stage_id: "Goal Intake", state: "Running" },
+        timestamp: new Date().toISOString(),
+      });
     });
 
     await waitFor(() => expect(result.current.planner.plans[0].stages[0].state).toBe("running"));
@@ -174,11 +218,13 @@ describe("useBoardState planner integration", () => {
       String(input).endsWith("/api/workspaces/studio/boards/launchpad")
     ).length;
 
-    client?.emit("workflow:update", {
-      eventType: "workflow/state",
-      workflowId: plan.workflowId,
-      payload: { state: "Completed" },
-      timestamp: new Date().toISOString(),
+    await act(async () => {
+      client?.emit?.("workflow:update", {
+        eventType: "workflow/state",
+        workflowId: plan.workflowId,
+        payload: { state: "Completed" },
+        timestamp: new Date().toISOString(),
+      });
     });
 
     await waitFor(() => expect(result.current.planner.plans[0].status).toBe("completed"));

@@ -1,24 +1,29 @@
-use std::io::{BufRead, Write};
+use std::io::BufRead;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{bail, ensure, Context, Result};
 use clap::{Args, Parser, Subcommand};
-use noa_plugin_sdk::{ToolDescriptor, ToolRegistry};
-use futures::StreamExt;
+use noa_caddy_manager::{CaddyManager, HealthProbe, RateLimitConfig, ReverseProxyRoute};
+#[cfg(feature = "cicd")]
+use noa_cicd::CICDSystem;
+#[cfg(feature = "inference")]
 use noa_inference::{
     CompletionRequest, ProviderRouter, TelemetryEvent, TelemetryHandle, TelemetrySink,
     TelemetryStatus,
 };
-use noa_cicd::CICDSystem;
+use noa_plugin_sdk::{ToolDescriptor, ToolRegistry};
 use noa_workflow::EvidenceLedgerEntry;
-use noa_workflow::{InferenceMetric, PipelineInstrumentation};
+#[cfg(feature = "inference")]
+use noa_workflow::InferenceMetric;
+use noa_workflow::PipelineInstrumentation;
 use relocation_daemon::{ExecutionMode, RelocationDaemon};
 use serde::Serialize;
 use serde_json::json;
 use tokio::runtime::Runtime;
 use uuid::Uuid;
+use walkdir::WalkDir;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum OutputMode {
@@ -29,8 +34,8 @@ enum OutputMode {
 #[derive(Parser)]
 #[command(
     name = "noa",
-    about = "NOA Ark OS relocation daemon tooling",
     about = "NOA Ark OS unified CLI (kernel, world, registry, trust, snapshot, agent, policy, sbom, pipeline, profile)",
+    long_about = "NOA Ark OS relocation daemon tooling",
     version
 )]
 struct Cli {
@@ -47,7 +52,11 @@ struct Cli {
 
 impl Cli {
     fn output_mode(&self) -> OutputMode {
-        if self.yaml { OutputMode::Yaml } else { OutputMode::Json }
+        if self.yaml {
+            OutputMode::Yaml
+        } else {
+            OutputMode::Json
+        }
     }
 }
 
@@ -73,96 +82,53 @@ struct RegistryArgs {
 #[derive(Subcommand)]
 enum Commands {
     /// Kernel operations
-    Kernel { #[command(subcommand)] cmd: KernelCmd },
+    Kernel {
+        #[command(subcommand)]
+        cmd: KernelCmd,
+    },
     /// World model operations
-    World { #[command(subcommand)] cmd: WorldCmd },
+    World {
+        #[command(subcommand)]
+        cmd: WorldCmd,
+    },
     /// Registry operations
-    Registry { #[command(subcommand)] cmd: RegistryCmd },
+    Registry {
+        #[command(subcommand)]
+        cmd: RegistryCmd,
+    },
     /// Trust operations
-    Trust { #[command(subcommand)] cmd: TrustCmd },
+    Trust {
+        #[command(subcommand)]
+        cmd: TrustCmd,
+    },
     /// Snapshot operations
-    Snapshot { #[command(subcommand)] cmd: SnapshotCmd },
-    /// Agent operations
-    Agent { #[command(subcommand)] cmd: AgentCmd },
+    Snapshot {
+        #[command(subcommand)]
+        cmd: SnapshotCmd,
+    },
     /// Policy operations
-    Policy { #[command(subcommand)] cmd: PolicyCmd },
+    Policy {
+        #[command(subcommand)]
+        cmd: PolicyCmd,
+    },
     /// SBOM operations
-    Sbom { #[command(subcommand)] cmd: SbomCmd },
-    /// Pipeline operations
-    Pipeline { #[command(subcommand)] cmd: PipelineCmd },
+    Sbom {
+        #[command(subcommand)]
+        cmd: SbomCmd,
+    },
     /// Profile operations
-    Profile { #[command(subcommand)] cmd: ProfileCmd },
+    Profile {
+        #[command(subcommand)]
+        cmd: ProfileCmd,
+    },
 
     /// Relocation daemon tooling (legacy)
-    Relocation { #[command(subcommand)] cmd: RelocationCmd },
+    Relocation {
+        #[command(subcommand)]
+        cmd: RelocationCmd,
+    },
 
     /// Inspect the evidence ledger
-    Evidence {
-        #[arg(long)]
-        workflow: Option<String>,
-        #[arg(long)]
-        limit: Option<usize>,
-    },
-}
-
-#[derive(Subcommand)]
-enum KernelCmd { Start, Stop, Status, Logs }
-
-#[derive(Subcommand)]
-enum WorldCmd { Verify, Fix, Graph, Diff { snapshot: String } }
-
-#[derive(Subcommand)]
-enum RegistryCmd { List, Describe { tool: String }, Search { query: String }, Validate }
-
-#[derive(Subcommand)]
-enum TrustCmd { Score, Audit { #[arg(long)] history: bool }, Thresholds { #[arg(value_name = "RULES")] rules: Option<String> } }
-
-#[derive(Subcommand)]
-enum SnapshotCmd { Create { name: String }, List, Rollback { id: String }, Verify { id: String } }
-
-#[derive(Subcommand)]
-enum AgentCmd { Spawn { r#type: String }, List, Kill { id: String }, Logs { id: String }, Metrics { id: String } }
-
-#[derive(Subcommand)]
-enum PolicyCmd { Validate { file: PathBuf }, Apply { file: PathBuf }, Test { file: PathBuf }, DryRun { file: PathBuf } }
-
-#[derive(Subcommand)]
-enum SbomCmd { Generate, Verify, Sign, Audit }
-
-#[derive(Subcommand)]
-enum PipelineCmd { Run, Status, Logs, Artifacts }
-
-#[derive(Subcommand)]
-enum ProfileCmd { Switch { name: String }, List, Validate { name: String }, Diff { a: String, b: String } }
-
-#[derive(Subcommand)]
-enum RelocationCmd {
-    /// Execute the relocation daemon once with the selected mode
-    Run {
-        #[command(flatten)]
-        daemon: DaemonArgs,
-        #[arg(long, default_value = "approval", value_parser = parse_mode)]
-        mode: ExecutionMode,
-    },
-    /// Display the current relocation state snapshot
-    Status { #[command(flatten)] daemon: DaemonArgs },
-    /// Approve a pending relocation action by its UUID
-    Approve {
-        #[command(flatten)]
-        daemon: DaemonArgs,
-        #[arg(value_parser = parse_uuid)]
-        action_id: Uuid,
-    },
-    /// Manually override a relocation for the provided source and destination
-    Override {
-        #[command(flatten)]
-        daemon: DaemonArgs,
-        source: PathBuf,
-        destination: PathBuf,
-        #[arg(long)]
-        force: bool,
-    },
-    /// Inspect the evidence ledger for workflow receipts and scan results
     Evidence {
         #[arg(long)]
         workflow: Option<String>,
@@ -194,6 +160,182 @@ enum RelocationCmd {
         #[command(flatten)]
         query: RegistryArgs,
     },
+    /// Manage shared notebook workspaces
+    Notebook {
+        #[command(subcommand)]
+        command: NotebookCommands,
+    },
+    /// Interact with agents using configured inference providers
+    Agent {
+        #[command(subcommand)]
+        command: AgentCommands,
+    },
+    /// Manage the embedded Caddy reverse proxy
+    Caddy {
+        #[command(subcommand)]
+        command: CaddyCommands,
+    },
+    /// Run a natural language query through the inference router
+    Query {
+        #[arg(value_name = "PROMPT")]
+        prompt: String,
+        #[arg(long)]
+        stream: bool,
+    },
+    /// Manage CI/CD pipelines and agent approvals
+    Pipeline {
+        #[command(subcommand)]
+        command: PipelineCommands,
+    },
+}
+
+#[derive(Subcommand)]
+enum KernelCmd {
+    Start,
+    Stop,
+    Status,
+    Logs,
+}
+
+#[derive(Subcommand)]
+enum WorldCmd {
+    Verify,
+    Fix,
+    Graph,
+    Diff { snapshot: String },
+}
+
+#[derive(Subcommand)]
+enum RegistryCmd {
+    List,
+    Describe { tool: String },
+    Search { query: String },
+    Validate,
+}
+
+#[derive(Subcommand)]
+enum CaddyCommands {
+    /// Push a reverse proxy route through the Caddy admin API
+    PushRoute {
+        #[arg(long, default_value = "http://127.0.0.1:2019")]
+        admin_endpoint: String,
+        #[arg(long, required = true)]
+        domain: String,
+        #[arg(long = "upstream", required = true)]
+        upstreams: Vec<String>,
+        #[arg(long, default_value = "/health")]
+        health_uri: String,
+        #[arg(long, default_value = "10s")]
+        health_interval: String,
+        #[arg(long, default_value = "5s")]
+        health_timeout: String,
+        #[arg(long)]
+        disable_health_check: bool,
+        #[arg(long)]
+        disable_compression: bool,
+        #[arg(long)]
+        disable_security_headers: bool,
+        #[arg(long)]
+        rate_limit_events: Option<u64>,
+        #[arg(long)]
+        rate_limit_window: Option<String>,
+    },
+    /// Trigger a configuration reload via the admin API
+    Reload {
+        #[arg(long, default_value = "http://127.0.0.1:2019")]
+        admin_endpoint: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum NotebookCommands {
+    /// Ensure the shared notebook workspace exists and has metadata
+    Init {
+        #[arg(long, default_value = "notebooks")]
+        path: PathBuf,
+    },
+    /// Summarise the number of tracked notebooks under the workspace
+    Status {
+        #[arg(long, default_value = "notebooks")]
+        path: PathBuf,
+    },
+}
+
+#[derive(Subcommand)]
+enum TrustCmd {
+    Score,
+    Audit {
+        #[arg(long)]
+        history: bool,
+    },
+    Thresholds {
+        #[arg(value_name = "RULES")]
+        rules: Option<String>,
+    },
+}
+
+#[derive(Subcommand)]
+enum SnapshotCmd {
+    Create { name: String },
+    List,
+    Rollback { id: String },
+    Verify { id: String },
+}
+
+#[derive(Subcommand)]
+enum PolicyCmd {
+    Validate { file: PathBuf },
+    Apply { file: PathBuf },
+    Test { file: PathBuf },
+    DryRun { file: PathBuf },
+}
+
+#[derive(Subcommand)]
+enum SbomCmd {
+    Generate,
+    Verify,
+    Sign,
+    Audit,
+}
+
+#[derive(Subcommand)]
+enum ProfileCmd {
+    Switch { name: String },
+    List,
+    Validate { name: String },
+    Diff { a: String, b: String },
+}
+
+#[derive(Subcommand)]
+enum RelocationCmd {
+    /// Execute the relocation daemon once with the selected mode
+    Run {
+        #[command(flatten)]
+        daemon: DaemonArgs,
+        #[arg(long, default_value = "approval", value_parser = parse_mode)]
+        mode: ExecutionMode,
+    },
+    /// Display the current relocation state snapshot
+    Status {
+        #[command(flatten)]
+        daemon: DaemonArgs,
+    },
+    /// Approve a pending relocation action by its UUID
+    Approve {
+        #[command(flatten)]
+        daemon: DaemonArgs,
+        #[arg(value_parser = parse_uuid)]
+        action_id: Uuid,
+    },
+    /// Manually override a relocation for the provided source and destination
+    Override {
+        #[command(flatten)]
+        daemon: DaemonArgs,
+        source: PathBuf,
+        destination: PathBuf,
+        #[arg(long)]
+        force: bool,
+    },
 }
 
 #[derive(Serialize)]
@@ -203,22 +345,6 @@ struct ToolCategoryResponse {
     category: String,
     total: usize,
     tools: Vec<ToolDescriptor>,
-    /// Interact with agents using configured inference providers
-    Agent {
-        #[command(subcommand)]
-        command: AgentCommands,
-    },
-    /// Run a natural language query through the inference router
-    Query {
-        #[arg(value_name = "PROMPT")]
-        prompt: String,
-        #[arg(long)]
-        stream: bool,
-    /// Manage CI/CD pipelines and agent approvals
-    Pipeline {
-        #[command(subcommand)]
-        command: PipelineCommands,
-    },
 }
 
 #[derive(Subcommand)]
@@ -229,6 +355,10 @@ enum AgentCommands {
         prompt: String,
         #[arg(long)]
         stream: bool,
+    },
+}
+
+#[derive(Subcommand)]
 enum PipelineCommands {
     /// Approve a pipeline using agent trust policies
     Approve {
@@ -316,16 +446,6 @@ fn main() -> Result<()> {
                 };
                 print_obj(out_mode, &v)?;
             }
-            Commands::Agent { cmd } => {
-                let v = match cmd {
-                    AgentCmd::Spawn { r#type } => json!({"component":"agent","action":"spawn","type": r#type, "status":"not_implemented"}),
-                    AgentCmd::List => json!({"component":"agent","action":"list","status":"not_implemented"}),
-                    AgentCmd::Kill { id } => json!({"component":"agent","action":"kill","id": id, "status":"not_implemented"}),
-                    AgentCmd::Logs { id } => json!({"component":"agent","action":"logs","id": id, "status":"not_implemented"}),
-                    AgentCmd::Metrics { id } => json!({"component":"agent","action":"metrics","id": id, "status":"not_implemented"}),
-                };
-                print_obj(out_mode, &v)?;
-            }
             Commands::Policy { cmd } => {
                 let v = match cmd {
                     PolicyCmd::Validate { file } => json!({"component":"policy","action":"validate","file": file, "status":"not_implemented"}),
@@ -341,15 +461,6 @@ fn main() -> Result<()> {
                     SbomCmd::Verify => json!({"component":"sbom","action":"verify","status":"not_implemented"}),
                     SbomCmd::Sign => json!({"component":"sbom","action":"sign","status":"not_implemented"}),
                     SbomCmd::Audit => json!({"component":"sbom","action":"audit","status":"not_implemented"}),
-                };
-                print_obj(out_mode, &v)?;
-            }
-            Commands::Pipeline { cmd } => {
-                let v = match cmd {
-                    PipelineCmd::Run => json!({"component":"pipeline","action":"run","status":"not_implemented"}),
-                    PipelineCmd::Status => json!({"component":"pipeline","action":"status","status":"not_implemented"}),
-                    PipelineCmd::Logs => json!({"component":"pipeline","action":"logs","status":"not_implemented"}),
-                    PipelineCmd::Artifacts => json!({"component":"pipeline","action":"artifacts","status":"not_implemented"}),
                 };
                 print_obj(out_mode, &v)?;
             }
@@ -418,6 +529,54 @@ fn main() -> Result<()> {
             Commands::Plugin { query } => {
                 handle_registry_category("plugin", query)?;
             }
+            Commands::Notebook { command } => match command {
+                NotebookCommands::Init { path } => {
+                    std::fs::create_dir_all(&path)
+                        .with_context(|| format!("failed to create {:?}", path))?;
+                    let manifest = path.join("README.noa.md");
+                    if !manifest.exists() {
+                        let contents = "# NOA Notebook Workspace\nThis directory is managed via `noa notebook`.\n";
+                        std::fs::write(&manifest, contents)?;
+                    }
+                    let payload = json!({
+                        "component": "notebook",
+                        "action": "init",
+                        "path": path.display().to_string(),
+                        "status": "ok",
+                    });
+                    print_obj(out_mode, &payload)?;
+                }
+                NotebookCommands::Status { path } => {
+                    let mut notebooks = 0usize;
+                    let mut checkpoints = 0usize;
+                    for entry in WalkDir::new(&path).into_iter().filter_map(|entry| entry.ok()) {
+                        if entry.file_type().is_file()
+                            && entry
+                                .path()
+                                .extension()
+                                .and_then(|ext| ext.to_str())
+                                == Some("ipynb")
+                        {
+                            notebooks += 1;
+                        }
+                        if entry.file_type().is_dir()
+                            && entry.file_name() == ".ipynb_checkpoints"
+                        {
+                            checkpoints += 1;
+                        }
+                    }
+                    let payload = json!({
+                        "component": "notebook",
+                        "action": "status",
+                        "path": path.display().to_string(),
+                        "notebooks": notebooks,
+                        "checkpoint_dirs": checkpoints,
+                        "status": "ok",
+                    });
+                    print_obj(out_mode, &payload)?;
+                }
+            },
+            #[cfg(feature = "inference")]
             Commands::Agent { command } => {
                 let instrumentation = Arc::new(
                     PipelineInstrumentation::new()
@@ -430,6 +589,82 @@ fn main() -> Result<()> {
                     }
                 }
             }
+            #[cfg(not(feature = "inference"))]
+            Commands::Agent { .. } => {
+                print_obj(out_mode, &json!({"component":"agent","status":"inference_disabled"}))?;
+            }
+            Commands::Caddy { command } => match command {
+                CaddyCommands::PushRoute {
+                    admin_endpoint,
+                    domain,
+                    upstreams,
+                    health_uri,
+                    health_interval,
+                    health_timeout,
+                    disable_health_check,
+                    disable_compression,
+                    disable_security_headers,
+                    rate_limit_events,
+                    rate_limit_window,
+                } => {
+                    ensure!(
+                        !upstreams.is_empty(),
+                        "provide at least one --upstream value"
+                    );
+                    let mut route = ReverseProxyRoute::default();
+                    route.domain = domain;
+                    route.upstreams = upstreams;
+                    route.enable_compression = !disable_compression;
+                    route.inject_security_headers = !disable_security_headers;
+                    route.health_probe = if disable_health_check {
+                        None
+                    } else {
+                        Some(HealthProbe {
+                            uri: health_uri,
+                            interval: health_interval,
+                            timeout: health_timeout,
+                        })
+                    };
+                    route.rate_limit = match rate_limit_events {
+                        Some(events) => Some(RateLimitConfig {
+                            zone: "dynamic".into(),
+                            key: "{remote_host}".into(),
+                            events,
+                            window: rate_limit_window
+                                .unwrap_or_else(|| "1m".to_string()),
+                        }),
+                        None => {
+                            if rate_limit_window.is_some() {
+                                bail!(
+                                    "--rate-limit-window requires --rate-limit-events"
+                                );
+                            }
+                            None
+                        }
+                    };
+                    let manager = CaddyManager::new(admin_endpoint)?;
+                    manager.push_route(&route).await?;
+                    let payload = json!({
+                        "component": "caddy",
+                        "action": "push_route",
+                        "domain": route.domain,
+                        "upstreams": route.upstreams,
+                        "status": "ok"
+                    });
+                    print_obj(out_mode, &payload)?;
+                }
+                CaddyCommands::Reload { admin_endpoint } => {
+                    let manager = CaddyManager::new(admin_endpoint)?;
+                    manager.reload().await?;
+                    let payload = json!({
+                        "component": "caddy",
+                        "action": "reload",
+                        "status": "ok"
+                    });
+                    print_obj(out_mode, &payload)?;
+                }
+            },
+            #[cfg(feature = "inference")]
             Commands::Query { prompt, stream } => {
                 let instrumentation = Arc::new(
                     PipelineInstrumentation::new()
@@ -438,6 +673,7 @@ fn main() -> Result<()> {
                 let telemetry = inference_telemetry_handle(instrumentation);
                 handle_query(prompt, stream, telemetry).await?;
             }
+            #[cfg(feature = "cicd")]
             Commands::Pipeline { command } => match command {
                 PipelineCommands::Approve {
                     pipeline,
@@ -464,7 +700,7 @@ fn main() -> Result<()> {
                             tags.clone(),
                             evidence.clone(),
                         )
-                        .map_err(anyhow::Error::msg)?;
+                        .map_err(Error::msg)?;
                     let payload = json!({
                         "pipeline_id": pipeline,
                         "status": format!("{:?}", status),
@@ -476,6 +712,14 @@ fn main() -> Result<()> {
                     println!("{}", serde_json::to_string_pretty(&payload)?);
                 }
             },
+            #[cfg(not(feature = "inference"))]
+            Commands::Query { .. } => {
+                print_obj(out_mode, &json!({"component":"query","status":"inference_disabled"}))?;
+            }
+            #[cfg(not(feature = "cicd"))]
+            Commands::Pipeline { .. } => {
+                print_obj(out_mode, &json!({"component":"pipeline","status":"cicd_disabled"}))?;
+            }
         }
 
         Ok(())
@@ -528,7 +772,7 @@ fn handle_registry_category(category: &str, query: RegistryArgs) -> Result<()> {
 fn show_evidence(workflow_filter: Option<String>, limit: Option<usize>) -> Result<()> {
     let path = PathBuf::from("storage/db/evidence/ledger.jsonl");
     if !path.exists() {
-        anyhow::bail!("evidence ledger not found at {}", path.display());
+        bail!("evidence ledger not found at {}", path.display());
     }
     let file = std::fs::File::open(&path)?;
     let reader = std::io::BufReader::new(file);
@@ -566,10 +810,12 @@ async fn build_daemon(config: DaemonArgs) -> Result<RelocationDaemon> {
     RelocationDaemon::new(config.policy, config.registry, config.backups).await
 }
 
+#[cfg(feature = "inference")]
 struct InferenceTelemetryBridge {
     instrumentation: Arc<PipelineInstrumentation>,
 }
 
+#[cfg(feature = "inference")]
 impl TelemetrySink for InferenceTelemetryBridge {
     fn record(&self, event: TelemetryEvent) {
         let status = match event.status {
@@ -592,15 +838,23 @@ impl TelemetrySink for InferenceTelemetryBridge {
     }
 }
 
+#[cfg(feature = "inference")]
 fn inference_telemetry_handle(instrumentation: Arc<PipelineInstrumentation>) -> TelemetryHandle {
     Arc::new(InferenceTelemetryBridge { instrumentation }) as TelemetryHandle
 }
+#[cfg(not(feature = "inference"))]
+#[allow(dead_code)]
+fn inference_telemetry_handle(_instrumentation: Arc<PipelineInstrumentation>) -> () {
+    ()
+}
 
+#[cfg(feature = "inference")]
 async fn build_router(telemetry: TelemetryHandle) -> Result<ProviderRouter> {
     let router = ProviderRouter::from_env()?;
     Ok(router.with_telemetry(telemetry))
 }
 
+#[cfg(feature = "inference")]
 async fn handle_invoke(prompt: String, stream: bool, telemetry: TelemetryHandle) -> Result<()> {
     let router = build_router(telemetry).await?;
     let request = CompletionRequest {
@@ -628,6 +882,7 @@ async fn handle_invoke(prompt: String, stream: bool, telemetry: TelemetryHandle)
     Ok(())
 }
 
+#[cfg(feature = "inference")]
 async fn handle_query(prompt: String, stream: bool, telemetry: TelemetryHandle) -> Result<()> {
     let router = build_router(telemetry).await?;
     let request = CompletionRequest {

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Capability","Platform"],"fn":["bootstrap","init","init_with_kernel"],"mod":["adapters","analytics","chat","components","events","module","renderer","services","shell","state","workflows"],"struct":["KernelUiBridge","UIContext","UIState"]};

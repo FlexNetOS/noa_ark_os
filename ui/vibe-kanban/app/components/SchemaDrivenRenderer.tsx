@@ -13,6 +13,7 @@ import { BoardShell } from "./BoardShell";
 import { PresenceBar } from "./PresenceBar";
 import { AssistPanel } from "./AssistPanel";
 import { PlannerPanel } from "./PlannerPanel";
+import { AutomationPanel } from "./AutomationPanel";
 import { UploadPanel } from "./UploadPanel";
 import { AnalyticsPanel } from "./AnalyticsPanel";
 import { ActivityTimeline } from "./ActivityTimeline";
@@ -160,21 +161,7 @@ const widgetRegistry = {
       </WidgetSurface>
     );
   },
-  "workspace.planner": ({ context }: ComponentRenderProps) => {
-    const { boardState } = context.data as SchemaDrivenRendererProps["context"]["data"];
-    const resume = context.resumeWorkflow;
-    return (
-      <WidgetSurface>
-        <PlannerPanel
-          planner={boardState.planner}
-          onResume={(token) => {
-            boardState.resumePlan(token);
-            resume?.(token);
-          }}
-        />
-      </WidgetSurface>
-    );
-  },
+  // removed duplicate planner widget using unsupported props
   "workspace.analytics": ({ context }: ComponentRenderProps) => {
     const { boardState } = context.data as SchemaDrivenRendererProps["context"]["data"];
     const enableGoalInsights =
@@ -197,7 +184,7 @@ const widgetRegistry = {
   },
   "workspace.automation": ({ context }: ComponentRenderProps) => {
     const { boardState } = context.data as SchemaDrivenRendererProps["context"]["data"];
-    const cards = boardState.snapshot?.columns.flatMap((column) => column.cards) ?? [];
+    const cards = boardState.snapshot?.columns.flatMap((column) => column.goals) ?? [];
     return (
       <WidgetSurface>
         <AutomationPanel cards={cards} onRetry={boardState.retryAutomation} />

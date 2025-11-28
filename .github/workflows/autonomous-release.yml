@@ -1,0 +1,52 @@
+name: Autonomous Release
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - cicd/**
+      - audit/**
+      - docs/autonomous_release_flow.md
+      - .github/workflows/autonomous-release.yml
+
+jobs:
+  trust-gate:
+    name: Verify autonomous release pipeline
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Configure git
+        run: |
+          git config --global user.name "CI Bot"
+          git config --global user.email "ci@example.com"
+      - name: Run CICD tests
+        run: cargo test -p noa_cicd
+
+      - name: Execute rollback drill
+        run: cargo run --manifest-path cicd/Cargo.toml --bin rollback_simulation -- --repo . --ledger audit/ledger.jsonl --output audit/rollbacks
+
+      - name: Publish audit bundle
+        run: bash audit/publish.sh
+
+      - name: Verify latest audit bundle
+        run: |
+          latest=$(ls -d audit/bundle-* 2>/dev/null | tail -n 1)
+          if [ -z "$latest" ]; then
+            echo "No audit bundle produced"
+            exit 1
+          fi
+          bash audit/verify.sh "$latest"
+
+      - name: Show ledger tail
+        run: |
+          echo '--- ledger tail ---'
+          tail -n 20 audit/ledger.jsonl || true

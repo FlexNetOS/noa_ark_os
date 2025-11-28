@@ -198,6 +198,18 @@ jobs:
 
 **Notes**:
 - Guard can be bypassed line-by-line with `QUARANTINE_GUARD_ALLOW` for documentation snippets only.
+
+### Local Regression Harness (Make Targets)
+
+To exercise the portable-friendly `make` targets outside CI, run `cicd/workflows/local-devshell-regression.sh` (or the PowerShell variant). The script sequentially executes:
+
+```bash
+make cargo-check
+make cargo-test
+make ui-build
+```
+
+This mirrors the regression coverage expected by CI while relying on the same shims that power the new developer CLI.
 - Rotation workflow appends to `archive/YYYY/MM/ledger.json` and emits `.tar.zst` bundles under `archive/YYYY/MM/quarantine/` for audit.
 
 ---

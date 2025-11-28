@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 
 
 import { assertUser } from "@/app/lib/session";
-import type { VibeCard, WorkspaceBoard } from "@/app/components/board-types";
+import type { VibeCard, WorkspaceBoard, Goal, GoalPayload } from "@/app/components/board-types";
 import { aiDatabase } from "@/server/ai-database";
 import { appendGoalTrace, getGoalMemoryInsights } from "@/server/memory-store";
 import { getBoard, getWorkspace } from "@/server/workspace-store";
@@ -111,35 +111,53 @@ export async function POST(
   if (!board) {
     return new NextResponse("Not Found", { status: 404 });
   }
+  let body: unknown = null;
+  try {
+    body = await request.json();
+  } catch {
+    body = null;
+  }
   const goalId = `board:${params.boardId}`;
+  const suggestions = generateSuggestions(board);
+  const focusCard = pickFocusGoal(board);
+  const goalPayload = buildGoalPayload(
+    body,
+    { workspaceId: workspace.id, boardId: board.id, userId: user.id },
+    board,
+    focusCard,
+    suggestions
+  );
+  const resolvedGoalId = goalPayload.id ?? goalId;
   const generatedAt = new Date().toISOString();
   aiDatabase.recordGoalLifecycleEvent({
-    goalId,
+    goalId: resolvedGoalId,
     workspaceId: workspace.id,
     eventType: "assist.requested",
     status: "received",
     summary: `Assist requested by ${user.name ?? user.id}`,
-    payload: { boardId: board.id, workspaceId: workspace.id },
+    payload: { boardId: board.id, workspaceId: workspace.id, goal: goalPayload },
   });
-  const suggestions = generateSuggestions(board);
-  const focusCard = pickFocusCard(board);
   aiDatabase.recordGoalLifecycleEvent({
-    goalId,
+    goalId: resolvedGoalId,
     workspaceId: workspace.id,
     eventType: "assist.generated",
     status: "success",
     summary: `Generated ${suggestions.length} suggestions`,
-    payload: { boardId: board.id, suggestionCount: suggestions.length },
+    payload: {
+      boardId: board.id,
+      suggestionCount: suggestions.length,
+      goal: goalPayload,
+    },
   });
   aiDatabase.upsertGoalEmbedding({
-    goalId,
+    goalId: resolvedGoalId,
     workspaceId: workspace.id,
     embeddingModel: "kanban.board.stats.v1",
     embedding: buildBoardEmbedding(board),
   });
   await appendGoalTrace({
-    id: `${goalId}-assist-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
-    goalId,
+    id: `${resolvedGoalId}-assist-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    goalId: resolvedGoalId,
     workspaceId: workspace.id,
     boardId: board.id,
     actorId: user.id,
@@ -149,10 +167,10 @@ export async function POST(
     metadata: { suggestionCount: suggestions.length },
     createdAt: generatedAt,
   });
-  const memory = await getGoalMemoryInsights(goalId, workspace.id);
-  const lifecycle = aiDatabase.listGoalLifecycleEvents(goalId, 25);
-  const artifacts = aiDatabase.listArtifacts(goalId, 25);
-  const similarGoals = aiDatabase.searchSimilarGoals(goalId, "kanban.board.stats.v1", 5);
+  const memory = await getGoalMemoryInsights(resolvedGoalId, workspace.id);
+  const lifecycle = aiDatabase.listGoalLifecycleEvents(resolvedGoalId, 25);
+  const artifacts = aiDatabase.listArtifacts(resolvedGoalId, 25);
+  const similarGoals = aiDatabase.searchSimilarGoals(resolvedGoalId, "kanban.board.stats.v1", 5);
   return NextResponse.json({
     suggestions,
     focusCard,
@@ -179,13 +197,16 @@ function pickFocusGoal(board: WorkspaceBoard): Goal | null {
   return sorted[0] ?? null;
 }
 
+function resolveGoals(column: WorkspaceBoard["columns"][number]): Goal[] {
+  return column.goals ?? column.cards ?? [];
+}
+
 function buildBoardEmbedding(board: WorkspaceBoard): number[] {
-  const totalCards = board.columns.reduce((count, column) => count + column.cards.length, 0);
-  const hypeCards = board.columns.flatMap((column) => column.cards.filter((card) => card.mood === "hype")).length;
+  const totals = board.columns.map((column) => resolveGoals(column));
+  const totalGoals = totals.reduce((count, goals) => count + goals.length, 0);
+  const hypeGoals = totals.flat().filter((card) => card.mood === "hype").length;
   const doneColumn = board.columns.find((column) => column.title.toLowerCase().includes("done"));
-  const completed = doneColumn?.cards.length ?? 0;
-  const focusCards = board.columns
-    .flatMap((column) => column.cards)
-    .filter((card) => card.mood === "focus").length;
-  return [totalCards, hypeCards, completed, focusCards].map((value) => Number(value));
+  const completed = doneColumn ? resolveGoals(doneColumn).length : 0;
+  const focusGoals = totals.flat().filter((card) => card.mood === "focus").length;
+  return [totalGoals, hypeGoals, completed, focusGoals].map((value) => Number(value));
 }

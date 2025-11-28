@@ -1,0 +1,31 @@
+{
+  "events": [
+    {
+      "client_id": "cli-1",
+      "fs_scope": "fs.policy.read",
+      "latency_ms": 0.03596401074901223,
+      "method": "GET",
+      "network_scope": "net.gateway",
+      "path": "/v1/policy",
+      "service": "gateway",
+      "timestamp": 1763498536.6603613,
+      "token_rate_limit": 120
+    },
+    {
+      "client_id": "notebook-agent",
+      "fs_scope": "fs.notebooks.sync",
+      "latency_ms": 0.012788979802280664,
+      "method": "POST",
+      "network_scope": "net.notebooks.loopback",
+      "path": "/v1/notebooks/sync",
+      "service": "notebook-sync",
+      "timestamp": 1763498536.6604457,
+      "token_rate_limit": 60
+    }
+  ],
+  "p95_latency_ms": 0.03596401074901223,
+  "rejected_auth": 1,
+  "rejected_policy": 2,
+  "rejected_rate": 0,
+  "requests_total": 2
+}

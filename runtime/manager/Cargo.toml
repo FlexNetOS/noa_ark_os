@@ -8,6 +8,7 @@ license = "MIT"
 
 [dependencies]
 serde = { workspace = true }
+serde_yaml = { workspace = true }
 anyhow = { workspace = true }
 noa_core = { path = "../../core" }
 thiserror = "1.0"
