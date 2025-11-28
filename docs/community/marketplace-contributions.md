@@ -19,7 +19,7 @@ The marketplace showcases kernel-vetted applications and agents. Publishers must
 
 1. **Automated Linting**: `marketctl lint` validates manifest structure, attestation references, and semantic versioning.
 2. **Security Scan**: Kernel security council reviews supply chain attestations, SBOMs, and vulnerability reports.
-3. **Functional Evaluation**: Marketplace maintainers execute the installation workflow in a sandbox workspace.
+3. **Functional Evaluation**: Workflow maintainers execute the installation workflow in a sandbox workspace.
 4. **Contract Sign-off**: Licensing terms and revenue sharing agreements are finalized prior to publication.
 
 ## Post-Publication Responsibilities
