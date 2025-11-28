@@ -19,13 +19,14 @@ mod telemetry;
 pub use auth::{AuthCredentials, UnifiedAuthenticator};
 pub use policy::{GatewayPolicy, PolicyEnforcer};
 pub use rate_limit::{RateLimiter, RateLimiterConfig};
-pub use router::{ProgrammableRouter, Protocol, RoutePlan};
+pub use router::{ProgrammableRouter, Protocol, RoutePlan, RoutingError};
 pub use telemetry::{GatewayMetrics, TelemetryEvent, TelemetrySink};
 
 use anyhow::{anyhow, Context, Result};
 use chrono::{DateTime, Utc};
 use noa_agents::registry::AgentRegistry;
 use noa_core::security::{self, Permission};
+use serde::Serialize;
 use std::sync::Arc;
 use tracing::instrument;
 
@@ -42,7 +43,7 @@ pub struct GatewayRequest {
 }
 
 /// Simplified response emitted by the gateway after routing.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct GatewayResponse {
     pub request_id: String,
     pub route_plan: RoutePlan,

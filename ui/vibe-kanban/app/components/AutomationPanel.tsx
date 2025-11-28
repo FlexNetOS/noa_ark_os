@@ -3,12 +3,13 @@
 import { useMemo, useState } from "react";
 import type { VibeCard, AgentAutomationRun } from "./board-types";
 import { tokens } from "@noa-ark/shared-ui/tokens";
+const palette = tokens.colors;
 
 const STATUS_COLORS: Record<AgentAutomationRun["status"], string> = {
-  queued: tokens.colors["status/info"],
-  running: tokens.colors["status/warning"],
-  completed: tokens.colors["status/success"],
-  failed: tokens.colors["status/danger"],
+  queued: palette["status/info"],
+  running: palette["status/warning"],
+  completed: palette["status/success"],
+  failed: palette["status/danger"],
 };
 
 export interface AutomationPanelProps {
@@ -70,8 +71,8 @@ export function AutomationPanel({ cards, onRetry }: AutomationPanelProps) {
               padding: tokens.spacing.md,
               background:
                 latestRun?.status === "running"
-                  ? tokens.colors["surface/glow"]
-                  : tokens.colors["surface/primary"],
+                  ? palette["surface/glow"]
+                  : palette["surface/primary"],
               display: "flex",
               flexDirection: "column",
               gap: tokens.spacing.sm,
@@ -89,7 +90,7 @@ export function AutomationPanel({ cards, onRetry }: AutomationPanelProps) {
                     borderRadius: tokens.radii.full,
                     fontSize: "0.75rem",
                     fontWeight: 600,
-                    color: tokens.colors["text/inverse"],
+                    color: palette["text/inverse"],
                     background: STATUS_COLORS[latestRun?.status ?? "queued"],
                   }}
                 >
@@ -112,7 +113,7 @@ export function AutomationPanel({ cards, onRetry }: AutomationPanelProps) {
                         justifyContent: "space-between",
                         alignItems: "center",
                         borderRadius: tokens.radii.sm,
-                        background: tokens.colors["surface/secondary"],
+                        background: palette["surface/secondary"],
                         padding: `${tokens.spacing.xs} ${tokens.spacing.sm}`,
                       }}
                     >
@@ -120,10 +121,10 @@ export function AutomationPanel({ cards, onRetry }: AutomationPanelProps) {
                         <p style={{ fontSize: "0.8rem", fontWeight: 600 }}>{tool.name}</p>
                         <p style={{ fontSize: "0.75rem", color: tokens.colors["text/subtle"] }}>{tool.capability}</p>
                         {tool.error && (
-                          <p style={{ fontSize: "0.75rem", color: tokens.colors["status/danger"] }}>{tool.error}</p>
+                          <p style={{ fontSize: "0.75rem", color: palette["status/danger"] }}>{tool.error}</p>
                         )}
                         {tool.output && !tool.error && (
-                          <p style={{ fontSize: "0.75rem", color: tokens.colors["text/muted"] }}>{tool.output}</p>
+                          <p style={{ fontSize: "0.75rem", color: palette["text/muted"] }}>{tool.output}</p>
                         )}
                       </div>
                       <span style={{ fontSize: "0.75rem", textTransform: "capitalize" }}>{tool.status}</span>
@@ -143,11 +144,11 @@ export function AutomationPanel({ cards, onRetry }: AutomationPanelProps) {
                 disabled={pending.has(card.id) || (!automation.retryAvailable && !hasFailure)}
                 style={{
                   borderRadius: tokens.radii.full,
-                  border: `1px solid ${tokens.colors["border/strong"]}`,
+                  border: `1px solid ${palette["border/strong"]}`,
                   padding: `${tokens.spacing.xs} ${tokens.spacing.md}`,
                   fontSize: "0.8rem",
                   fontWeight: 600,
-                  color: hasFailure ? tokens.colors["status/danger"] : tokens.colors["text/primary"],
+                  color: hasFailure ? palette["status/danger"] : palette["text/primary"],
                   background: "transparent",
                   opacity: pending.has(card.id) ? 0.6 : 1,
                   cursor: pending.has(card.id) ? "progress" : "pointer",

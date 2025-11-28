@@ -408,8 +408,8 @@ fn parse_priority(priority_str: &str) -> Result<Priority, Error> {
 }
 
 fn extract_name_from_url(url: &str) -> String {
-    url.split('/')
-        .last()
+    url.rsplit('/')
+        .next()
         .and_then(|s| s.split('.').next())
         .unwrap_or("unknown")
         .to_string()

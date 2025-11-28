@@ -1,5 +1,6 @@
 use std::collections::HashSet;
-use std::path::Path;
+use std::fs;
+use std::path::{Path, PathBuf};
 
 use noa_core::hardware::{AcceleratorKind, HardwareProfile};
 #[cfg(test)]
@@ -96,18 +97,13 @@ impl RuntimePlan {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum HostClassification {
     Minimal,
+    #[default]
     Standard,
     Accelerated,
-}
-
-impl Default for HostClassification {
-    fn default() -> Self {
-        HostClassification::Standard
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -135,9 +131,43 @@ pub struct KernelRuntimeGraph {
     pub services: Vec<KernelRuntimeService>,
 }
 
+#[derive(Debug, Error)]
+pub enum KernelRuntimeGraphError {
+    #[error("failed to read kernel runtime graph at {path}: {source}")]
+    Read {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("failed to parse kernel runtime graph at {path}: {source}")]
+    Parse {
+        path: PathBuf,
+        #[source]
+        source: serde_yaml::Error,
+    },
+}
+
 impl KernelRuntimeGraph {
     pub fn service(&self, id: &str) -> Option<&KernelRuntimeService> {
         self.services.iter().find(|service| service.id == id)
+    }
+
+    pub fn load_from_path(
+        path: impl AsRef<Path>,
+    ) -> std::result::Result<Self, KernelRuntimeGraphError> {
+        let path_ref = path.as_ref();
+        let path_buf = path_ref.to_path_buf();
+        let data =
+            fs::read_to_string(path_ref).map_err(|source| KernelRuntimeGraphError::Read {
+                path: path_buf.clone(),
+                source,
+            })?;
+        let graph =
+            serde_yaml::from_str(&data).map_err(|source| KernelRuntimeGraphError::Parse {
+                path: path_buf,
+                source,
+            })?;
+        Ok(graph)
     }
 }
 
@@ -249,6 +279,7 @@ impl AdaptiveRuntimeController {
         Ok(Some(report))
     }
 }
+
 /// Errors reported when a suitable backend cannot be selected.
 #[derive(Debug, Error)]
 pub enum RuntimeSelectionError {
@@ -426,6 +457,7 @@ fn deduplicate_fallbacks(plan: &mut RuntimePlan) {
 mod tests {
     use super::*;
     use std::fs;
+    use std::path::PathBuf;
 
     use tempfile::tempdir;
     use wat::parse_str;
@@ -445,6 +477,21 @@ mod tests {
             total_bytes: total_gb * 1024 * 1024 * 1024,
             available_bytes: available_gb * 1024 * 1024 * 1024,
         }
+    }
+
+    #[test]
+    fn load_graph_from_yaml_fixture() {
+        let graph_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../kernel/graph.yaml");
+        let graph =
+            KernelRuntimeGraph::load_from_path(&graph_path).expect("graph fixture should load");
+        assert!(
+            !graph.services.is_empty(),
+            "fixture graph must contain at least one service"
+        );
+        assert!(
+            !graph.boot_order.is_empty(),
+            "fixture graph must declare a boot order"
+        );
     }
 
     #[test]

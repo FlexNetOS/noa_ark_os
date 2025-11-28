@@ -27,8 +27,8 @@ impl Cas {
         Ok(Self { root })
     }
 
-    /// Create a CAS instance using the default directory.
-    pub fn default() -> Result<Self> {
+    /// Create a CAS instance using env var `CRC_CAS_DIR` or default directory.
+    pub fn from_env_or_default() -> Result<Self> {
         let root = std::env::var("CRC_CAS_DIR").unwrap_or_else(|_| DEFAULT_CAS_DIR.to_string());
         Self::new(root)
     }

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["register_default_capabilities","wrap_init_error"]};

@@ -181,7 +181,7 @@ impl RuntimeManager {
                 *in_degree.entry(plugin.name.clone()).or_insert(0) += 1;
                 adjacency
                     .entry(dependency.clone())
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push(plugin.name.clone());
             }
         }

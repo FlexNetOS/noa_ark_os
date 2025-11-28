@@ -386,7 +386,9 @@ mod tests {
             tool_requirements: Vec::new(),
         };
 
-        let receipt = dispatcher.dispatch(&task).expect("role dispatch should succeed");
+        let receipt = dispatcher
+            .dispatch(&task)
+            .expect("role dispatch should succeed");
         assert_eq!(receipt.agent_metadata.role, "planner");
         assert!(
             receipt

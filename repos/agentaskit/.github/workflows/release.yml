@@ -1,0 +1,11 @@
+name: Release
+on:
+  workflow_dispatch:
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify gates (stub)
+        run: echo "Gates would verify VER-001, canary, signatures"

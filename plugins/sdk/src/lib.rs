@@ -7,6 +7,6 @@
 pub mod registry;
 
 pub use registry::{
-    ApiSurface, AutomationSurface, BudgetSpec, CliMapping, NetworkClass, OutputSpec,
-    ParameterSpec, RestSurface, SideEffectSpec, ToolDescriptor, ToolRegistry,
+    ApiSurface, AutomationSurface, BudgetSpec, CliMapping, NetworkClass, OutputSpec, ParameterSpec,
+    RestSurface, SideEffectSpec, ToolDescriptor, ToolRegistry,
 };

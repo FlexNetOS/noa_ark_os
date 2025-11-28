@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["TelemetryError"],"fn":["default_storage_dir","span_name"],"struct":["GatewayMetrics","TelemetryEvent","TelemetrySink"]};

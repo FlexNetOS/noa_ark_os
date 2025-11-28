@@ -15,6 +15,12 @@ impl NodeId {
     }
 }
 
+impl Default for NodeId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Lane {
     Fast,
@@ -85,6 +91,12 @@ impl NodeIo {
             inputs: BTreeMap::new(),
             outputs: BTreeMap::new(),
         }
+    }
+}
+
+impl Default for NodeIo {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

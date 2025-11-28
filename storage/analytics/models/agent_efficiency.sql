@@ -1,0 +1,2 @@
+-- Placeholder model defining agent efficiency aggregations.
+-- Replace with SQL capturing success ratios and MTTR per swarm.

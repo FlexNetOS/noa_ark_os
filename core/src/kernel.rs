@@ -8,10 +8,10 @@ use std::time::Duration;
 use crate::capabilities::builtin::register_default_capabilities;
 use crate::capabilities::{CapabilityError, CapabilityRegistry, KernelHandle};
 use crate::config::manifest::{KernelManifest, ManifestError};
+use crate::config::profile::{CapabilityToken, ProfileDocument, ProfileError};
 use crate::metrics::{self, AggregatedTelemetry, LoadLevel};
 use crate::security::{self, OperationKind, SignedOperation};
 use crate::token;
-use crate::config::profile::{CapabilityToken, ProfileDocument, ProfileError};
 
 static KERNEL_RUNNING: AtomicBool = AtomicBool::new(false);
 

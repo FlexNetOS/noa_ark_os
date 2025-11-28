@@ -187,7 +187,7 @@ impl ModelLifecycleController for AgentLifecycleController {
         );
         self.runtime
             .execute(&agent_id, &code)
-            .map_err(|err| ControllerError::Runtime(err))?;
+            .map_err(ControllerError::Runtime)?;
 
         let artifact_path = self
             .simulate_training(&agent_id, &request.dataset_path, &request.hyperparameters)
@@ -217,7 +217,7 @@ impl ModelLifecycleController for AgentLifecycleController {
 
         self.runtime
             .execute(&request.agent_id, &code)
-            .map_err(|err| ControllerError::Runtime(err))?;
+            .map_err(ControllerError::Runtime)?;
 
         let metrics = serde_json::json!({
             "accuracy": 0.92,

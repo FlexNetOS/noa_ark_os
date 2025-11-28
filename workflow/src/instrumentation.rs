@@ -1,8 +1,8 @@
-use crate::{Stage, StageType, Task, TaskDispatchReceipt};
+use crate::reward::RewardError;
 use crate::reward::{
     AgentApprovalStatus, AgentStandingSummary, RewardAgentSnapshot, RewardInputs, RewardScorekeeper,
 };
-use crate::reward::RewardError;
+use crate::{Stage, StageType, Task, TaskDispatchReceipt};
 use chrono::Utc;
 use noa_core::security::{self, OperationKind, OperationRecord, SignedOperation};
 use noa_core::utils::{current_timestamp_millis, simple_hash};
@@ -705,6 +705,7 @@ impl EvidenceLedgerEntry {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn budget_decision(
         workflow_id: &str,
         stage_id: &str,
@@ -1030,6 +1031,7 @@ impl PipelineInstrumentation {
         Ok(receipt)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn record_budget_decision(
         &self,
         workflow_id: &str,
@@ -1042,7 +1044,12 @@ impl PipelineInstrumentation {
         rewritten_plan: Option<Value>,
     ) -> Result<BudgetDecisionRecord, InstrumentationError> {
         let timestamp = current_timestamp_millis();
-        let filename = format!("{}-{}-{}-budget.json", timestamp, workflow_id, stage_id.replace('/', "_"));
+        let filename = format!(
+            "{}-{}-{}-budget.json",
+            timestamp,
+            workflow_id,
+            stage_id.replace('/', "_")
+        );
         let snapshot_path = self.budget_guardian_dir.join(filename);
         if let Some(parent) = snapshot_path.parent() {
             fs::create_dir_all(parent)?;
@@ -1070,15 +1077,19 @@ impl PipelineInstrumentation {
             metadata: manifest.clone(),
             timestamp,
         };
-        let record = OperationRecord::new(OperationKind::Other, workflow_id.to_string(), stage_id.to_string())
-            .with_metadata(json!({
-                "tokens_used": tokens_used,
-                "token_limit": token_limit,
-                "latency_ms": latency_ms,
-                "latency_limit": latency_limit,
-                "action": action,
-                "snapshot": snapshot_path.to_string_lossy(),
-            }));
+        let record = OperationRecord::new(
+            OperationKind::Other,
+            workflow_id.to_string(),
+            stage_id.to_string(),
+        )
+        .with_metadata(json!({
+            "tokens_used": tokens_used,
+            "token_limit": token_limit,
+            "latency_ms": latency_ms,
+            "latency_limit": latency_limit,
+            "action": action,
+            "snapshot": snapshot_path.to_string_lossy(),
+        }));
         let signed = self.append_entry(BUDGET_DECISION_LOG, event, record)?;
         let record = BudgetDecisionRecord {
             workflow_id: workflow_id.to_string(),
@@ -1142,12 +1153,13 @@ impl PipelineInstrumentation {
             metadata: manifest.clone(),
             timestamp,
         };
-        let record = OperationRecord::new(OperationKind::Other, fixer.to_string(), target.to_string())
-            .with_metadata(json!({
-                "snapshot": snapshot_path.to_string_lossy(),
-                "plan_digest": simple_hash(&plan_serialised),
-                "policy_digest": simple_hash(&policy_serialised),
-            }));
+        let record =
+            OperationRecord::new(OperationKind::Other, fixer.to_string(), target.to_string())
+                .with_metadata(json!({
+                    "snapshot": snapshot_path.to_string_lossy(),
+                    "plan_digest": simple_hash(&plan_serialised),
+                    "policy_digest": simple_hash(&policy_serialised),
+                }));
         let signed = self.append_entry(AUTO_FIX_LOG, event, record)?;
         let receipt = AutoFixActionReceipt {
             fixer: fixer.to_string(),
@@ -1301,7 +1313,7 @@ impl PipelineInstrumentation {
                 inputs,
                 &agent_snapshots,
             );
-            self.persist_reward_history(&*keeper)?;
+            self.persist_reward_history(&keeper)?;
             drop(keeper);
             println!(
                 "[REWARD] {}::{} delta={:.2} coverage={:.2} flake={:.2} tokens={:.2} rollback={:.2}",
@@ -1559,11 +1571,7 @@ impl PipelineInstrumentation {
 
         for base in [&self.index_dir, &self.mirror_dir] {
             let path = base.join(format!("{}.log", log_name));
-            let mut file = OpenOptions::new()
-                .create(true)
-                .write(true)
-                .append(true)
-                .open(path)?;
+            let mut file = OpenOptions::new().create(true).append(true).open(path)?;
             file.write_all(payload.as_bytes())?;
             file.flush()?;
             file.sync_all()?;
@@ -1582,7 +1590,7 @@ fn with_log_lock<T>(
 ) -> Result<T, InstrumentationError> {
     let _guard = log_write_lock()
         .lock()
-        .map_err(|_| std::io::Error::new(ErrorKind::Other, "log write lock poisoned"))?;
+        .map_err(|_| std::io::Error::other("log write lock poisoned"))?;
     f()
 }
 

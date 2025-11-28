@@ -215,7 +215,8 @@ impl TriggerManager {
         };
 
         let confidence_threshold_met = event.confidence >= self.config.auto_merge_threshold;
-        let passed = confidence_threshold_met && effective_score >= self.config.required_trust_average;
+        let passed =
+            confidence_threshold_met && effective_score >= self.config.required_trust_average;
 
         let reason = if passed {
             format!(
@@ -680,7 +681,10 @@ impl TriggerManager {
             .await?
             .is_none()
         {
-            warn!("Failed to fetch integration branch '{}'", integration_branch);
+            warn!(
+                "Failed to fetch integration branch '{}'",
+                integration_branch
+            );
         }
         if self
             .run_git_command_optional(repo_root, &["fetch", "origin", source_short])

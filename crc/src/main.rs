@@ -135,7 +135,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 async fn cas_cli(args: CasArgs) -> Result<(), Box<dyn std::error::Error>> {
-    let cas = Cas::default()?;
+    let cas = Cas::from_env_or_default()?;
     match args.command {
         CasCommand::Put { input } => {
             let bytes = async_fs::read(&input).await?;
@@ -300,7 +300,7 @@ async fn run_once(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
 async fn ingest(args: IngestArgs) -> Result<(), Box<dyn std::error::Error>> {
     let trace_id = telemetry::new_trace_id();
     let digestors: Vec<Box<dyn Digestor>> = vec![
-        Box::new(GitDigestor::default()),
+        Box::new(GitDigestor),
         Box::new(ConfigDigestor),
         Box::new(ApiDigestor),
         Box::new(SbomDigestor),

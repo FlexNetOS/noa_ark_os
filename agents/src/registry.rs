@@ -1,9 +1,10 @@
 // Agent Registry - Loads and manages agent metadata from CRC drops
 // Integrates the 928-agent directory from the stale/agents drop
 
+use crate::implementations::specialist::PolicyEnforcementAgent;
 use crate::unified_types::{AgentCategory, AgentLayer, AgentMetadata, HealthStatus, RegistryStats};
 use crate::{Error, Result};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io::{Cursor, Read};
 use std::path::Path;
 use std::sync::{Arc, RwLock};
@@ -76,6 +77,7 @@ impl AgentRegistry {
     fn load_from_reader<R: Read>(&self, mut reader: csv::Reader<R>) -> Result<usize> {
         let mut count = 0;
         let mut agents_write = self.agents.write().unwrap();
+        let mut duplicate_logged: HashSet<String> = HashSet::new();
 
         for result in reader.records() {
             let record = result?;
@@ -85,12 +87,23 @@ impl AgentRegistry {
                 let is_new = agents_write.insert(agent_id.clone(), agent).is_none();
                 if is_new {
                     count += 1;
-                } else {
+                } else if duplicate_logged.insert(agent_id.clone()) {
+                    // Only log each duplicate once to reduce startup noise
                     info!(
                         "Duplicate agent entry detected, keeping latest: {}",
                         agent_id
                     );
                 }
+            }
+        }
+
+        if !agents_write.contains_key("pe-ssp") {
+            let policy_agent = PolicyEnforcementAgent::new().metadata_snapshot();
+            let inserted = agents_write
+                .insert(policy_agent.agent_id.clone(), policy_agent)
+                .is_none();
+            if inserted {
+                count += 1;
             }
         }
 
@@ -209,13 +222,13 @@ impl AgentRegistry {
             // Index by layer
             by_layer_write
                 .entry(agent.layer.clone())
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(agent.agent_id.clone());
 
             // Index by category
             by_category_write
                 .entry(agent.category.clone())
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(agent.agent_id.clone());
 
             // Update stats

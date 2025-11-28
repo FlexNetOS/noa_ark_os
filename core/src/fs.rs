@@ -177,12 +177,12 @@ impl FileSystemService {
 
 /// Create a file.
 pub fn create_file(path: String, permissions: u32) -> Result<(), &'static str> {
-    FileSystemService::default().create_file(path, permissions)
+    FileSystemService.create_file(path, permissions)
 }
 
 /// Get file descriptor.
 pub fn get_file(path: &str) -> Option<FileDescriptor> {
-    FileSystemService::default().get_file(path)
+    FileSystemService.get_file(path)
 }
 
 /// Move a file to a new destination path.

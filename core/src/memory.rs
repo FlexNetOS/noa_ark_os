@@ -66,17 +66,17 @@ impl MemoryManager {
 
 /// Track memory allocation.
 pub fn allocate(size: usize) -> Result<(), &'static str> {
-    MemoryManager::default().allocate(size)
+    MemoryManager.allocate(size)
 }
 
 /// Track memory deallocation.
 pub fn deallocate(size: usize) -> Result<(), &'static str> {
-    MemoryManager::default().deallocate(size)
+    MemoryManager.deallocate(size)
 }
 
 /// Get total allocated memory.
 pub fn get_allocated() -> usize {
-    MemoryManager::default().total_allocated()
+    MemoryManager.total_allocated()
 }
 
 /// Load registry data from the provided directory path.

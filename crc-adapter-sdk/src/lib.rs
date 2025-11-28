@@ -54,6 +54,12 @@ impl CapabilityRegistry {
     }
 }
 
+impl Default for CapabilityRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub fn scaffold(kind: &str, name: &str) -> String {
     format!(
         "// Generated adapter\nuse crc_adapter_sdk::{{CapabilityAdapter, AdapterMetadata}};\nuse serde_json::Value;\n\n#[derive(Default)]\npub struct {name}Adapter;\n\n#[async_trait::async_trait]\nimpl CapabilityAdapter for {name}Adapter {{\n    async fn execute(&self, input: Value) -> anyhow::Result<Value> {{\n        Ok(input)\n    }}\n\n    fn metadata(&self) -> AdapterMetadata {{\n        AdapterMetadata {{\n            id: \"{kind}.{name}\".into(),\n            kind: \"{kind}\".into(),\n            version: \"0.1.0\".into(),\n            requires: vec![],\n            provides: vec![\"{kind}\".into()],\n        }}\n    }}\n}}\n",

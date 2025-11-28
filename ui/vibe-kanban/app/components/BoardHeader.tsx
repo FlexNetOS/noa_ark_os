@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import type { CapabilityFeatureGateStatus } from "@/shared/capabilities";
 
@@ -26,8 +26,11 @@ type BoardHeaderProps = {
   canAddColumn?: boolean;
   addColumnDisabledReason?: string;
   columnCount: number;
-  totalGoalCount: number;
-  completedGoalCount: number;
+  // Accept both new and legacy prop names
+  totalGoalCount?: number;
+  totalCardCount?: number;
+  completedGoalCount?: number;
+  completedCount?: number;
   showMetrics?: boolean;
   metrics?: BoardMetrics;
   goalInsightsEnabled?: boolean;
@@ -35,29 +38,34 @@ type BoardHeaderProps = {
   capabilitiesLoading?: boolean;
 };
 
-export function BoardHeader({
-  projectName,
-  lastUpdated,
-  onRename,
-  onAddColumn,
-  canAddColumn = true,
-  addColumnDisabledReason,
-  columnCount,
-  totalGoalCount,
-  completedGoalCount,
-  showMetrics = true,
-  metrics: advancedMetrics,
-  goalInsightsEnabled = false,
-  capabilitySummary = [],
-  capabilitiesLoading = false,
-}: BoardHeaderProps) {
+export function BoardHeader(props: BoardHeaderProps) {
+  const {
+    projectName,
+    lastUpdated,
+    onRename,
+    onAddColumn,
+    canAddColumn = true,
+    addColumnDisabledReason,
+    columnCount,
+    totalGoalCount: totalGoalCountProp,
+    totalCardCount,
+    completedGoalCount: completedGoalCountProp,
+    completedCount,
+    showMetrics = true,
+    metrics: advancedMetrics,
+    goalInsightsEnabled = false,
+    capabilitySummary = [],
+    capabilitiesLoading = false,
+  } = props;
+  const totalGoalCount = totalGoalCountProp ?? totalCardCount ?? 0;
+  const completedGoalCount = completedGoalCountProp ?? completedCount ?? 0;
   const [value, setValue] = useState(projectName);
 
   useEffect(() => {
     setValue(projectName);
   }, [projectName]);
 
-  const metrics = useMemo(() => {
+  const metrics = (() => {
     const base: { label: string; value: string }[] = [
       { label: "Columns", value: columnCount.toString() },
       { label: "Active goals", value: Math.max(totalGoalCount - completedGoalCount, 0).toString() },
@@ -79,7 +87,7 @@ export function BoardHeader({
       }
     }
     return base;
-  }, [advancedMetrics, columnCount, completedCount, goalInsightsEnabled, totalCardCount]);
+  })();
 
   const hasCapabilitySummary = capabilitySummary.length > 0;
 

@@ -166,6 +166,7 @@ pub struct Scorekeeper {
 
 impl Scorekeeper {
     /// Create a scorekeeper using the default storage path or overridden by NOA_TRUST_METRICS_PATH.
+    #[allow(clippy::should_implement_trait)]
     pub fn default() -> Result<Self, ScorekeeperError> {
         let storage_path = std::env::var("NOA_TRUST_METRICS_PATH")
             .map(PathBuf::from)

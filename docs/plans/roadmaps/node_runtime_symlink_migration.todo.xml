@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<todoPlan id="node-runtime-symlink-migration" version="1.0">
+  <meta>
+    <title>Node Runtime Migration Away From Symlinked node_modules</title>
+    <description>
+      Structured plan to move from pnpm&apos;s symlinked node_modules layout to a tmpfs/content-store
+      backed, ephemeral node_modules per run, with a resolver-based bridge that keeps existing tools
+      working throughout the transition.
+    </description>
+  </meta>
+
+  <phase id="0" name="Baseline Mapping">
+    <task id="0.1" status="pending">
+      <title>Inventory Node entrypoints and scripts</title>
+      <details>
+        Scan package.json, Makefile, and scripts/ for all Node-using commands (lint, test, dev, CLI,
+        CI helpers) and classify by sensitivity (critical vs. experimental).
+      </details>
+    </task>
+    <task id="0.2" status="pending">
+      <title>Document current symlink layout and constraints</title>
+      <details>
+        Capture current pnpm/node_modules structure, symlink pain points (FS, tooling, portability),
+        and target invariants in docs/automation/node_runtime_plan.md.
+      </details>
+    </task>
+  </phase>
+
+  <phase id="1" name="Virtual Registry and Resolver Seed">
+    <task id="1.1" status="pending">
+      <title>Generate node manifest from pnpm store</title>
+      <details>
+        Implement a tool to read pnpm-lock.yaml and pnpm store metadata and emit
+        .workspace/registry/node_modules.json mapping package@version to canonical store paths and
+        entry points.
+      </details>
+    </task>
+    <task id="1.2" status="pending">
+      <title>Implement Node ESM resolver loader</title>
+      <details>
+        Add tools/node_runtime/resolver.mjs that resolves imports via the manifest and falls back to
+        standard Node resolution when entries are missing. Gate behavior behind NOA_NODE_RESOLVER=1.
+      </details>
+    </task>
+    <task id="1.3" status="pending">
+      <title>Wrap tsx with resolver-aware launcher</title>
+      <details>
+        Provide tools/node_runtime/tsx-wrapper.mjs that runs tsx under the resolver loader when
+        NOA_NODE_RESOLVER=1, without changing existing tsx usage by default.
+      </details>
+    </task>
+  </phase>
+
+  <phase id="2" name="Stable Node Tool Bridge">
+    <task id="2.1" status="pending">
+      <title>Add unified node-env launcher</title>
+      <details>
+        Create server/tools/node-env.sh that activates portable Node and pnpm and supports modes:
+        legacy (current pnpm layout) and hybrid (legacy layout plus resolver enabled).
+      </details>
+    </task>
+    <task id="2.2" status="pending">
+      <title>Wire Makefile and top-level scripts through node-env</title>
+      <details>
+        Update high-level targets (lint, test, typecheck, build) to call node-env.sh in legacy mode,
+        ensuring zero behavior change for existing flows.
+      </details>
+    </task>
+    <task id="2.3" status="pending">
+      <title>Enable hybrid mode for selected CLIs</title>
+      <details>
+        Switch internal tools like offline_pr_queue and notebook_sync to node-env hybrid mode and
+        validate resolver behavior, keeping a documented fallback to legacy.
+      </details>
+    </task>
+  </phase>
+
+  <phase id="3" name="Tmpfs Store and Ephemeral node_modules">
+    <task id="3.1" status="pending">
+      <title>Hydrate content-addressed Node store</title>
+      <details>
+        Implement tools/node_runtime/hydrate_store to copy or hardlink packages from pnpm&apos;s store
+        into a dedicated node_store/content directory, with a manifest under node_store/manifest.json.
+      </details>
+    </task>
+    <task id="3.2" status="pending">
+      <title>Implement ephemeral node_modules materializer</title>
+      <details>
+        Add tools/node_runtime/materialize_modules.ts that builds minimal, copy/hardlink-based
+        node_modules trees under tmpfs (or .workspace/tmp) for a given project based on the manifest.
+      </details>
+    </task>
+    <task id="3.3" status="pending">
+      <title>Extend node-env with ephemeral mode</title>
+      <details>
+        Teach node-env.sh mode=ephemeral to hydrate node_store, materialize node_modules in tmpfs,
+        set NODE_PATH/PATH appropriately, and then execute the requested Node command.
+      </details>
+    </task>
+    <task id="3.4" status="pending">
+      <title>Pilot ephemeral mode for non-critical tools</title>
+      <details>
+        Run internal CLIs and one non-critical script under ephemeral mode in CI and local dev,
+        keeping legacy mode as the default while issues are resolved.
+      </details>
+    </task>
+  </phase>
+
+  <phase id="4" name="Gradual Migration of Tooling">
+    <task id="4.1" status="pending">
+      <title>Qualify tests and linting under ephemeral mode</title>
+      <details>
+        Execute test and lint suites via node-env ephemeral in a dedicated CI job gated by
+        NOA_NODE_RUNTIME=ephemeral; document and fix any incompatibilities uncovered.
+      </details>
+    </task>
+    <task id="4.2" status="pending">
+      <title>Promote ephemeral mode to default for selected workflows</title>
+      <details>
+        Once stable, make ephemeral the default for classes of commands (e.g., tests, lint, CLIs)
+        while retaining NOA_NODE_RUNTIME=legacy as an escape hatch.
+      </details>
+    </task>
+    <task id="4.3" status="pending">
+      <title>Adopt resolver for advanced scenarios</title>
+      <details>
+        Use the resolver loader to support any tools or imports that are difficult to represent in
+        a minimal node_modules tree, especially where direct store resolution is cleaner.
+      </details>
+    </task>
+  </phase>
+
+  <phase id="5" name="Policy, Hardening, and Cleanup">
+    <task id="5.1" status="pending">
+      <title>Document Node runtime architecture and registry</title>
+      <details>
+        Update .workspace/registry and docs/automation/node_runtime_plan.md to describe the Node
+        store, manifests, resolver loader, and node-env modes as the canonical policy.
+      </details>
+    </task>
+    <task id="5.2" status="pending">
+      <title>Add CI gates for ephemeral runtime</title>
+      <details>
+        Introduce CI jobs that run key commands via node-env ephemeral and fail on regressions;
+        add a check that disallows new symlinks outside Node&apos;s own package manager space.
+      </details>
+    </task>
+    <task id="5.3" status="pending">
+      <title>Define onboarding and migration guidelines</title>
+      <details>
+        Provide a concise operator guide for switching between legacy and ephemeral modes, wiring
+        new Node tools through node-env and manifests, and debugging resolver-related issues.
+      </details>
+    </task>
+  </phase>
+</todoPlan>
+

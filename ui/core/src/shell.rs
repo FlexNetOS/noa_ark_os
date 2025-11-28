@@ -338,7 +338,6 @@ impl UnifiedShell {
         let mut workspaces: Vec<_> = state_snapshot
             .workspaces
             .values()
-            .cloned()
             .filter(|workspace| {
                 workspace.allowed_roles.is_empty()
                     || workspace
@@ -346,6 +345,7 @@ impl UnifiedShell {
                         .iter()
                         .any(|role| session_roles.iter().any(|r| r == role))
             })
+            .cloned()
             .collect();
         workspaces.sort_by(|a, b| a.label.cmp(&b.label));
 

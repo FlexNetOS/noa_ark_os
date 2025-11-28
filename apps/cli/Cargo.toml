@@ -21,6 +21,27 @@ relocation-daemon = { path = "../../services/relocation-daemon" }
 uuid = { version = "1.6", features = ["v4"] }
 noa_workflow = { path = "../../workflow" }
 noa-plugin-sdk = { path = "../../plugins/sdk" }
-noa_inference = { path = "../../server/ai/inference" }
+noa-tools-agent = { path = "../../server/tools_agent", default-features = false, features = ["client"] }
+noa_inference = { path = "../../server/ai/inference", optional = true }
+noa_cicd = { path = "../../cicd", optional = true }
+noa_core = { path = "../../core" }
+noa_caddy_manager = { path = "../../server/caddy_manager" }
+noa_observability = { path = "../../server/observability" }
+walkdir = "2"
+shlex = "1.3"
 futures = "0.3"
-noa_cicd = { path = "../../cicd" }
+
+[build-dependencies]
+serde_json = { workspace = true }
+chrono = { version = "0.4", features = ["clock"] }
+noa-tools-agent = { path = "../../server/tools_agent" }
+
+[features]
+default = []
+inference = ["noa_inference"]
+cicd = ["noa_cicd"]
+
+[dev-dependencies]
+assert_cmd = "2.0"
+predicates = "3.1"
+tempfile = "3.23.0"

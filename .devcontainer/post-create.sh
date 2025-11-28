@@ -29,4 +29,8 @@ if command -v cargo >/dev/null 2>&1; then
   (cargo update --workspace || true)
 fi
 
+if [ -x "scripts/codex-bootstrap.sh" ]; then
+  scripts/codex-bootstrap.sh || true
+fi
+
 echo "Post-create complete."

@@ -154,19 +154,14 @@ impl Symbol {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum LifecycleStage {
+    #[default]
     Prototype,
     Active,
     Deprecated,
     Retired,
-}
-
-impl Default for LifecycleStage {
-    fn default() -> Self {
-        LifecycleStage::Prototype
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -625,7 +620,7 @@ impl VerificationReport {
         }
 
         let failover_proved =
-            schematic.failover_paths.iter().any(|path| path.len() >= 1) || connectors.len() > 1;
+            schematic.failover_paths.iter().any(|path| !path.is_empty()) || connectors.len() > 1;
         if !failover_proved {
             issues.push("no failover path available".to_string());
         }
@@ -1232,6 +1227,12 @@ impl QuantumSecurityPosture {
             .unwrap()
             .get(connector)
             .map(|material| material.algorithm.clone())
+    }
+}
+
+impl Default for QuantumSecurityPosture {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

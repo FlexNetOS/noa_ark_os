@@ -361,6 +361,12 @@ impl ParallelDropProcessor {
     }
 }
 
+impl Default for ParallelDropProcessor {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

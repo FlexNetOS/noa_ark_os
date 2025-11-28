@@ -29,82 +29,70 @@ again.
 ## 🌐 Multi-Platform Support
 
 This workspace supports development on:
-- **Windows (PowerShell)** - Portable Cargo installation
-- **WSL (Ubuntu)** - Native Linux Rust or Windows portable
-- **Linux** - System Rust installation
+- **Windows (PowerShell)** - Native portable workflow (`setup-portable-cargo.ps1` / `activate-cargo.ps1`)
+- **Linux + macOS shells** - POSIX portable workflow (`setup-portable-cargo.sh` / `activate-cargo.sh`)
+- **WSL** - Use the Linux/macOS scripts directly so the toolchain lives inside the repo
 
-**See [MULTI_PLATFORM.md](MULTI_PLATFORM.md) for detailed multi-platform setup guide.**
-
----
-
-## 🚀 Quick Start (Windows PowerShell)
-
-### First Time Setup
-
-```powershell
-# Run setup script (one-time)
-.\server\tools\setup-portable-cargo.ps1
-```
-
-This will:
-- Download Rust toolchain (~150 MB)
-- Install to `server/tools/cargo-portable/`
-- Create activation script
-
-### Every Time You Develop
-
-**IMPORTANT**: Use PowerShell (not WSL/bash) for the portable Cargo installation.
-
-```powershell
-# 1. Review activation steps (optional)
-python server/tools/dev_env_cli.py activate --platform windows
-
-# 2. Navigate to workspace
-cd D:\dev\workspaces\noa_ark_os
-
-# 3. Activate portable cargo
-.\server\tools\activate-cargo.ps1
-
-# 4. Navigate to project
-cd crc
-
-# 5. Build
-cargo build
-
-# 6. Run
-cargo run --bin crc-server
-```
+Every path stays inside `server/tools/` so builds remain reproducible regardless of the host platform.
+**See [MULTI_PLATFORM.md](MULTI_PLATFORM.md) for deeper platform notes.**
 
 ---
 
-## 🐧 Quick Start (WSL/Ubuntu)
+## 🚀 Portable Cargo Quick Start (All Platforms)
 
-### Option 1: Native Linux Rust (Recommended)
+### 1. One-Time Setup
+
+| Platform | Command |
+| --- | --- |
+| Windows PowerShell | `powershell -ExecutionPolicy Bypass -File .\server\tools\setup-portable-cargo.ps1` |
+| Linux / macOS shells | `bash ./server/tools/setup-portable-cargo.sh` |
+
+The setup script:
+- Downloads the latest stable Rust toolchain (~150–200 MB)
+- Installs it into `server/tools/cargo-portable/`
+- Stores rustup metadata under `server/tools/rustup-portable/`
+
+### 2. Activate Per-Shell Session
+
+| Platform | Command |
+| --- | --- |
+| Windows PowerShell | `.\server\tools\activate-cargo.ps1` |
+| Linux / macOS shells | `source ./server/tools/activate-cargo.sh` |
+
+Activation exports `CARGO_HOME`, `RUSTUP_HOME`, and updates `PATH` for the current shell. Re-run it for every new terminal session or integrate it with your shell profile if desired.
+
+### 3. Build/Run
 
 ```bash
-# Install Rust
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-
-# Activate
-source $HOME/.cargo/env
-
-# Verify
-cargo --version
+# From workspace root after activation
+cargo build --workspace
+cargo test --workspace
 ```
 
-### Option 2: Use Windows Portable Cargo
+> 💡 Use `python server/tools/dev_env_cli.py activate --platform <windows|linux|macos>` to review which script to call plus environment tips.
 
-```bash
-# Inspect CLI guidance (optional)
-python server/tools/dev_env_cli.py activate --platform wsl
+---
 
-# Run activation script
-source ./server/tools/activate-cargo.sh
+## 🐧 Linux + macOS Notes
 
-# Follow prompts to use Windows Cargo (slower)
-```
+- Required packages: `curl`, `python3`, `pkg-config`, `libssl-dev`/`openssl` headers, a C toolchain (`build-essential` or Xcode CLT), and `xz`/`tar` for unpacking.
+- Always `source` the activation script (`source ./server/tools/activate-cargo.sh`) so it can export environment variables into your current shell. Running it with `bash ./activate-cargo.sh` will spawn a subshell and the variables will be lost.
+- The POSIX setup script accepts `--workspace <path>` and `--force` for custom layouts and rebuilds.
+- If you keep multiple worktrees, set `NOA_CARGO_HOME` / `NOA_RUSTUP_HOME` before running the setup script to pin the installation to a shared location.
 
-**See [MULTI_PLATFORM.md](MULTI_PLATFORM.md) for detailed WSL/Ubuntu setup.**
+---
+
+## 💻 Windows Tips
+
+- Stay inside PowerShell when using the portable installation. Git Bash or WSL shells cannot invoke the Windows binaries.
+- Set `NOA_CARGO_ACTIVATE_SILENT=1` before calling `activate-cargo.ps1` to suppress logs in automated scripts.
+- Run `python server/tools/dev_env_cli.py doctor` if activation does not update the PATH; it validates the stored state JSON/YAML in `tools/devshell/state/`.
+
+---
+
+## 🔁 WSL Interop
+
+When using WSL, prefer the Linux/macOS scripts so the toolchain lives directly under the Linux filesystem (`/home/<user>/.../server/tools`). This avoids Windows path translation penalties and ensures symbolic links behave correctly.
 
 ---
 
@@ -169,6 +157,29 @@ Activation prepends `server/tools/node-portable/current/bin` to `PATH` and
 exports `NOA_NODE_HOME` / `COREPACK_HOME` so all Make targets resolve tooling
 from the hermetic bundle. Combine this with the cargo activation scripts before
 invoking `make`, `pnpm`, or the pipeline tasks.
+
+---
+
+## 🌐 Portable Caddy reverse proxy
+
+The reverse proxy follows the same hermetic toolchain approach. The scripts
+under `server/tools/` download the official Caddy release for your platform,
+extract it into `server/tools/caddy-portable/`, and refresh
+`caddy-portable.manifest.json`.
+
+```bash
+# Linux/macOS/WSL
+./server/tools/setup-portable-caddy.sh
+source ./server/tools/activate-caddy.sh
+
+# Windows PowerShell
+./server/tools/setup-portable-caddy.ps1
+./server/tools/activate-caddy.ps1
+```
+
+Activation exports `NOA_CADDY_HOME` and prepends the portable binary to `PATH`
+so `caddy validate`, `caddy run`, and `noa caddy ...` always reference the same
+audited artifact across CI and developer hosts.
 
 ---
 
@@ -245,33 +256,47 @@ python server/tools/dev_env_cli.py summary
 
 ## ❓ Troubleshooting
 
-### "Cargo not found"
+### "Cargo not found" (Linux/macOS)
+
+1. Confirm you **sourced** the activation script: `source ./server/tools/activate-cargo.sh`.
+2. Inspect `echo $CARGO_HOME`—it should point at `.../server/tools/cargo-portable`.
+3. If the path is blank, rerun `python server/tools/dev_env_cli.py doctor` to see which script to call for your platform.
+4. Reinstall with `bash ./server/tools/setup-portable-cargo.sh --force` if `cargo-portable/bin/cargo` is missing.
+
+### "Cargo not found" (Windows)
 
 1. Run `python server/tools/dev_env_cli.py doctor` to confirm the activation scripts exist.
-2. Make sure you ran `activate-cargo.ps1` in current session.
-3. Check if `cargo.exe` exists at: `server\tools\cargo-portable\bin\cargo.exe`.
-4. If missing, run `setup-portable-cargo.ps1` again.
+2. Make sure you ran `.\server\tools\activate-cargo.ps1` in the current session.
+3. Check `server\tools\cargo-portable\bin\cargo.exe`.
+4. Re-run `.\server\tools\setup-portable-cargo.ps1` if the binary is missing.
 
-### "Permission denied"
+### "PATH didn't update" on macOS/Linux
 
-Run PowerShell as Administrator or:
+Some shells (e.g., `zsh`) require the script to be sourced **after** custom PATH logic in `.zshrc`. Move `source ./server/tools/activate-cargo.sh` to the bottom of your profile or export `NOA_CARGO_ACTIVATE_SILENT=1` and let the CLI add it when running `python server/tools/dev_env_cli.py activate --auto`.
+
+### Windows execution policy errors
+
 ```powershell
 Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
 ```
 
-### Need to reinstall
+### Need to reinstall from scratch
 
 ```powershell
-# Delete directories
+# Delete directories (Windows)
 Remove-Item -Recurse -Force server\tools\cargo-portable
 Remove-Item -Recurse -Force server\tools\rustup-portable
-
-# Run setup again
 .\server\tools\setup-portable-cargo.ps1
 
-# Verify with the CLI
-python server/tools/dev_env_cli.py doctor
 ```
+
+```bash
+# Delete directories (Linux/macOS)
+rm -rf server/tools/cargo-portable server/tools/rustup-portable
+bash ./server/tools/setup-portable-cargo.sh --force
+```
+
+After reinstalling, run `python server/tools/dev_env_cli.py doctor` for a sanity check.
 
 ---
 

@@ -126,7 +126,7 @@ pub fn detect_hardware_profile() -> HardwareProfile {
             vendor: cpu.vendor_id().to_string(),
             physical_cores: system.physical_core_count().unwrap_or(logical_cores),
             logical_cores,
-            frequency_mhz: Some(cpu.frequency() as u64),
+            frequency_mhz: Some(cpu.frequency()),
         })
         .unwrap_or(CpuProfile {
             brand: "unknown".to_string(),

@@ -16,7 +16,9 @@ export default function Page() {
   const session = useSession();
   const state = useBoardState(session.user);
   const [envelope, setEnvelope] = useState<PageEnvelope>(vibeDashboardEnvelope);
-  const [resumeToken, setResumeToken] = useState<ResumeToken | undefined>(vibeDashboardEnvelope.resumeToken);
+  const [resumeToken, setResumeToken] = useState<ResumeToken | undefined>(
+    vibeDashboardEnvelope.resumeToken ?? undefined
+  );
   const traceIdRef = useRef<string>(ensureTraceId());
 
   const ready = session.status === "ready" && !!session.user && state.hydrated && state.snapshot;
@@ -36,43 +38,67 @@ export default function Page() {
   }, []);
 
   const plannerResumeToken = state.planner.plans.find((plan) => plan.resumeToken)?.resumeToken;
-  const effectiveResumeToken = plannerResumeToken ?? resumeToken;
+  const effectiveResumeToken: ResumeToken | undefined = plannerResumeToken ?? resumeToken;
 
   const schemaRenderer = useMemo(() => {
     return ready
       ? (
-          <SchemaDrivenRenderer
-            schema={envelope.schema}
-            context={{
-              resumeWorkflow: (token) => {
+        <SchemaDrivenRenderer
+          schema={envelope.schema}
+          context={{
+            resumeWorkflow: (token) => {
+              if (!token) {
+                return;
+              }
+              const resumeArg: ResumeToken =
+                typeof token === "string"
+                  ? {
+                      workflowId: token,
+                      stageId: undefined,
+                      checkpoint: "",
+                      issuedAt: new Date().toISOString(),
+                      expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+                    }
+                  : token;
+              if (!resumeArg.workflowId) {
                 logInfo({
                   component: "vibe.page",
-                  event: "workflow_resume_requested",
-                  message: "Requesting workflow resume",
-                  outcome: "pending",
+                  event: "workflow_resume_rejected",
+                  message: "Resume token missing workflow identifier",
+                  outcome: "rejected",
                   traceId: traceIdRef.current,
-                  context: { workflowId: token.workflowId },
+                  context: { reason: "missing_workflow_id" },
                 });
-                state.resumePlan(token);
-              },
-              triggerEvent: (bindingId) => {
-                logInfo({
-                  component: "vibe.page",
-                  event: "ui_event_triggered",
-                  message: "UI event triggered",
-                  outcome: "observed",
-                  traceId: traceIdRef.current,
-                  context: { bindingId },
-                });
-              },
-                data: {
-                  boardState: state,
-                  session,
-                  resumeToken: effectiveResumeToken,
-                },
-              }}
-            />
-        )
+                return;
+              }
+              logInfo({
+                component: "vibe.page",
+                event: "workflow_resume_requested",
+                message: "Requesting workflow resume",
+                outcome: "pending",
+                traceId: traceIdRef.current,
+                context: { workflowId: resumeArg.workflowId },
+              });
+              state.resumePlan(resumeArg);
+            },
+            triggerEvent: (bindingId) => {
+              logInfo({
+                component: "vibe.page",
+                event: "ui_event_triggered",
+                message: "UI event triggered",
+                outcome: "observed",
+                traceId: traceIdRef.current,
+                context: { bindingId },
+              });
+            },
+            data: {
+              boardState: state,
+              session,
+              resumeToken: effectiveResumeToken,
+            },
+          }}
+        />
+      )
       : null;
   }, [ready, envelope.schema, state, session, effectiveResumeToken]);
 
