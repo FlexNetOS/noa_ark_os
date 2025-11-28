@@ -315,6 +315,15 @@ print_phase_summary() {
   else
     printf 'Portable PowerShell evidence sentinel missing (expected %s)\n\n' "$PWSH_SENTINEL"
   fi
+  local pwsh_env_flag="${NOA_PWSH_ENV:-0}"
+  local toolchain_flag="${NOA_TOOLCHAINS_ACTIVATED:-0}"
+  local pwsh_bin_display="${POWERSHELL_BIN:-<unset>}"
+  printf 'PowerShell activation flags: NOA_PWSH_ENV=%s NOA_TOOLCHAINS_ACTIVATED=%s\n' "$pwsh_env_flag" "$toolchain_flag"
+  printf 'Active PowerShell binary: %s\n' "$pwsh_bin_display"
+  if [[ -n "${NOA_PWSH_PLATFORM_RESOLVED:-}" ]]; then
+    printf 'Resolved platform: %s\n' "$NOA_PWSH_PLATFORM_RESOLVED"
+  fi
+  printf '\n'
 }
 
 detect_host_platform() {

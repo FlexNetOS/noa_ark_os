@@ -1,9 +1,12 @@
 {
   "status": "preactivated",
   "reason": "NOA_PWSH_ENV preset (/home/noa/dev/workspace/noa_ark_os/noa_ark_os/server/tools/pwsh-portable/bin/pwsh)",
-  "timestamp": "2025-11-21T13:27:03Z",
+  "timestamp": "2025-11-21T15:59:53Z",
   "binary": "/home/noa/dev/workspace/noa_ark_os/noa_ark_os/server/tools/pwsh-portable/bin/pwsh",
+  "binary_sha256": "e274c1ed6047243ec1da305dc2d4ed955393d820a369f82e81b2b3850cc219c5",
   "manifest": "/home/noa/dev/workspace/noa_ark_os/noa_ark_os/server/tools/pwsh-portable.manifest.json",
-  "manifest_sha256": "136f196735063fc8f23b96faad5ac74a188b9bc6b0f8238379cd742a9ff35d89",
+  "manifest_sha256": "d34317bef0eb9bb49fbc2cf0a37c055c24d1706b068376b451bf48d569b1545e",
+  "current_link": "/home/noa/dev/workspace/noa_ark_os/noa_ark_os/server/tools/pwsh-portable/current/pwsh",
+  "current_target": "/home/noa/dev/workspace/noa_ark_os/noa_ark_os/server/tools/pwsh-portable/platforms/linux-x64/powershell-7.4.5-linux-x64/pwsh",
   "platform": "linux-x64"
 }

@@ -91,7 +91,9 @@ def build_result(
     actual_sha: Optional[str],
     exec_status: Optional[str] = None,
     manifest_sha: Optional[str] = None,
+    binary_link: Optional[Path] = None,
     current_binary: Optional[Path] = None,
+    current_link: Optional[Path] = None,
     current_target: Optional[Path] = None,
 ) -> Dict[str, Any]:
     return {
@@ -104,7 +106,9 @@ def build_result(
         "actual_sha256": actual_sha,
         "exec_status": exec_status,
         "manifest_sha256": manifest_sha,
+        "binary_link": str(binary_link) if binary_link else None,
         "current_binary": str(current_binary) if current_binary else None,
+        "current_link": str(current_link) if current_link else None,
         "current_target": str(current_target) if current_target else None,
     }
 
@@ -122,6 +126,10 @@ def format_text(result: Dict[str, Any]) -> str:
     ]
     if result.get("current_binary"):
         parts.append(f"current={result['current_binary']}")
+    if result.get("binary_link"):
+        parts.append(f"binary_link={result['binary_link']}")
+    if result.get("current_link"):
+        parts.append(f"current_link={result['current_link']}")
     if result.get("current_target"):
         parts.append(f"current_target={result['current_target']}")
     if result.get("exec_status"):
@@ -304,7 +312,9 @@ def main() -> int:
         actual_sha=actual_sha,
         exec_status=exec_status,
         manifest_sha=manifest_sha,
+        binary_link=current_binary_link,
         current_binary=current_binary_target,
+        current_link=current_link_path,
         current_target=current_link_target,
     )
 
