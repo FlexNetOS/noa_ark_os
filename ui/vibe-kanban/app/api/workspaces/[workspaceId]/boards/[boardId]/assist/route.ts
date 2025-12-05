@@ -102,7 +102,7 @@ export async function POST(
   request: Request,
   { params }: { params: { workspaceId: string; boardId: string } }
 ) {
-  const user = assertUser();
+  const user = await assertUser();
   const workspace = await getWorkspace(params.workspaceId);
   if (!workspace || !workspace.members.some((member) => member.id === user.id)) {
     return new NextResponse("Not Found", { status: 404 });

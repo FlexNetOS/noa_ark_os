@@ -6,7 +6,7 @@ import { appendGoalTrace, getGoalMemoryInsights } from "@/server/memory-store";
 import { getWorkspace } from "@/server/workspace-store";
 
 export async function GET(request: Request, { params }: { params: { goalId: string } }) {
-  const user = assertUser();
+  const user = await assertUser();
   const url = new URL(request.url);
   const workspaceId = url.searchParams.get("workspaceId");
   if (!workspaceId) {
