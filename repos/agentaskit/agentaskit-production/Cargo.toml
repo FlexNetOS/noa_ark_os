@@ -52,16 +52,16 @@ tauri-build = { version = "1.0", features = [] }
 clap = { version = "4.0", features = ["derive"] }
 
 # Security and cryptography
-ring = "0.16"
+ring = "0.17.14"
 sha2 = "0.10"
 
 # WASM runtime
-wasmtime = "13.0"
-wasi-common = "13.0"
+wasmtime = "39.0"
+wasi-common = "39.0"
 wat = "1.0"
 base64 = "0.22"
 hmac = "0.12"
-cap-std = "3.0"
+cap-std = "3.4"
 walkdir = "2.0"
 
 # Database and storage

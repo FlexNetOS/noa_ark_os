@@ -25,4 +25,3 @@ for agent_name in manifest:
         f.write(docker_template)
     print(f"Wrote Dockerfile for {agent_name}")
 print("✅ All agents have Dockerfile")
-

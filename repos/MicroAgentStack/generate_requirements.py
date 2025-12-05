@@ -18,4 +18,3 @@ for agent_name in manifest:
         f.write("\n".join(base_reqs) + "\n")
     print(f"Wrote requirements.txt for {agent_name}")
 print("✅ All agents have requirements.txt")
-
