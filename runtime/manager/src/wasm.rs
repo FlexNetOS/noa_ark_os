@@ -1,20 +1,13 @@
-type ProbeStorePipes = (
-    Store<ProbeState>,
-    WritePipe<Cursor<Vec<u8>>>,
-    WritePipe<Cursor<Vec<u8>>>,
-);
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-use cap_std::{ambient_authority, fs::Dir};
 use serde::{Deserialize, Serialize};
-use std::io::Cursor;
 use thiserror::Error;
-use wasi_common::pipe::WritePipe;
 use wasmtime::ResourceLimiter;
 use wasmtime::{Config, Engine, Linker, Module, Store};
-use wasmtime_wasi::sync::{add_to_linker, WasiCtxBuilder};
-use wasmtime_wasi::{I32Exit, WasiCtx};
+use wasmtime_wasi::p1::{WasiP1Ctx, add_to_linker_sync};
+use wasmtime_wasi::p2::pipe::MemoryOutputPipe;
+use wasmtime_wasi::{WasiCtxBuilder, I32Exit};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WasmProbeConfig {
@@ -86,7 +79,7 @@ impl WasmProbeRunner {
         engine_config.consume_fuel(true);
         engine_config.wasm_multi_memory(true);
         engine_config.wasm_multi_value(true);
-        engine_config.static_memory_maximum_size(config.max_memory_mb * 1024 * 1024);
+        // Memory limits are now configured through ResourceLimiter instead of static_memory_maximum_size
         let engine = Engine::new(&engine_config)?;
         Ok(Self { engine, config })
     }
@@ -97,11 +90,11 @@ impl WasmProbeRunner {
         args: &[String],
     ) -> Result<WasmProbeReport, WasmProbeError> {
         let module = Module::from_file(&self.engine, module_path.as_ref())?;
-        let (mut store, stdout_pipe, stderr_pipe) = self.build_store(args)?;
+        let mut store = self.build_store(args)?;
         store.set_fuel(self.config.fuel_budget)?;
 
         let mut linker = Linker::new(&self.engine);
-        add_to_linker(&mut linker, |state: &mut ProbeState| &mut state.wasi)
+        add_to_linker_sync(&mut linker, |state: &mut ProbeState| &mut state.wasi)
             .map_err(|err| WasmProbeError::Wasi(err.to_string()))?;
 
         let start = Instant::now();
@@ -132,14 +125,15 @@ impl WasmProbeRunner {
         }
         let duration = start.elapsed();
 
+        // Extract output from the pipes before dropping store
+        let stdout_bytes: Vec<u8> = store.data().stdout.contents().to_vec();
+        let stderr_bytes: Vec<u8> = store.data().stderr.contents().to_vec();
+
         drop(store);
 
         if duration.as_millis() > u128::from(self.config.max_execution_time_ms) {
             return Err(WasmProbeError::Timeout(self.config.max_execution_time_ms));
         }
-
-        let stdout_bytes = collect_pipe(stdout_pipe)?;
-        let stderr_bytes = collect_pipe(stderr_pipe)?;
 
         Ok(WasmProbeReport {
             duration_ms: duration.as_millis(),
@@ -148,16 +142,14 @@ impl WasmProbeRunner {
         })
     }
 
-    fn build_store(&self, args: &[String]) -> Result<ProbeStorePipes, WasmProbeError> {
-        let stdout_pipe = WritePipe::new_in_memory();
-        let stderr_pipe = WritePipe::new_in_memory();
+    fn build_store(&self, args: &[String]) -> Result<Store<ProbeState>, WasmProbeError> {
+        let stdout_stream = MemoryOutputPipe::new(1024 * 1024);
+        let stderr_stream = MemoryOutputPipe::new(1024 * 1024);
 
         let mut builder = WasiCtxBuilder::new();
-        builder.stdout(Box::new(stdout_pipe.clone()));
-        builder.stderr(Box::new(stderr_pipe.clone()));
-        builder
-            .args(args)
-            .map_err(|err| WasmProbeError::Wasi(err.to_string()))?;
+        builder.stdout(stdout_stream.clone());
+        builder.stderr(stderr_stream.clone());
+        builder.args(args);
 
         if self.config.allow_network {
             return Err(WasmProbeError::Wasi(
@@ -180,20 +172,17 @@ impl WasmProbeRunner {
                     canonical_dir.display()
                 )));
             }
-            let cap_dir =
-                Dir::open_ambient_dir(&canonical_dir, ambient_authority()).map_err(|err| {
-                    WasmProbeError::Wasi(format!(
-                        "Failed to open directory '{}': {}",
-                        canonical_dir.display(),
-                        err
-                    ))
-                })?;
             builder
-                .preopened_dir(cap_dir, &canonical_dir)
+                .preopened_dir(
+                    &canonical_dir, 
+                    canonical_dir.to_string_lossy().as_ref(),
+                    wasmtime_wasi::DirPerms::all(), 
+                    wasmtime_wasi::FilePerms::all()
+                )
                 .map_err(|err| WasmProbeError::Wasi(err.to_string()))?;
         }
 
-        let wasi = builder.build();
+        let wasi = builder.build_p1();
         let mut store = Store::new(
             &self.engine,
             ProbeState {
@@ -201,17 +190,13 @@ impl WasmProbeRunner {
                 limiter: ProbeLimiter {
                     max_memory_bytes: (self.config.max_memory_mb * 1024 * 1024) as usize,
                 },
+                stdout: stdout_stream,
+                stderr: stderr_stream,
             },
         );
         store.limiter(|state| &mut state.limiter);
-        Ok((store, stdout_pipe, stderr_pipe))
+        Ok(store)
     }
-}
-
-fn collect_pipe(pipe: WritePipe<Cursor<Vec<u8>>>) -> Result<Vec<u8>, WasmProbeError> {
-    pipe.try_into_inner()
-        .map(Cursor::into_inner)
-        .map_err(|_| WasmProbeError::Wasi("failed to collect pipe output".to_string()))
 }
 
 struct ProbeLimiter {
@@ -231,9 +216,9 @@ impl ResourceLimiter for ProbeLimiter {
 
     fn table_growing(
         &mut self,
-        _current: u32,
-        desired: u32,
-        maximum: Option<u32>,
+        _current: usize,
+        desired: usize,
+        maximum: Option<usize>,
     ) -> anyhow::Result<bool> {
         if let Some(max) = maximum {
             Ok(desired <= max)
@@ -244,6 +229,8 @@ impl ResourceLimiter for ProbeLimiter {
 }
 
 struct ProbeState {
-    wasi: WasiCtx,
+    wasi: WasiP1Ctx,
     limiter: ProbeLimiter,
+    stdout: MemoryOutputPipe,
+    stderr: MemoryOutputPipe,
 }
