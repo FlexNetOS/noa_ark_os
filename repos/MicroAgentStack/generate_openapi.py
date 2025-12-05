@@ -41,4 +41,3 @@ paths:
     print(f"Wrote openapi.yaml for {agent_name}")
 
 print("✅ All agents have openapi.yaml (Swagger spec)")
-

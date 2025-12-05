@@ -40,4 +40,3 @@ Version: {manifest[agent]["version"]}
             for line in lines:
                 s.write(line)
 print("Metadata injected/updated for all agents!")
-
