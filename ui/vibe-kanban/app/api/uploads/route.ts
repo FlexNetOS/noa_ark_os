@@ -23,7 +23,7 @@ function sanitizeFilename(name: string | undefined) {
 }
 
 export async function POST(request: Request) {
-  const user = assertUser();
+  const user = await assertUser();
   const traceSource = typeof request.headers?.get === "function" ? request.headers.get("x-trace-id") : null;
   const traceId = ensureTraceId(traceSource);
   const component = "api.uploads";
