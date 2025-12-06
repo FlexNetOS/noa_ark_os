@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["env_path","handle_request","internal_error","json_error","json_response","main","parse_json","shutdown_signal"],"struct":["AppState","ApproveRequest","HealthResponse","OverrideRequest","RunRequest"]};

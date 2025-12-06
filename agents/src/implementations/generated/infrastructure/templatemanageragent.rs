@@ -1,5 +1,5 @@
 //! TemplateManagerAgent - Auto-generated
-//! 
+//!
 //! Selects and fills code templates for new agents (Python, Node, etc.); escalates for new template formats or explicit user review.
 
 use crate::unified_types::*;
@@ -48,22 +48,22 @@ impl Templatemanageragent {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Ready;
         Ok(())
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -78,13 +78,13 @@ impl Default for Templatemanageragent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = Templatemanageragent::new();
         assert_eq!(agent.metadata().name, "TemplateManagerAgent");
     }
-    
+
     #[tokio::test]
     async fn test_agent_initialization() {
         let mut agent = Templatemanageragent::new();

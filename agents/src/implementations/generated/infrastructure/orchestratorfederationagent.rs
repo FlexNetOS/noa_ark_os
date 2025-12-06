@@ -1,5 +1,5 @@
 //! OrchestratorFederationAgent - Auto-generated
-//! 
+//!
 //! Federates orchestrators for geo-redundancy, global scaling, and failover, and can escalate for human intervention in case of critical split-brain or regional data conflicts.
 
 use crate::unified_types::*;
@@ -48,22 +48,22 @@ impl Orchestratorfederationagent {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Ready;
         Ok(())
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -78,13 +78,13 @@ impl Default for Orchestratorfederationagent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = Orchestratorfederationagent::new();
         assert_eq!(agent.metadata().name, "OrchestratorFederationAgent");
     }
-    
+
     #[tokio::test]
     async fn test_agent_initialization() {
         let mut agent = Orchestratorfederationagent::new();

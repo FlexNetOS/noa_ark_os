@@ -1,0 +1,111 @@
+{
+  "nodes": [
+    {
+      "id": "0e9d08e3-6445-4356-9c85-eb266da02749",
+      "kind": "Analyze",
+      "lane": "Fast",
+      "facets": [],
+      "io": {
+        "inputs": {},
+        "outputs": {
+          "stdout": {
+            "key": "stdout",
+            "artifact": {
+              "path": null,
+              "hash": "278b10d36f6d5ff15496075f2cccc962db55ec61603abe77a5786ff8010e3646",
+              "content_type": "text/plain",
+              "metadata": {}
+            },
+            "facets": [
+              {
+                "kind": "Analysis",
+                "lane": "Fast",
+                "metadata": {}
+              }
+            ],
+            "provenance": {
+              "origin": "1",
+              "description": "Executed analyze",
+              "captured_at": "2025-11-18T20:13:43.216285913Z",
+              "trust_score": 0.9
+            }
+          }
+        }
+      },
+      "dependencies": [],
+      "cache_key": "278b10d36f6d5ff15496075f2cccc962db55ec61603abe77a5786ff8010e3646"
+    },
+    {
+      "id": "2fed8ebc-01fd-44f6-bb0c-32e70b1870d0",
+      "kind": "Decide",
+      "lane": "Fast",
+      "facets": [],
+      "io": {
+        "inputs": {},
+        "outputs": {
+          "stdout": {
+            "key": "stdout",
+            "artifact": {
+              "path": null,
+              "hash": "28d01191ede2adeb27eb3fec73dfc294127468fbeafdfc6dac10b3c730205c07",
+              "content_type": "text/plain",
+              "metadata": {}
+            },
+            "facets": [
+              {
+                "kind": "Decision",
+                "lane": "Fast",
+                "metadata": {}
+              }
+            ],
+            "provenance": {
+              "origin": "2",
+              "description": "Executed decide",
+              "captured_at": "2025-11-18T20:13:43.216302649Z",
+              "trust_score": 0.8
+            }
+          }
+        }
+      },
+      "dependencies": [],
+      "cache_key": "28d01191ede2adeb27eb3fec73dfc294127468fbeafdfc6dac10b3c730205c07"
+    },
+    {
+      "id": "0ecd0f97-cba9-4353-a6e3-9add49d7faec",
+      "kind": "Persist",
+      "lane": "Deep",
+      "facets": [],
+      "io": {
+        "inputs": {},
+        "outputs": {
+          "stdout": {
+            "key": "stdout",
+            "artifact": {
+              "path": null,
+              "hash": "0244481043b1012d25ea79cea8bf027d60a75cd65aa8d8844af8d6dbaacf8655",
+              "content_type": "text/plain",
+              "metadata": {}
+            },
+            "facets": [
+              {
+                "kind": "Persistence",
+                "lane": "Deep",
+                "metadata": {}
+              }
+            ],
+            "provenance": {
+              "origin": "5",
+              "description": "Executed persist",
+              "captured_at": "2025-11-18T20:13:43.216311392Z",
+              "trust_score": 1.0
+            }
+          }
+        }
+      },
+      "dependencies": [],
+      "cache_key": "0244481043b1012d25ea79cea8bf027d60a75cd65aa8d8844af8d6dbaacf8655"
+    }
+  ],
+  "captured_at": "2025-11-18T20:13:43.216320886Z",
+  "description": "run completion"
+}

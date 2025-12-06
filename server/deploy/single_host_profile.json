@@ -1,0 +1,40 @@
+{
+  "profile": "single-host",
+  "manifest": "../../core/kernel/manifest/kernel_graph.json",
+  "boot": {
+    "target": "kernel",
+    "orderedServices": [
+      "kernel",
+      "agent-registry",
+      "runtime-manager",
+      "gateway",
+      "observability",
+      "ui-shell",
+      "ecosystem"
+    ]
+  },
+  "health": {
+    "readinessFile": "state/{service}.ready",
+    "timeoutSeconds": 30,
+    "retries": 3
+  },
+  "observability": {
+    "bundlePath": "var/snapshots/single-host",
+    "metrics": {
+      "gateway": "telemetry/gateway-metrics.json",
+      "runtime-manager": "telemetry/runtime-metrics.json"
+    }
+  },
+  "resources": {
+    "baseline": {
+      "cpuCores": 8,
+      "memoryMb": 32768,
+      "diskMb": 51200
+    },
+    "highAvailability": {
+      "cpuCores": 16,
+      "memoryMb": 65536,
+      "diskMb": 102400
+    }
+  }
+}

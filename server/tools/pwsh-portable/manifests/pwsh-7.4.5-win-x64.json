@@ -1,0 +1,12 @@
+{
+    "pwsh_version": "7.4.5",
+    "platform": "win-x64",
+    "archive": "PowerShell-7.4.5-win-x64.zip",
+    "archive_sha256": "c735653083d4bc725687c005a4e6d4f0fb11c94b0cf86850467688796ac00342",
+    "source_url": "https://github.com/PowerShell/PowerShell/releases/download/v7.4.5/PowerShell-7.4.5-win-x64.zip",
+    "bundle_root": "pwsh-portable/platforms/win-x64/PowerShell-7.4.5-win-x64",
+    "binary_kind": "pwsh.exe",
+    "binary": "pwsh-portable/platforms/win-x64/PowerShell-7.4.5-win-x64/pwsh.exe",
+    "sha256": "7541f707744f237e826f5592920173df7fe0554e01e160dbf43e047564d51aea",
+    "generated_at": "2025-11-21T15:24:28Z"
+}

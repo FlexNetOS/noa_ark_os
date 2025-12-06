@@ -1,0 +1,42 @@
+{
+  "name": "@noa-ark/research-notebook",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "import": "./dist/src/index.js",
+      "types": "./dist/src/index.d.ts"
+    },
+    "./renderers/web": {
+      "import": "./dist/src/renderers/web.js",
+      "types": "./dist/src/renderers/web.d.ts"
+    },
+    "./renderers/desktop": {
+      "import": "./dist/src/renderers/desktop.js",
+      "types": "./dist/src/renderers/desktop.d.ts"
+    },
+    "./renderers/native": {
+      "import": "./dist/src/renderers/native.js",
+      "types": "./dist/src/renderers/native.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "lint": "tsc --noEmit --project tsconfig.json",
+    "test": "bash -lc 'shopt -s globstar nullglob && node --import tsx --test tests/**/*.test.ts'"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "dependencies": {
+    "@noa-ark/shared-ui": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "@types/react": "19.2.6",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3"
+  }
+}

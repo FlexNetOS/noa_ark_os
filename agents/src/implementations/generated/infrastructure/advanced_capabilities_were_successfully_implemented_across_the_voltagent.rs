@@ -1,5 +1,5 @@
 //! Advanced capabilities were successfully implemented across the VoltAgent - Auto-generated
-//! 
+//!
 //! ['Performs Micro Agent functions']
 
 use crate::unified_types::*;
@@ -17,8 +17,10 @@ impl AdvancedCapabilitiesWereSuccessfullyImplementedAcrossTheVoltagent {
     pub fn new() -> Self {
         let metadata = AgentMetadata {
             id: Uuid::new_v4(),
-            agent_id: "advanced_capabilities_were_successfully_implemented_across_the_voltagent".to_string(),
-            name: "Advanced capabilities were successfully implemented across the VoltAgent".to_string(),
+            agent_id: "advanced_capabilities_were_successfully_implemented_across_the_voltagent"
+                .to_string(),
+            name: "Advanced capabilities were successfully implemented across the VoltAgent"
+                .to_string(),
             layer: AgentLayer::L5Infrastructure,
             category: AgentCategory::Other,
             agent_type: AgentType::Worker,
@@ -48,22 +50,22 @@ impl AdvancedCapabilitiesWereSuccessfullyImplementedAcrossTheVoltagent {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Ready;
         Ok(())
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -78,13 +80,16 @@ impl Default for AdvancedCapabilitiesWereSuccessfullyImplementedAcrossTheVoltage
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = AdvancedCapabilitiesWereSuccessfullyImplementedAcrossTheVoltagent::new();
-        assert_eq!(agent.metadata().name, "Advanced capabilities were successfully implemented across the VoltAgent");
+        assert_eq!(
+            agent.metadata().name,
+            "Advanced capabilities were successfully implemented across the VoltAgent"
+        );
     }
-    
+
     #[tokio::test]
     async fn test_agent_initialization() {
         let mut agent = AdvancedCapabilitiesWereSuccessfullyImplementedAcrossTheVoltagent::new();

@@ -1,0 +1,25 @@
+
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CapabilityToken",
+  "type": "object",
+  "properties": {
+    "iss": {"type": "string"},
+    "sub": {"type": "string"},
+    "aud": {"type": "string"},
+    "cap": {
+      "type": "object",
+      "properties": {
+        "cpu_ms": {"type": "integer"},
+        "egress_kb": {"type": "integer"},
+        "dataset": {"type": "string"}
+      },
+      "required": ["cpu_ms"]
+    },
+    "caveats": {
+      "type": "array",
+      "items": {"type": "object"}
+    }
+  },
+  "required": ["iss","sub","aud","cap"]
+}

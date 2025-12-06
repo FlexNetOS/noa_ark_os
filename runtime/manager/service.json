@@ -1,0 +1,5 @@
+{
+  "id": "runtime-manager",
+  "version": "1.1.0",
+  "interfaces": ["runtime-policy", "kernel-events"]
+}

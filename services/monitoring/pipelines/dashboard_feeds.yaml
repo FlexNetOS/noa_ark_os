@@ -1,0 +1,46 @@
+# Dashboard Feed Configuration
+version: 1
+default_owner: automation-observability
+feeds:
+  - name: automation-effectiveness
+    description: "Primary dashboard feed for relocation and documentation automation"
+    source: crc.sandboxes
+    metric_manifest: ../../../.graphs/metrics/automation_effectiveness.yaml
+    refresh_interval: 5m
+    retention: 7d
+    transformations:
+      - type: normalize
+        fields:
+          - relocation.execution.success_rate
+          - docs.regeneration.runtime_minutes
+        notes: "Ensures metrics share a comparable scale for chart overlays"
+      - type: annotate
+        metadata:
+          owner: automation-observability
+          contact: "slack://#automation-ops"
+          runbook: docs/reports/AUTOMATION_EFFECTIVENESS_ROI.md
+      - type: quality_gate
+        criteria:
+          missing_data_tolerance_percent: 5
+          jitter_tolerance_percent: 10
+
+  - name: roi-kpi-stream
+    description: "Aggregated ROI statistics published to executive dashboards"
+    source: docs.reports
+    metric_manifest: ../../../.graphs/metrics/automation_effectiveness.yaml
+    refresh_interval: 1h
+    retention: 90d
+    transformations:
+      - type: aggregate
+        method: sum
+        fields:
+          - automation.roi.hours_saved
+          - automation.roi.cost_avoidance_usd
+          - automation.roi.incidents_avoided
+        notes: "Generates month-to-date totals for leadership reporting"
+      - type: emit-alert-hook
+        pipeline: automation-roi-regression
+      - type: annotate
+        metadata:
+          owner: finance-ops
+          contact: "email://finance-partner@example.com"

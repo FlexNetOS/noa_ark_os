@@ -1,5 +1,5 @@
-use async_trait::async_trait;
 use anyhow::Result;
+use async_trait::async_trait;
 
 /// Configuration for inference requests
 #[derive(Debug, Clone)]
@@ -26,10 +26,10 @@ impl Default for InferenceConfig {
 pub trait InferenceEngine: Send + Sync {
     /// Generate text from a prompt
     async fn generate(&self, prompt: &str, config: InferenceConfig) -> Result<String>;
-    
+
     /// Get the model name
     fn model_name(&self) -> &str;
-    
+
     /// Check if the engine is available
     async fn is_available(&self) -> bool;
 }
@@ -62,15 +62,15 @@ impl InferenceEngine for LlamaInferenceEngine {
                 Some(config.stop_sequences)
             },
         };
-        
+
         let response = self.client.completion(request).await?;
         Ok(response.content)
     }
-    
+
     fn model_name(&self) -> &str {
         &self.model_name
     }
-    
+
     async fn is_available(&self) -> bool {
         self.client.health_check().await.unwrap_or(false)
     }
@@ -79,19 +79,19 @@ impl InferenceEngine for LlamaInferenceEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_config_default() {
         let config = InferenceConfig::default();
         assert_eq!(config.temperature, 0.7);
         assert_eq!(config.max_tokens, 2048);
     }
-    
+
     #[tokio::test]
     async fn test_engine_creation() {
         let engine = LlamaInferenceEngine::new(
             "http://127.0.0.1:8080".to_string(),
-            "llama-3.2-3b".to_string()
+            "llama-3.2-3b".to_string(),
         );
         assert_eq!(engine.model_name(), "llama-3.2-3b");
     }

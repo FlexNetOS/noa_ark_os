@@ -1,5 +1,5 @@
 //! Successful implementation and rigorous benchmarking of core functionalities including Agent Deployment - Auto-generated
-//! 
+//!
 //! ['Performs Micro Agent functions']
 
 use crate::unified_types::*;
@@ -8,7 +8,8 @@ use tokio::sync::RwLock;
 use uuid::Uuid;
 
 /// Successful implementation and rigorous benchmarking of core functionalities including Agent Deployment
-pub struct SuccessfulImplementationAndRigorousBenchmarkingOfCoreFunctionalitiesIncludingAgentDeployment {
+pub struct SuccessfulImplementationAndRigorousBenchmarkingOfCoreFunctionalitiesIncludingAgentDeployment
+{
     metadata: AgentMetadata,
     state: RwLock<AgentState>,
 }
@@ -48,28 +49,30 @@ impl SuccessfulImplementationAndRigorousBenchmarkingOfCoreFunctionalitiesIncludi
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Ready;
         Ok(())
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
 }
 
-impl Default for SuccessfulImplementationAndRigorousBenchmarkingOfCoreFunctionalitiesIncludingAgentDeployment {
+impl Default
+    for SuccessfulImplementationAndRigorousBenchmarkingOfCoreFunctionalitiesIncludingAgentDeployment
+{
     fn default() -> Self {
         Self::new()
     }
@@ -78,13 +81,13 @@ impl Default for SuccessfulImplementationAndRigorousBenchmarkingOfCoreFunctional
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = SuccessfulImplementationAndRigorousBenchmarkingOfCoreFunctionalitiesIncludingAgentDeployment::new();
         assert_eq!(agent.metadata().name, "Successful implementation and rigorous benchmarking of core functionalities including Agent Deployment");
     }
-    
+
     #[tokio::test]
     async fn test_agent_initialization() {
         let mut agent = SuccessfulImplementationAndRigorousBenchmarkingOfCoreFunctionalitiesIncludingAgentDeployment::new();

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["ModuleCapability","ModuleMount"],"fn":["default_modules"],"struct":["AgentModule","AnalyticsModule","ChatModule","CiModule","DashboardModule","KanbanModule","LazyModule","ModuleContext","ModuleDescriptor","ResearchNotebookModule","StorageModule","WorkflowModule"],"trait":["ShellModule"]};

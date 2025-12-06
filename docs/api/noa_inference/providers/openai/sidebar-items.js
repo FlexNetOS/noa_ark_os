@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["default_base_url","default_timeout","parse_openai_stream_chunk"],"struct":["ChatMessage","ChatRequest","OpenAiChatResponse","OpenAiChoice","OpenAiConfig","OpenAiMessage","OpenAiProvider","OpenAiStreamChoice","OpenAiStreamDelta","OpenAiStreamEvent","OpenAiUsage"]};

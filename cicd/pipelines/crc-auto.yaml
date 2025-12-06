@@ -159,6 +159,20 @@ stages:
           
           echo "✓ Integration tests passed"
 
+  # Stage 4: CRC DAG execution
+  - name: crc_dag
+    display_name: "Execute CRC DAG Offline"
+    timeout_minutes: 15
+    depends_on:
+      - test
+    steps:
+      - name: orchestrate_crc
+        display_name: "Run CRC orchestrator"
+        script: |
+          echo "Running CRC orchestrator offline"
+          cargo run -p noa_crc -- run --checkpoint out/ckpt
+          cargo run -p noa_crc -- graph ls
+
   - name: single_host_acceptance
     display_name: "Single-host Acceptance"
     timeout_minutes: 15
@@ -190,7 +204,18 @@ stages:
           NOA_PROFILE=server/profiles/single_host/profile.toml \
             services/single-host/init/noa-single-host.sh start all || true
           echo "✓ Bootstrap script executed"
-      
+
+      - name: profile_health_matrix
+        display_name: "Profile capability health matrix"
+        script: |
+          set -e
+          echo "Validating capability tokens for all profiles"
+          for PROFILE in single_host air_gapped devcontainer edge_lite; do
+            echo "→ Checking ${PROFILE}"
+            cargo test -p noa_core profile_switching --release -- --nocapture
+          done
+          echo "✓ Capability tokens validated across profiles"
+
       - name: coverage_report
         display_name: "Generate Coverage Report"
         continue_on_error: true

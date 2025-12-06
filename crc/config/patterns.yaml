@@ -1,5 +1,12 @@
 # Code Patterns for Adaptation
 
+metadata:
+  version: 1
+  owners:
+    core: crc-adaptation
+    storage: storage-relocation
+    documentation: documentation-automation
+
 patterns:
   # HTTP Libraries
   http_requests:
@@ -157,17 +164,51 @@ language_specific:
       adapt: "fn func() {}"
       reason: "Convert to Rust function"
       confidence: 0.80
-    
+
     - pattern: "module.exports = {}"
       adapt: "pub mod module {}"
       reason: "Convert to Rust module"
       confidence: 0.75
-  
+
   go:
     - pattern: "func Name() {}"
       adapt: "fn name() {}"
       reason: "Convert to Rust naming"
       confidence: 0.85
+
+  # Storage Automation Guardrails
+  automation_storage:
+    - pattern: "shutil.move(src, dst)"
+      replace: "noa_storage::automation::relocate(src, dst)"
+      reason: "Use orchestrated relocation workflow with audit logging"
+      confidence: 0.88
+
+    - pattern: "os.rename(old, new)"
+      replace: "noa_storage::automation::safe_rename(old, new)"
+      reason: "Ensure relocation guardrails and pre-flight validation"
+      confidence: 0.86
+
+    - pattern: "Path(src).replace(target)"
+      wrap: "noa_storage::automation::bulk_relocate(PathList::from(src), target)"
+      reason: "Batch relocation must go through managed playbooks"
+      confidence: 0.82
+
+  # Documentation Automation Patterns
+  documentation_workflows:
+    - pattern: "open('README.md', 'w')"
+      wrap: "noa_docs::automation::update_readme(|writer| { writer })"
+      reason: "Route documentation updates through automation harness"
+      confidence: 0.84
+
+    - pattern: "generate_docs(project)"
+      replace: "noa_docs::automation::run_playbook('authoritative-docs', project)"
+      reason: "Invoke standardized documentation generation playbooks"
+      confidence: 0.83
+
+    - pattern: "markdown.render(content)"
+      wrap: "noa_docs::lint::render_with_guardrails(content)"
+      reason: "Apply documentation linting and compliance guardrails"
+      confidence: 0.87
 
 # Meta patterns
 meta:

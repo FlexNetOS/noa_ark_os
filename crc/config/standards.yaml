@@ -1,5 +1,11 @@
 # Workspace Standards
 
+metadata:
+  version: 1
+  owners:
+    governance: crc-governance
+    automation: automation-observability
+
 # Language-specific standards
 languages:
   rust:
@@ -153,13 +159,38 @@ testing:
       python: "test_*.py or *_test.py"
       go: "*_test.go"
       csharp: "*.Tests.cs"
-    
+
     test_naming:
       rust: "test_*"
       python: "test_*"
       go: "Test*"
       csharp: "Test*"
-  
+
+# Automation Standards
+automation:
+  storage_playbooks:
+    require_checkpointing: true
+    rollback_window_minutes: 15
+    audit_log_channel: "storage-relocation"
+    verification_steps:
+      - "preflight_validation"
+      - "post_move_checksum"
+      - "business_owner_signoff"
+
+  documentation_playbooks:
+    enforce_styleguide: "docs/styleguide.md"
+    auto_archive_superseded: true
+    metrics_required:
+      - "update_cycle_time"
+      - "review_turnaround"
+      - "doc_coverage_delta"
+
+  incident_simulations:
+    sandbox_expectations:
+      - "capture_telemetry"
+      - "validate_recovery_plan"
+      - "publish_postmortem"
+
   mocking:
     prefer_dependency_injection: true
     use_test_doubles: true
