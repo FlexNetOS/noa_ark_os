@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { getProvider as uiGetProvider, resetProviderCache as uiReset } from "../router";
+import { getProvider as uiGetProvider, resetProviderCache as uiReset } from "..";
 import { getProvider as canonicalGetProvider, resetProviderCache as canonicalReset } from "@noa-ark/server/ai/router";
 import { handlePromptRequest } from "../controllers/prompt";
 import { LlamaCppProvider } from "@noa-ark/server/ai/providers/llama_cpp";
