@@ -1,0 +1,17 @@
+{
+  "drifts": [
+    {
+      "node_id": "missing-target",
+      "relative_path": "tests/world_model/fixtures/ghost.txt",
+      "expected_kind": "file",
+      "issue": "missing"
+    }
+  ],
+  "remediation": [
+    {
+      "node_id": "missing-target",
+      "action": "create_file",
+      "relative_path": "tests/world_model/fixtures/ghost.txt"
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["ui_schema_service_client","ui_schema_service_server"],"struct":["LayoutRegion","PageEnvelope","PageMetadata","PageRequest","PageSchema","RealTimeEvent","ResumeToken","WidgetSchema"]};

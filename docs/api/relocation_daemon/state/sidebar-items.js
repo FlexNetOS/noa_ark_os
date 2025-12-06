@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["ActionOutcome"],"struct":["CompletedAction","DuplicateSet","PendingAction","RelocationAction","RelocationState","SkippedAction"]};

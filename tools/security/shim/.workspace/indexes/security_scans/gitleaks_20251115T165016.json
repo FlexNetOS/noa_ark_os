@@ -1,0 +1,11 @@
+{
+  "findings": [
+    {
+      "description": "secret-like token 'AWS_ACCESS_KEY_ID' detected",
+      "file": "secret.txt",
+      "severity": "critical"
+    }
+  ],
+  "generated_at": "2025-11-15T16:50:16.941044931Z",
+  "tool": "gitleaks"
+}

@@ -1,5 +1,6 @@
 
 import asyncio
+import logging
 import os
 import subprocess
 import json
@@ -8,12 +9,21 @@ import inspect
 from typing import Dict, List, Any
 from pathlib import Path
 
+from server.python.common.workspace import resolve_workspace_path
+
+logger = logging.getLogger(__name__)
+
 class Constitutionalselfmodificationvalidator:
     """Advanced Constitutional Validation for Self-Modification with constitutional integration"""
     
     def __init__(self):
         self.constitutional_validator = ConstitutionalValidator()
-        self.workspace_path = "/home/ubuntu/ark-ai-os-workspace"
+        self.workspace_path = resolve_workspace_path()
+        logger.info(
+            "%s resolved workspace path: %s",
+            self.__class__.__name__,
+            self.workspace_path,
+        )
         self.modification_history = []
         
     async def execute_operation(self, operation: Dict[str, Any]) -> Dict[str, Any]:

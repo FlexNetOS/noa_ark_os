@@ -30,6 +30,7 @@ pub enum GpuBackend {
 }
 
 impl GpuBackend {
+    #[cfg_attr(not(test), allow(dead_code))]
     fn from_vendor_hint(vendor_id: Option<&str>, name: &str) -> Self {
         let vendor = vendor_id.unwrap_or("").to_ascii_lowercase();
         if vendor.contains("10de") || name.to_ascii_lowercase().contains("nvidia") {
@@ -125,7 +126,7 @@ pub fn detect_hardware_profile() -> HardwareProfile {
             vendor: cpu.vendor_id().to_string(),
             physical_cores: system.physical_core_count().unwrap_or(logical_cores),
             logical_cores,
-            frequency_mhz: Some(cpu.frequency() as u64),
+            frequency_mhz: Some(cpu.frequency()),
         })
         .unwrap_or(CpuProfile {
             brand: "unknown".to_string(),
@@ -156,7 +157,7 @@ fn detect_gpus(_system: &System) -> Vec<GpuProfile> {
 
     // Note: sysinfo graphics_cards() API not available in this version
     // Falling back to nvidia-smi detection.
-    
+
     gpus.extend(query_nvidia_smi());
 
     gpus
@@ -177,8 +178,8 @@ fn query_nvidia_smi() -> Vec<GpuProfile> {
             for line in stdout.lines() {
                 let parts: Vec<_> = line.split(',').map(|s| s.trim()).collect();
                 // Skip empty lines and lines with empty first field
-                // Also ensure we have at least the name field
-                if parts.is_empty() || parts[0].is_empty() {
+                // Also ensure we have at least 3 fields (name, memory, driver)
+                if parts.is_empty() || parts[0].is_empty() || parts.len() < 3 {
                     continue;
                 }
 

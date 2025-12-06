@@ -1,0 +1,36 @@
+{
+  "artifacts": [
+    {
+      "name": "kernel",
+      "path": "dist/noa-ark-os-kernel.tar.zst",
+      "sha256": "de5f4caa04f1ddc9743db507940301bb6f4cc7dcd45d221ff6a15bef2a9d8a17",
+      "size": 1845828
+    },
+    {
+      "name": "extensions",
+      "path": "dist/noa-ark-os-extensions.tar.zst",
+      "sha256": "714eb07642c24a4145e7e794f426b65496932d14eae19e150d735436fb0388ba",
+      "size": 446840362
+    }
+  ],
+  "generated_at": "2025-11-18T21:59:38Z",
+  "sboms": [
+    {
+      "name": "kernel",
+      "path": "audit/SBOM.kernel.cdx.json",
+      "sha256": "0af614c65fbce6fa8d0b8f9569c459e0be2d59b6b839d5bac9b1a066edddd83e",
+      "size": 26657
+    },
+    {
+      "name": "extensions",
+      "path": "audit/SBOM.extensions.cdx.json",
+      "sha256": "381eebb22ca0e02799e981632f02fe50ff8543b67bbb2700cd260009e5c48f21",
+      "size": 74186
+    }
+  ],
+  "source_date_epoch": 0,
+  "toolchain": {
+    "package": "python -m tools.repro.audit_pipeline package",
+    "version": "0.1"
+  }
+}

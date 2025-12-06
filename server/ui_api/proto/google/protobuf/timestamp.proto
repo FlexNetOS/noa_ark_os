@@ -12,6 +12,8 @@ option php_namespace = "Google\\Protobuf\\WellKnownTypes";
 option php_metadata_namespace = "Google\\Protobuf\\Internal";
 option cc_enable_arenas = true;
 
+// Minimal copy of google.protobuf.Timestamp to satisfy local builds without
+// relying on external protobuf distributions.
 message Timestamp {
   int64 seconds = 1;
   int32 nanos = 2;

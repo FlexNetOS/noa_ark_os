@@ -1,0 +1,70 @@
+﻿# ─────────────────────────────────────────────────────────────────────────────
+#  AgentAskit • Production TODO
+#  Date: 2025-10-05
+#  Legend:
+#    ☐ = open, ☑ = done
+#    Priority: [91m(A)[0m = Critical, [93m(B)[0m = High
+#    Tags: [96m+Tag[0m  Context: [95m@context[0m  Metrics: [1mbold[0m
+#  Note: ANSI color codes included. If your viewer lacks ANSI support, remove [...m codes.
+# ─────────────────────────────────────────────────────────────────────────────
+
+[1;96m== Performance & SLA ==[0m
+- [ ] [91m(A)[0m 2025-10-05 Implement performance optimization system [1mtput_tasks:10000_per_sec[0m [1mtput_msgs:100000_per_sec[0m [96m+AgentAskit +Performance +Scalability[0m [95m@prod[0m [REF: PERF-001]
+- [ ] [91m(A)[0m 2025-10-05 Achieve SLA targets [1mstartup_lt_ms:100[0m [1mresponse_lt_ms:50[0m [96m+AgentAskit +Performance[0m [95m@prod[0m [REF: SLA-001]
+
+[1;96m== Security ==[0m
+- [ ] [91m(A)[0m 2025-10-05 Complete security enhancement with capability token management [96m+AgentAskit +Security +AuthZ +Tokens[0m [95m@prod[0m [REF: SEC-001]
+
+[1;96m== Workflow & Orchestration ==[0m
+- [ ] [93m(B)[0m 2025-10-05 Execute 7-phase workflow with 928-agent orchestration [96m+AgentAskit +Workflow +Orchestration +Agents[0m [95m@prod[0m [REF: WF-001]
+
+[1;96m== Verification ==[0m
+- [ ] [93m(B)[0m 2025-10-05 Deploy triple verification with Model D evolutionary merge [96m+AgentAskit +Verification +ModelD[0m [95m@prod[0m [REF: VER-001]
+
+[1;96m== Observability ==[0m
+- [ ] [93m(B)[0m 2025-10-05 Create real-time health monitoring and agent capability matching [96m+AgentAskit +Observability +Health +Matching[0m [95m@prod[0m [REF: OBS-001]
+
+[1;96m== Documentation & Compliance ==[0m
+- [ ] [93m(B)[0m 2025-10-05 Generate comprehensive documentation with evidence trails and SHA-256 hashes [96m+AgentAskit +Docs +Compliance +Integrity[0m [95m@prod[0m [REF: DOC-001]
+
+- [ ] [91m(A)[0m 2025-10-05 <Title> owner:@alice deps:[PERF-001, OBS-001]  +Tag1 +Tag2 @prod [REF: ABC-123] acc: "<measurable acceptance>" evid: "<link>"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# References
+#   PERF-001: Performance optimization system with throughput targets (tasks,msgs/sec).
+#   SLA-001 : Startup/response latency objectives for production.
+#   SEC-001 : Capability-token management, AuthZ hardening.
+#   WF-001  : 7-phase, 928-agent orchestration plan.
+#   VER-001 : Triple verification, Model-D evolutionary merge.
+#   OBS-001 : Real-time health/metrics and capability matching.
+#   DOC-001 : Docs with evidence trails and SHA-256 integrity.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  AgentAskit • Production TODO (Subject Inbox)
+#  Date: 2025-10-05
+#  Legend:
+#    ☐ = open, ☑ = done
+#    Priority: (A) = Critical, (B) = High, (C) = Medium
+#  Note: This file captures chat-request subjects. `tasks.todo` interprets these via 4D.
+# ─────────────────────────────────────────────────────────────────────────────
+
+== 7-Phase Execution Subjects ==
+- [ ] (A) 2025-10-05 Cross-reference entire repo vs final package; produce lineage/duplicates/missing  @prod +CrossRef +Archives [REF: SUBJ-CROSSREF]
+  acc: "Artifacts manifest/report present; CI uploaded; SoT updated"  evid: "agentaskit-production/docs/reports/cross_reference/artifacts/"
+- [ ] (A) 2025-10-05 Verify nothing overlooked; enumerate missing expected production components  @prod +Verification +Inventory [REF: SUBJ-VERIFY]
+  acc: "Missing-dirs list closed or waived with ADR"  evid: "report.md section: Missing expected production components"
+- [ ] (A) 2025-10-05 Apply fixes (heal, no harm); upgrades only; update .todo with actions  @prod +Fixes +Upgrades [REF: SUBJ-HEAL-UPGRADE]
+  acc: "Fix PRs merged; SoT entries added; no capability regressions"  evid: "SoT entries; CI logs"
+- [ ] (B) 2025-10-05 Optimize, organize, unify per report  @prod +Unify +Organize +Optimize [REF: SUBJ-UNIFY]
+  acc: "Unification plan applied; no duplicates; structure conforms"  evid: "UNIFICATION_PLAN.md; SoT"
+- [ ] (B) 2025-10-05 Complete all subject items; reconcile subject inbox to zero  @prod +Ops +Hygiene [REF: SUBJ-ZERO-INBOX]
+  acc: "All SUBJ-* entries closed; mirrored WORKFLOW-* closed"  evid: "tasks.todo status; SoT"
+- [ ] (A) 2025-10-05 Integrate llama.cpp and wire to model selector agents  @staging +Models +Inference +Integration [REF: SUBJ-LLAMACPP]
+  acc: "Submodule or fetch script; build instructions; selector bridge stub in repo; no breakages"  evid: "integrations/llama.cpp/README.md; CI build logs"
+
+== Observability & Security Subjects ==
+- [ ] (B) 2025-10-05 Add SLO check CI and baseline policies  @prod +SLO +CI [REF: SUBJ-SLO-CI]
+  acc: "slo/policies.yaml present; slo-check CI green"  evid: "slo/policies.yaml; .github/workflows/slo-check.yml"
+- [ ] (B) 2025-10-05 Add CodeQL/SCA security CI baselines  @prod +Security +CI [REF: SUBJ-SEC-CI]
+  acc: "CodeQL and SCA pass; 0 critical/high"  evid: ".github/workflows/codeql.yml; security/reports/"

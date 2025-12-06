@@ -1,0 +1,9 @@
+(function() {
+    var implementors = Object.fromEntries([["noa_ui_api",[["impl&lt;T, B&gt; Service&lt;<a class=\"struct\" href=\"https://docs.rs/http/0.2.11/http/request/struct.Request.html\" title=\"struct http::request::Request\">Request</a>&lt;B&gt;&gt; for <a class=\"struct\" href=\"noa_ui_api/grpc/proto/ui_schema_service_server/struct.UiSchemaServiceServer.html\" title=\"struct noa_ui_api::grpc::proto::ui_schema_service_server::UiSchemaServiceServer\">UiSchemaServiceServer</a>&lt;T&gt;<div class=\"where\">where\n    T: <a class=\"trait\" href=\"noa_ui_api/grpc/proto/ui_schema_service_server/trait.UiSchemaService.html\" title=\"trait noa_ui_api::grpc::proto::ui_schema_service_server::UiSchemaService\">UiSchemaService</a>,\n    B: <a class=\"trait\" href=\"https://docs.rs/http-body/0.4.6/http_body/trait.Body.html\" title=\"trait http_body::Body\">Body</a> + <a class=\"trait\" href=\"https://doc.rust-lang.org/1.91.1/core/marker/trait.Send.html\" title=\"trait core::marker::Send\">Send</a> + 'static,\n    B::<a class=\"associatedtype\" href=\"https://docs.rs/http-body/0.4.6/http_body/trait.Body.html#associatedtype.Error\" title=\"type http_body::Body::Error\">Error</a>: <a class=\"trait\" href=\"https://doc.rust-lang.org/1.91.1/core/convert/trait.Into.html\" title=\"trait core::convert::Into\">Into</a>&lt;<a class=\"type\" href=\"https://docs.rs/tonic/0.11.0/tonic/codegen/type.StdError.html\" title=\"type tonic::codegen::StdError\">StdError</a>&gt; + <a class=\"trait\" href=\"https://doc.rust-lang.org/1.91.1/core/marker/trait.Send.html\" title=\"trait core::marker::Send\">Send</a> + 'static,</div>"]]]]);
+    if (window.register_implementors) {
+        window.register_implementors(implementors);
+    } else {
+        window.pending_implementors = implementors;
+    }
+})()
+//{"start":57,"fragment_lengths":[1572]}

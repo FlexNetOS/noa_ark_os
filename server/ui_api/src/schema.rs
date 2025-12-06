@@ -1,3 +1,5 @@
+use std::fmt;
+
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use serde_repr::Serialize_repr;
@@ -12,6 +14,7 @@ pub enum WidgetKind {
     WorkspaceAnalytics,
     WorkspaceActivity,
     WorkspaceAssist,
+    WorkspacePlanner,
     WorkspaceIntegrations,
     WorkspacePresence,
     LayoutRegion,
@@ -26,6 +29,18 @@ pub enum LayoutSlot {
     Header = 1,
     Main = 2,
     Footer = 3,
+}
+
+impl fmt::Display for LayoutSlot {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let label = match self {
+            LayoutSlot::Header => "header",
+            LayoutSlot::Main => "main",
+            LayoutSlot::Footer => "footer",
+        };
+
+        f.write_str(label)
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -113,13 +128,13 @@ impl PageEnvelope {
                 kind: "workspace".into(),
                 metadata: PageMetadata {
                     title: "Vibe Kanban Control Hub".into(),
-                    description: Some("Server-driven schema delivered by noa_ui_api".into()),
+                    description: Some("Server-driven schema delivered by noa_ui_api with goal-centric kanban planning".into()),
                     tokens_version: "0.1.0".into(),
                     created_at: "2024-05-01T00:00:00.000Z".into(),
                     updated_at: "2024-05-15T00:00:00.000Z".into(),
                     accessibility_notes: vec![
                         "ARIA labels provided for all actionable widgets".into(),
-                        "Color contrast adheres to WCAG AA".into(),
+                        "Goal metrics and controls meet WCAG AA contrast guidelines".into(),
                     ],
                 },
                 regions: vec![
@@ -198,6 +213,13 @@ impl PageEnvelope {
                                 variant: None,
                                 props: None,
                                 component: Some("AssistPanel".into()),
+                            },
+                            WidgetSchema {
+                                id: "planner".into(),
+                                kind: WidgetKind::WorkspacePlanner,
+                                variant: None,
+                                props: None,
+                                component: Some("PlannerPanel".into()),
                             },
                             WidgetSchema {
                                 id: "analytics".into(),

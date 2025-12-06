@@ -7,8 +7,9 @@ export type SessionUser = {
 
 const COOKIE_NAME = "vibe-user";
 
-export function readUserFromCookies(): SessionUser | undefined {
-  const raw = cookies().get(COOKIE_NAME)?.value;
+export async function readUserFromCookies(): Promise<SessionUser | undefined> {
+  const cookieStore = await cookies();
+  const raw = cookieStore.get(COOKIE_NAME)?.value;
   if (!raw) return undefined;
   try {
     return JSON.parse(raw) as SessionUser;
@@ -18,16 +19,17 @@ export function readUserFromCookies(): SessionUser | undefined {
   }
 }
 
-export function assertUser(): SessionUser {
-  const user = readUserFromCookies();
+export async function assertUser(): Promise<SessionUser> {
+  const user = await readUserFromCookies();
   if (!user) {
     throw new Response("Unauthorized", { status: 401 });
   }
   return user;
 }
 
-export function setUserSession(user: SessionUser) {
-  cookies().set({
+export async function setUserSession(user: SessionUser): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.set({
     name: COOKIE_NAME,
     value: JSON.stringify(user),
     httpOnly: false,
@@ -37,6 +39,7 @@ export function setUserSession(user: SessionUser) {
   });
 }
 
-export function clearUserSession() {
-  cookies().delete(COOKIE_NAME);
+export async function clearUserSession(): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.delete(COOKIE_NAME);
 }

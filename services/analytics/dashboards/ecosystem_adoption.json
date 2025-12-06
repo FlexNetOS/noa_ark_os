@@ -1,0 +1,20 @@
+{
+  "title": "Ecosystem adoption",
+  "widgets": [
+    {
+      "id": "active-features",
+      "title": "Active ecosystem features",
+      "metric": "ecosystem_features_enabled_total"
+    },
+    {
+      "id": "onboarding-completion",
+      "title": "Onboarding completion rate",
+      "metric": "ecosystem_onboarding_completion_percent"
+    },
+    {
+      "id": "roi",
+      "title": "Partner ROI",
+      "metric": "ecosystem_partner_roi_index"
+    }
+  ]
+}
