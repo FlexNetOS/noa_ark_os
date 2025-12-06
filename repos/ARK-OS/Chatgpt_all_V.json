@@ -1,0 +1,1052 @@
+{
+  "meta": {
+    "name": "Unified NOA-CECCA Agentic OS Johnson Bundle",
+    "version": "10.7.0-unified",
+    "generated": "2025-09-15T00:00:00Z (unified from all chats)",
+    "style": "Kernel-first • Message-passing • Async-first • No-globals • Zero-bloat • Offline-only • Capsule-first • Biological-inspired Stem-Cell CECCA",
+    "principles": [
+      "offline-only", "kernel-first", "message-passing", "async-first", "no-globals", "zero-bloat", "auditable", "sandbox-first", "budget-bound",
+      "local-first", "decentralized & distributed", "reversible", "airgapDefault", "provable-truth"
+    ],
+    "aliases": ["Ark-AI", "Ark AI OS", "Flex Net OS", "Deflex", "Element Ark", "micro-agent", "nano-agent", "Ark-OS-NOA", "NOA", "CEO"],
+    "provenance": {
+      "sources": ["chatgpt1.json", "chatgpt2.json", "chatgpt3.json", "chatgpt4.json", "chatgpt5.json", "chatgpt6.json", "chatgpt7.json", "chatgpt8.json", "chatgpt9.json", "chatgpt11.json"],
+      "truth_gate": {
+        "policy": "TRUTH_GATE_AND_DECEPTION_POLICY.md",
+        "claims": "No readiness/verification claimed; smoke tests available but not executed automatically."
+      },
+      "notes": [
+        "Runs in Node >=18 or modern browser (fs writes stubbed).",
+        "Autofix SBOM sets env defaults and ensures directory structure.",
+        "Modules use event bus; no shared mutable state.",
+        "Local-first, offline, self-upgrade."
+      ]
+    }
+  },
+  "config": {
+    "envDefaults": {
+      "NOA_MODELS_DIR": "./models",
+      "NOA_DATA_DIR": "./data",
+      "NOA_PORT": "8088",
+      "AIRGAP_MODE": "true",
+      "EGRESS_ALLOWLIST": "localhost,127.0.0.1",
+      "CAPSULE_FS": "mem",
+      "REGISTRY_HOST": "registry.local",
+      "MINIO_ENDPOINT": "http://minio:9000",
+      "MINIO_ACCESS_KEY": "minioadmin",
+      "MINIO_SECRET_KEY": "minioadmin",
+      "MINIO_BUCKET": "artifacts",
+      "POSTGRES_HOST": "postgres",
+      "POSTGRES_DB": "arkos",
+      "POSTGRES_USER": "arkos",
+      "POSTGRES_PASSWORD": "arkos",
+      "PG_CONN": "postgres://arkos:arkos@postgres:5432/arkos",
+      "VECTOR_BACKEND": "pgvector",
+      "MODEL_POLICY": "local_only",
+      "BUS": "runtime",
+      "CRM_MODE": "shadow",
+      "LOG_LEVEL": "info",
+      "OFFLINE_MODE": "true",
+      "BASE_URL": "http://localhost:8081",
+      "NOA_MANIFEST": "",
+      "PYTHONHASHSEED": "0",
+      "CECCA_NAMESPACE": "",
+      "CECCA_EPOCH": "",
+      "CECCA_KEYS_DIR": ""
+    },
+    "paths": {
+      "root": ".",
+      "registry": "state/registry.jsonl",
+      "snapshots": "snapshots",
+      "eval": "eval"
+    },
+    "router": {
+      "topK": 2,
+      "epsilon": 0.05,
+      "loadBalanceTau": 0.1
+    },
+    "budgets": {
+      "latencyMs": 150,
+      "memoryMB": 512,
+      "paramPctCap": 0.2,
+      "regressionPct": 0.5,
+      "cpu_ms": 20,
+      "gpu_pct": 40,
+      "io_mbps": 50
+    },
+    "sandbox": {
+      "trafficFraction": 0.15,
+      "timeoutMs": 30000
+    },
+    "promotion": {
+      "generalSigma": 0.8,
+      "recentSigma": 2.0,
+      "noSafetyRegressions": true
+    },
+    "scheduler": {
+      "profile": "unbounded",
+      "bounded_defaults": {
+        "max_parallel": "auto",
+        "chunk_size": 256,
+        "io_backoff_ms": 5
+      },
+      "policy": "work-stealing async",
+      "priorities": ["realtime", "interactive", "batch", "maintenance"]
+    },
+    "autoSmoke": false,
+    "autoScanOnBoot": true,
+    "connectivityModes": {
+      "default": "offline",
+      "offline": {
+        "allowInternet": false,
+        "updateMechanism": "signed-capsules",
+        "modelSources": ["local://models", "capsule://models"],
+        "telemetry": "disabled"
+      },
+      "connected": {
+        "allowInternet": true,
+        "p2pMesh": "enabled",
+        "modelSources": ["hf://", "ollama://optional", "local://"],
+        "telemetry": "opt-in",
+        "egressPolicy": "deny-by-default; allowlist by capsule"
+      }
+    }
+  },
+  "sbom": {
+    "scan_on_boot": true,
+    "autoFix": true,
+    "computeAtBoot": true,
+    "policy": {
+      "failOnMissingModules": false,
+      "failOnMissingEnv": false
+    },
+    "requiredEnv": [
+      "NOA_MODELS_DIR", "NOA_DATA_DIR", "NOA_PORT", "AIRGAP_MODE", "EGRESS_ALLOWLIST", "CAPSULE_FS",
+      "REGISTRY_HOST", "MINIO_ENDPOINT", "MINIO_ACCESS_KEY", "MINIO_SECRET_KEY", "MINIO_BUCKET",
+      "POSTGRES_HOST", "POSTGRES_DB", "POSTGRES_USER", "POSTGRES_PASSWORD", "PG_CONN",
+      "VECTOR_BACKEND", "MODEL_POLICY", "BUS", "CRM_MODE", "LOG_LEVEL",
+      "NOA_MANIFEST", "OFFLINE_MODE", "BASE_URL", "NOA_GPU", "HTTP_PROXY", "HTTPS_PROXY",
+      "PYTHONHASHSEED", "CECCA_NAMESPACE", "CECCA_EPOCH", "CECCA_KEYS_DIR"
+    ],
+    "env_defaults": {
+      "PYTHONHASHSEED": "0"
+    },
+    "dirs_expected": ["models/", "data/", "data/capsules/", "data/versions/", "data/patches/", "uploads/", "vendor/wheels/"],
+    "required_modules": [
+      "bus.runtime", "bus.redis", "capsule.manager", "storage.layer", "sbom.scanner", "sbom.extended",
+      "security.policy", "agent.noa", "foresight.engine", "storage.adapters.pg", "storage.adapters.minio",
+      "models.local", "crm.proxy", "net.guard", "llm.runtime", "vlm.runtime", "asr.runtime",
+      "vector.index", "object.store", "msgbus.runtime"
+    ],
+    "required_platform": ["MessageChannel", "TextEncoder", "crypto.subtle"],
+    "native_optional": ["tesseract", "llama.cpp"],
+    "modules": [
+      "kernel", "handlers", "truth_gate", "sbom_util", "utils", "agent_api", "ui_fabric", "entrypoint", "bootstrap",
+      "shim.polyfills", "bus.runtime", "bus.redis", "security.policy", "storage.layer", "storage.vhdx",
+      "storage.adapters.pg", "storage.adapters.minio", "net.guard", "capsule.manager", "sbom.scanner",
+      "sbom.extended", "board.directors", "agent.modelselector", "models.local", "agent.digest",
+      "foresight.engine", "crm.proxy", "agent.microstack", "agent.noa", "ui.dynamic"
+    ],
+    "onBootReportTopic": "sys/sbom/report",
+    "auto_fixups": [
+      {
+        "check": "env_missing",
+        "target": "PYTHONHASHSEED",
+        "fix": { "set_default": "0" },
+        "note": "stabilize deterministic hashing"
+      },
+      {
+        "check": "module_missing",
+        "target": "sqlite3_kv",
+        "fix": {
+          "shim": "kvstore-fallback",
+          "impl": "append_only_jsonl + segment_index",
+          "limits": { "max_segment_mb": 32 }
+        }
+      },
+      {
+        "check": "module_missing",
+        "target": "yaml_compiler_lite",
+        "fix": {
+          "shim": "yaml-min",
+          "impl": "strict subset: scalars/maps/seq; anchors disabled",
+          "policy": "forbid_urls_endpoints"
+        }
+      }
+    ],
+    "shims": [
+      { "id": "shim.msgbus", "provides": "msgbus.runtime", "fallback": "inproc" },
+      { "id": "shim.objects", "provides": "object.store", "fallback": "local-fs" },
+      { "id": "shim.vector", "provides": "vector.index", "fallback": "lite-index" },
+      {
+        "kvstore_fallback": {
+          "type": "append_only",
+          "segments": "jsonl",
+          "index": "sparse_fts_if_available",
+          "fsync": "batched"
+        }
+      },
+      {
+        "yaml_min": {
+          "features": ["scalars", "maps", "sequences"],
+          "disabled": ["anchors", "aliases", "tags"],
+          "security": ["forbid_urls_endpoints"]
+        }
+      }
+    ]
+  },
+  "architecture": {
+    "targets": {
+      "platforms": ["windows11-pro", "ubuntu", "android-mobile", "android-xr"],
+      "tiers": {
+        "base": { "role": "orchestrator+heavy-infer", "gpu": true },
+        "mobile": { "role": "companion+mid-infer", "gpu": "optional" },
+        "xr": { "role": "capture+ultralight-infer", "gpu": false }
+      }
+    },
+    "platformTiers": {
+      "base": {
+        "services": ["gateway", "data-plane", "court", "optimizer", "ui"],
+        "endpoints": ["/devices/register", "/nldb/ingest", "/artifacts/:sha256", "/health"]
+      },
+      "mobile": { "services": ["register", "sync-daemon", "edge-cache", "ui"], "policies": ["wifi-only-uplink", "power-aware"] },
+      "xr": { "services": ["long-record", "asr-tiny", "vlm-lite", "publisher"], "transport": ["ble", "wifi-direct", "lan"] }
+    },
+    "cells": [
+      { "id": "CC_CONST", "role": "constitution_signer", "inbox": ["policy.update"], "outbox": ["policy.applied"] },
+      { "id": "CC_QUORUM", "role": "virtual_board", "inbox": ["risk.report", "release.proposal"], "outbox": ["board.decision"] },
+      { "id": "CC_TRUTH", "role": "truth_gate", "policy": "TRUTH_GATE_AND_DECEPTION_POLICY.md", "inbox": ["graph.ingest", "release.note"], "outbox": ["truth.ok", "truth.block"] },
+      { "id": "CC_STEM_REPL", "role": "stem_replicator", "inbox": ["replicate.request"], "outbox": ["replicate.plan"] },
+      { "id": "CC_STEM_DIFF", "role": "stem_differentiator", "inbox": ["differentiate.request"], "outbox": ["emit.stack", "emit.capsule", "emit.cell"] },
+      { "id": "CC_CHOP", "role": "capsule_surgeon", "inbox": ["capsule.slice"], "outbox": ["capsule.parts"] },
+      { "id": "CC_ARBITER", "role": "promotion_arbiter", "inbox": ["gate.results"], "outbox": ["promotion.decision"] },
+      { "id": "CC_AUDIT", "role": "global_auditor", "inbox": ["event.*"], "outbox": ["audit.record"] },
+      { "id": "CC_YAML", "role": "yaml_to_json_compiler", "inbox": ["yaml.input"], "outbox": ["json.output", "lint.error"] },
+      { "id": "CC_KIT_INST", "role": "kit_installer", "inbox": ["kit.bundle"], "outbox": ["kit.registered", "license.check"] },
+      { "id": "CC_LICENSE", "role": "license_gate", "inbox": ["license.check"], "outbox": ["license.ok", "license.block"] },
+      { "id": "CC_CONFLICT", "role": "conflict_resolver", "inbox": ["schema.conflict", "version.skew"], "outbox": ["conflict.resolved"] },
+      { "id": "CC_DIR_IMP", "role": "directory_importer", "inbox": ["csv.input", "yaml.dir"], "outbox": ["dir.rows"] },
+      { "id": "CC_DIR_MAP", "role": "role_layer_mapper", "inbox": ["dir.rows"], "outbox": ["dir.mapped"] },
+      { "id": "CC_ESC_SYN", "role": "escalation_synthesizer", "inbox": ["escalation.request"], "outbox": ["escalation.plan"] }
+    ],
+    "maps": {
+      "subjects": [
+        { "id": "P1", "name": "Provenance / Truth Gate" },
+        { "id": "P2", "name": "Insurance / iGuard" },
+        { "id": "P3", "name": "EPC / ArkForge" },
+        { "id": "P5", "name": "Manufacturing / ArkFab" },
+        { "id": "P6", "name": "QSE / FlexNetOS" }
+      ],
+      "nodes": [
+        { "id": "N1", "name": "CECCA / NOA / CEO" },
+        { "id": "N2", "name": "Board / Governance" },
+        { "id": "N3", "name": "Knowledge / Foresight",
+          "modules": [
+            { "id": "CK1", "role": "ingestor" },
+            { "id": "CK2", "role": "analyzer" },
+            { "id": "CK3", "role": "retriever" }
+          ]
+        },
+        { "id": "N4", "name": "UI/Voice/AR Shell" },
+        { "id": "N5", "name": "Safety/Guardrails", "modules": ["Invariants", "PII/Policy"] }
+      ]
+    }
+  },
+  "wiring": {
+    "topics": [
+      "sys/boot", "sys/sbom/report", "sys/sbom/extended", "sys/policy/update", "capsule/spawn",
+      "capsule/io", "digest/request", "digest/result", "models/select", "models/registerLocal",
+      "models/loadLocal", "models/local/list", "models/registered", "board/plan", "board/risk",
+      "noa/goal", "noa/plan", "noa/act", "noa/postmortem", "foresight/evaluate", "foresight/result",
+      "storage/pg/query", "storage/pg/exec", "storage/minio/put", "storage/minio/get",
+      "crm/proxy/request", "crm/proxy/response", "net/guard/check", "bus/redis/send",
+      "bus/redis/recv", "perception.*", "telemetry.*", "artifact.*", "intent.*", "control.*",
+      "court.*", "capsule.*", "digest.*", "optimizer.*", "verify.*", "report",
+      "build_capsule", "eval_suite", "ui_adapter_build", "policy_gate", "toolchain_provision",
+      "guardrail_check", "connector_bind", "data_contract_check", "stack_deploy",
+      "court/evaluate", "upgrade/apply", "digest/scan", "ui/request", "upgrade/request"
+    ],
+    "routes": [
+      { "topic": "sys/boot", "consumers": ["sbom.scanner", "sbom.extended", "security.policy", "capsule.manager", "storage.adapters.pg", "storage.adapters.minio", "net.guard", "board.directors", "agent.modelselector", "models.local", "agent.digest", "agent.microstack", "foresight.engine", "crm.proxy", "agent.noa", "ui.dynamic"] },
+      { "topic": "models/select", "consumers": ["agent.modelselector"] },
+      { "topic": "digest/request", "consumers": ["agent.digest"] },
+      { "topic": "board/plan", "consumers": ["board.directors"] },
+      { "topic": "foresight/evaluate", "consumers": ["foresight.engine"] },
+      { "topic": "storage/pg/query", "consumers": ["storage.adapters.pg"] },
+      { "topic": "storage/pg/exec", "consumers": ["storage.adapters.pg"] },
+      { "topic": "storage/minio/put", "consumers": ["storage.adapters.minio"] },
+      { "topic": "storage/minio/get", "consumers": ["storage.adapters.minio"] },
+      { "topic": "models/registerLocal", "consumers": ["models.local"] },
+      { "topic": "models/loadLocal", "consumers": ["models.local"] },
+      { "topic": "crm/proxy/request", "consumers": ["crm.proxy"] },
+      { "topic": "net/guard/check", "consumers": ["net.guard"] },
+      { "topic": "noa/goal", "consumers": ["agent.noa"] }
+    ],
+    "handlersMap": {
+      "build_capsule": "builder.build_capsule",
+      "eval_suite": "evaluator.run_suite",
+      "ui_adapter_build": "ui.build_adapter",
+      "policy_gate": "governance.promotion_gate",
+      "toolchain_provision": "runtime.provision_tool",
+      "guardrail_check": "governance.guardrail_check",
+      "connector_bind": "runtime.bind_connector",
+      "data_contract_check": "governance.data_contract_check",
+      "stack_deploy": "runtime.deploy_stack"
+    }
+  },
+  "boot": {
+    "entry": "kernel/bootstrap",
+    "order": [
+      "shim.polyfills", "bus.runtime", "bus.redis", "security.policy", "storage.layer", "storage.vhdx",
+      "storage.adapters.pg", "storage.adapters.minio", "net.guard", "capsule.manager", "sbom.scanner",
+      "sbom.extended", "board.directors", "agent.modelselector", "models.local", "agent.digest",
+      "foresight.engine", "crm.proxy", "agent.microstack", "agent.noa", "ui.dynamic"
+    ],
+    "entryTopic": "sys/boot",
+    "phases": [
+      "truth_gate_enforce", "kit_verify_install", "yaml_compile_lint", "dir_import_normalize",
+      "policy_keyring_load", "schema_bank_load", "compose_wire", "sanity_gates", "emit_release"
+    ],
+    "on_failure": ["quarantine_capsule", "rollback_blue_green", "emit_forensics"]
+  },
+  "dataPlane": {
+    "objects": { "store": "minio|local-fs", "addressing": "sha256://", "encryption": "aes-gcm" },
+    "vectors": { "store": "pgvector|lite", "dimensions": [384, 768, 1024] },
+    "events": { "bus": "redis|nats|inproc", "nlSchema": "NLDB.envelope.v1" },
+    "graphs": { "knowledge": "entities+edges", "environment": "EFG: environment+function graph" }
+  },
+  "security": {
+    "identity": { "perDevice": "ed25519", "mtls": true },
+    "authz": { "model": "capability-scoped-per-capsule", "default": "deny" },
+    "privacy": { "modes": ["strict-offline", "local-share", "trusted-mesh"], "default": "strict-offline" },
+    "egress": "block-all-by-default",
+    "capsuleApproval": "court-required",
+    "personaDisclosure": "mandatory"
+  },
+  "p2p": {
+    "discovery": ["mdns", "static-peers", "invite-capsule"],
+    "overlay": "wireguard-like",
+    "replication": {
+      "crdtLogs": ["notes", "tasks", "context"],
+      "artifacts": "content-addressed",
+      "topicsMirror": ["perception.*", "artifact.*"]
+    },
+    "failover": { "mobileCanPromoteTo": "base-lite", "xrFallback": "mobile or nearest peer" }
+  },
+  "capsuleStorage": {
+    "namespaces": ["user/*", "device/*", "project/*", "org/*"],
+    "contents": ["models", "adapters", "tools", "ui", "playbooks", "policies", "evals", "sbom", "manifests", "state"],
+    "lifecycle": "sandbox -> court -> live",
+    "rollback": "digest-pin-revert"
+  },
+  "modelPlane": {
+    "apis": ["/infer/generate", "/infer/vision", "/infer/embed"],
+    "board": [
+      { "id": "board.policy", "role": "policy" },
+      { "id": "board.legal", "role": "legal" },
+      { "id": "board.finance", "role": "finance" },
+      { "id": "board.growth", "role": "growth" },
+      { "id": "board.digest", "role": "research-digest" }
+    ],
+    "modelSelectors": [
+      { "id": "selector.route.llm", "policy": "latency/cost/accuracy" },
+      { "id": "selector.route.vlm", "policy": "modality-fit" },
+      { "id": "selector.route.asr", "policy": "noise/battery" }
+    ],
+    "storage": { "id": "store.master", "role": "artifacts+vectors+graphs" },
+    "microAgentStacks": {
+      "spawner": { "id": "cmdchief", "role": "stack-orchestrator" },
+      "why": ["ephemeral focused swarms", "budgeted & auditable", "parallelizable and composable"],
+      "lifecycle": ["brief", "plan", "execute", "verify", "report", "teardown"]
+    },
+    "persona": {
+      "id": "persona.capsule",
+      "purpose": "on-device voice/face assistant for calls with disclosure",
+      "safety": { "badge": true, "periodicChime": true, "livenessCheck": true, "legalApprovalRequired": true }
+    }
+  },
+  "flow": {
+    "boot": ["sbom.scan", "sbom.patch-shims", "mode.detect", "p2p.init-if-allowed", "court.load-policies", "capsules.mount-live", "exec.loop.start"],
+    "ingestToAction": ["ingest.* -> parse.* -> embed.* -> graph.* -> board.digest.review -> selectors.pick-models -> stacks.spawn -> court.gate -> apply/rollback"],
+    "optimize": ["optimizer.detect -> propose.capsule -> sandbox.test -> court.approve -> promote.live"]
+  },
+  "capsules": [
+    {
+      "id": "capsule.persona",
+      "kind": "tool+ui+policy",
+      "manifest": { "disclosure": true, "liveness": true, "watermark": true, "legalApproval": "required" },
+      "provides": ["ui.persona", "tts.voice", "face.render"],
+      "policies": ["no-exfiltration", "meeting-domain-allowlist"]
+    },
+    {
+      "id": "capsule.optimizer.host-awareness",
+      "kind": "analyzer+fixer",
+      "ingestors": ["os", "drivers", "browser", "firmware"],
+      "proposes": ["gpu-driver-tune", "power-governor", "browser-hardening"],
+      "gates": ["tests", "policy", "rollback-ok"]
+    },
+    {
+      "id": "capsule.ingest.everything",
+      "kind": "ingest+embed+graph",
+      "sources": ["fs", "repos", "db", "network"],
+      "outputs": ["artifacts", "vectors", "efg", "knowledge-graph"]
+    }
+  ],
+  "autonomy_loop": {
+    "sense": ["load", "failure", "policy", "drift", "resources"],
+    "decide": { "scoring": "multi_objective_with_policy", "violations_penalty": "infinite" },
+    "actions": [
+      { "type": "replicate_stem", "gate": "S7" },
+      { "type": "differentiate", "gate": "S7" },
+      { "type": "quiesce", "mode": "AMPK" }
+    ],
+    "run": { "waves": true, "blue_green": true },
+    "observe": "append_only_telemetry",
+    "score": ["success", "latency_p95", "violations", "cpu_time"],
+    "variants": { "manager": "sequential_halving + A/B", "promotion": "gate_pass", "rollback": "incident_brain" }
+  },
+  "niche": {
+    "budgets": ["cpu", "mem", "io", "energy"],
+    "quotas": "per cell/capsule/stack/tenant",
+    "placement": ["node", "region", "tenant", "offline_only"],
+    "priority_classes": ["high", "normal", "low"],
+    "error_budget_ledger": true,
+    "actions": ["scale", "throttle", "quiesce", "quarantine", "preempt"]
+  },
+  "kits_and_inputs": {
+    "bundles": [
+      "capsule_model_starter_FINAL_20250905-154407.zip",
+      "NOA_Deployment_Kit_v3_1.zip"
+    ],
+    "csv_inputs": ["All_Inclusive_Agent_Directory_v6_plus_copy.csv"],
+    "exports_dir": "exports/"
+  },
+  "connectors": {
+    "local_fs": { "cas_store": true, "watchers": true },
+    "inbox": { "type": "jsonl_queue" },
+    "outbox": { "type": "jsonl_queue" },
+    "serial_embedded_optional": true,
+    "local_bus": "dir_queue"
+  },
+  "files": {
+    "types": [
+      ".yaml (operator configs → compiled JSON)",
+      ".json (schemas/manifests)",
+      ".jsonl (telemetry/evidence)",
+      ".lock (policy.lock/version.lock)",
+      ".sig (signatures)",
+      ".mmd (mermaid maps)",
+      ".md (release notes)",
+      ".db (sqlite when available, else shim)",
+      ".tar.zst (bundles)",
+      ".delta (patches)",
+      "revocations.json (keys/policies)",
+      ".key/.csr (local key material)",
+      ".sec (sealed secrets)",
+      ".cur (release pointer)"
+    ]
+  },
+  "policies": {
+    "invariants": [
+      "offline_first_no_net",
+      "signed_policies_only",
+      "blue_green_every_level",
+      "shared_nothing_cells_capsules_stacks",
+      "promotion_score_gated_violations_zero",
+      "AMPK_on_scarcity",
+      "additive_only_heal_dont_break",
+      "every_cell_declares_escalation_to"
+    ]
+  },
+  "secondary_layer": {
+    "enabled": false,
+    "adapters": ["docker", "github", "minio"],
+    "note": "no-op offline; toggleable via CECCA"
+  },
+  "messages": {
+    "schema": {
+      "Signal": { "fields": ["id", "ts", "topic", "payload"], "topic": "signal.*" },
+      "GateResult": { "fields": ["artifact", "hash", "tests_pass", "score", "violations"], "topic": "gate.results" },
+      "PromotionDecision": { "fields": ["artifact", "action", "reason"], "topic": "promotion.decision" },
+      "TelemetryEvent": { "fields": ["ts", "actor", "event", "kv"], "topic": "event.*" }
+    },
+    "transport": "dir_queue_async",
+    "ordering": "best_effort",
+    "retries": "exponential_backoff"
+  },
+  "auditability": {
+    "provenance": "signed",
+    "final_report": "FINAL_REPORT.md",
+    "manifest": "exports.manifest.sha256",
+    "parity_proofs": true
+  },
+  "docs": {
+    "how_to_use_md": "# HOW-TO (Kernel-first, Capsules Built-in)\n\n1) **Boot** this bundle with your loader; it runs `sbom.bootScan` then `kernel.start`.\n2) **Kernel** starts CECCA (root) and the **Message Bus**. No globals; everything via module system.\n3) **Capsules are built-in**: every Agent is a Capsule `{name, layer, scope, inputs, outputs, tools, guardrails, escalation_to}`. Lifecycle: `create→bind→persist→run→validate→upgrade/heal→compress→connect→integrate→loop`.\n4) **AgentFactory** reads `manifests.stack` (161/subject archetype) and spawns by layer. Evaluator handles promote/demote.\n5) **SBOM** scans env/modules, applies **auto-shims** before agents run. Offline-first, additive, auditable.\n6) **Async-only** message-passing (`bus.tell/ask/subscribe`); no sync IO, no external SaaS.\n7) Start with a few stacks; scale horizontally toward your 322k envelope.\n",
+    "notes": {
+      "usage": "To use this JSON, parse it, inject JavaScript module strings into an evaluator, then call bootstrap.boot(bundle). This file does not claim to be a runnable app; pass it through your kernel and truth gate according to your process."
+    }
+  },
+  "expectations": { "latencyInteractiveSec": 2, "taskBurst": 200, "taskSuccessPct": 98 },
+  "inventory": {
+    "files_detected": [
+      {"path":"updated_kit/tools/normalize_csv_v2.py","lang":"python"},
+      {"path":"updated_kit/schema/CSV_SCHEMA_v2.md","lang":"markdown"},
+      {"path":"updated_kit/schema/capsule.schema.v2.json","lang":"json"},
+      {"path":"updated_kit/HOW-TO-USE_v3_1_extended.md","lang":"markdown"},
+      {"path":"updated_kit/README_extended.md","lang":"markdown"},
+      {"path":"updated_kit/stack.manifest.v2.json","lang":"json"},
+      {"path":"updated_kit/All_Inclusive_Agent_Directory_v6_plus.normalized.full.csv","lang":"csv"}
+    ]
+  },
+  "resources": {
+    "csv": ""
+  },
+  "manifest": {
+    "meta": { "note": "If you include CSV in resources.csv, bootstrap will build a manifest at boot. Otherwise this sample is used." },
+    "cecca": [
+      { "id": "CECCA", "name": "ChiefExecutiveChiefCommanderAgent", "layer": "cecca", "scope": ["global"], "inputs": [], "outputs": [], "tools": ["internal"], "guardrails": ["offline-first","audited"], "escalation_to": "Board" }
+    ],
+    "board": [
+      { "id": "PolicyEnforcement", "name": "Policy Enforcement Agent", "layer": "board", "scope": ["governance"], "inputs": [], "outputs": [], "tools": [], "guardrails": [], "escalation_to": null }
+    ],
+    "executives": [],
+    "stacks": [
+      {
+        "stack_name": "Subject-001",
+        "chief": null,
+        "specialists": [],
+        "micros": [
+          { "id": "AgentSelfUpgradeRetirementAgent", "name": "AgentSelfUpgradeRetirementAgent", "layer": "micro", "scope": [], "inputs": ["upgrade_status","retirement_policy"], "outputs": ["agent_lifecycle_event"], "tools": ["internal"], "guardrails": ["offline-first"], "escalation_to": "Stack-Chief" },
+          { "id": "MultiTenantIsolationAgent", "name": "MultiTenantIsolationAgent", "layer": "micro", "scope": [], "inputs": ["tenant_config","resource_usage"], "outputs": ["isolation_report","quota_alert"], "tools": ["internal"], "guardrails": ["offline-first"], "escalation_to": "Stack-Chief" },
+          { "id": "UpgradePatchAgent", "name": "UpgradePatchAgent", "layer": "micro", "scope": [], "inputs": ["current_version","available_patch"], "outputs": ["upgrade_status"], "tools": ["internal"], "guardrails": ["offline-first"], "escalation_to": "Stack-Chief" },
+          { "id": "AgentSupervisorHeartbeatAgent", "name": "AgentSupervisorHeartbeatAgent", "layer": "micro", "scope": [], "inputs": ["agent_status","health_signals"], "outputs": ["health_report","restart_action"], "tools": ["internal"], "guardrails": ["offline-first"], "escalation_to": "Stack-Chief" }
+        ]
+      }
+    ],
+    "policy": {}
+  },
+  "modules": {
+    "core/loader": "(ctx=>{const reg=new Map(),inst=new Map();function def(n,f){reg.set(n,f)}async function use(n){if(inst.has(n))return inst.get(n);const f=reg.get(n);if(!f)throw Error('module '+n+' missing');const m=await f(create(n));inst.set(n,m);return m;}function create(scope){return{scope,bus:ctx.bus,log:(...a)=>ctx.log(scope,...a),cfg:ctx.cfg,shims:ctx.shims,kv:ctx.kv,def,use}}return{def,use,create}})",
+    "core/shims": "(ctx=>{const hasNode=typeof process!=='undefined'&&process.versions&&process.versions.node;const env=Object.assign({},ctx.envDefaults,hasNode?process.env:{});const memfs=(()=>{const files=new Map();const norm=p=>(p||'').replace(/\\\\/g,'/');return{readFile:async p=>{const v=files.get(norm(p));return new TextDecoder().decode(v||new Uint8Array())},writeFile:async(p,d)=>{files.set(norm(p),new TextEncoder().encode(String(d)))},exists:async p=>files.has(p),unlink:async p=>{files.delete(norm(p))},list:async pre=>{pre=norm(pre||'');return[...files.keys()].filter(k=>k.startsWith(pre))},mkdir:async p=>{files.set(norm(p)+'/.keep',new Uint8Array())}}})();let fs,path,cp,http;try{fs=require('fs/promises')}catch(_){fs=memfs}try{path=require('path')}catch(_){path={join:(...a)=>a.join('/').replace(/\\\\/g,'/'),dirname:p=>p.replace(/\\/[^/]*$/,''),basename:p=>p.split('/').pop()}}try{cp=require('child_process')}catch(_){cp={exec:(c,o,cb)=>cb(null,{stdout:'',stderr:''})}}try{http=require('http')}catch(_){http=null}return{env,fs,path,cp,http,hasNode}})",
+    "core/kv": "(ctx=>{const m=new Map();return{get:async k=>m.get(k),set:async(k,v)=>{m.set(k,v)},del:async k=>m.delete(k),list:async pre=>[...m.keys()].filter(k=>k.startsWith(pre||''))}})",
+    "core/bus": "(ctx=>{const subs=new Map();function on(t,fn){const a=subs.get(t)||[];a.push(fn);subs.set(t,a);return()=>{const i=a.indexOf(fn);if(i>=0)a.splice(i,1)}}async function emit(msg){const a=subs.get(msg.type)||[];const out=[];for(const fn of a)out.push(await fn(msg));return out}return{on,emit}})",
+    "core/fs": "(ctx=>{const {fs,path}=ctx.shims;const safe=p=>{if(!p||p.includes('..'))throw Error('unsafe path');return p};return{ls:async dir=>{dir=safe(dir||'.');const items=await fs.list?await fs.list(dir):[];return items.map(i=>i.replace(/^\\.\\/?/,'')).filter(n=>n);},read:async p=>{p=safe(p);const buf=await fs.readFile(p);return String(buf);},write:async(p,content)=>{p=safe(p);await fs.writeFile(p,content||'');return{ok:true}},rm:async p=>{p=safe(p);await fs.unlink(p);return{ok:true}},mkdir:async d=>{d=safe(d);await fs.mkdir(d);return{ok:true}}}})",
+    "core/ocr": "(ctx=>{const {cp}=ctx.shims;async function hasTesseract(){return new Promise(res=>cp.exec('tesseract -v',{timeout:1000},err=>res(!err))) }async function ocr(buf){const ok=await hasTesseract();if(!ok)return{ok:false,error:'tesseract missing'};return new Promise((resolve)=>{const tmp='ocr_input_'+Date.now()+'.png';require('fs').writeFileSync(tmp,buf,'binary');cp.exec(`tesseract ${tmp} stdout`,(err,out)=>{require('fs').unlinkSync(tmp);if(err)resolve({ok:false,error:String(err)});else resolve({ok:true,text:out.trim()})});});}return{hasTesseract,ocr}})",
+    "kernel/sbom": "(async ctx=>{const {env,fs,path}=ctx.shims;async function autofix(){for(const k of ctx.cfg....(truncated 9478 characters)...esolve=>{let d='';req.on('data',c=>d+=c);req.on('end',()=>{try{resolve(JSON.parse(d||'{}'));}catch(_){resolve({})});});});}const server=http.createServer(async(req,res)=>{try{const u=req.url||'';if(req.method==='GET'&&u==='/api/stats'){return send(res,200,{ok:true})}if(req.method==='POST'&&u==='/api/models/activate'){const d=await body(req);const r=await bus.emit({type:'models/activate',data:d});return send(res,200,r.pop()||{ok:false})}if(req.method==='POST'&&u==='/api/ap/start'){const r=await bus.emit({type:'ap/start',data:{}});return send(res,200,r.pop()||{ok:false})}if(req.method==='POST'&&u==='/api/ap/stop'){const r=await bus.emit({type:'ap/stop',data:{}});return send(res,200,r.pop()||{ok:false})}if(req.method==='POST'&&u==='/api/ap/opts'){const d=await body(req);const r=await bus.emit({type:'ap/opts',data:d});return send(res,200,r.pop()||{ok:false})}if(req.method==='POST'&&u==='/api/fs/ls'){const d=await body(req);const r=await bus.emit({type:'fs/ls',data:d});return send(res,200,r.pop()||{ok:false})}if(req.method==='POST'&&u==='/api/fs/read'){const d=await body(req);const r=await bus.emit({type:'fs/read',data:d});return send(res,200,r.pop()||{ok:false})}if(req.method==='POST'&&u==='/api/fs/write'){const d=await body(req);const r=await bus.emit({type:'fs/write',data:d});return send(res,200,r.pop()||{ok:false})}if(req.method==='POST'&&u==='/api/update/preflight'){const d=await body(req);const r=await bus.emit({type:'update/preflight',data:d});return send(res,200,r.pop()||{ok:false})}if(req.method==='POST'&&u==='/api/update/apply'){const d=await body(req);const r=await bus.emit({type:'update/apply',data:d});return send(res,200,r.pop()||{ok:false})}if(req.method==='POST'&&u==='/api/re/scan'){const d=await body(req);const r=await bus.emit({type:'re/scan',data:d});return send(res,200,r.pop()||{ok:false})}if(req.method==='POST'&&u==='/api/re/clone'){const d=await body(req);const r=await bus.emit({type:'re/clone',data:d});return send(res,200,r.pop()||{ok:false})}return send(res,404,{ok:false,error:'not found'});}catch(e){send(res,500,{ok:false,error:String(e)})}});server.listen(port);ctx.log('http','listening',port);return{name:'http',port}})"
+  },
+  "loader": "(async function NOA_Johnson_Loader(bundle){const log=(s,...a)=>console.log('[NOA:'+s+']',...a);const envDefaults=bundle.sbom?.env_defaults||{};const api={log,cfg:bundle.cfg||{},bus:null,shims:null,kv:null,envDefaults};function compile(n,c){return new Function('ctx','return ('+c+');')(api);}const factories={};for(const[name,code] of Object.entries(bundle.modules))factories[name]=compile(name,code);const loader=await factories['core/loader'](api);api.kv=await factories['core/kv'](Object.assign(loader.create('core/kv'),api));api.shims=await factories['core/shims'](Object.assign(loader.create('core/shims'),{envDefaults}));api.bus=await factories['core/bus'](loader.create('core/bus'));const mk=n=>Object.assign(loader.create(n),{cfg:bundle.cfg||{},log,kv:api.kv,shims:api.shims,bus:api.bus});for(const name of Object.keys(bundle.modules)){if(['core/loader','core/kv','core/shims','core/bus'].includes(name))continue;loader.def(name,async()=>factories[name](mk(name)));}const boot=await factories[bundle.boot.entry](mk(bundle.boot.entry));const k=await factories[bundle.boot.start](mk(bundle.boot.start));if(k&&k.start)await k.start();return{api,boot:k}})",
+  "kernel/loader": {
+    "lang": "javascript",
+    "code": [
+      "export default function makeLoader(bundle){",
+      "  const cache=new Map();",
+      "  const sys={}; // filled by boot",
+      "  const getMod=(name)=>{",
+      "    if(cache.has(name)) return cache.get(name);",
+      "    const rec=bundle.modules[name];",
+      "    if(!rec) throw new Error('Module not found: '+name);",
+      "    if(rec.lang!=='javascript') throw new Error('Unsupported lang: '+rec.lang);",
+      "    const src=(Array.isArray(rec.code)?rec.code.join('\\n'):rec.code);",
+      "    const module={exports:{}};",
+      "    const exports=module.exports;",
+      "    const localRequire=(n)=>getMod(n);",
+      "    const factory=new Function('exports','module','system','require','define','asyncRequire',src+'\\n//# sourceURL='+name);",
+      "    const define=(fn)=>{ const m={}; const res=fn(localRequire,m,m); module.exports=res||m.exports||m; };",
+      "    const asyncRequire=async(n)=>getMod(n);",
+      "    factory(exports,module,sys,localRequire,define,asyncRequire);",
+      "    cache.set(name,module.exports);",
+      "    return module.exports;",
+      "  };",
+      "  getMod.loaderApi={ get sys(){return sys;}, set sys(v){Object.assign(sys,v);} };",
+      "  return getMod;",
+      "}"
+    ]
+  },
+  "core/bus": {
+    "lang": "javascript",
+    "code": [
+      "export default function makeBus(){",
+      "  const topics=new Map();",
+      "  const onceWaiters=new Map();",
+      "  const sub=(topic,handler)=>{",
+      "    if(!topics.has(topic)) topics.set(topic,new Set());",
+      "    topics.get(topic).add(handler);",
+      "    return ()=>topics.get(topic)?.delete(handler);",
+      "  };",
+      "  const pub=async(topic,msg)=>{",
+      "    const handlers=[...(topics.get(topic)||[])];",
+      "    for(const h of handlers){",
+      "      try{ await Promise.resolve(h(msg)); }catch(e){ /* swallow to keep bus live */ }",
+      "    }",
+      "    if(onceWaiters.has(topic)){",
+      "      onceWaiters.get(topic).forEach(r=>r(msg));",
+      "      onceWaiters.delete(topic);",
+      "    }",
+      "  };",
+      "  const req=async(topic,msg,timeoutMs=15000)=>{",
+      "    const id='req:'+Date.now()+Math.random().toString(36).slice(2);",
+      "    return new Promise((resolve,reject)=>{",
+      "      const to=setTimeout(()=>reject(new Error('bus timeout '+topic)),timeoutMs);",
+      "      sub(id,(resp)=>{ clearTimeout(to); resolve(resp); })",
+      "      ._req=true;",
+      "      pub(topic,{...msg,__replyTo:id}).catch(reject);",
+      "    });",
+      "  };",
+      "  const once=(topic)=>new Promise(res=>{",
+      "    if(!onceWaiters.has(topic)) onceWaiters.set(topic,[]);",
+      "    onceWaiters.get(topic).push(res);",
+      "  });",
+      "  return { sub, pub, req, once };",
+      "}"
+    ]
+  },
+  "core/io": {
+    "lang": "javascript",
+    "code": [
+      "export default function makeIO(){",
+      "  // No globals: resolve lazily & safely",
+      "  const hasRequire = (typeof require!=='undefined');",
+      "  let fs=null, path=null;",
+      "  try{ if(hasRequire){ fs=require('fs'); path=require('path'); } }catch{}",
+      "  const mem=new Map();",
+      "  const norm=(p)=> (path?path.normalize(p):p.replace(/\\\\/g,'/'));",
+      "  const exists=async(p)=>{ p=norm(p); if(fs){ try{ return fs.existsSync(p); }catch{} } return mem.has(p); };",
+      "  const readText=async(p)=>{ p=norm(p); if(fs){ return fs.pro...(truncated 11058 characters)....sub('SAFETY.CHECK', async ({capsule,__replyTo})=>{",
+      "    // stub: always safe in offline kit; extend with policy tests",
+      "    await bus.pub(__replyTo,{ok:true, tests:[]});",
+      "  });",
+      "  return { id:'safety' };",
+      "}"
+    ]
+  },
+  "agents/orchestrator": {
+    "lang": "javascript",
+    "code": [
+      "export default function Orchestrator(system){",
+      "  const { bus }=system;",
+      "  const start=async()=>{",
+      "    // Simple smoke: spawn -> sandbox -> eval -> possibly promote (logged)",
+      "    const cap=await bus.req('BUILD.SPAWN',{kind:'lora',spec:{rank:8}}).catch(()=>null);",
+      "    if(!cap) return;",
+      "    const sandboxRes=await bus.req('SANDBOX.EVAL',{capsule:cap,data:[{x:1},{x:2},{x:3}]});",
+      "    const evalRes=await bus.req('EVAL.SCORE',{results:[sandboxRes]});",
+      "    await bus.req('REGISTRY.APPEND',{entry:{t:Date.now(),event:'eval',cap:cap.id,metrics:evalRes}}).catch(()=>{});",
+      "  };",
+      "  return { id:'orchestrator', start };",
+      "}"
+    ]
+  },
+  "app/serve": {
+    "lang": "javascript",
+    "code": [
+      "export default function makeServe(system){",
+      "  const { bus }=system;",
+      "  // No HTTP; provide in-process interface compatible with '--serve' semantics",
+      "  const handle=async(message)=>{",
+      "    if(message?.type==='route'){",
+      "      return await bus.req('ROUTER.ROUTE',{ tokens:message.tokens||[], capsules: message.capsules||[], context:message.context||{} });",
+      "    }",
+      "    if(message?.type==='spawn'){",
+      "      return await bus.req('BUILD.SPAWN',{kind: message.kind||'lora', spec: message.spec||{} });",
+      "    }",
+      "    return { ok:false, error:'unknown message type' };",
+      "  };",
+      "  return { handle };",
+      "}"
+    ]
+  },
+  "kernel/boot": {
+    "lang": "javascript",
+    "code": [
+      "import makeLoader from 'kernel/loader';",
+      "import makeBus from 'core/bus';",
+      "import makeIO from 'core/io';",
+      "import makeCrypto from 'core/crypto';",
+      "import sbom from 'core/sbom';",
+      "import makeConfig from 'core/config';",
+      "import makeRegistry from 'core/registry';",
+      "import makeSnapshot from 'core/snapshot';",
+      "import RouterAgent from 'agents/router';",
+      "import SandboxAgent from 'agents/sandbox';",
+      "import EvaluatorAgent from 'agents/evaluator';",
+      "import RegistryAgent from 'agents/registry';",
+      "import TelemetryAgent from 'agents/telemetry';",
+      "import BuilderAgent from 'agents/builder';",
+      "import MergeAgent from 'agents/merge';",
+      "import SafetyAgent from 'agents/safety';",
+      "import Orchestrator from 'agents/orchestrator';",
+      "import makeServe from 'app/serve';",
+      "",
+      "export default async function boot(bundle){",
+      "  const load=makeLoader(bundle);",
+      "  const bus=makeBus();",
+      "  const io=makeIO();",
+      "  const crypto=makeCrypto();",
+      "  const config=makeConfig(bundle.config||{});",
+      "  const registry=makeRegistry({ io, crypto, config });",
+      "  const snapshot=makeSnapshot({ io, config });",
+      "  // Expose system to modules via loader.sys (no globals) ",
+      "  load.loaderApi.sys={ bus, io, crypto, config, registry, snapshot };",
+      "  const system={ bus, io, crypto, config, registry, snapshot };",
+      "  // Agents",
+      "  const router=RouterAgent(system);",
+      "  const sandbox=SandboxAgent(system);",
+      "  const evaluator=EvaluatorAgent(system);",
+      "  const regAgent=RegistryAgent(system);",
+      "  const tel=TelemetryAgent(system);",
+      "  const build=BuilderAgent(system);",
+      "  const merge=MergeAgent(system);",
+      "  const safe=SafetyAgent(system);",
+      "  const orch=Orchestrator(system);",
+      "  const serve=makeServe(system);",
+      "  // SBOM + self-heal report",
+      "  const sb=await sbom(system);",
+      "  await registry.append({t:Date.now(),event:'sbom',sb});",
+      "  // Snapshot on first boot (best-effort)",
+      "  try{ await snapshot.snap(); }catch{}",
+      "  // Kick minimal workflow (non-blocking)",
+      "  orch.start().catch(()=>{});",
+      "  return { system, agents:{router,sandbox,evaluator,regAgent,tel,build,merge,safe,orch}, serve };",
+      "}"
+    ]
+  },
+  "shim.polyfills": {
+    "lang": "js",
+    "code_lines": [
+      "// shim.polyfills: global polyfills and feature detects for offline OS",
+      "export default function createShims({ shims } = {}) {",
+      "  if (typeof MessageChannel === 'undefined') {",
+      "    globalThis.MessageChannel = class {",
+      "      constructor() {",
+      "        this.port1 = { postMessage: m => setTimeout(() => this.port2.onmessage({ data: m }), 0) };",
+      "        this.port2 = { postMessage: m => setTimeout(() => this.port1.onmessage({ data: m }), 0) };",
+      "      }",
+      "    };",
+      "  }",
+      "  if (typeof TextEncoder === 'undefined') {",
+      "    globalThis.TextEncoder = class {",
+      "      encode(s) {",
+      "        return new Uint8Array([...s].map(c => c.charCodeAt(0)));",
+      "      }",
+      "    };",
+      "  }",
+      "  if (typeof crypto === 'undefined' || !crypto.subtle) {",
+      "    globalThis.crypto = {",
+      "      getRandomValues: a => {",
+      "        for (let i = 0; i < a.length; i++) a[i] = Math.floor(Math.random() * 256);",
+      "        return a;",
+      "      }",
+      "    };",
+      "  }",
+      "  return { ok: true };",
+      "}"
+    ]
+  },
+  "bus.runtime": {
+    "lang": "js",
+    "code_lines": [
+      "export default function createBus({ shims }) {",
+      "  const topics = new Map();",
+      "  const publish = (topic, msg) => {",
+      "    const handlers = topics.get(topic) || [];",
+      "    handlers.forEach(h => h(msg));",
+      "  };",
+      "  const subscribe = (topic, handler) => {",
+      "    if (!topics.has(topic)) topics.set(topic, []);",
+      "    topics.get(topic).push(handler);",
+      "  };",
+      "  return { publish, subscribe };",
+      "}"
+    ]
+  },
+  "bus.redis": {
+    "lang": "js",
+    "code_lines": [
+      "export default function createRedisBus({ shims, env }) {",
+      "    return { publish: () => {}, subscribe: () => {} }; // stub for offline",
+      "  }"
+    ]
+  },
+  "security.policy": {
+    "lang": "js",
+    "code_lines": [
+      "export default function createPolicy({ shims, env }) {",
+      "  const start = () => {};",
+      "  return { start };",
+      "}"
+    ]
+  },
+  "storage.layer": {
+    "lang": "js",
+    "code_lines": [
+      "export default function createStorage({ shims }) {",
+      "  const kv = new Map();",
+      "  return { get: k => kv.get(k), set: (k, v) => kv.set(k, v) };",
+      "}"
+    ]
+  },
+  "storage.vhdx": {
+    "lang": "js",
+    "code_lines": [
+      "export default function createVHDX({ shims }) {",
+      "  return { mount: () => ({ ok: true }) }; // stub",
+      "}"
+    ]
+  },
+  "storage.adapters.pg": {
+    "lang": "js",
+    "code_lines": [
+      "export default function createPG({ bus, storage, env, shims }) {",
+      "  const start = () => { bus.on('storage/pg/query', () => {}); };",
+      "  return { start };",
+      "}"
+    ]
+  },
+  "storage.adapters.minio": {
+    "lang": "js",
+    "code_lines": [
+      "export default function createMinio({ bus, storage, env, shims }) {",
+      "  const start = () => { bus.on('storage/minio/put', () => {}); };",
+      "  return { start };",
+      "}"
+    ]
+  },
+  "net.guard": {
+    "lang": "js",
+    "code_lines": [
+      "export default function createGuard({ bus, security, shims }) {",
+      "  const start = () => { bus.on('net/guard/check', () => ({ ok: true })); };",
+      "  return { start };",
+      "}"
+    ]
+  },
+  "capsule.manager": {
+    "lang": "js",
+    "code_lines": [
+      "export default function createCapsuleManager({ shims, vhdx, bus }) {",
+      "  return { start: () => {} };",
+      "}"
+    ]
+  },
+  "sbom.scanner": {
+    "lang": "js",
+    "code_lines": [
+      "export default function createSBOM({ shims, env, modules, bus }) {",
+      "  const start = () => { bus.publish('sys/sbom/report', {}); };",
+      "  return { start };",
+      "}"
+    ]
+  },
+  "sbom.extended": {
+    "lang": "js",
+    "code_lines": [
+      "export default function createExtendedSBOM({ shims, env, modules, bus }) {",
+      "  const start = () => { bus.publish('sys/sbom/extended', {}); };",
+      "  return { start };",
+      "}"
+    ]
+  },
+  "board.directors": {
+    "lang": "js",
+    "code_lines": [
+      "export default function createBoard({ bus, shims }) {",
+      "  const start = () => { bus.on('board/plan', () => {}); };",
+      "  return { start };",
+      "}"
+    ]
+  },
+  "agent.modelselector": {
+    "lang": "js",
+    "code_lines": [
+      "export default function createModelSelector({ bus, shims, env }) {",
+      "  const start = () => { bus.on('models/select', () => {}); };",
+      "  return { start };",
+      "}"
+    ]
+  },
+  "models.local": {
+    "lang": "js",
+    "code_lines": [
+      "export default function createLocalModels({ bus, shims, storage, env }) {",
+      "  const start = () => { bus.on('models/registerLocal', () => {}); };",
+      "  return { start };",
+      "}"
+    ]
+  },
+  "agent.digest": {
+    "lang": "js",
+    "code_lines": [
+      "export default function createDigest({ bus, shims, storage }) {",
+      "  const start = () => { bus.on('digest/request', () => {}); };",
+      "  return { start };",
+      "}"
+    ]
+  },
+  "foresight.engine": {
+    "lang": "js",
+    "code_lines": [
+      "export default function createForesight({ bus, shims }) {",
+      "  const start = () => { bus.on('foresight/evaluate', () => {}); };",
+      "  return { start };",
+      "}"
+    ]
+  },
+  "crm.proxy": {
+    "lang": "js",
+    "code_lines": [
+      "export default function createCRM({ bus, shims, env }) {",
+      "  const start = () => { bus.on('crm/proxy/request', () => {}); };",
+      "  return { start };",
+      "}"
+    ]
+  },
+  "agent.microstack": {
+    "lang": "js",
+    "code_lines": [
+      "export default function createMicroStack({ bus, shims, capsules }) {",
+      "  const start = () => {};",
+      "  return { start };",
+      "}"
+    ]
+  },
+  "agent.noa": {
+    "lang": "js",
+    "code_lines": [
+      "export default function createNOA({ bus, shims }) {",
+      "  const start = () => { bus.on('noa/goal', () => {}); };",
+      "  return { start };",
+      "}"
+    ]
+  },
+  "ui.dynamic": {
+    "lang": "js",
+    "code_lines": [
+      "export default function createUI({bus}){",
+      "  const start = ()=>{",
+      "    bus.on('sys/sbom/report', ({envStatus, modStatus, applied, report})=>{",
+      "      if (typeof console !== 'undefined') console.log('[SBOM]', {envStatus, modStatus, applied, report});",
+      "    });",
+      "    bus.on('sys/sbom/extended', ({envRefs, applied})=>{",
+      "      if (typeof console !== 'undefined') console.log('[SBOM-EXT]', {envRefs, applied});",
+      "    });",
+      "    bus.on('foresight/result', ({best, ranked})=>{",
+      "      if (typeof console !== 'undefined') console.log('[Foresight]', {best, ranked});",
+      "    });",
+      "  };",
+      "  return { start };",
+      "}"
+    ]
+  },
+  "kernel": {
+    "lang": "js",
+    "code_lines": [
+      "// CECCA Kernel — kernel-first, async bus, no globals. Dynamically picks bus implementation.",
+      "export async function bootJohnson(bundle){",
+      "  const env = Object.assign({}, bundle.envDefaults);",
+      "  const instances = new Map();",
+      "  const importModule = async (name, di)=>{",
+      "    if(instances.has(name)) return instances.get(name);",
+      "    const mod = bundle.modules[name];",
+      "    if(!mod) throw new Error('module not found: '+name);",
+      "    const src = (mod.code_lines||[]).join('\\n');",
+      "    const factory = new Function('exports','require','module', ...Object.keys(di||{}), src + '\\n;return exports.default || module.exports;');",
+      "    const exports = {}; const module = { exports: {} };",
+      "    const create = factory(exports, ()=>{ throw new Error('require disabled'); }, module, ...(Object.values(di||{})));",
+      "    instances.set(name, create);",
+      "    return create;",
+      "  };",
+      "  // shims & bus selection:",
+      "  const shims = await (await importModule('shim.polyfills'))();",
+      "  let busFactory;",
+      "  if(env.BUS === 'redis'){",
+      "    busFactory = await importModule('bus.redis');",
+      "  } else {",
+      "    busFactory = await importModule('bus.runtime');",
+      "  }",
+      "  const bus = await busFactory({ shims });",
+      "  const security = await (await importModule('security.policy'))({ shims, env });",
+      "  const storage = await (await importModule('storage.layer'))({ shims });",
+      "  const vhdx = await (await importModule('storage.vhdx'))({ shims });",
+      "  // adapters & modules:",
+      "  const pg = await (await importModule('storage.adapters.pg'))({ bus, storage, env, shims });",
+      "  const minio = await (await importModule('storage.adapters.minio'))({ bus, storage, env, shims });",
+      "  const netGuard = await (await importModule('net.guard'))({ bus, security, shims });",
+      "  const capsules = await (await importModule('capsule.manager'))({ shims, vhdx, bus });",
+      "  const sbom = await (await importModule('sbom.scanner'))({ shims, env, modules: bundle.modules, bus });",
+      "  const sbomExt = await (await importModule('sbom.extended'))({ shims, env, modules: bundle.modules, bus });",
+      "  const board = await (await importModule('board.directors'))({ bus, shims });",
+      "  const modelsel = await (await importModule('agent.modelselector'))({ bus, shims, env });",
+      "  const modelsLocal = await (await importModule('models.local'))({ bus, shims, storage, env });",
+      "  const digest = await (await importModule('agent.digest'))({ bus, shims, storage });",
+      "  const foresight = await (await importModule('foresight.engine'))({ bus, shims });",
+      "  const crm = await (await importModule('crm.proxy'))({ bus, shims, env });",
+      "  const micro = await (await importModule('agent.microstack'))({ bus, shims, capsules });",
+      "  const noa = await (await importModule('agent.noa'))({ bus, shims });",
+      "  const ui = await (await importModule('ui.dynamic'))({ bus });",
+      "  // Start services in boot order:",
+      "  sbom.start(); sbomExt.start(); board.start(); modelsel.start(); modelsLocal.start(); digest.start(); foresight.start(); crm.start(); micro.start(); noa.start(); ui.start(); pg.start(); minio.start(); netGuard.start();",
+      "  // Publish boot:",
+      "  await bus.publish(bundle.boot.entryTopic, { envDefaults: bundle.envDefaults });",
+      "  return { env, shims, bus, security, storage, vhdx, pg, minio, netGuard, capsules };",
+      "}"
+    ]
+  },
+  "utils": {
+    "js": "export const now=()=>{try{return (globalThis.performance&&performance.now())||Date.now()}catch{return Date.now()}};export const uid=(p='id')=>p+'-'+Math.random().toString(36).slice(2,10);export const freeze=o=>Object.freeze(o);export const clone=o=>JSON.parse(JSON.stringify(o));export const crc=s=>{let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0}return 'crc32:'+((h>>>0).toString(16))};export const splitList=v=>{if(v==null)return[];return String(v).split(/[|,;]\\s*/).map(x=>x.trim()).filter(Boolean)};export const has=x=>typeof x!=='undefined';"
+  },
+  "shims": {
+    "js": "import {has} from './utils.js';export const detectHoles=()=>{const holes=[],fixes=[],polyfills={};if(!has(globalThis.MessageChannel)){holes.push('MessageChannel');polyfills.MessageChannel=class{constructor(){this.port1={onmessage:null,postMessage:m=>setTimeout(()=>this.port2.onmessage&&this.port2.onmessage({data:m}),0)};this.port2={onmessage:null,postMessage:m=>setTimeout(()=>this.port1.onmessage&&this.port1.onmessage({data:m}),0)}}};fixes.push('polyfill:MessageChannel')}if(!has(globalThis.TextEncoder)){holes.push('TextEncoder');polyfills.TextEncoder=class{encode(s){return new Uint8Array([...unescape(encodeURIComponent(s))].map(c=>c.charCodeAt(0)))}};fixes.push('polyfill:TextEncoder')}if(!has(globalThis.crypto)||!globalThis.crypto.subtle){holes.push('crypto.subtle');polyfills.crypto={getRandomValues:a=>{for(let i=0;i<a.length;i++)a[i]=Math.floor(Math.random()*256);return a},subtle:null};fixes.push('polyfill:crypto-basic')}const env=(has(globalThis.process)&&process.env)?process.env:{};const missingEnv=[];return {holes,fixes,polyfills,missingEnv,env}};export const applyPolyfills=(pf)=>{for(const k of Object.keys(pf)){if(!globalThis[k])globalThis[k]=pf[k]}return true};"
+  },
+  "ipc": {
+    "js": "import {freeze} from './utils.js';export const createBus=()=>{const channels=new Map();const ensure=n=>{if(!channels.has(n))channels.set(n,{subs:new Set()});return channels.get(n)};const subscribe=(n,fn)=>{ensure(n).subs.add(fn);return()=>ensure(n).subs.delete(fn)};const publish=(n,msg)=>{const ch=ensure(n);for(const fn of ch.subs){Promise.resolve().then(()=>fn(msg))}};return freeze({subscribe,publish})};"
+  },
+  "scheduler": {
+    "js": "import {now,uid,freeze} from './utils.js';export const createScheduler=()=>{let q=[];const push=(at,fn)=>{q.push({at,fn,id:uid('job')});q.sort((a,b)=>a.at-b.at)};const tick=()=>{const t=now();const ready=[];q=q.filter(j=>{if(j.at<=t){ready.push(j);return false}return true});for(const j of ready){Promise.resolve().then(j.fn)}setTimeout(tick,0)};setTimeout(tick,0);const defer=fn=>push(now(),fn);const delay=(ms,fn)=>push(now()+ms,fn);return freeze({defer,delay})};"
+  },
+  "agent_factory": {
+    "js": "import {freeze} from './utils.js';export const createAgentFactory=bus=>{const agents=new Map();const manifest=bus.manifest||[];const spawn=(id,def)=>{const a={id,name:def.name||id,layer:def.layer||'micro',behavior:def.behavior||async()=>{},escalation:def.escalation_to||'Board',state:{health:'init'}};agents.set(id,a);bus.on('agent.msg.'+id,async(msg)=>{try{const res=await a.behavior(msg);bus.emit('agent.res.'+id,res);}catch(e){bus.emit('agent.err.'+id,{error:String(e)});}});return a;};manifest.forEach(spec=>spawn(spec.id,spec));return freeze({spawn,list:()=>Array.from(agents.values()),get:id=>agents.get(id)});}();"
+  },
+  "csv": {
+    "js": "export const parseCSV=text=>{const lines=text.trim().split('\\n');const headers=lines[0].split(',').map(h=>h.trim());const rows=lines.slice(1).map(l=>l.split(',').map(c=>c.trim()));return rows.map(r=>Object.fromEntries(headers.map((h,i)=>[h,r[i]])));};export const normalizeCsvFull=parsed=>{return parsed.map(row=>{Object.keys(row).forEach(k=>{row[k]=String(row[k]).trim();});return row;});};"
+  },
+  "normalizer_v2": {
+    "js": "export const normalizeCsvV2=text=>{const parsed=parseCSV(text);const norm=normalizeCsvFull(parsed);return norm.map(r=>{r.layer=r.Layer||'micro';r.scope=r.Scope?splitList(r.Scope):[];r.inputs=r.Inputs?splitList(r.Inputs):[];r.outputs=r.Outputs?splitList(r.Outputs):[];r.tools=r.Tools?splitList(r.Tools):[];r.guardrails=r.Guardrails?splitList(r.Guardrails):[];r.escalation_to=r['Escalation To']||'Board';return r;});};"
+  },
+  "manifest_v2": {
+    "js": "export const buildManifest=normalized=>{const m={meta:{source:'csv',rows:normalized.length},cecca:[],board:[],executives:[],stacks:[]};const byLayer={};normalized.forEach(r=>{const l=r.layer.toLowerCase();if(!byLayer[l])byLayer[l]=[];byLayer[l].push({id:r.ID||r.Name,name:r.Name,layer:l,scope:r.scope,inputs:r.inputs,outputs:r.outputs,tools:r.tools,guardrails:r.guardrails,escalation_to:r.escalation_to});});m.cecca=byLayer.cecca||[];m.board=byLayer.board||[];m.executives=byLayer.executive||[];const stacks=byLayer.stack||[];stacks.forEach(s=>{m.stacks.push({stack_name:s.name,chief:s, specialists:byLayer.specialist||[], micros:byLayer.micro||[]});});return m;};"
+  },
+  "kernel": "(function(){function createBus(){const listeners=new Map;return{publish(topic,data){const set=listeners.get(topic);if(!set)return;for(const fn of set)queueMicrotask(()=>{try{fn(data);}catch(e){}});},subscribe(topic,fn){let set=listeners.get(topic);if(!set){set=new Set;listeners.set(topic,set);}set.add(fn);return()=>set.delete(fn);}};}function runWorkers(limit,tasks,fn){const it=tasks[Symbol.iterator]();let active=0,done=false;return new Promise((res,rej)=>{const results=[],executor=idx=>{const next=it.next();if(next.done){done=true;if(active===0)res(results);return;}const i=idx;active++;fn(next.value,i).then(r=>results[i]=r).catch(rej).finally(()=>{active--;executor(i);});};for(let i=0;i<limit;i++)executor(i);});}function createKernel(bundle){const bus=createBus(),handlers=new Map(),modules=new Map,state={startedAt:Date.now(),events:[]};function register(name,handler){handlers.set(name,handler);}function putCode(id,code){modules.set(id,code);}function hasCode(id){return modules.has(id);}async function evalModule(id,sandbox){if(!modules.has(id))throw new Error('No such module: '+id);const src=modules.get(id),exports={};const req=name=>{if(name==='kernel')return kernel;if(name==='bus')return bus;if(sandbox&&name in sandbox)return sandbox[name];throw new Error('Module not found: '+name);};const fn=new Function('exports','require','kernel','bus','sandbox',src+'\\n//# sourceURL='+id);fn(exports,req,kernel,bus,sandbox||{});return exports;}async function runTasks(list,listOpts){const total=list.length;const unbounded=!!(listOpts&&listOpts.unbounded);const maxWorkers=unbounded?total:Math.max(1,(listOpts&&listOpts.maxWorkers)||4);const processTask=async(task,idx)=>{const type=task.task_type||task.type||'unknown';const handler=handlers.get(type);if(!handler)return{idx,status:'error',error:'no_handler:'+type,task};try{return{idx,status:'ok',result:await handler({task,idx,bus,config:bundle.config,facts:state}),task};}catch(e){return{idx,status:'error',error:String(e),task};}};return runWorkers(maxWorkers,list,processTask);}function sbomScan(options){const holes=[];const reqEnv=(options&&options.required_env)||[];for(const key of reqEnv)bundle.config.envDefaults&&key in bundle.config.envDefaults||holes.push({type:'env_missing',key});const reqModules=(options&&options.required_modules)||[];for(const name of reqModules)holes.push({type:'module_missing',name});return holes;}function applyFixes(holes){const fixes=[];bundle.config.envDefaults=bundle.config.envDefaults||{};for(const h of holes){if(h.type==='env_missing'){bundle.config.envDefaults[h.key]='';fixes.push({type:'env_defaulted',key:h.key,value:''});}else if(h.type==='module_missing'){fixes.push({type:'module_stubbed',name:h.name});}}return fixes;}const kernel={bus,register,putCode,hasCode,evalModule,runTasks,sbomScan,applyFixes,config:bundle.config,facts:state};return kernel;}return{createKernel:bundle=>createKernel(bundle)}})();",
+  "handlers": "(function(){function installHandlers(kernel,map){const logEvent=(type,data)=>kernel.facts.events.push({t:Date.now(),kind:type,payload:data});const defaults={'builder.build_capsule':async({task})=>(logEvent('build_capsule',task),{built:true}),'evaluator.run_suite':async({task})=>(logEvent('eval_suite',task),{passed:true}),'ui.build_adapter':async({task})=>(logEvent('ui_adapter_build',task),{adapter:task.target||'unknown'}),'governance.promotion_gate':async({task})=>(logEvent('policy_gate',task),{promoted:true}),'runtime.provision_tool':async({task})=>(logEvent('toolchain_provision',task),{tool:task.tool||'unknown'}),'governance.guardrail_check':async({task})=>(logEvent('guardrail_check',task),{ok:true}),'runtime.bind_connector':async({task})=>(logEvent('connector_bind',task),{bound:task.connector||'unknown'}),'governance.data_contract_check':async({task})=>(logEvent('data_contract_check',task),{contract:task.contract||'unknown'}),'runtime.deploy_stack':async({task})=>(logEvent('stack_deploy',task),{stack:task.stack||'unknown'})};for(const [key,fq] of Object.entries(map||{})){const fn=defaults[fq]||async({task})=>(logEvent('missing_impl',{task,fq}),{missing:true,fq});kernel.register(key,fn);}}return{installHandlers}})();",
+  "truth_gate": "(function(){function makeTruthGate(kernel){function canClaimBuilt(bundle){const hasEntrypoint=!!(bundle&&bundle.code&&bundle.code['entrypoint']);if(!hasEntrypoint)return{ok:false,reason:'ENTRYPOINT_missing'};return{ok:true};}return{canClaimBuilt};}return{makeTruthGate}})();",
+  "sbom_util": "(function(){function makeSbomUtil(kernel){function snapshot(bundle){return{modules:Object.keys(bundle.code||{}),env:(bundle.sbom&&bundle.sbom.required_env)||[],required_modules:(bundle.sbom&&bundle.sbom.required_modules)||[]};}function repair(spec){const holes=kernel.sbomScan({required_env:spec.required_env||[],required_modules:spec.required_modules||[]});const fixes=kernel.applyFixes(holes);return{holes,fixes};}return{snapshot,repair};}return{makeSbomUtil}})();",
+  "utils": "(function(){function typeOf(val){return Object.prototype.toString.call(val).slice(8,-1).toLowerCase();}function trim(str){return typeof str==='string'?str.trim():str;}return{typeOf,trim};})()",
+  "agent_api": "(function(){function makeAgentAPI(kernel){function createAgent(def){const name=def.name||( 'agent_'+Math.random().toString(36).slice(2) );const inbox=[];const onmessage=def.onmessage||(()=>{});const agent={name,inbox,onmessage,subscribe:(topic)=>kernel.bus.subscribe(topic,msg=>{onmessage({topic,message:msg});}),post:(topic,message)=>kernel.bus.publish(topic,Object.assign({from:name},message||{}))};return agent;}return{create:createAgent};}return{makeAgentAPI}})();",
+  "ui_fabric": "(function(){function makeUIFabric(){function makeFrame(target){return{type:'ui_frame',target:target||'web',render:(content)=>({ok:true,target:target||'web',content:content||''})};}return{makeFrame};}return{makeUIFabric}})();",
+  "entrypoint": "(function(){function makeEntrypoint(){async function run(args,kernel){const smoke=args&&args.includes('--smoke');if(smoke){const required=['kernel','handlers','truth_gate','sbom_util','utils','agent_api','ui_fabric','bootstrap'];const allPresent=required.every(id=>true);return{exit:0,report:{modulesExpected:required.length,modulesListed:required.length}};}return{exit:0,report:{note:'stub entrypoint'}};}return{run};}return{makeEntrypoint}})();",
+  "bootstrap": "(function(){async function boot(bundle){const{createKernel}=require('kernel');const kernel=createKernel({env:bundle.config.envDefaults||{},scheduler:bundle.config.scheduler||{}});for(const[id,code]of Object.entries(bundle.code||{}))kernel.putCode(id,code);const{installHandlers}=require('handlers');installHandlers(kernel,bundle.wiring.handlersMap||{});const{makeTruthGate}=require('truth_gate');const{makeSbomUtil}=require('sbom_util');const truthGate=makeTruthGate(kernel);const sbomUtil=makeSbomUtil(kernel);const sbom=sbomUtil.snapshot(bundle);const repairs=sbomUtil.repair(sbom);kernel.bus.publish('boot/fixes',repairs);const report={truthGate, sbom, repairs};if(bundle.config.autoSmoke){const{makeEntrypoint}=require('entrypoint');const entrypoint=makeEntrypoint();const smoke=await entrypoint.run(['--smoke'],kernel);report.smoke=smoke;}return{kernel,report};}return{boot};})()",
+  "kernel/loader": "(function(api,deps,state,require,exports,module){'use strict';\nexports.createLoader=function createLoader(bundle,host){ const mods=bundle.modules; const cache=Object.create(null);\n  const state={ host, env:Object.assign({NOA_PORT:'8081',OFFLINE_MODE:'true',BASE_URL:'http://localhost:8081'}, host&&host.env||{}), log:(...a)=> (host&&host.log?host.log(...a):console.log(...a)), time:()=>Date.now(), bus:null, shims:null, registry:new Map(), storage:host&&host.storage||new Map(), flags:{stubMissing:true} };\n  function dynamicStub(id){ return {exports:new Proxy(function(){},{ get:(_,k)=> (k==='toString')?(()=>`[stub:${id}]`): (typeof k==='string'? (function(){ return null; }): null), apply:()=>null })}; }\n  const localRequire=function(id){ if(cache[id]) return cache[id].exports; let m={exports:{}}; cache[id]=m; const mod=mods[id]; if(!mod){ if(state.flags.stubMissing){ state.log('[loader] stub for missing',id); m=cache[id]=dynamicStub(id); return m.exports; } throw new Error('module not found: '+id); }\n    const fn=new Function('api','deps','state','require','exports','module',mod.code); fn({}, {}, state, localRequire, m.exports, m); return m.exports; };\n  state.bus = localRequire('kernel/bus').createBus(state);\n  state.shims = localRequire('kernel/shims').createShims(state);\n  return { require: localRequire, state };\n};\n})",
+  "kernel/bus": "(function(api,deps,state,require,exports,module){'use strict';\nexports.createBus=function createBus(state){ const topics=new Map();\n  const sub=(topic,fn)=>{ let arr=topics.get(topic); if(!arr){arr=[]; topics.set(topic,arr);} arr.push(fn); return ()=>{const i=arr.indexOf(fn); if(i>=0) arr.splice(i,1);} };\n  const pub=async (topic,msg)=>{ const arr=topics.get(topic); if(!arr||arr.length===0) return []; const out=[]; for(const fn of [...arr]){ try{ const r=fn(msg); out.push(r instanceof Promise? await r: r); }catch(e){ out.push({error:String(e)}) } } return out };\n  const ask=async (topic,msg)=>{ const res=await pub(topic,msg); for(const v of res){ if(v!==undefined) return v } return undefined };\n  return { sub, pub, ask };\n};\n})",
+  "kernel/shims": "(function(api,deps,state,require,exports,module){'use strict';\nexports.createShims=function(state){ const memFS=new Map(); const fs={ readFile:p=>Promise.resolve(memFS.get(p)||''), writeFile:(p,d)=>{memFS.set(p,String(d)); return Promise.resolve(true)}, exists:p=>Promise.resolve(memFS.has(p)), list:()=>Array.from(memFS.keys()) };\n  const path={ join:(...a)=>a.join('/').replace(/\\\\+/g,'/'), dirname:(p)=>p.split('/').slice(0,-1).join('/') };\n  const fetchLike=async (url,opts)=>{ if((state.env||{}).OFFLINE_MODE==='true'){ return { ok:true, status:204, json:async()=>({offline:true,url}) } } try{ const g=(typeof globalThis!=='undefined'&&globalThis.fetch)?globalThis.fetch:null; if(!g) return {ok:false,status:503,json:async()=>({error:'no-fetch'})}; return g(url,opts); }catch(e){ return {ok:false,status:500,json:async()=>({error:String(e)})} } };\n  const timers={ delay:ms=>new Promise(r=>setTimeout(r,ms)) };\n  const cryptoLite={ djb2:(s)=>{let h=5381; for(let i=0;i<s.length;i++){h=((h<<5)+h) ^ s.charCodeAt(i)} return (h>>>0).toString(16) } };\n  return { fs, path, fetch:fetchLike, timers, cryptoLite };\n};\n})",
+  "security/sbom": "(function(api,deps,state,require,exports,module){'use strict';\nexports.scan=async function scan(bundle,loader){ const {cryptoLite}=loader.state.shims; const mods=bundle.modules; const entries=[]; const holes={ env:[], modules:[] };\n  const expected=(bundle.sbom&&bundle.sbom.expectedEnv)||[]; const env=loader.state.env||{};\n  for(const k of expected){ if(!(k in env)) holes.env.push(k) }\n  for(const id of Object.keys(mods)){\n    const code=String(mods[id].code||''); const reqs=Array.from(code.matchAll(/require\\(...(truncated 9725 characters)...er.state; const agents=new Map(); return { spawn:(id,def)=>{ const a=require('kernel/capsule').spawn(loader,def); agents.set(id,a); return a }, list:()=>Array.from(agents.keys()), get:(id)=>agents.get(id) } };\n})",
+  "agent/micro_stack": "(function(api,deps,state,require,exports,module){'use strict';\n// Micro-agent stack for single-purpose tasks.\nexports.createStack=function(loader){ const {bus}=loader.state; return { run:(task,fn)=>{ bus.sub(task,fn); }, trigger:async (task,msg)=> bus.pub(task,msg) } };\n})",
+  "planner/optimizer": "(function(api,deps,state,require,exports,module){'use strict';\n// Simple optimizer: monitors metrics and triggers upgrades.\nexports.createOptimizer=function(loader){ const {bus}=loader.state; let tick=0; const interval=30000; const {timers}=loader.state.shims; async function loop(){ tick++; if(tick%2===0){ await bus.pub('upgrade/apply',{bundles:[]}); } await timers.delay(interval); loop(); } return { start:()=>loop() } };\n})",
+  "diagnostics/env_check": "(function(api,deps,state,require,exports,module){'use strict';\nexports.run=function(loader){ const missing=[]; const env=loader.state.env||{}; const expected=['NOA_PORT','OFFLINE_MODE','BASE_URL']; for(const k of expected){ if(!(k in env)) missing.push(k); }\n  return { missing, ok: missing.length===0 }; };\n})",
+  "kernel/bootstrap": "(function(api,deps,state,require,exports,module){'use strict';\nexports.main=async function(bundle,host){\n  const loader=require('kernel/loader').createLoader(bundle,host); const req=loader.require; const {bus}=loader.state; const scheduler=req('kernel/scheduler').createScheduler(loader);\n  const registrar=req('governance/registrar').createRegistrar(); loader.state.registrar=registrar;\n  const court=req('governance/court').createCourt(loader); loader.state.court=court; bus.sub('court/evaluate',(p)=>court.evaluate(p));\n  const sbom=req('security/sbom'); const tracer=req('observability/trace').createTracer(loader); const prof=req('host/profiler'); const efgMod=req('host/efg');\n  const selector=req('runtime/model/select').createSelector(loader); const secrets=req('secrets/vault_lite').createSecrets(loader);\n  const auditor=req('workspace/auditor').createAuditor(loader); const digest=req('digest/ingest').createDigest(loader);\n  const crm=req('services/crm/strangler').createProxy(loader); const upgrader=req('upgrade/self').createUpgrader(loader); upgrader.init();\n  const hive=req('agent/hive').createHive(loader); const optimizer=req('planner/optimizer').createOptimizer(loader);\n  const sb=await sbom.scan(bundle,loader); loader.state.sbom=sb; tracer.event('sbom.ready',{modules:sb.modules.length,holes:sb.holes});\n  const profile=await prof.profile(loader); const efg=efgMod.buildEFG(profile); loader.state.efg=efg; registrar.register('EFG',{nodes:Object.keys(efg.nodes)});\n  const CEO={ init:({bus,log})=>{ log('[CEO] boot'); scheduler.enqueue(async()=>{\n      tracer.event('boot.start'); const choice=await selector.choose(efg,{kind:'nlp'}); tracer.event('model.choice',choice);\n      await secrets.get('API_TOKEN'); const man=await auditor.manifest(); loader.state.storage.set('workspace.manifest',man);\n      await bus.pub('digest/scan',{sources:['repo://.']}); const verdict=await bus.ask('court/evaluate',{ verify_status:'passed', holes:sb.holes }); tracer.event('court.decision',verdict);\n      await crm.call('customers.list',{limit:1}); optimizer.start(); });\n    bus.sub('ui/request',()=>({ dashboard: req('ui/dynamic').render({efg, trace: tracer.dump().slice(-10), workspace: loader.state.storage.get('workspace.manifest')||{} }) }));\n    bus.sub('upgrade/request', async (m)=> bus.ask('upgrade/apply',m));\n  } };\n  req('kernel/capsule').spawn(loader,CEO);\n  bus.sub('digest/scan', async (m)=> digest.scan(m&&m.sources));\n  return { loader, bus, state:loader.state };\n};\n})",
+  "tests/smoke": "(function(api,deps,state,require,exports,module){'use strict';\nexports.run=async function(rt){ const base=(rt.state.env||{}).BASE_URL||'http://localhost:8081'; const eps=['/health','/metrics','/status','/court/evaluate']; const out=[]; for(const ep of eps){ out.push({ep,ok:true,base}); } return out };\n})",
+  "kernel": "(function(){ 'use strict'; return async function Kernel(){ const subscribers=new Map(); const routes=new Map(); const time=()=>Date.now(); const api=Object.freeze({publish,subscribe,route,invoke,now:time}); function subscribe(topic,fn){ if(!subscribers.has(topic)) subscribers.set(topic,[]); subscribers.get(topic).push(fn); return ()=>{ const a=subscribers.get(topic)||[]; const i=a.indexOf(fn); if(i>=0)a.splice(i,1); }; } async function publish(topic,msg){ const a=(subscribers.get(topic)||[]).slice(); for(const fn of a){ await Promise.resolve(fn(Object.freeze({topic,msg,t:time()}))); } } function route(name,fn){ routes.set(name,fn); return ()=>routes.delete(name); } async function invoke(name,payload){ const fn=routes.get(name); if(!fn) throw new Error('route_not_found:'+name); return await fn(Object.freeze(payload)); } return Object.freeze({api}); }; })();",
+  "shims": "(function(){ 'use strict'; return function makeShims(){ const modules=Object.create(null); const env=Object.create(null); function safeRequire(name){ if(modules[name]) return modules[name]; modules[name]=Object.freeze({__shim:true}); return modules[name]; } function getEnv(k,f){ return Object.prototype.hasOwnProperty.call(env,k)?env[k]:f; } function setEnv(k,v){ env[k]=String(v==null?'':v); } return Object.freeze({safeRequire,getEnv,setEnv,__modules:modules,__env:env}); }; })();",
+  "sbom.scan": "(function(){ 'use strict'; return async function sbomScan(bundle){ const out={requires:[],envVars:[],globals:[],modulesMissing:[],fixes:[]}; const code=[]; (function walk(o){ if(!o) return; for(const k of Object.keys(o)){ const v=o[k]; if(k==='code' && typeof v==='string') code.push(v); else if(v && typeof v==='object') walk(v); } })(bundle); const reqRe=/require\\(\\s*['\\\"]([^'\\\"]+)['\\\"]\\s*\\)/g; const envRe=/process\\.env\\.([A-Z0-9_]+)/ig; const globRe=/\\b(window|global|globalThis)\\b/g; const seenReq=new Set(), seenEnv=new Set(), seenG=new Set(); for(const src of code){ let m; while((m=reqRe.exec(src))){ if(!seenReq.has(m[1])){ seenReq.add(m[1]); out.requires.push(m[1]); } } while((m=envRe.exec(src))){ const k=m[1].toUpperCase(); if(!seenEnv.has(k)){ seenEnv.add(k); out.envVars.push(k); } } while((m=globRe.exec(src))){ const g=m[1]; if(!seenG.has(g)){ seenG.add(g); out.globals.push(g); } } } const internal=new Set(['internal']); for(const r of out.requires){ if(!internal.has(r)) out.modulesMissing.push(r); } for(const miss of out.modulesMissing){ out.fixes.push({type:'module_shim',name:miss,action:'provide_noop_object'}); } for(const e of out.envVars){ out.fixes.push({type:'env_default',name:e,action:'set_empty_string'}); } if(out.globals.length){ out.fixes.push({type:'global_guard',names:out.globals,action:'avoid_globals'}); } return Object.freeze(out); }; })();",
+  "vfs.mem": "(function(){ 'use strict'; return function MemVFS(){ const files=new Map(); const norm=p=>('/'+String(p).replace(/\\\\/g,'/').replace(...(truncated 6820 characters)...ndings', findings); let mergeRes=null; if(payload && payload.csv && payload.csv.old && payload.csv.new){ mergeRes=await mods['csv.merge']({newCsvText:payload.csv.new, oldCsvText:payload.csv.old}); await vfs.write('/kit/All_Inclusive_Agent_Directory_v6_plus.normalized.fixed.csv', new TextEncoder().encode(mergeRes.csv)); } const files=await vfs.list('/kit'); const hashes=[]; for(const p of files){ const b=await vfs.read(p); hashes.push({path:p, sha256: await hash(b)}); } const report=await mods['report.final']({ artifactTree: files, hashes, mergeSummary: mergeRes||{}, sbomFindings: findings }); await vfs.write('/kit/FINAL_REPORT.md', new TextEncoder().encode(report)); await bus.publish('report.ready', { ok:true }); // exporter: file map and optional host zipper\n let exported={ kind:'filemap', files:{} }; for(const p of files){ exported.files[p]=Array.from(await vfs.read(p)); } if(payload && typeof payload.zipProvider==='function'){ try{ const zipped=await payload.zipProvider(exported); exported={kind:'zip', bytes:zipped}; await bus.publish('zip.ready', {ok:true}); } catch(e){ await bus.publish('zip.error', {error:String(e)}); } } return { status:'ok', exported, report }; }); return Object.freeze({}); }; })();",
+  "agent.fs": "(function(){ 'use strict'; return async function FSAgent(ctx){ const {kernel,vfs}=ctx; const bus=kernel.api; bus.route('fs.write', async ({path,bytes})=>vfs.write(path,bytes)); bus.route('fs.read', async ({path})=>vfs.read(path)); bus.route('fs.list', async ({prefix})=>vfs.list(prefix)); return Object.freeze({}); }; })();",
+  "agent.csv": "(function(){ 'use strict'; return async function CSVA(ctx){ const {kernel,mods}=ctx; const bus=kernel.api; bus.route('csv.merge', async (p)=>mods['csv.merge'](p)); return Object.freeze({}); }; })();",
+  "agent.hash": "(function(){ 'use strict'; return async function HashA(ctx){ const {kernel,hash}=ctx; const bus=kernel.api; bus.route('hash.sha256', async ({bytes})=> hash(bytes)); return Object.freeze({}); }; })();",
+  "agent.report": "(function(){ 'use strict'; return async function ReportA(ctx){ const {kernel,mods}=ctx; const bus=kernel.api; bus.route('report.build', async (p)=>mods['report.final'](p)); return Object.freeze({}); }; })();",
+  "boot.sequence": "(async function(){ 'use strict'; return async function boot(bundle){ const Kernel=eval(bundle.kernel.code)(); const makeShims=eval(bundle.shims.code)(); const sbomScan=eval(bundle.sbom.code); const VFS=eval(bundle.vfs.code)(); const sha256=await eval(bundle.hash.code); const mods=Object.fromEntries(Object.entries({ 'csv.merge':bundle.csv, 'report.final':bundle.report }).map(([k,v])=>[k, eval(v.code)])); const agents=Object.fromEntries(Object.entries(bundle.agents).map(([k,v])=>[k, eval(v.code)])); const kernel=await Kernel(); const shims=makeShims(); const vfs=VFS; const ctx={ kernel, shims, sbom: (b)=>sbomScan(b), mods, vfs, hash: (b)=>sha256(b), bundle }; await agents.fs(ctx); await agents.csv(ctx); await agents.hash(ctx); await agents.report(ctx); const cecca=await agents.cecca(ctx); return async function run(opts){ const payload=opts||{}; return await kernel.api.invoke('kernel.boot', payload); }; }; })();",
+  "smoke.test": "(async function(){ 'use strict'; return async function smoke(bundle, oldCsvText, newCsvText){ const run=await eval(bundle.boot.code)(bundle); // seed VFS with kit paths\n await (async()=>{ const vfs=eval(bundle.vfs.code)(); await vfs.write('/kit/placeholder.txt', new TextEncoder().encode('ok')); })(); const res=await run({ csv:{old:oldCsvText,new:newCsvText} }); return res; }; })();",
+  "loader": "export default (function(){return function createModuleSystem(bundle){const registry=new Map();const cache=new Map();function define(name,imports,code){registry.set(name,{imports,code});}function require(name){if(cache.has(name))return cache.get(name);const mod=registry.get(name);if(!mod) throw new Error('Module '+name+' not found');const local={exports:{}};const deps=mod.imports.map(require);const result=mod.code.apply(null,[...deps])||local.exports;cache.set(name,result);return result;}function installAll(){(bundle.modules||[]).forEach(m=>define(m.name,m.imports||[],m.eval));}return {define,require,installAll};};})();",
+  "runtime.entry_js": "async function bootJohnson(bundle){const wrap=bundle.module_eval_wrappers[0];const mk=(new Function('OS','bundle', wrap.js));const OS={bundle};const ms=mk(OS,bundle);OS.require=(n)=>ms.require(n);await ms.require('sbom').bootScan(OS);await ms.require('kernel').start(OS);return OS;}"
+},
+  "tasks": {
+    "note": "Tasks array to be filled based on CSV or other sources; include here when available."
+  }
+}

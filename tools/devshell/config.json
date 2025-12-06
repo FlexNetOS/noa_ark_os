@@ -1,0 +1,34 @@
+{
+  "$schema": "./config.schema.json",
+  "pnpm": {
+    "requiredVersion": "9.11.0",
+    "defaultStoreDir": "node_modules/.pnpm",
+    "aliases": {
+      "pn": "pnpm",
+      "px": "pnpm exec"
+    }
+  },
+  "env": {
+    "common": {
+      "NOA_WORKSPACE_ROOT": ".",
+      "PNPM_HOME": "tools/.pnpm-home"
+    },
+    "posix": {
+      "CARGO_HOME": "server/tools/cargo-portable",
+      "RUSTUP_HOME": "server/tools/rustup-portable",
+      "PATH_PREPEND": [
+        "server/tools/cargo-portable/bin"
+      ]
+    },
+    "windows": {
+      "CARGO_HOME": "server/tools/cargo-portable",
+      "RUSTUP_HOME": "server/tools/rustup-portable",
+      "PATH_PREPEND": [
+        "server/tools/cargo-portable/bin"
+      ]
+    }
+  },
+  "rustAnalyzer": {
+    "checkCommand": "check"
+  }
+}

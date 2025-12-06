@@ -1,0 +1,719 @@
+{
+  "version": 1,
+  "description": "Central command approval policy shared across IDEs and automation.",
+  "rules": [
+    {
+      "id": "deny-subshell-parentheses",
+      "type": "regex",
+      "value": "\\$\\([^)]*\\)",
+      "flags": "s",
+      "scope": "line",
+      "action": "deny",
+      "description": "Block command substitution via $(...) (known limitation: does not match nested or multiline subshells)"
+    },
+    {
+      "id": "deny-subshell-braces",
+      "type": "regex",
+      "value": "\\{[^}]*;\\s*\\}",
+      "flags": "s",
+      "scope": "line",
+      "action": "deny",
+      "description": "Block shell command grouping with braces (e.g., { ...; }) (known limitation: does not match nested or multiline groups)"
+    },
+    {
+      "id": "deny-subshell-backticks",
+      "type": "regex",
+      "value": "`[^`]+`",
+      "flags": "s",
+      "scope": "line",
+      "action": "deny",
+      "description": "Block legacy shell command substitution using backticks (known limitation: does not detect escaped or quoted backticks)"
+    },
+    {
+      "id": "deny-subshell-dollar",
+      "type": "regex",
+      "value": "\\$\\(.+\\)",
+      "flags": "s",
+      "scope": "line",
+      "action": "deny",
+      "description": "Block dollar-paren command substitution"
+    },
+    {
+      "id": "deny-git-branch-destructive",
+      "type": "regex",
+      "value": "^git branch\\b.*-(d|D|m|M|-delete|-force)\\b",
+      "scope": "line",
+      "action": "deny",
+      "description": "Disallow destructive git branch flags"
+    },
+    {
+      "id": "deny-column-wide",
+      "type": "regex",
+      "value": "^column\\b.*-c\\s+[0-9]{4,}",
+      "scope": "line",
+      "action": "deny",
+      "description": "Prevent pathological column width usage"
+    },
+    {
+      "id": "deny-date-set",
+      "type": "regex",
+      "value": "^date\\b.*(-s|--set)\\b",
+      "scope": "line",
+      "action": "deny",
+      "description": "Prevent setting system date"
+    },
+    {
+      "id": "deny-find-exec",
+      "type": "regex",
+      "value": "^find\\b.*-(delete|exec|execdir|fprint|fprintf|fls|ok|okdir)\\b",
+      "scope": "line",
+      "action": "deny",
+      "description": "Block dangerous find actions"
+    },
+    {
+      "id": "deny-sort-output",
+      "type": "regex",
+      "value": "^sort\\b.*-(o|S)\\b",
+      "scope": "line",
+      "action": "deny",
+      "description": "Prevent in-place or huge sort operations"
+    },
+    {
+      "id": "deny-tree-output",
+      "type": "regex",
+      "value": "^tree\\b.*-o\\b",
+      "scope": "line",
+      "action": "deny",
+      "description": "Prevent tree output redirection"
+    },
+    {
+      "id": "deny-rm",
+      "type": "exact",
+      "value": "rm",
+      "scope": "command",
+      "action": "deny"
+    },
+    {
+      "id": "deny-rmdir",
+      "type": "exact",
+      "value": "rmdir",
+      "scope": "command",
+      "action": "deny"
+    },
+    {
+      "id": "deny-del",
+      "type": "exact",
+      "value": "del",
+      "scope": "command",
+      "action": "deny"
+    },
+    {
+      "id": "deny-remove-item",
+      "type": "exact",
+      "value": "Remove-Item",
+      "scope": "command",
+      "action": "deny"
+    },
+    {
+      "id": "deny-ri",
+      "type": "exact",
+      "value": "ri",
+      "scope": "command",
+      "action": "deny"
+    },
+    {
+      "id": "deny-rd",
+      "type": "exact",
+      "value": "rd",
+      "scope": "command",
+      "action": "deny"
+    },
+    {
+      "id": "deny-erase",
+      "type": "exact",
+      "value": "erase",
+      "scope": "command",
+      "action": "deny"
+    },
+    {
+      "id": "deny-dd",
+      "type": "exact",
+      "value": "dd",
+      "scope": "command",
+      "action": "deny"
+    },
+    {
+      "id": "deny-kill",
+      "type": "exact",
+      "value": "kill",
+      "scope": "command",
+      "action": "deny"
+    },
+    {
+      "id": "deny-ps",
+      "type": "exact",
+      "value": "ps",
+      "scope": "command",
+      "action": "deny"
+    },
+    {
+      "id": "deny-top",
+      "type": "exact",
+      "value": "top",
+      "scope": "command",
+      "action": "deny"
+    },
+    {
+      "id": "deny-stop-process",
+      "type": "exact",
+      "value": "Stop-Process",
+      "scope": "command",
+      "action": "deny"
+    },
+    {
+      "id": "deny-spps",
+      "type": "exact",
+      "value": "spps",
+      "scope": "command",
+      "action": "deny"
+    },
+    {
+      "id": "deny-taskkill",
+      "type": "exact",
+      "value": "taskkill",
+      "scope": "command",
+      "action": "deny"
+    },
+    {
+      "id": "deny-taskkill-exe",
+      "type": "exact",
+      "value": "taskkill.exe",
+      "scope": "command",
+      "action": "deny"
+    },
+    {
+      "id": "deny-curl",
+      "type": "exact",
+      "value": "curl",
+      "scope": "command",
+      "action": "deny"
+    },
+    {
+      "id": "deny-wget",
+      "type": "exact",
+      "value": "wget",
+      "scope": "command",
+      "action": "deny"
+    },
+    {
+      "id": "deny-invoke-restmethod",
+      "type": "exact",
+      "value": "Invoke-RestMethod",
+      "scope": "command",
+      "action": "deny"
+    },
+    {
+      "id": "deny-invoke-webrequest",
+      "type": "exact",
+      "value": "Invoke-WebRequest",
+      "scope": "command",
+      "action": "deny"
+    },
+    {
+      "id": "deny-irm",
+      "type": "exact",
+      "value": "irm",
+      "scope": "command",
+      "action": "deny"
+    },
+    {
+      "id": "deny-iwr",
+      "type": "exact",
+      "value": "iwr",
+      "scope": "command",
+      "action": "deny"
+    },
+    {
+      "id": "deny-chmod",
+      "type": "exact",
+      "value": "chmod",
+      "scope": "command",
+      "action": "deny"
+    },
+    {
+      "id": "deny-chown",
+      "type": "exact",
+      "value": "chown",
+      "scope": "command",
+      "action": "deny"
+    },
+    {
+      "id": "deny-set-itemproperty",
+      "type": "exact",
+      "value": "Set-ItemProperty",
+      "scope": "command",
+      "action": "deny"
+    },
+    {
+      "id": "deny-sp",
+      "type": "exact",
+      "value": "sp",
+      "scope": "command",
+      "action": "deny"
+    },
+    {
+      "id": "deny-set-acl",
+      "type": "exact",
+      "value": "Set-Acl",
+      "scope": "command",
+      "action": "deny"
+    },
+    {
+      "id": "deny-jq",
+      "type": "exact",
+      "value": "jq",
+      "scope": "command",
+      "action": "deny"
+    },
+    {
+      "id": "deny-xargs",
+      "type": "exact",
+      "value": "xargs",
+      "scope": "command",
+      "action": "deny"
+    },
+    {
+      "id": "deny-eval",
+      "type": "exact",
+      "value": "eval",
+      "scope": "command",
+      "action": "deny"
+    },
+    {
+      "id": "deny-invoke-expression",
+      "type": "exact",
+      "value": "Invoke-Expression",
+      "scope": "command",
+      "action": "deny"
+    },
+    {
+      "id": "deny-iex",
+      "type": "exact",
+      "value": "iex",
+      "scope": "command",
+      "action": "deny"
+    },
+    {
+      "id": "allow-cd",
+      "type": "exact",
+      "value": "cd",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-echo",
+      "type": "exact",
+      "value": "echo",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-ls",
+      "type": "exact",
+      "value": "ls",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-pwd",
+      "type": "exact",
+      "value": "pwd",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-cat",
+      "type": "exact",
+      "value": "cat",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-head",
+      "type": "exact",
+      "value": "head",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-tail",
+      "type": "exact",
+      "value": "tail",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-findstr",
+      "type": "exact",
+      "value": "findstr",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-wc",
+      "type": "exact",
+      "value": "wc",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-tr",
+      "type": "exact",
+      "value": "tr",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-cut",
+      "type": "exact",
+      "value": "cut",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-cmp",
+      "type": "exact",
+      "value": "cmp",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-which",
+      "type": "exact",
+      "value": "which",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-basename",
+      "type": "exact",
+      "value": "basename",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-dirname",
+      "type": "exact",
+      "value": "dirname",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-realpath",
+      "type": "exact",
+      "value": "realpath",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-readlink",
+      "type": "exact",
+      "value": "readlink",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-stat",
+      "type": "exact",
+      "value": "stat",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-file",
+      "type": "exact",
+      "value": "file",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-du",
+      "type": "exact",
+      "value": "du",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-df",
+      "type": "exact",
+      "value": "df",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-sleep",
+      "type": "exact",
+      "value": "sleep",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-grep",
+      "type": "exact",
+      "value": "grep",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-git-status",
+      "type": "exact",
+      "value": "git status",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-git-log",
+      "type": "exact",
+      "value": "git log",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-git-show",
+      "type": "exact",
+      "value": "git show",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-git-diff",
+      "type": "exact",
+      "value": "git diff",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-git-grep",
+      "type": "exact",
+      "value": "git grep",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-git-branch",
+      "type": "exact",
+      "value": "git branch",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-git-rev-parse",
+      "type": "exact",
+      "value": "git rev-parse",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-git-checkout",
+      "type": "exact",
+      "value": "git checkout",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-git-merge",
+      "type": "exact",
+      "value": "git merge",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-git-add",
+      "type": "exact",
+      "value": "git add",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-git-commit",
+      "type": "exact",
+      "value": "git commit",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-pnpm-lint",
+      "type": "exact",
+      "value": "pnpm lint",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-pnpm-typecheck",
+      "type": "exact",
+      "value": "pnpm typecheck",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-pnpm-test",
+      "type": "exact",
+      "value": "pnpm test",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-get-childitem",
+      "type": "exact",
+      "value": "Get-ChildItem",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-get-content",
+      "type": "exact",
+      "value": "Get-Content",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-get-date",
+      "type": "exact",
+      "value": "Get-Date",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-get-random",
+      "type": "exact",
+      "value": "Get-Random",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-get-location",
+      "type": "exact",
+      "value": "Get-Location",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-write-host",
+      "type": "exact",
+      "value": "Write-Host",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-write-output",
+      "type": "exact",
+      "value": "Write-Output",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-split-path",
+      "type": "exact",
+      "value": "Split-Path",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-join-path",
+      "type": "exact",
+      "value": "Join-Path",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-start-sleep",
+      "type": "exact",
+      "value": "Start-Sleep",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-where-object",
+      "type": "exact",
+      "value": "Where-Object",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-select",
+      "type": "regex",
+      "value": "^Select-[a-z0-9]",
+      "flags": "i",
+      "scope": "command",
+      "action": "allow"
+    },
+    {
+      "id": "allow-measure",
+      "type": "regex",
+      "value": "^Measure-[a-z0-9]",
+      "flags": "i",
+      "scope": "command",
+      "action": "allow"
+    },
+    {
+      "id": "allow-compare",
+      "type": "regex",
+      "value": "^Compare-[a-z0-9]",
+      "flags": "i",
+      "scope": "command",
+      "action": "allow"
+    },
+    {
+      "id": "allow-format",
+      "type": "regex",
+      "value": "^Format-[a-z0-9]",
+      "flags": "i",
+      "scope": "command",
+      "action": "allow"
+    },
+    {
+      "id": "allow-sort",
+      "type": "regex",
+      "value": "^Sort-[a-z0-9]",
+      "flags": "i",
+      "scope": "command",
+      "action": "allow"
+    },
+    {
+      "id": "allow-column",
+      "type": "exact",
+      "value": "column",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-date",
+      "type": "exact",
+      "value": "date",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-find",
+      "type": "exact",
+      "value": "find",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-sort-cmd",
+      "type": "exact",
+      "value": "sort",
+      "scope": "line",
+      "action": "allow"
+    },
+    {
+      "id": "allow-tree",
+      "type": "exact",
+      "value": "tree",
+      "scope": "line",
+      "action": "allow"
+    }
+  ],
+  "defaultAction": "deny"
+}

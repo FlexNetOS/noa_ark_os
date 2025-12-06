@@ -9,7 +9,10 @@ use std::sync::mpsc::channel;
 use std::time::Duration;
 use tracing::{debug, error, info};
 
-use crate::{CRCSystem, DropManifest, Error, Priority, SourceType};
+use crate::{
+    extraction::prepare_artifact_for_processing, CRCSystem, DropManifest, Error, Priority,
+    SourceType,
+};
 
 /// Source type detection and configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -183,19 +186,53 @@ impl CRCWatcher {
             .get(&source_type)
             .ok_or_else(|| Error::ConfigError("Unknown source type".to_string()))?;
 
-        // Extract metadata
-        let metadata = self.extract_metadata(&path).await?;
+        // Prepare the source for ingestion (extract archives when necessary)
+        let prepared = prepare_artifact_for_processing(path.clone()).await?;
+        let processing_path = prepared.processing_path.clone();
+
+        // Extract metadata from the processing directory
+        let mut metadata = self.extract_metadata(&processing_path).await?;
+        metadata.insert(
+            "processing_path".to_string(),
+            processing_path.display().to_string(),
+        );
+
+        if let Some(artifact) = prepared.original_artifact.as_ref() {
+            metadata.insert(
+                "original_artifact_path".to_string(),
+                artifact.path.display().to_string(),
+            );
+            if let Some(ext) = artifact.archive_type.as_ref() {
+                metadata.insert("original_artifact_type".to_string(), ext.clone());
+            }
+            if let Some(size) = artifact.size {
+                metadata.insert("original_artifact_size".to_string(), size.to_string());
+            }
+            if let Some(extracted) = artifact.extracted_path.as_ref() {
+                metadata.insert(
+                    "extracted_path".to_string(),
+                    extracted.display().to_string(),
+                );
+            }
+            if let Some(file_name) = artifact.path.file_name().and_then(|n| n.to_str()) {
+                metadata.insert("original_artifact_name".to_string(), file_name.to_string());
+            }
+        }
 
         // Generate manifest
         let manifest = self
-            .generate_manifest(&path, source_type.clone(), config, metadata)
+            .generate_manifest(&processing_path, source_type.clone(), config, metadata)
             .await?;
 
         // Register drop with CRC system
         let drop_id = self
             .crc_system
-            .register_drop(path.clone(), manifest)
-            .map_err(|e| Error::SystemError(e))?;
+            .register_drop(
+                processing_path.clone(),
+                manifest,
+                prepared.original_artifact.clone(),
+            )
+            .map_err(Error::SystemError)?;
 
         info!("✓ Drop registered: {} ({})", drop_id, config.name);
         info!("  Source type: {:?}", source_type);

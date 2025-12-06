@@ -2,46 +2,46 @@
 
 import { useEffect, useState } from "react";
 
-import type { VibeCard } from "./board-types";
+import type { Goal } from "./board-types";
 import { MOOD_OPTIONS } from "./moods";
 
 type CardEditorProps = {
-  card: VibeCard | null;
+  goal: Goal | null;
   columnId: string | null;
   onClose: () => void;
-  onUpdate: (columnId: string, cardId: string, patch: Partial<VibeCard>) => void;
-  onDelete: (columnId: string, cardId: string) => void;
+  onUpdate: (columnId: string, goalId: string, patch: Partial<Goal>) => void;
+  onDelete: (columnId: string, goalId: string) => void;
 };
 
-export function CardEditor({ card, columnId, onClose, onUpdate, onDelete }: CardEditorProps) {
-  const [title, setTitle] = useState(card?.title ?? "");
-  const [notes, setNotes] = useState(card?.notes ?? "");
-  const [mood, setMood] = useState<VibeCard["mood"]>(card?.mood ?? "focus");
+export function CardEditor({ goal, columnId, onClose, onUpdate, onDelete }: CardEditorProps) {
+  const [title, setTitle] = useState(goal?.title ?? "");
+  const [notes, setNotes] = useState(goal?.notes ?? "");
+  const [mood, setMood] = useState<Goal["mood"]>(goal?.mood ?? "focus");
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (!card || !columnId) {
+    if (!goal || !columnId) {
       setVisible(false);
       return;
     }
 
-    setTitle(card.title);
-    setNotes(card.notes);
-    setMood(card.mood);
+    setTitle(goal.title);
+    setNotes(goal.notes);
+    setMood(goal.mood);
     setVisible(true);
-  }, [card, columnId]);
+  }, [goal, columnId]);
 
-  if (!card || !columnId) {
+  if (!goal || !columnId) {
     return null;
   }
 
   const handleSave = () => {
-    onUpdate(columnId, card.id, { title, notes, mood });
+    onUpdate(columnId, goal.id, { title, notes, mood });
     onClose();
   };
 
   const handleDelete = () => {
-    onDelete(columnId, card.id);
+    onDelete(columnId, goal.id);
     onClose();
   };
 
@@ -62,8 +62,8 @@ export function CardEditor({ card, columnId, onClose, onUpdate, onDelete }: Card
           </svg>
         </button>
         <div className="mb-6 space-y-2">
-          <span className="text-xs uppercase tracking-[0.3em] text-white/40">Edit vibe</span>
-          <h2 className="text-2xl font-semibold text-white">{card.title}</h2>
+          <span className="text-xs uppercase tracking-[0.3em] text-white/40">Edit goal</span>
+          <h2 className="text-2xl font-semibold text-white">{goal.title}</h2>
         </div>
         <div className="space-y-5">
           <div className="space-y-2">
@@ -109,14 +109,14 @@ export function CardEditor({ card, columnId, onClose, onUpdate, onDelete }: Card
             onClick={handleDelete}
             className="rounded-full bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-red-300 transition hover:bg-red-500/20 hover:text-red-100"
           >
-            Delete card
+            Delete goal
           </button>
           <button
             type="button"
             onClick={handleSave}
             className="rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500 px-6 py-2 text-sm font-semibold uppercase tracking-wide text-white shadow-glow transition hover:shadow-[0_18px_40px_-22px_rgba(99,102,241,0.95)]"
           >
-            Save vibe
+            Save goal
           </button>
         </div>
       </div>

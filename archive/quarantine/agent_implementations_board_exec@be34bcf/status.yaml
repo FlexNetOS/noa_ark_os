@@ -1,0 +1,10 @@
+component: agents-board-executive
+archived_commit: be34bcf
+archived_on: 2025-11-14
+owners:
+  - Agent Framework Team
+reason: "Inactive board/executive agent implementations produced >30 warnings during `cargo test -p noa_agents -p noa_core -p noa_workflow`."
+reintegration_criteria:
+  - Add feature flags or runtime wiring so these agents are exercised by tests
+  - Achieve warning-free builds (treat warnings as errors locally)
+  - Document new interfaces in docs/projects/ROADMAP_AGENTIC_KERNEL.md

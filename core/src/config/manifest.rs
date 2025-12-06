@@ -23,9 +23,17 @@ pub const CAPABILITY_GATEWAY: &str = "core.gateway";
 pub const CAPABILITY_RUNTIME_MANAGER: &str = "core.runtime.manager";
 /// Capability identifier for the agent factory subsystem.
 pub const CAPABILITY_AGENT_FACTORY: &str = "agents.factory";
+/// Scope granting host environment takeover privileges.
+pub const SCOPE_HOST_ENVIRONMENT_TAKEOVER: &str = "host.environment.takeover";
+/// Scope granting host resource arbitration privileges.
+pub const SCOPE_HOST_RESOURCE_ARBITRATE: &str = "host.resource.arbitrate";
 
 fn default_autostart() -> bool {
     true
+}
+
+fn default_policy_ttl() -> u64 {
+    900
 }
 
 /// Root manifest describing kernel capabilities and runtimes.
@@ -42,19 +50,20 @@ pub struct KernelManifest {
     /// Optional metadata for downstream tooling.
     #[serde(default)]
     pub metadata: HashMap<String, Value>,
+    /// Token policies describing scope configuration for capability tokens.
+    #[serde(default)]
+    pub token_policies: Vec<TokenPolicyManifestEntry>,
+}
+
+impl Default for KernelManifest {
+    fn default() -> Self {
+        // Delegate to the canonical constructor to avoid duplication.
+        Self::manifest_default()
+    }
 }
 
 impl KernelManifest {
-    /// Load a manifest from a YAML file.
-    pub fn load_from_yaml(path: impl AsRef<Path>) -> Result<Self, ManifestError> {
-        let content = fs::read_to_string(path).map_err(ManifestError::Io)?;
-        let manifest: Self = serde_yaml::from_str(&content).map_err(ManifestError::Parse)?;
-        manifest.validate()?;
-        Ok(manifest)
-    }
-
-    /// Provide a manifest populated with the built-in capabilities and runtimes.
-    pub fn default() -> Self {
+    fn manifest_default() -> Self {
         let mut capabilities = vec![
             CapabilityManifestEntry::new(CAPABILITY_PROCESS),
             CapabilityManifestEntry::new(CAPABILITY_MEMORY),
@@ -108,12 +117,54 @@ impl KernelManifest {
             ),
         ];
 
+        let token_policies = vec![
+            TokenPolicyManifestEntry {
+                scope: SCOPE_HOST_ENVIRONMENT_TAKEOVER.to_string(),
+                description: Some(
+                    "Allows an actor to request exclusive control over a managed environment"
+                        .to_string(),
+                ),
+                ttl_seconds: 600,
+                capabilities: vec![
+                    CAPABILITY_PROCESS.to_string(),
+                    CAPABILITY_SECURITY.to_string(),
+                ],
+            },
+            TokenPolicyManifestEntry {
+                scope: SCOPE_HOST_RESOURCE_ARBITRATE.to_string(),
+                description: Some(
+                    "Allows an actor to arbitrate CPU/memory allocations for an environment"
+                        .to_string(),
+                ),
+                ttl_seconds: 600,
+                capabilities: vec![
+                    CAPABILITY_PROCESS.to_string(),
+                    CAPABILITY_MEMORY.to_string(),
+                    CAPABILITY_SECURITY.to_string(),
+                ],
+            },
+        ];
+
         Self {
             version: "1.0".to_string(),
             capabilities,
             runtimes,
             metadata: HashMap::new(),
+            token_policies,
         }
+    }
+    /// Load a manifest from a YAML file.
+    pub fn load_from_yaml(path: impl AsRef<Path>) -> Result<Self, ManifestError> {
+        let content = fs::read_to_string(path).map_err(ManifestError::Io)?;
+        let manifest: Self = serde_yaml::from_str(&content).map_err(ManifestError::Parse)?;
+        manifest.validate()?;
+        Ok(manifest)
+    }
+
+    /// Provide a manifest populated with the built-in capabilities and runtimes.
+    #[allow(clippy::should_implement_trait)]
+    pub fn default() -> Self {
+        Self::manifest_default()
     }
 
     /// Validate manifest invariants.
@@ -160,6 +211,30 @@ impl KernelManifest {
             }
         }
 
+        let mut scope_ids: HashSet<String> = HashSet::new();
+        for policy in &self.token_policies {
+            if !scope_ids.insert(policy.scope.clone()) {
+                return Err(ManifestError::Validation(format!(
+                    "duplicate token scope {}",
+                    policy.scope
+                )));
+            }
+            if policy.ttl_seconds == 0 {
+                return Err(ManifestError::Validation(format!(
+                    "token scope {} must specify a non-zero ttl",
+                    policy.scope
+                )));
+            }
+            for capability in &policy.capabilities {
+                if !capability_ids.contains(capability) {
+                    return Err(ManifestError::Validation(format!(
+                        "token scope {} references unknown capability {}",
+                        policy.scope, capability
+                    )));
+                }
+            }
+        }
+
         Ok(())
     }
 
@@ -171,6 +246,18 @@ impl KernelManifest {
     /// Retrieve a runtime manifest entry.
     pub fn runtime(&self, name: &str) -> Option<&RuntimeManifestEntry> {
         self.runtimes.iter().find(|runtime| runtime.name == name)
+    }
+
+    /// Retrieve a token policy entry.
+    pub fn token_policy(&self, scope: &str) -> Option<&TokenPolicyManifestEntry> {
+        self.token_policies
+            .iter()
+            .find(|policy| policy.scope == scope)
+    }
+
+    /// List all token policies defined in the manifest.
+    pub fn token_policies(&self) -> &[TokenPolicyManifestEntry] {
+        &self.token_policies
     }
 }
 
@@ -198,8 +285,32 @@ impl CapabilityManifestEntry {
             provider: None,
             version: None,
             depends_on: Vec::new(),
-            autostart: true,
+            autostart: default_autostart(),
             metadata: HashMap::new(),
+        }
+    }
+}
+
+/// Manifest entry describing a token scope policy.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TokenPolicyManifestEntry {
+    pub scope: String,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default = "default_policy_ttl")]
+    pub ttl_seconds: u64,
+    #[serde(default)]
+    pub capabilities: Vec<String>,
+}
+
+impl TokenPolicyManifestEntry {
+    /// Create a new token policy manifest entry with defaults.
+    pub fn new(scope: impl Into<String>) -> Self {
+        Self {
+            scope: scope.into(),
+            description: None,
+            ttl_seconds: default_policy_ttl(),
+            capabilities: Vec::new(),
         }
     }
 }

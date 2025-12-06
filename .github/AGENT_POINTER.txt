@@ -1,0 +1,1 @@
+Provider/agent instruction policy lives in AGENT.md. Do not place instructions elsewhere.

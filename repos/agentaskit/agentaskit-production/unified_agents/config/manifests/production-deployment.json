@@ -1,0 +1,256 @@
+{
+  "version": "1.0",
+  "deployment": {
+    "name": "production-multi-agent-system",
+    "environment": "production",
+    "description": "Production deployment of Multi-Agent AgenticAI Task Deployment Kit with 100 agents across six hierarchical layers",
+    "tags": ["production", "hierarchy", "autonomous"],
+    "created_by": "agentaskit-admin",
+    "created_at": "2025-10-05T00:00:00Z"
+  },
+  "configuration": {
+    "mode": "supervised",
+    "scaling": {
+      "auto_scale": true,
+      "min_agents": 50,
+      "max_agents": 500,
+      "scale_up_threshold": 80,
+      "scale_down_threshold": 20
+    },
+    "security": {
+      "token_duration": "24h",
+      "audit_retention": "30d",
+      "compliance_monitoring": true
+    },
+    "monitoring": {
+      "metrics_retention": "7d",
+      "alert_retention": "30d",
+      "health_check_interval": "30s"
+    }
+  },
+  "agents": [
+    {
+      "name": "CECCA-Supreme-001",
+      "layer": "CECCA",
+      "capabilities": [
+        "strategic_planning",
+        "system_authority",
+        "cross_organizational_coordination",
+        "emergency_decision_making",
+        "resource_allocation"
+      ],
+      "resource_requirements": {
+        "cpu_cores": 4.0,
+        "memory_mb": 8192,
+        "storage_mb": 10240,
+        "network_bandwidth_mbps": 100
+      },
+      "configuration": {
+        "startup_delay": "0s",
+        "health_check_timeout": "30s",
+        "task_timeout": "30m",
+        "retry_attempts": 3
+      },
+      "metadata": {
+        "priority": "highest",
+        "description": "Supreme command and control agent"
+      }
+    },
+    {
+      "name": "Board-Governance-001",
+      "layer": "Board",
+      "capabilities": [
+        "policy_enforcement",
+        "governance_oversight",
+        "compliance_monitoring",
+        "risk_assessment",
+        "ethics_validation"
+      ],
+      "resource_requirements": {
+        "cpu_cores": 2.0,
+        "memory_mb": 4096,
+        "storage_mb": 5120,
+        "network_bandwidth_mbps": 50
+      },
+      "escalation_path": "CECCA-Supreme-001",
+      "configuration": {
+        "startup_delay": "5s",
+        "health_check_timeout": "15s",
+        "task_timeout": "15m",
+        "retry_attempts": 2
+      },
+      "metadata": {
+        "priority": "high",
+        "description": "Primary governance oversight agent"
+      }
+    },
+    {
+      "name": "Executive-Operations-001",
+      "layer": "Executive",
+      "capabilities": [
+        "operational_coordination",
+        "task_orchestration",
+        "resource_management",
+        "performance_monitoring",
+        "emergency_response"
+      ],
+      "resource_requirements": {
+        "cpu_cores": 2.0,
+        "memory_mb": 4096,
+        "storage_mb": 5120,
+        "network_bandwidth_mbps": 50
+      },
+      "escalation_path": "Board-Governance-001",
+      "configuration": {
+        "startup_delay": "10s",
+        "health_check_timeout": "10s",
+        "task_timeout": "10m",
+        "retry_attempts": 2
+      },
+      "metadata": {
+        "priority": "high",
+        "description": "Primary operations coordinator"
+      }
+    }
+  ],
+  "agent_groups": [
+    {
+      "name": "board-layer-agents",
+      "template": {
+        "name": "Board-Agent",
+        "layer": "Board",
+        "capabilities": [
+          "policy_enforcement",
+          "governance_oversight",
+          "compliance_monitoring",
+          "risk_assessment"
+        ],
+        "resource_requirements": {
+          "cpu_cores": 2.0,
+          "memory_mb": 4096,
+          "storage_mb": 5120,
+          "network_bandwidth_mbps": 50
+        },
+        "escalation_path": "CECCA-Supreme-001",
+        "configuration": {
+          "startup_delay": "5s",
+          "health_check_timeout": "15s",
+          "task_timeout": "15m",
+          "retry_attempts": 2
+        }
+      },
+      "count": 4,
+      "naming_pattern": "Board-Agent-{index:03d}"
+    },
+    {
+      "name": "executive-layer-agents",
+      "template": {
+        "name": "Executive-Agent",
+        "layer": "Executive",
+        "capabilities": [
+          "operational_coordination",
+          "task_orchestration",
+          "resource_management",
+          "performance_monitoring"
+        ],
+        "resource_requirements": {
+          "cpu_cores": 2.0,
+          "memory_mb": 4096,
+          "storage_mb": 5120,
+          "network_bandwidth_mbps": 50
+        },
+        "configuration": {
+          "startup_delay": "10s",
+          "health_check_timeout": "10s",
+          "task_timeout": "10m",
+          "retry_attempts": 2
+        }
+      },
+      "count": 9,
+      "naming_pattern": "Executive-Agent-{index:03d}"
+    },
+    {
+      "name": "stack-chief-agents",
+      "template": {
+        "name": "StackChief-Agent",
+        "layer": "StackChief",
+        "capabilities": [
+          "domain_leadership",
+          "subject_matter_expertise",
+          "team_coordination",
+          "workflow_orchestration"
+        ],
+        "resource_requirements": {
+          "cpu_cores": 1.5,
+          "memory_mb": 2048,
+          "storage_mb": 2560,
+          "network_bandwidth_mbps": 25
+        },
+        "configuration": {
+          "startup_delay": "15s",
+          "health_check_timeout": "10s",
+          "task_timeout": "5m",
+          "retry_attempts": 2
+        }
+      },
+      "count": 20,
+      "naming_pattern": "StackChief-Agent-{index:03d}"
+    },
+    {
+      "name": "specialist-agents",
+      "template": {
+        "name": "Specialist-Agent",
+        "layer": "Specialist",
+        "capabilities": [
+          "deep_domain_expertise",
+          "complex_analysis",
+          "system_integration",
+          "advanced_processing",
+          "decision_support"
+        ],
+        "resource_requirements": {
+          "cpu_cores": 1.0,
+          "memory_mb": 1024,
+          "storage_mb": 1280,
+          "network_bandwidth_mbps": 10
+        },
+        "configuration": {
+          "startup_delay": "20s",
+          "health_check_timeout": "5s",
+          "task_timeout": "3m",
+          "retry_attempts": 1
+        }
+      },
+      "count": 30,
+      "naming_pattern": "Specialist-Agent-{index:03d}"
+    },
+    {
+      "name": "micro-agents",
+      "template": {
+        "name": "Micro-Agent",
+        "layer": "Micro",
+        "capabilities": [
+          "task_execution",
+          "atomic_operations",
+          "parallel_processing",
+          "rule_based_actions",
+          "resource_efficiency"
+        ],
+        "resource_requirements": {
+          "cpu_cores": 0.25,
+          "memory_mb": 256,
+          "storage_mb": 512,
+          "network_bandwidth_mbps": 5
+        },
+        "configuration": {
+          "startup_delay": "30s",
+          "health_check_timeout": "5s",
+          "task_timeout": "1m",
+          "retry_attempts": 1
+        }
+      },
+      "count": 35,
+      "naming_pattern": "Micro-Agent-{index:03d}"
+    }
+  ]
+}

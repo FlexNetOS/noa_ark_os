@@ -9,6 +9,8 @@ use std::sync::RwLock;
 
 use crate::capabilities::{CapabilityError, CapabilityResult};
 use crate::config::manifest::{RuntimeKind, RuntimeManifestEntry};
+use crate::kernel::{self, AiControlLoop, MachineRemediationDirective};
+use crate::metrics::AggregatedTelemetry;
 
 /// Runtime plugin state tracked by the kernel.
 #[derive(Debug, Clone)]
@@ -49,6 +51,48 @@ impl RuntimePlugin {
 pub struct RuntimeManager {
     plugins: RwLock<HashMap<String, RuntimePlugin>>,
     boot_order: RwLock<Vec<String>>,
+}
+
+/// Execution policy derived from kernel telemetry for runtime schedulers.
+#[derive(Debug, Clone)]
+pub struct MachineExecutionPolicy {
+    pub directive: MachineRemediationDirective,
+    pub telemetry: Option<AggregatedTelemetry>,
+    pub active_runtimes: Vec<RuntimePlugin>,
+}
+
+impl MachineExecutionPolicy {
+    pub fn prefer_machine(&self) -> bool {
+        self.directive.prefer_machine()
+    }
+}
+
+/// Trait bridging runtime managers with the kernel control loop interface.
+pub trait RuntimeControlLoop {
+    fn machine_execution_policy(&self) -> MachineExecutionPolicy;
+}
+
+impl RuntimeControlLoop for RuntimeManager {
+    fn machine_execution_policy(&self) -> MachineExecutionPolicy {
+        let (directive, telemetry) = if let Some(handle) = kernel::handle() {
+            let snapshot = handle.agent_health_snapshot();
+            (snapshot.directive(), snapshot.telemetry)
+        } else {
+            (MachineRemediationDirective::default(), None)
+        };
+
+        let active_runtimes = self
+            .all_runtimes()
+            .into_iter()
+            .filter(|runtime| runtime.status == RuntimeStatus::Running)
+            .collect();
+
+        MachineExecutionPolicy {
+            directive,
+            telemetry,
+            active_runtimes,
+        }
+    }
 }
 
 impl RuntimeManager {
@@ -137,7 +181,7 @@ impl RuntimeManager {
                 *in_degree.entry(plugin.name.clone()).or_insert(0) += 1;
                 adjacency
                     .entry(dependency.clone())
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push(plugin.name.clone());
             }
         }

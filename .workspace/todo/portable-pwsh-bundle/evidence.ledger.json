@@ -1,0 +1,112 @@
+{
+  "task": "Portable PowerShell Bundle",
+  "timestamp_utc": "2025-11-21T16:04:54Z",
+  "artifacts": [
+    {
+      "id": "A1-manifest",
+      "path": "server/tools/pwsh-portable.manifest.json",
+      "sha256": "d34317bef0eb9bb49fbc2cf0a37c055c24d1706b068376b451bf48d569b1545e",
+      "notes": "Multi-platform manifest (Linux + macOS + Windows) generated via --include-desktop."
+    },
+    {
+      "id": "A2-setup-sh",
+      "path": "server/tools/setup-portable-pwsh.sh",
+      "sha256": "7b7ca19931d1e5c196d95b8c5d143f26fbd94f416693ba152dc88ccb0a707ec6",
+      "notes": "Bash helper updated with --include-desktop/PWSH_INCLUDE_DESKTOP support."
+    },
+    {
+      "id": "A3-setup-ps1",
+      "path": "server/tools/setup-portable-pwsh.ps1",
+      "sha256": "1f90c10cdf6f24f29aabd43012873fd4ba82e3e798043323e895581391213689",
+      "notes": "PowerShell variant mirrors the desktop inclusion logic."
+    },
+    {
+      "id": "A4-activate-toolchains",
+      "path": "server/tools/activate-toolchains.sh",
+      "sha256": "c39f2e7e7ae6be3fad6be480a102e735dc6716db1c51e5ce9460ac806bf95d92",
+      "notes": "Chains pwsh/cargo/node activation, guards against double-runs, exports NOA_TOOLCHAINS_ACTIVATED, and tags NOA_TOOLCHAINS_CHAINING so child activators know they were invoked via the wrapper."
+    },
+    {
+      "id": "A5-duplicate-guard",
+      "path": "scripts/lib/ensure_no_duplicate_tasks.sh",
+      "sha256": "8d50332d56e0c21a32d0814f78acdc83333a90b49a101ebeba746e2de90ff658",
+      "notes": "Runs the checker with --ensure-exec --require-current and points to setup-portable-pwsh.sh --include-desktop on failure."
+    },
+    {
+      "id": "A6-checker",
+      "path": "tools/automation/check_portable_pwsh.py",
+      "sha256": "9e23e6ba0ee4a1a6fab2a7ae0678390f3d3990fd85b896142fa686399b34766b",
+      "notes": "Now emits manifest hashes, resolved current links, and honors --require-current."
+    },
+    {
+      "id": "A7-launcher",
+      "path": "scripts/full_stack_launch.sh",
+      "sha256": "b093420e9aafce23e7b66ceadf26ac2c8fde060fbd377a3f3605878f4ec16746",
+      "notes": "Phase summary now lists manifest/binary/current hashes plus NOA_PWSH/NOA_TOOLCHAINS flags and the active PowerShell binary; CUDA/Llama prep still respects Linux PowerShell."
+    },
+    {
+      "id": "A8-llama-setup",
+      "path": "scripts/dev/setup-llama-cpp.ps1",
+      "sha256": "0cd61c7de310792d487ed83e908afdeb58847b7dc6a000063a83118a2f8d6d8f",
+      "notes": "PowerShell script provisions Linux binaries and updates the start script template."
+    },
+    {
+      "id": "A9-llama-start",
+      "path": "scripts/dev/start-llama-server.ps1",
+      "sha256": "9b3a567981cc340ae7d436a651ce89a6bd272dd62eeb608362ddcd351f563750",
+      "notes": "Runtime launcher now detects platform, applies chmod on Linux, and omits the invalid --log-format flag."
+    },
+    {
+      "id": "A10-placeholder-gguf",
+      "path": "server/ai/llama-cpp/models/Llama-3.2-3B-Instruct.Q4_K_M.gguf",
+      "sha256": "7aa2ea7d25884c612779857bf2848870ae28e4d033e559fc5e63275e192d58ec",
+      "notes": "Tiny placeholder so automation can confirm llama assets exist; not a production-ready model."
+    },
+    {
+      "id": "A11-activate-cargo",
+      "path": "server/tools/activate-cargo-wsl.sh",
+      "sha256": "a7bdfbfa421b6c3df1ead9ed7a052b2d9580915a4b513fe370a18436923df141",
+      "notes": "When invoked directly it now reroutes through activate-toolchains.sh (unless explicitly disabled) so Cargo activation always happens alongside pwsh/node evidence logging."
+    },
+    {
+      "id": "A12-activate-node",
+      "path": "server/tools/activate-node.sh",
+      "sha256": "9c3c3fa1b965b6e041ef63c7158b6dc4da7a1b5d0906bb2e7fe0c99ff50ae6c3",
+      "notes": "Matches the Cargo script: redirects to activate-toolchains.sh and only falls back to legacy behavior when the wrapper is missing or explicitly disabled."
+    }
+  ],
+  "commands": [
+    {
+      "id": "CMD-checker",
+      "cwd": "/home/noa/dev/workspace/noa_ark_os/noa_ark_os",
+      "command": "python3 tools/automation/check_portable_pwsh.py --platform linux-x64 --ensure-exec --require-current --output json",
+      "exit_code": 0,
+      "timestamp_utc": "2025-11-21T16:05:30Z",
+      "notes": "Validated manifest hash, binary hash, binary/current symlink paths, and recorded exec output (PowerShell 7.4.5)."
+    },
+    {
+      "id": "CMD-duplicate-guard",
+      "cwd": "/home/noa/dev/workspace/noa_ark_os/noa_ark_os",
+      "command": "scripts/lib/ensure_no_duplicate_tasks.sh",
+      "exit_code": 0,
+      "timestamp_utc": "2025-11-21T16:06:00Z",
+      "notes": "Anti-duplication guard emitted the refreshed portable_pwsh_manifest claim (status=ok, manifest sha d34317..., binary_link/current_link now recorded, exec PowerShell 7.4.5)."
+    },
+    {
+      "id": "CMD-llama-setup",
+      "cwd": "/home/noa/dev/workspace/noa_ark_os/noa_ark_os",
+      "command": "$POWERSHELL_BIN -NoProfile -ExecutionPolicy Bypass -File scripts/dev/setup-llama-cpp.ps1 -SkipModelDownload -WorkspaceRoot .",
+      "exit_code": 0,
+      "timestamp_utc": "2025-11-21T15:20:00Z",
+      "notes": "Downloaded Linux llama.cpp binaries via portable PowerShell without pulling large GGUFs."
+    },
+    {
+      "id": "CMD-launcher",
+      "cwd": "/home/noa/dev/workspace/noa_ark_os/noa_ark_os",
+      "command": "bash scripts/full_stack_launch.sh --prepare-only --skip-tests --skip-docker --skip-make --skip-notebook --cuda-mode auto --llama-mode auto --master-controller-mode skip --pipeline-mode skip",
+      "exit_code": 0,
+      "timestamp_utc": "2025-11-21T15:59:53Z",
+      "notes": "Prepare run captured pwsh-activation.json with env flags + manifest hash, exercised CUDA/Llama phases under Linux PowerShell, and logged the new phase summary output."
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "api_keys": "${GATEWAY_API_KEYS}",
+  "mtls": {
+    "allowed_fingerprints": "${GATEWAY_MTLS_ALLOWED_FINGERPRINTS}",
+    "agent_san_prefix": "${GATEWAY_MTLS_AGENT_SAN_PREFIX}",
+    "control_plane_san": "${GATEWAY_MTLS_CONTROL_PLANE_SAN}"
+  },
+  "oidc": {
+    "issuer": "${GATEWAY_OIDC_ISSUER}",
+    "audience": "${GATEWAY_OIDC_AUDIENCE}",
+    "hs256_secret": "${GATEWAY_OIDC_HS256_SECRET}"
+  }
+}

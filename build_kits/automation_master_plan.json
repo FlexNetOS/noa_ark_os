@@ -1,0 +1,150 @@
+[
+  {
+    "code": "AMP-BOOT-01",
+    "title": "Automate Quickstart bootstrapper",
+    "theme": "Quickstart bootstrap automation",
+    "description": "Automate the Quickstart bootstrap orchestrator so provisioning, configuration seeding, and telemetry export execute without manual intervention.",
+    "priority": "P0",
+    "status": "Proposed",
+    "depends_on": [],
+    "acceptance_criteria": [
+      "Clean-room bootstrap completes without manual actions.",
+      "Telemetry exports are ingested into monitoring dashboards for every run."
+    ]
+  },
+  {
+    "code": "AMP-MREG-02",
+    "title": "Implement model registry updater automation",
+    "theme": "Model lifecycle automation",
+    "description": "Deliver a scheduled model registry updater that reconciles metadata changes, validates schemas, and emits change events to downstream consumers.",
+    "priority": "P0",
+    "status": "Proposed",
+    "depends_on": [
+      "AMP-BOOT-01"
+    ],
+    "acceptance_criteria": [
+      "Registry updates run on schedule without operator input.",
+      "Invalid metadata is quarantined with actionable alerts.",
+      "Change events deliver to subscribers within one minute."
+    ]
+  },
+  {
+    "code": "AMP-GHCLI-03",
+    "title": "Bundle offline GitHub CLI installer",
+    "theme": "Developer toolchain resilience",
+    "description": "Ship an offline-ready GitHub CLI bundle with checksum verification, automated configuration, and diagnostics suited for air-gapped deployments.",
+    "priority": "P0",
+    "status": "Proposed",
+    "depends_on": [
+      "AMP-BOOT-01"
+    ],
+    "acceptance_criteria": [
+      "Installer completes on air-gapped hosts without network access.",
+      "Diagnostics confirm CLI functionality against internal mirrors.",
+      "Checksum validation blocks tampered artifacts."
+    ]
+    "area": "Build",
+    "subsystem": "Developer onboarding",
+    "hitl_path": "scripts/dev/quickstart.sh prompt",
+    "hitl_type": "confirm",
+    "proposed_automation": "Extend script into runa bootstrap --auto pipeline that runs cargo build/test/demo non-interactively, captures logs, and asks triage AI to summarize failures into tools/offline_pr_queue/logs/quickstart.",
+    "ai_role": "triage",
+    "offline_mechanism": "Local runa CLI + llama.cpp summarizer",
+    "online_feature_flag": "ONLINE_GITHUB_MODE",
+    "risks": "AI misclassification of failure context",
+    "acceptance_criteria": [
+      "runa bootstrap --auto exits non-zero on failure and writes summary/report without pausing for input."
+    ],
+    "depends_on": ["runa-cli-core", "ai-provider-abstraction"]
+  },
+  {
+    "area": "Release",
+    "subsystem": "CRC integration",
+    "hitl_path": "cicd/pipelines/crc-auto.yaml quality_gate manual review",
+    "hitl_type": "review",
+    "proposed_automation": "Introduce policy engine evaluating metrics + AI triage on logs to auto-decide pass/fail, escalating only when confidence <0.9; decisions recorded in crc/logs/quality_gate.jsonl.",
+    "ai_role": "triage",
+    "offline_mechanism": "Offline CRC runner with cached metrics fixtures",
+    "online_feature_flag": "ONLINE_GITHUB_MODE",
+    "risks": "False green if metrics spoofed",
+    "acceptance_criteria": [
+      "Gate auto-passes when metrics meet thresholds and AI score ≥0.9, else creates escalation artifact."
+    ],
+    "depends_on": ["runa-cli-core", "ai-provider-abstraction", "offline-ci-runner"]
+  },
+  {
+    "area": "Operations",
+    "subsystem": "Relocation daemon",
+    "hitl_path": "apps/cli approve subcommand",
+    "hitl_type": "approve",
+    "proposed_automation": "Build rule-based evaluator + AI triage to auto-approve safe actions via runa relocation auto-approve, logging verdicts under .workspace/relocation/logs.",
+    "ai_role": "triage",
+    "offline_mechanism": "Local policy engine + llama.cpp review",
+    "online_feature_flag": "RELOCATION_SYNC_MODE",
+    "risks": "Over-approving risky relocations",
+    "acceptance_criteria": [
+      "100% approvals include policy decision log, AI confidence, and rollback command; risky cases queued for manual."
+    ],
+    "depends_on": ["ai-provider-abstraction", "policy-engine-core"]
+  },
+  {
+    "area": "Build",
+    "subsystem": "Merge tooling",
+    "hitl_path": "workflow/flows/merge/README.md manual conflict resolution",
+    "hitl_type": "runbook",
+    "proposed_automation": "Implement runa merge --auto that replays merge, uses AI code reviewer to draft patches, and reruns verification before updating queue.",
+    "ai_role": "code review",
+    "offline_mechanism": "Git worktree sandbox + llama.cpp diff assistant",
+    "online_feature_flag": "ONLINE_GITHUB_MODE",
+    "risks": "Incorrect conflict resolution",
+    "acceptance_criteria": [
+      "Auto-merge succeeds for ≥95% historical conflict cases in dry-run tests; failures create structured TODO with suggested edits."
+    ],
+    "depends_on": ["runa-cli-core", "ai-provider-abstraction", "offline-ci-runner"]
+  },
+  {
+    "area": "Release",
+    "subsystem": "Documentation",
+    "hitl_path": "docs/plans/gap_remediation_tasks.md release notes drafting",
+    "hitl_type": "doc writer",
+    "proposed_automation": "Generate release notes via runa release notes --from-ledger, feeding merged PR ledger into doc-drafter AI, storing drafts under docs/releases/drafts/.",
+    "ai_role": "doc writer",
+    "offline_mechanism": "Local llama.cpp doc generator + Markdown templates",
+    "online_feature_flag": "ONLINE_GITHUB_MODE",
+    "risks": "Inaccurate summaries",
+    "acceptance_criteria": [
+      "Every release run produces draft + diff summary + acceptance checklist; human edit optional but not required."
+    ],
+    "depends_on": ["runa-cli-core", "ai-provider-abstraction", "offline-pr-ledger"]
+  },
+  {
+    "area": "Infrastructure",
+    "subsystem": "Model registry",
+    "hitl_path": "tools/ai/ollama_manager.sh manual registry edit when yq missing",
+    "hitl_type": "config",
+    "proposed_automation": "Add embedded YAML updater (python -m ruamel.yaml fallback) and AI triage to validate registry diffs, preventing manual edits.",
+    "ai_role": "triage",
+    "offline_mechanism": "Bundled Python fallback + llama.cpp diff validator",
+    "online_feature_flag": "AI_PROVIDER",
+    "risks": "Registry corruption if parser fails",
+    "acceptance_criteria": [
+      "Command updates registry atomically and writes validation report; manual edit no longer required."
+    ],
+    "depends_on": ["offline-python-runtime", "ai-provider-abstraction"]
+  },
+  {
+    "area": "Infrastructure",
+    "subsystem": "Tooling bootstrap",
+    "hitl_path": "scripts/install_gh_cli.sh manual install fallback",
+    "hitl_type": "runbook",
+    "proposed_automation": "Ship cached GH CLI tarballs under tools/offline_cache/gh/ with runa tools install gh wrapper; AI triage suggests platform-specific fix if install fails.",
+    "ai_role": "triage",
+    "offline_mechanism": "Offline artifact cache + checksum verification",
+    "online_feature_flag": "ONLINE_GITHUB_MODE",
+    "risks": "Stale binaries on new platforms",
+    "acceptance_criteria": [
+      "Installer succeeds offline for supported OS; mismatches raise actionable AI suggestion."
+    ],
+    "depends_on": ["offline-artifact-cache", "ai-provider-abstraction"]
+  }
+]

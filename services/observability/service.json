@@ -1,0 +1,5 @@
+{
+  "id": "observability",
+  "version": "0.5.0",
+  "interfaces": ["metrics-export", "logs-export"]
+}

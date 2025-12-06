@@ -8,6 +8,7 @@ pub struct RenderFrame<'a> {
     pub chrome: &'a ShellChrome,
 }
 
+#[allow(clippy::module_inception)]
 pub mod renderer {
     use super::*;
 

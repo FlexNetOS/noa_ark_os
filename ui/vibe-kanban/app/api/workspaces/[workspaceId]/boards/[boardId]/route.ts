@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
 
-import { assertUser } from "../../../../lib/session";
-import { getBoard, getWorkspace, removeBoard, saveBoard } from "../../../../../server/workspace-store";
-import { workspaceEventHub } from "../../../../../server/workspace-events";
-import type { WorkspaceBoard } from "../../../../components/board-types";
+import { assertUser } from "@/app/lib/session";
+import { getBoard, getWorkspace, removeBoard, saveBoard } from "@/server/workspace-store";
+import { workspaceEventHub } from "@/server/workspace-events";
+import type { WorkspaceBoard } from "@/app/components/board-types";
 
 export async function GET(
   _request: Request,
   { params }: { params: { workspaceId: string; boardId: string } }
 ) {
-  const user = assertUser();
+  const user = await assertUser();
   const workspace = await getWorkspace(params.workspaceId);
   if (!workspace || !workspace.members.some((member) => member.id === user.id)) {
     return new NextResponse("Not Found", { status: 404 });
@@ -25,7 +25,7 @@ export async function PUT(
   request: Request,
   { params }: { params: { workspaceId: string; boardId: string } }
 ) {
-  const user = assertUser();
+  const user = await assertUser();
   const workspace = await getWorkspace(params.workspaceId);
   if (!workspace) {
     return new NextResponse("Not Found", { status: 404 });
@@ -62,7 +62,7 @@ export async function DELETE(
   _request: Request,
   { params }: { params: { workspaceId: string; boardId: string } }
 ) {
-  const user = assertUser();
+  const user = await assertUser();
   const workspace = await getWorkspace(params.workspaceId);
   if (!workspace) {
     return new NextResponse("Not Found", { status: 404 });

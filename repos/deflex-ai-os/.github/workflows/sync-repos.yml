@@ -1,0 +1,74 @@
+name: Sync Starred Repositories
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # Every 6 hours
+  workflow_dispatch:
+    inputs:
+      repos:
+        description: 'Comma-separated list of repos to sync (owner/name format)'
+        required: false
+        type: string
+
+jobs:
+  sync-repos:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Git
+        run: |
+          git config user.name "FlexNetOS Bot"
+          git config user.email "bot@flexnetos.dev"
+      
+      - name: Sync Subtree Repositories
+        run: |
+          # List of repos to sync as subtrees
+          SUBTREE_REPOS=(
+            "axum-rs/axum:vendor/axum"
+            "tokio-rs/tokio:vendor/tokio"
+            "DioxusLabs/dioxus:vendor/dioxus"
+            "cloudflare/pingora:vendor/pingora"
+            "huggingface/candle:vendor/candle"
+            "tracel-ai/burn:vendor/burn"
+          )
+          
+          for repo_mapping in "${SUBTREE_REPOS[@]}"; do
+            IFS=':' read -r repo local_path <<< "$repo_mapping"
+            echo "Syncing $repo to $local_path"
+            
+            if [ ! -d "$local_path" ]; then
+              git subtree add --prefix="$local_path" "https://github.com/$repo.git" main --squash
+            else
+              git subtree pull --prefix="$local_path" "https://github.com/$repo.git" main --squash || true
+            fi
+          done
+      
+      - name: Update Submodules
+        run: |
+          # Initialize and update submodules
+          git submodule update --init --recursive --remote
+      
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore: sync external repositories'
+          title: '[Auto] Sync External Repositories'
+          body: |
+            This PR automatically syncs external repositories.
+            
+            - Updates git subtrees for vendored dependencies
+            - Updates git submodules to latest commits
+            
+            Please review changes before merging.
+          branch: auto-sync/repos
+          delete-branch: true

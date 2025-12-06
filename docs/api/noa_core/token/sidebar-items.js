@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["TokenError"],"fn":["configure_from_manifest","global_service","issuance_counter","service"],"struct":["CapabilityTokenService","ScopeToken","TokenIssuanceRequest","TokenPolicy","TokenStore"]};

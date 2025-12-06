@@ -12,8 +12,12 @@ import { IntegrationStatus } from "./IntegrationStatus";
 import { BoardShell } from "./BoardShell";
 import { PresenceBar } from "./PresenceBar";
 import { AssistPanel } from "./AssistPanel";
+import { PlannerPanel } from "./PlannerPanel";
+import { AutomationPanel } from "./AutomationPanel";
+import { UploadPanel } from "./UploadPanel";
 import { AnalyticsPanel } from "./AnalyticsPanel";
 import { ActivityTimeline } from "./ActivityTimeline";
+import { isFeatureEnabled } from "./featureFlags";
 import type { BoardState } from "./useBoardState";
 import type { SessionState } from "./useSession";
 
@@ -25,6 +29,7 @@ export interface SchemaDrivenRendererProps {
       session: SessionState;
       resumeToken?: ResumeToken;
     };
+    resumeWorkflow?: (token: ResumeToken) => void;
   };
 }
 
@@ -124,19 +129,48 @@ const widgetRegistry = {
       </WidgetSurface>
     );
   },
-  "workspace.assist": ({ context }: ComponentRenderProps) => {
+  "workspace.planner": ({ context }: ComponentRenderProps) => {
     const { boardState } = context.data as SchemaDrivenRendererProps["context"]["data"];
     return (
       <WidgetSurface>
-        <AssistPanel assist={boardState.assist} onRequest={boardState.requestAssist} />
+        <PlannerPanel insights={boardState.goalInsights} onRefresh={boardState.refreshBoard} loading={boardState.loading} />
       </WidgetSurface>
     );
   },
-  "workspace.analytics": ({ context }: ComponentRenderProps) => {
+  "workspace.assist": ({ context }: ComponentRenderProps) => {
+    const { boardState } = context.data as SchemaDrivenRendererProps["context"]["data"];
+    const assistGate = boardState.capabilities.featureGates.find(
+      (gate) => gate.id === "kanban.assist"
+    );
+    return (
+      <WidgetSurface>
+        <AssistPanel
+          assist={boardState.assist}
+          onRequest={boardState.requestAssist}
+          capability={assistGate}
+          loading={boardState.capabilities.loading}
+        />
+      </WidgetSurface>
+    );
+  },
+  "workspace.uploads": ({ context }: ComponentRenderProps) => {
     const { boardState } = context.data as SchemaDrivenRendererProps["context"]["data"];
     return (
       <WidgetSurface>
-        <AnalyticsPanel board={boardState.snapshot} />
+        <UploadPanel state={boardState} />
+      </WidgetSurface>
+    );
+  },
+  // removed duplicate planner widget using unsupported props
+  "workspace.analytics": ({ context }: ComponentRenderProps) => {
+    const { boardState } = context.data as SchemaDrivenRendererProps["context"]["data"];
+    const enableGoalInsights =
+      isFeatureEnabled("goalInsights") &&
+      !boardState.capabilities.loading &&
+      boardState.capabilities.has("kanban.goalInsights");
+    return (
+      <WidgetSurface>
+        <AnalyticsPanel board={boardState.snapshot} enableGoalInsights={enableGoalInsights} />
       </WidgetSurface>
     );
   },
@@ -145,6 +179,15 @@ const widgetRegistry = {
     return (
       <WidgetSurface>
         <ActivityTimeline activity={boardState.activity} />
+      </WidgetSurface>
+    );
+  },
+  "workspace.automation": ({ context }: ComponentRenderProps) => {
+    const { boardState } = context.data as SchemaDrivenRendererProps["context"]["data"];
+    const cards = boardState.snapshot?.columns.flatMap((column) => column.goals) ?? [];
+    return (
+      <WidgetSurface>
+        <AutomationPanel cards={cards} onRetry={boardState.retryAutomation} />
       </WidgetSurface>
     );
   },
