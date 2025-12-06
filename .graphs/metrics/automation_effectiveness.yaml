@@ -1,0 +1,102 @@
+# Automation Effectiveness Dashboard
+version: 1
+owner: automation-observability
+last_reviewed: 2024-05-01
+panels:
+  - id: relocation-guardrails
+    title: "Relocation Guardrail Compliance"
+    description: "Tracks execution quality of storage relocation automation"
+    queries:
+      - metric: relocation.execution.success_rate
+        statistic: avg
+        window: 24h
+        unit: ratio
+        notes: "Higher is better; measures successful batch transfers over total"
+      - metric: relocation.validation.checksum_mismatch
+        statistic: sum
+        window: 24h
+        unit: count
+        notes: "Rolling sum of checksum mismatches discovered during validation"
+    thresholds:
+      success_rate:
+        warning: 0.97
+        critical: 0.95
+        unit: ratio
+        rationale: "Below 95% indicates relocation guardrails failing consistently"
+      checksum_mismatch:
+        warning: 1
+        critical: 3
+        unit: count
+        rationale: "Any mismatch requires follow-up; three indicates systemic drift"
+
+  - id: documentation-recovery
+    title: "Documentation Recovery Throughput"
+    description: "Monitors documentation regeneration speed and quality"
+    queries:
+      - metric: docs.regeneration.runtime_minutes
+        statistic: p95
+        window: 7d
+        unit: minutes
+        notes: "Time for automation to regenerate authoritative documentation"
+      - metric: docs.validation.review_latency_minutes
+        statistic: p75
+        window: 7d
+        unit: minutes
+        notes: "Measures stakeholder review cycle time for regenerated docs"
+      - metric: docs.incident.ttd_minutes
+        statistic: avg
+        window: 7d
+        unit: minutes
+        notes: "Mean time to detect documentation regressions from telemetry"
+    thresholds:
+      runtime_minutes:
+        warning: 30
+        critical: 45
+        unit: minutes
+        rationale: "Regeneration past 45 minutes risks breaching recovery targets"
+      review_latency_minutes:
+        warning: 60
+        critical: 90
+        unit: minutes
+        rationale: "Reviews beyond 90 minutes create outage risk for dependent teams"
+      ttd_minutes:
+        warning: 20
+        critical: 30
+        unit: minutes
+        rationale: "Detection lag over 30 minutes degrades response readiness"
+
+  - id: automation-roi
+    title: "Automation ROI Snapshot"
+    description: "Compares automation investment to realized savings"
+    queries:
+      - metric: automation.roi.hours_saved
+        statistic: sum
+        window: 30d
+        unit: hours
+        notes: "Engineering hours avoided through automation-assisted recovery"
+      - metric: automation.roi.cost_avoidance_usd
+        statistic: sum
+        window: 30d
+        unit: usd
+        notes: "Financial impact of automated relocations and doc recovery"
+      - metric: automation.roi.incidents_avoided
+        statistic: sum
+        window: 30d
+        unit: count
+        notes: "Simulated incidents avoided via proactive automation guardrails"
+    thresholds:
+      hours_saved:
+        warning: 120
+        critical: 80
+        unit: hours
+        rationale: "Below 80 hours saved indicates diminishing automation returns"
+      cost_avoidance_usd:
+        warning: 25000
+        critical: 15000
+        unit: usd
+        rationale: "Falling under $15k suggests automation cost exceeds benefit"
+      incidents_avoided:
+        warning: 5
+        critical: 2
+        unit: count
+        rationale: "Less than two avoided incidents signals guardrail coverage gaps"

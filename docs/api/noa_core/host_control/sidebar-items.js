@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["HostControlError"],"fn":["global_host_control","service"],"struct":["EnvironmentLease","HostControlService","LeaseStore","ResourceArbitrationDecision","ResourceArbitrationRequest"]};

@@ -1,0 +1,9 @@
+{
+  "node_version": "20.19.5",
+  "pnpm_version": "8.15.4",
+  "platform": "linux-x64",
+  "node_archive": "node-v20.19.5-linux-x64.tar.xz",
+  "node_sha256": "8d01d4c50e7a9047d70196f8fc6f1b165069065b44bd9402491544bd70586c7d",
+  "pnpm_sha256": "7d26cc57186850a2d71ab77da7cf52ff0eeabf680ac446c8da2324aa63808aac",
+  "generated_at": "2025-11-15T03:56:00Z"
+}

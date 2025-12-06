@@ -1,0 +1,2 @@
+# Defer to AGENT.md
+Use AGENT.md at repo root as the sole policy and instruction source. Do not duplicate logic here.

@@ -1,0 +1,6 @@
+Reward entries: 0
+Average reward: 0.00
+Coverage average: 0.00
+Flake average: 0.00
+Token average: 0.00
+Rollback average: 0.00

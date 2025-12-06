@@ -4,6 +4,12 @@
 
 Development tools and system utilities for NOA ARK OS workspace management.
 
+### Automated planner inputs
+
+All agent tooling that assembles work queues must read `docs/tasks/index.json` for authoritative roadmap tasks. The
+companion validator (`python tools/task_index_validator.py`) ensures the schema, dependencies, and owning file references
+stay consistent before automation consumes the data.
+
 ## 🧹 Maintenance Scripts (`maintenance/`)
 
 The CRC `scripts-1` drop has been adapted into curated maintenance helpers:
@@ -14,6 +20,23 @@ The CRC `scripts-1` drop has been adapted into curated maintenance helpers:
 - `pre_commit_check.sh` – optional pre-commit hygiene (fmt, clippy, large file scan, metrics).
 
 Run via WSL/Git Bash, e.g. `bash tools/maintenance/daily_maintenance.sh`.
+
+
+## 📦 Portable Distribution Builder
+
+- `portable_builder.py` – assembles kernel capabilities, runtimes, AI assets, and
+  application packages into reproducible bundles. The script reads the kernel
+  manifest (`core/config/default_manifest.yaml`) and emits bundle metadata,
+  deterministic lock hashes, and target descriptors for OCI/WASI archives.
+
+**Usage**:
+
+```bash
+python tools/portable_builder.py --output build/portable
+```
+
+CI automation can run `scripts/ci/validate_portable_bundle.sh` to build and
+validate the output using the `noa_cicd` validation utilities.
 
 
 

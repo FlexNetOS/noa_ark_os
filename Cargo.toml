@@ -4,13 +4,29 @@ resolver = "2"
 members = [
     "core",
     "agents",
+    "ai/runtime",
     "workflow",
     "sandbox",
     "cicd",
     "crc",
+    "crc-adapter-sdk",
     "runtime/manager",
     "ui/core",
     "server/ai/inference",
+    "server/caddy_manager",
+    "server/gateway",
+    "server/core",
+    "server/api",
+    "server/observability",
+    "server/tools_agent",
+    "services/relocation-daemon",
+    "apps/cli",
+    "server/relocation",
+    "server/ui_api",
+    "tools/symbol_graph",
+    "tools/security/shim",
+    "plugins/sdk",
+    "tools/quarantine_guard",
 ]
 
 [workspace.package]
@@ -26,3 +42,15 @@ serde_yaml = "0.9"
 anyhow = "1.0"
 tokio = { version = "1", features = ["full"] }
 noa_inference = { path = "server/ai/inference" }
+thiserror = "2.0"
+config = "0.15"
+
+[workspace.lints.rust]
+unsafe_code = "warn"
+
+[profile.dev]
+opt-level = 0
+
+[profile.release]
+opt-level = 3
+lto = true

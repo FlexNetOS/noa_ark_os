@@ -1,0 +1,275 @@
+# Standard Operating Procedures (SOP)
+
+**Version:** 1.0  
+**Last Updated:** 2025-10-04  
+**System:** AgentAsKit Production  
+**Purpose:** Define standard operating procedures for enhanced workflow processing
+
+## 1. Chat Request Processing Procedures
+
+### 1.1 Request Ingestion Protocol
+- **Input Validation:** All chat requests must be validated for format compliance, security constraints, and user authorization
+- **Classification:** Requests must be classified into Creative, Technical, Educational, or Complex categories
+- **Priority Assignment:** Assign priority levels (Low, Medium, High, Critical) based on urgency and impact
+- **Session Management:** Maintain session context for multi-turn conversations
+
+### 1.2 SOT Integration Requirements
+- **Mandatory SOT Reading:** AI model must read and analyze sot.md before processing any request
+- **Task Alignment:** All new tasks must align with existing executed and in-progress tasks in SOT
+- **Conflict Resolution:** Use SOT as single source of truth for resolving any conflicts
+- **Update Protocol:** All task updates must be reflected in SOT immediately upon completion
+
+## 2. 4D Methodology Implementation
+
+### 2.1 DECONSTRUCT Phase
+**Required Outputs:**
+- Core intent extraction with 95% accuracy
+- Comprehensive key entity identification
+- Context analysis with cross-references to SOT
+- Output requirements specification
+- Constraint identification and validation
+- Provided vs. missing resource mapping
+
+**Quality Gates:**
+- Intent clarity score >= 0.8
+- Entity coverage >= 90%
+- All constraints documented and verified
+
+### 2.2 DIAGNOSE Phase
+**Required Outputs:**
+- Clarity gap identification with remediation suggestions
+- Ambiguity point documentation with resolution paths
+- Specificity level assessment (Vague, Moderate, Specific, Precise)
+- Completeness score calculation (0.0-1.0)
+- Structure needs analysis
+- Complexity assessment (Simple, Moderate, Complex, HighlyComplex)
+
+**Quality Gates:**
+- Completeness score >= 0.85 for production tasks
+- All ambiguity points addressed
+- Structure needs documented with implementation plans
+
+### 2.3 DEVELOP Phase
+**Required Outputs:**
+- Request type classification with confidence score
+- Optimization technique selection with justification
+- AI role assignment with capability mapping
+- Context enhancement with relevant information
+- Logical structure design with validation
+
+**Quality Gates:**
+- Classification confidence >= 0.9
+- All selected techniques must have documented rationale
+- Context enhancement must add measurable value
+
+### 2.4 DELIVER Phase
+**Required Outputs:**
+- Detailed execution plan with dependencies
+- Triple-verification protocol implementation
+- Deliverable specifications with target locations
+- Timeline with milestones and critical path
+- Resource allocation with agent assignments
+
+**Quality Gates:**
+- All execution steps must have clear verification criteria
+- Deliverable specifications must meet production standards
+- Timeline must be realistic and achievable
+
+## 3. TODO Management Procedures
+
+### 3.1 Task Subject Creation
+**Format Requirements:**
+```markdown
+## Task: [ID] - [Title]
+
+**Priority:** [Low|Medium|High|Critical]  
+**Created:** [ISO 8601 Timestamp]  
+**Status:** [Pending|In Progress|Complete|Cancelled|Blocked]  
+**Assigned Agents:** [Agent IDs]  
+
+### Deconstruct
+- **Core Intent:** [Description]
+- **Key Entities:** [List]
+- **Output Requirements:** [List]
+- **Constraints:** [List]
+
+### Diagnose
+- **Clarity Gaps:** [List]
+- **Specificity Level:** [Level]
+- **Completeness Score:** [0.0-1.0]
+- **Complexity:** [Level]
+
+### Develop
+- **Request Type:** [Type]
+- **Techniques:** [List]
+- **AI Role:** [Description]
+
+### Deliver
+- **Execution Steps:** [Numbered list]
+- **Deliverables:** [List with target locations]
+- **Timeline:** [Milestone dates]
+- **Verification:** [Triple-verification plan]
+```
+
+### 3.2 Update Procedures
+- **Atomic Updates:** Each TODO update must be atomic and verified
+- **Status Tracking:** Status changes must be logged with timestamps
+- **Dependency Management:** Dependencies must be validated before status changes
+- **Archive Protocol:** Completed tasks must be archived to maintain TODO clarity
+
+## 4. Deliverable Definition Standards
+
+### 4.1 Target Location Specifications
+**Production Structure Compliance:**
+- **Primary Location:** `agentaskit-production/` for all production code
+- **Documentation:** `docs/` subdirectory with organized structure
+- **Tests:** `agentaskit-production/tests/` with appropriate categorization
+- **Configurations:** `agentaskit-production/configs/` with environment separation
+- **Scripts:** `agentaskit-production/scripts/` with execution permissions
+
+**Organization Rules:**
+- Source code must follow Rust workspace conventions
+- Documentation must use consistent markdown formatting
+- All files must include appropriate headers and metadata
+- Binary artifacts must be stored in appropriate target directories
+
+### 4.2 Quality Requirements
+**Code Deliverables:**
+- Rust code must pass `cargo clippy --workspace --all-targets --all-features`
+- All code must have comprehensive documentation
+- Test coverage must be >= 80% for critical components
+- All code must follow workspace dependency management
+
+**Documentation Deliverables:**
+- Must include SHA-256 hashes for all referenced files
+- Must provide reproduction commands for all procedures
+- Must include complete evidence trails for all claims
+- Must follow triple-verification protocol
+
+**Configuration Deliverables:**
+- Must be environment-specific with clear separation
+- Must include validation procedures
+- Must document all configuration options
+- Must provide rollback procedures
+
+## 5. Verification Protocol Implementation
+
+### 5.1 Triple-Verification Requirements
+**Pass A - Self-Check:**
+- Internal consistency validation
+- Specification-to-artifact mapping
+- Unit test execution with logs
+- Smoke test validation
+
+**Pass B - Independent Re-derivation:**
+- Complete recomputation of all numbers
+- Fresh code execution in clean environment
+- Delta comparison with original results
+- Cross-tool verification where applicable
+
+**Pass C - Adversarial Check:**
+- Negative test case execution
+- Boundary condition testing
+- Alternative tool verification
+- Failure mode validation
+
+### 5.2 Evidence Documentation
+**Required Artifacts:**
+- `FINAL_REPORT.md` with complete claims table and evidence ledger
+- `TEST/` directory with all test scripts and logs
+- `HASHES.txt` with SHA-256 for all key files
+- `REPRO.md` with exact reproduction commands
+- `COVERAGE.md` with requirements coverage mapping
+
+**Truth Gate Checklist:**
+- [ ] All artifacts exist and are properly listed with hashes
+- [ ] Smoke tests pass with complete transcripts
+- [ ] Requirements ↔ artifacts ↔ tests fully mapped
+- [ ] All limits and constraints clearly stated
+- [ ] SHA-256 hashes provided for key files
+- [ ] Gap scan completed with coverage confirmation
+- [ ] Triple-verification protocol completed successfully
+
+## 6. Agent Orchestration Procedures
+
+### 6.1 Task Assignment Protocol
+- **Capability Matching:** Match task requirements with agent capabilities
+- **Load Balancing:** Distribute tasks based on agent availability and performance
+- **Dependency Resolution:** Ensure all dependencies are satisfied before assignment
+- **Escalation Paths:** Define clear escalation procedures for blocked tasks
+
+### 6.2 Progress Monitoring
+- **Real-time Status Updates:** Agent status must be updated in real-time
+- **Health Monitoring:** Continuous health assessment with automatic repair
+- **Performance Tracking:** Comprehensive metrics collection and analysis
+- **Failure Recovery:** Automatic failure detection with recovery procedures
+
+## 7. Integration Requirements
+
+### 7.1 NOA Integration
+- **Health Monitoring:** All tasks must integrate with NOA health monitoring
+- **Deployment Orchestration:** Use NOA for agent deployment and lifecycle management
+- **Repair Framework:** Leverage NOA's "Heal, Don't Harm" repair capabilities
+- **Verification Protocol:** Use NOA's triple-verification system
+
+### 7.2 FlexNetOS Integration
+- **Execution Environment:** Use FlexNetOS tri-sandbox for parallel execution
+- **WASM Runtime:** Leverage WASM host for secure capability execution
+- **Capability Tokens:** Use FlexNetOS capability token system for security
+- **File System Integrity:** Implement fs-verity for output verification
+
+### 7.3 Shared Components Integration
+- **Communication Protocols:** Use shared protocols for all inter-system communication
+- **Data Models:** Use shared data models for consistency across systems
+- **Utility Functions:** Leverage shared utilities for common operations
+- **Type Definitions:** Use shared types for interface consistency
+
+## 8. Compliance and Quality Assurance
+
+### 8.1 Memory Rule Compliance
+- **Production Structure Preference:** All deliverables in agentaskit-production
+- **Component Consolidation Rule:** Proper organization and archiving
+- **File Unification Rule:** Consistent file organization and management
+- **Workspace Crate Inclusion:** All crates properly included in workspace
+
+### 8.2 Technology Stack Compliance
+- **Rust-First:** Prioritize Rust implementation with Cargo workspace
+- **Cross-Platform:** Ensure compatibility across supported platforms
+- **Local-First:** Minimize external dependencies and cloud requirements
+- **Performance:** Optimize for speed and resource efficiency
+
+## 9. Emergency Procedures
+
+### 9.1 System Failure Response
+- **Immediate Assessment:** Rapid failure analysis with root cause identification
+- **Containment:** Isolate failed components to prevent cascade failures
+- **Recovery:** Execute recovery procedures with minimal data loss
+- **Post-Mortem:** Comprehensive analysis with prevention measures
+
+### 9.2 Data Recovery
+- **Backup Verification:** Regular backup integrity checks
+- **Recovery Testing:** Regular recovery procedure testing
+- **Archive Management:** Proper archive organization and retention
+- **Disaster Recovery:** Complete disaster recovery procedures
+
+## 10. Continuous Improvement
+
+### 10.1 Performance Optimization
+- **Regular Analysis:** Continuous performance monitoring and analysis
+- **Bottleneck Identification:** Systematic identification and resolution
+- **Resource Optimization:** Efficient resource utilization and scaling
+- **Capacity Planning:** Proactive capacity planning and management
+
+### 10.2 Process Enhancement
+- **Feedback Integration:** Continuous feedback collection and integration
+- **Best Practice Documentation:** Regular update of best practices
+- **Training Material:** Maintenance of current training and documentation
+- **Knowledge Management:** Systematic knowledge capture and sharing
+
+---
+
+**Version Control:**
+- Initial Version: 1.0 (2025-10-04)
+- Approved By: System Administrator
+- Next Review: 2025-11-04
+- Distribution: All AgentAsKit systems and agents

@@ -1,0 +1,9 @@
+version: 1
+name: default
+bounds:
+  latency_ms: 5000
+  cost_usd: 0.10
+  confidence: 0.75
+explanations:
+  enabled: true
+  format: markdown

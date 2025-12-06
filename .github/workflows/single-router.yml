@@ -1,0 +1,20 @@
+name: Single Router Enforcement
+on: [pull_request]
+jobs:
+  router-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Forbid alternate TS routers
+        shell: bash
+        run: |
+          set -euo pipefail
+          # must exist
+          test -f server/ai/router.ts || (echo "server/ai/router.ts missing" >&2; exit 1)
+          # find other router.ts files
+          others=$(git ls-files | grep -E '/router\.ts$' | grep -v '^server/ai/router.ts$' || true)
+          if [ -n "$others" ]; then
+            echo "Found additional router.ts files:\n$others" >&2
+            exit 1
+          fi

@@ -1,21 +1,106 @@
 "use client";
 
-import { AnalyticsPanel } from "./components/AnalyticsPanel";
-import { AssistPanel } from "./components/AssistPanel";
-import { BoardShell } from "./components/BoardShell";
+import type React from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { PageEnvelope, ResumeToken } from "@noa-ark/shared-ui/schema";
+import { createSchemaClient } from "@noa-ark/shared-ui/session";
+import { vibeDashboardEnvelope } from "@noa-ark/shared-ui/samples";
+import { ensureTraceId, logInfo } from "@noa-ark/shared-ui/logging";
+
 import { NotificationCenter } from "./components/NotificationCenter";
-import { PresenceBar } from "./components/PresenceBar";
-import { ActivityTimeline } from "./components/ActivityTimeline";
-import { IntegrationStatus } from "./components/IntegrationStatus";
-import { WorkspaceSwitcher } from "./components/WorkspaceSwitcher";
+import { SchemaDrivenRenderer } from "./components/SchemaDrivenRenderer";
 import { useBoardState } from "./components/useBoardState";
 import { useSession } from "./components/useSession";
 
 export default function Page() {
   const session = useSession();
   const state = useBoardState(session.user);
+  const [envelope, setEnvelope] = useState<PageEnvelope>(vibeDashboardEnvelope);
+  const [resumeToken, setResumeToken] = useState<ResumeToken | undefined>(
+    vibeDashboardEnvelope.resumeToken ?? undefined
+  );
+  const traceIdRef = useRef<string>(ensureTraceId());
 
   const ready = session.status === "ready" && !!session.user && state.hydrated && state.snapshot;
+
+  useEffect(() => {
+    const baseUrl = process.env.NEXT_PUBLIC_UI_API ?? "http://localhost:8787";
+    const schemaClient = createSchemaClient(baseUrl);
+    schemaClient
+      .fetchPage("vibe-kanban")
+      .then((payload) => {
+        setEnvelope(payload);
+        setResumeToken(payload.resumeToken ?? undefined);
+      })
+      .catch(() => {
+        // Fallback to local sample envelope
+      });
+  }, []);
+
+  const plannerResumeToken = state.planner.plans.find((plan) => plan.resumeToken)?.resumeToken;
+  const effectiveResumeToken: ResumeToken | undefined = plannerResumeToken ?? resumeToken;
+
+  const schemaRenderer = useMemo(() => {
+    return ready
+      ? (
+        <SchemaDrivenRenderer
+          schema={envelope.schema}
+          context={{
+            resumeWorkflow: (token) => {
+              if (!token) {
+                return;
+              }
+              const resumeArg: ResumeToken =
+                typeof token === "string"
+                  ? {
+                      workflowId: token,
+                      stageId: undefined,
+                      checkpoint: "",
+                      issuedAt: new Date().toISOString(),
+                      expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+                    }
+                  : token;
+              if (!resumeArg.workflowId) {
+                logInfo({
+                  component: "vibe.page",
+                  event: "workflow_resume_rejected",
+                  message: "Resume token missing workflow identifier",
+                  outcome: "rejected",
+                  traceId: traceIdRef.current,
+                  context: { reason: "missing_workflow_id" },
+                });
+                return;
+              }
+              logInfo({
+                component: "vibe.page",
+                event: "workflow_resume_requested",
+                message: "Requesting workflow resume",
+                outcome: "pending",
+                traceId: traceIdRef.current,
+                context: { workflowId: resumeArg.workflowId },
+              });
+              state.resumePlan(resumeArg);
+            },
+            triggerEvent: (bindingId) => {
+              logInfo({
+                component: "vibe.page",
+                event: "ui_event_triggered",
+                message: "UI event triggered",
+                outcome: "observed",
+                traceId: traceIdRef.current,
+                context: { bindingId },
+              });
+            },
+            data: {
+              boardState: state,
+              session,
+              resumeToken: effectiveResumeToken,
+            },
+          }}
+        />
+      )
+      : null;
+  }, [ready, envelope.schema, state, session, effectiveResumeToken]);
 
   if (session.status === "loading") {
     return <FullScreenMessage label="Initializing workspace…" />;
@@ -30,46 +115,10 @@ export default function Page() {
   }
 
   return (
-    <div className="relative min-h-screen bg-background pb-32 text-white">
+    <>
       <NotificationCenter notifications={state.notifications} onDismiss={state.dismissNotification} />
-
-      <header className="border-b border-white/10 bg-surface/50">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-6 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.4em] text-white/40">NOA ARK OS</p>
-            <h1 className="text-2xl font-semibold tracking-tight text-white">Vibe Kanban Control Hub</h1>
-            <p className="text-sm text-white/50">
-              Connected to workspaces, live presence, and agent intelligence.
-            </p>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <p className="text-sm font-semibold text-white">{session.user.name}</p>
-              <p className="text-xs uppercase tracking-[0.2em] text-white/40">Collaborator</p>
-            </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-blue-500 text-lg font-semibold">
-              {session.user.name.slice(0, 2).toUpperCase()}
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="relative mx-auto grid max-w-7xl gap-6 px-6 py-12 lg:grid-cols-[320px_1fr_320px]">
-        <div className="space-y-6">
-          <WorkspaceSwitcher state={state} />
-          <IntegrationStatus integrations={state.integrations} />
-        </div>
-        <div className="space-y-6">
-          <BoardShell state={state} />
-        </div>
-        <div className="space-y-6">
-          <PresenceBar presence={state.presence} members={state.workspace?.members ?? []} />
-          <AssistPanel assist={state.assist} onRequest={state.requestAssist} />
-          <AnalyticsPanel board={state.snapshot} />
-          <ActivityTimeline activity={state.activity} />
-        </div>
-      </main>
-    </div>
+      {schemaRenderer}
+    </>
   );
 }
 

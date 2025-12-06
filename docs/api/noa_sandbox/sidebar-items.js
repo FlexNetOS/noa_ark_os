@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["SandboxState","SandboxType"],"struct":["Sandbox","SandboxManager","ValidationResults"]};

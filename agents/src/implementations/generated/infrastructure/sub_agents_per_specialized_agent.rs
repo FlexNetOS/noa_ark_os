@@ -1,5 +1,5 @@
 //! Sub-Agents per Specialized Agent - Auto-generated
-//! 
+//!
 //! ['Performs Micro Agent functions']
 
 use crate::unified_types::*;
@@ -48,22 +48,22 @@ impl SubAgentsPerSpecializedAgent {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Ready;
         Ok(())
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -78,13 +78,13 @@ impl Default for SubAgentsPerSpecializedAgent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = SubAgentsPerSpecializedAgent::new();
         assert_eq!(agent.metadata().name, "Sub-Agents per Specialized Agent");
     }
-    
+
     #[tokio::test]
     async fn test_agent_initialization() {
         let mut agent = SubAgentsPerSpecializedAgent::new();

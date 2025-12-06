@@ -1,5 +1,5 @@
 //! The Board Agents also have the authority to spawn MicroAgentStacks - Auto-generated
-//! 
+//!
 //! ['Performs Micro Agent functions']
 
 use crate::unified_types::*;
@@ -17,7 +17,8 @@ impl TheBoardAgentsAlsoHaveTheAuthorityToSpawnMicroagentstacks {
     pub fn new() -> Self {
         let metadata = AgentMetadata {
             id: Uuid::new_v4(),
-            agent_id: "the_board_agents_also_have_the_authority_to_spawn_microagentstacks".to_string(),
+            agent_id: "the_board_agents_also_have_the_authority_to_spawn_microagentstacks"
+                .to_string(),
             name: "The Board Agents also have the authority to spawn MicroAgentStacks".to_string(),
             layer: AgentLayer::L5Infrastructure,
             category: AgentCategory::Other,
@@ -48,22 +49,22 @@ impl TheBoardAgentsAlsoHaveTheAuthorityToSpawnMicroagentstacks {
             last_updated: Some(chrono::Utc::now().to_rfc3339()),
             version: Some("1.0.0".to_string()),
         };
-        
+
         Self {
             metadata,
             state: RwLock::new(AgentState::Created),
         }
     }
-    
+
     pub async fn initialize(&mut self) -> Result<()> {
         *self.state.write().await = AgentState::Ready;
         Ok(())
     }
-    
+
     pub fn metadata(&self) -> &AgentMetadata {
         &self.metadata
     }
-    
+
     pub async fn state(&self) -> AgentState {
         self.state.read().await.clone()
     }
@@ -78,13 +79,16 @@ impl Default for TheBoardAgentsAlsoHaveTheAuthorityToSpawnMicroagentstacks {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_agent_creation() {
         let agent = TheBoardAgentsAlsoHaveTheAuthorityToSpawnMicroagentstacks::new();
-        assert_eq!(agent.metadata().name, "The Board Agents also have the authority to spawn MicroAgentStacks");
+        assert_eq!(
+            agent.metadata().name,
+            "The Board Agents also have the authority to spawn MicroAgentStacks"
+        );
     }
-    
+
     #[tokio::test]
     async fn test_agent_initialization() {
         let mut agent = TheBoardAgentsAlsoHaveTheAuthorityToSpawnMicroagentstacks::new();

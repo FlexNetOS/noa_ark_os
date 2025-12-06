@@ -1,0 +1,4080 @@
+{
+  "version": "2.0",
+  "generated_at": "2025-09-17T10:58:37.836734Z",
+  "epics": {
+    "K": "Kernelization & Syscalls",
+    "S": "Storage: VHDX/Blockstore/Compression",
+    "M": "MetaKV & SQL-subset Adapter",
+    "O": "Objects S3-shim & Registry",
+    "P": "Policy/Court at Syscall Boundary",
+    "E": "EFG/Host-Awareness Kernel Probe",
+    "A": "A/B Updater, Staging & Rollback",
+    "X": "Adapters (MinIO, Supabase, Docker)",
+    "T": "Testing (k6/fuzz/integration)",
+    "D": "Docs & Developer Experience"
+  },
+  "roles": [
+    "CEO",
+    "Court",
+    "Registrar",
+    "PolicyAgent",
+    "HostProfiler",
+    "StorageChief",
+    "MetaKVChief",
+    "ObjectChief",
+    "SecretsChief",
+    "Upgrader",
+    "UIKernel",
+    "Hive",
+    "MicroStack",
+    "Optimizer",
+    "Auditor"
+  ],
+  "counts": {
+    "tasks": 240
+  },
+  "tasks": [
+    {
+      "id": "CECCA-K-001",
+      "title": "Kernelization & Syscalls • UIKernel • BUILD",
+      "epic": "K",
+      "role": "UIKernel",
+      "type": "build",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-K-002",
+      "title": "Kernelization & Syscalls • CEO • BUILD",
+      "epic": "K",
+      "role": "CEO",
+      "type": "build",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-K-003",
+      "title": "Kernelization & Syscalls • PolicyAgent • BUILD",
+      "epic": "K",
+      "role": "PolicyAgent",
+      "type": "build",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-K-004",
+      "title": "Kernelization & Syscalls • Registrar • BUILD",
+      "epic": "K",
+      "role": "Registrar",
+      "type": "build",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-K-005",
+      "title": "Kernelization & Syscalls • UIKernel • BUILD",
+      "epic": "K",
+      "role": "UIKernel",
+      "type": "build",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-K-006",
+      "title": "Kernelization & Syscalls • Upgrader • BUILD",
+      "epic": "K",
+      "role": "Upgrader",
+      "type": "build",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-K-001"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-K-007",
+      "title": "Kernelization & Syscalls • CEO • BUILD",
+      "epic": "K",
+      "role": "CEO",
+      "type": "build",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-K-008",
+      "title": "Kernelization & Syscalls • Court • BUILD",
+      "epic": "K",
+      "role": "Court",
+      "type": "build",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-K-009",
+      "title": "Kernelization & Syscalls • PolicyAgent • BUILD",
+      "epic": "K",
+      "role": "PolicyAgent",
+      "type": "build",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-K-010",
+      "title": "Kernelization & Syscalls • SecretsChief • BUILD",
+      "epic": "K",
+      "role": "SecretsChief",
+      "type": "build",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-K-011",
+      "title": "Kernelization & Syscalls • Hive • BUILD",
+      "epic": "K",
+      "role": "Hive",
+      "type": "build",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-K-006"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-K-012",
+      "title": "Kernelization & Syscalls • PolicyAgent • BUILD",
+      "epic": "K",
+      "role": "PolicyAgent",
+      "type": "build",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-K-013",
+      "title": "Kernelization & Syscalls • Upgrader • BUILD",
+      "epic": "K",
+      "role": "Upgrader",
+      "type": "build",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-K-014",
+      "title": "Kernelization & Syscalls • MicroStack • BUILD",
+      "epic": "K",
+      "role": "MicroStack",
+      "type": "build",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-K-015",
+      "title": "Kernelization & Syscalls • MicroStack • BUILD",
+      "epic": "K",
+      "role": "MicroStack",
+      "type": "build",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-K-016",
+      "title": "Kernelization & Syscalls • Hive • BUILD",
+      "epic": "K",
+      "role": "Hive",
+      "type": "build",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-K-011"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-K-017",
+      "title": "Kernelization & Syscalls • StorageChief • BUILD",
+      "epic": "K",
+      "role": "StorageChief",
+      "type": "build",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-K-018",
+      "title": "Kernelization & Syscalls • Registrar • BUILD",
+      "epic": "K",
+      "role": "Registrar",
+      "type": "build",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-K-019",
+      "title": "Kernelization & Syscalls • MicroStack • BUILD",
+      "epic": "K",
+      "role": "MicroStack",
+      "type": "build",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-K-020",
+      "title": "Kernelization & Syscalls • Court • BUILD",
+      "epic": "K",
+      "role": "Court",
+      "type": "build",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-K-021",
+      "title": "Kernelization & Syscalls • MetaKVChief • TEST",
+      "epic": "K",
+      "role": "MetaKVChief",
+      "type": "test",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-K-016"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-K-022",
+      "title": "Kernelization & Syscalls • StorageChief • TEST",
+      "epic": "K",
+      "role": "StorageChief",
+      "type": "test",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-K-023",
+      "title": "Kernelization & Syscalls • Upgrader • TEST",
+      "epic": "K",
+      "role": "Upgrader",
+      "type": "test",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-K-024",
+      "title": "Kernelization & Syscalls • MicroStack • TEST",
+      "epic": "K",
+      "role": "MicroStack",
+      "type": "test",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-K-025",
+      "title": "Kernelization & Syscalls • Hive • TEST",
+      "epic": "K",
+      "role": "Hive",
+      "type": "test",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-K-026",
+      "title": "Kernelization & Syscalls • SecretsChief • TEST",
+      "epic": "K",
+      "role": "SecretsChief",
+      "type": "test",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-K-021"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-K-027",
+      "title": "Kernelization & Syscalls • Auditor • TEST",
+      "epic": "K",
+      "role": "Auditor",
+      "type": "test",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-K-028",
+      "title": "Kernelization & Syscalls • Court • TEST",
+      "epic": "K",
+      "role": "Court",
+      "type": "test",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-K-029",
+      "title": "Kernelization & Syscalls • Optimizer • TEST",
+      "epic": "K",
+      "role": "Optimizer",
+      "type": "test",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-K-030",
+      "title": "Kernelization & Syscalls • Upgrader • TEST",
+      "epic": "K",
+      "role": "Upgrader",
+      "type": "test",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-S-001",
+      "title": "Storage: VHDX/Blockstore/Compression • StorageChief • BUILD",
+      "epic": "S",
+      "role": "StorageChief",
+      "type": "build",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-K-026"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-S-002",
+      "title": "Storage: VHDX/Blockstore/Compression • StorageChief • BUILD",
+      "epic": "S",
+      "role": "StorageChief",
+      "type": "build",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-S-003",
+      "title": "Storage: VHDX/Blockstore/Compression • StorageChief • BUILD",
+      "epic": "S",
+      "role": "StorageChief",
+      "type": "build",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-S-004",
+      "title": "Storage: VHDX/Blockstore/Compression • StorageChief • BUILD",
+      "epic": "S",
+      "role": "StorageChief",
+      "type": "build",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-S-005",
+      "title": "Storage: VHDX/Blockstore/Compression • StorageChief • BUILD",
+      "epic": "S",
+      "role": "StorageChief",
+      "type": "build",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-S-006",
+      "title": "Storage: VHDX/Blockstore/Compression • StorageChief • BUILD",
+      "epic": "S",
+      "role": "StorageChief",
+      "type": "build",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-S-001"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-S-007",
+      "title": "Storage: VHDX/Blockstore/Compression • StorageChief • BUILD",
+      "epic": "S",
+      "role": "StorageChief",
+      "type": "build",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-S-008",
+      "title": "Storage: VHDX/Blockstore/Compression • StorageChief • BUILD",
+      "epic": "S",
+      "role": "StorageChief",
+      "type": "build",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-S-009",
+      "title": "Storage: VHDX/Blockstore/Compression • StorageChief • BUILD",
+      "epic": "S",
+      "role": "StorageChief",
+      "type": "build",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-S-010",
+      "title": "Storage: VHDX/Blockstore/Compression • StorageChief • BUILD",
+      "epic": "S",
+      "role": "StorageChief",
+      "type": "build",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-S-011",
+      "title": "Storage: VHDX/Blockstore/Compression • StorageChief • BUILD",
+      "epic": "S",
+      "role": "StorageChief",
+      "type": "build",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-S-006"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-S-012",
+      "title": "Storage: VHDX/Blockstore/Compression • StorageChief • BUILD",
+      "epic": "S",
+      "role": "StorageChief",
+      "type": "build",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-S-013",
+      "title": "Storage: VHDX/Blockstore/Compression • StorageChief • BUILD",
+      "epic": "S",
+      "role": "StorageChief",
+      "type": "build",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-S-014",
+      "title": "Storage: VHDX/Blockstore/Compression • StorageChief • BUILD",
+      "epic": "S",
+      "role": "StorageChief",
+      "type": "build",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-S-015",
+      "title": "Storage: VHDX/Blockstore/Compression • StorageChief • BUILD",
+      "epic": "S",
+      "role": "StorageChief",
+      "type": "build",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-S-016",
+      "title": "Storage: VHDX/Blockstore/Compression • StorageChief • BUILD",
+      "epic": "S",
+      "role": "StorageChief",
+      "type": "build",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-S-011"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-S-017",
+      "title": "Storage: VHDX/Blockstore/Compression • StorageChief • BUILD",
+      "epic": "S",
+      "role": "StorageChief",
+      "type": "build",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-S-018",
+      "title": "Storage: VHDX/Blockstore/Compression • StorageChief • BUILD",
+      "epic": "S",
+      "role": "StorageChief",
+      "type": "build",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-S-019",
+      "title": "Storage: VHDX/Blockstore/Compression • StorageChief • TEST",
+      "epic": "S",
+      "role": "StorageChief",
+      "type": "test",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-S-020",
+      "title": "Storage: VHDX/Blockstore/Compression • StorageChief • TEST",
+      "epic": "S",
+      "role": "StorageChief",
+      "type": "test",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-S-021",
+      "title": "Storage: VHDX/Blockstore/Compression • StorageChief • TEST",
+      "epic": "S",
+      "role": "StorageChief",
+      "type": "test",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-S-016"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-S-022",
+      "title": "Storage: VHDX/Blockstore/Compression • StorageChief • TEST",
+      "epic": "S",
+      "role": "StorageChief",
+      "type": "test",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-S-023",
+      "title": "Storage: VHDX/Blockstore/Compression • StorageChief • TEST",
+      "epic": "S",
+      "role": "StorageChief",
+      "type": "test",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-S-024",
+      "title": "Storage: VHDX/Blockstore/Compression • StorageChief • TEST",
+      "epic": "S",
+      "role": "StorageChief",
+      "type": "test",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-S-025",
+      "title": "Storage: VHDX/Blockstore/Compression • StorageChief • TEST",
+      "epic": "S",
+      "role": "StorageChief",
+      "type": "test",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-S-026",
+      "title": "Storage: VHDX/Blockstore/Compression • StorageChief • TEST",
+      "epic": "S",
+      "role": "StorageChief",
+      "type": "test",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-S-021"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-S-027",
+      "title": "Storage: VHDX/Blockstore/Compression • StorageChief • TEST",
+      "epic": "S",
+      "role": "StorageChief",
+      "type": "test",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-S-028",
+      "title": "Storage: VHDX/Blockstore/Compression • StorageChief • TEST",
+      "epic": "S",
+      "role": "StorageChief",
+      "type": "test",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-S-029",
+      "title": "Storage: VHDX/Blockstore/Compression • StorageChief • TEST",
+      "epic": "S",
+      "role": "StorageChief",
+      "type": "test",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-S-030",
+      "title": "Storage: VHDX/Blockstore/Compression • StorageChief • TEST",
+      "epic": "S",
+      "role": "StorageChief",
+      "type": "test",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-M-001",
+      "title": "MetaKV & SQL-subset Adapter • MetaKVChief • BUILD",
+      "epic": "M",
+      "role": "MetaKVChief",
+      "type": "build",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-S-026"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-M-002",
+      "title": "MetaKV & SQL-subset Adapter • MetaKVChief • BUILD",
+      "epic": "M",
+      "role": "MetaKVChief",
+      "type": "build",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-M-003",
+      "title": "MetaKV & SQL-subset Adapter • MetaKVChief • BUILD",
+      "epic": "M",
+      "role": "MetaKVChief",
+      "type": "build",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-M-004",
+      "title": "MetaKV & SQL-subset Adapter • MetaKVChief • BUILD",
+      "epic": "M",
+      "role": "MetaKVChief",
+      "type": "build",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-M-005",
+      "title": "MetaKV & SQL-subset Adapter • MetaKVChief • BUILD",
+      "epic": "M",
+      "role": "MetaKVChief",
+      "type": "build",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-M-006",
+      "title": "MetaKV & SQL-subset Adapter • MetaKVChief • BUILD",
+      "epic": "M",
+      "role": "MetaKVChief",
+      "type": "build",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-M-001"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-M-007",
+      "title": "MetaKV & SQL-subset Adapter • MetaKVChief • BUILD",
+      "epic": "M",
+      "role": "MetaKVChief",
+      "type": "build",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-M-008",
+      "title": "MetaKV & SQL-subset Adapter • MetaKVChief • BUILD",
+      "epic": "M",
+      "role": "MetaKVChief",
+      "type": "build",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-M-009",
+      "title": "MetaKV & SQL-subset Adapter • MetaKVChief • BUILD",
+      "epic": "M",
+      "role": "MetaKVChief",
+      "type": "build",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-M-010",
+      "title": "MetaKV & SQL-subset Adapter • MetaKVChief • BUILD",
+      "epic": "M",
+      "role": "MetaKVChief",
+      "type": "build",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-M-011",
+      "title": "MetaKV & SQL-subset Adapter • MetaKVChief • BUILD",
+      "epic": "M",
+      "role": "MetaKVChief",
+      "type": "build",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-M-006"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-M-012",
+      "title": "MetaKV & SQL-subset Adapter • MetaKVChief • BUILD",
+      "epic": "M",
+      "role": "MetaKVChief",
+      "type": "build",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-M-013",
+      "title": "MetaKV & SQL-subset Adapter • MetaKVChief • TEST",
+      "epic": "M",
+      "role": "MetaKVChief",
+      "type": "test",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-M-014",
+      "title": "MetaKV & SQL-subset Adapter • MetaKVChief • TEST",
+      "epic": "M",
+      "role": "MetaKVChief",
+      "type": "test",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-M-015",
+      "title": "MetaKV & SQL-subset Adapter • MetaKVChief • TEST",
+      "epic": "M",
+      "role": "MetaKVChief",
+      "type": "test",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-M-016",
+      "title": "MetaKV & SQL-subset Adapter • MetaKVChief • TEST",
+      "epic": "M",
+      "role": "MetaKVChief",
+      "type": "test",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-M-011"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-M-017",
+      "title": "MetaKV & SQL-subset Adapter • MetaKVChief • TEST",
+      "epic": "M",
+      "role": "MetaKVChief",
+      "type": "test",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-M-018",
+      "title": "MetaKV & SQL-subset Adapter • MetaKVChief • TEST",
+      "epic": "M",
+      "role": "MetaKVChief",
+      "type": "test",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-M-019",
+      "title": "MetaKV & SQL-subset Adapter • MetaKVChief • TEST",
+      "epic": "M",
+      "role": "MetaKVChief",
+      "type": "test",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-M-020",
+      "title": "MetaKV & SQL-subset Adapter • MetaKVChief • TEST",
+      "epic": "M",
+      "role": "MetaKVChief",
+      "type": "test",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-O-001",
+      "title": "Objects S3-shim & Registry • ObjectChief • BUILD",
+      "epic": "O",
+      "role": "ObjectChief",
+      "type": "build",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-M-016"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-O-002",
+      "title": "Objects S3-shim & Registry • ObjectChief • BUILD",
+      "epic": "O",
+      "role": "ObjectChief",
+      "type": "build",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-O-003",
+      "title": "Objects S3-shim & Registry • ObjectChief • BUILD",
+      "epic": "O",
+      "role": "ObjectChief",
+      "type": "build",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-O-004",
+      "title": "Objects S3-shim & Registry • ObjectChief • BUILD",
+      "epic": "O",
+      "role": "ObjectChief",
+      "type": "build",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-O-005",
+      "title": "Objects S3-shim & Registry • ObjectChief • BUILD",
+      "epic": "O",
+      "role": "ObjectChief",
+      "type": "build",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-O-006",
+      "title": "Objects S3-shim & Registry • ObjectChief • BUILD",
+      "epic": "O",
+      "role": "ObjectChief",
+      "type": "build",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-O-001"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-O-007",
+      "title": "Objects S3-shim & Registry • ObjectChief • BUILD",
+      "epic": "O",
+      "role": "ObjectChief",
+      "type": "build",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-O-008",
+      "title": "Objects S3-shim & Registry • ObjectChief • BUILD",
+      "epic": "O",
+      "role": "ObjectChief",
+      "type": "build",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-O-009",
+      "title": "Objects S3-shim & Registry • ObjectChief • BUILD",
+      "epic": "O",
+      "role": "ObjectChief",
+      "type": "build",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-O-010",
+      "title": "Objects S3-shim & Registry • ObjectChief • BUILD",
+      "epic": "O",
+      "role": "ObjectChief",
+      "type": "build",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-O-011",
+      "title": "Objects S3-shim & Registry • ObjectChief • BUILD",
+      "epic": "O",
+      "role": "ObjectChief",
+      "type": "build",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-O-006"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-O-012",
+      "title": "Objects S3-shim & Registry • ObjectChief • BUILD",
+      "epic": "O",
+      "role": "ObjectChief",
+      "type": "build",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-O-013",
+      "title": "Objects S3-shim & Registry • ObjectChief • TEST",
+      "epic": "O",
+      "role": "ObjectChief",
+      "type": "test",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-O-014",
+      "title": "Objects S3-shim & Registry • ObjectChief • TEST",
+      "epic": "O",
+      "role": "ObjectChief",
+      "type": "test",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-O-015",
+      "title": "Objects S3-shim & Registry • ObjectChief • TEST",
+      "epic": "O",
+      "role": "ObjectChief",
+      "type": "test",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-O-016",
+      "title": "Objects S3-shim & Registry • ObjectChief • TEST",
+      "epic": "O",
+      "role": "ObjectChief",
+      "type": "test",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-O-011"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-O-017",
+      "title": "Objects S3-shim & Registry • ObjectChief • TEST",
+      "epic": "O",
+      "role": "ObjectChief",
+      "type": "test",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-O-018",
+      "title": "Objects S3-shim & Registry • ObjectChief • TEST",
+      "epic": "O",
+      "role": "ObjectChief",
+      "type": "test",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-O-019",
+      "title": "Objects S3-shim & Registry • ObjectChief • TEST",
+      "epic": "O",
+      "role": "ObjectChief",
+      "type": "test",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-O-020",
+      "title": "Objects S3-shim & Registry • ObjectChief • TEST",
+      "epic": "O",
+      "role": "ObjectChief",
+      "type": "test",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-P-001",
+      "title": "Policy/Court at Syscall Boundary • PolicyAgent • BUILD",
+      "epic": "P",
+      "role": "PolicyAgent",
+      "type": "build",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-O-016",
+        "CECCA-O-018"
+      ],
+      "acceptance_criteria": [
+        "Syscall write is denied when OPA rule returns false",
+        "Court veto recorded in trace",
+        "Successful write produces lineage + SBOM link"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-P-002",
+      "title": "Policy/Court at Syscall Boundary • PolicyAgent • BUILD",
+      "epic": "P",
+      "role": "PolicyAgent",
+      "type": "build",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-O-019"
+      ],
+      "acceptance_criteria": [
+        "Syscall write is denied when OPA rule returns false",
+        "Court veto recorded in trace",
+        "Successful write produces lineage + SBOM link"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-P-003",
+      "title": "Policy/Court at Syscall Boundary • PolicyAgent • BUILD",
+      "epic": "P",
+      "role": "PolicyAgent",
+      "type": "build",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-O-020"
+      ],
+      "acceptance_criteria": [
+        "Syscall write is denied when OPA rule returns false",
+        "Court veto recorded in trace",
+        "Successful write produces lineage + SBOM link"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-P-004",
+      "title": "Policy/Court at Syscall Boundary • PolicyAgent • BUILD",
+      "epic": "P",
+      "role": "PolicyAgent",
+      "type": "build",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-P-001"
+      ],
+      "acceptance_criteria": [
+        "Syscall write is denied when OPA rule returns false",
+        "Court veto recorded in trace",
+        "Successful write produces lineage + SBOM link"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-P-005",
+      "title": "Policy/Court at Syscall Boundary • PolicyAgent • BUILD",
+      "epic": "P",
+      "role": "PolicyAgent",
+      "type": "build",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-P-002"
+      ],
+      "acceptance_criteria": [
+        "Syscall write is denied when OPA rule returns false",
+        "Court veto recorded in trace",
+        "Successful write produces lineage + SBOM link"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-P-006",
+      "title": "Policy/Court at Syscall Boundary • PolicyAgent • BUILD",
+      "epic": "P",
+      "role": "PolicyAgent",
+      "type": "build",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-P-001",
+        "CECCA-P-003"
+      ],
+      "acceptance_criteria": [
+        "Syscall write is denied when OPA rule returns false",
+        "Court veto recorded in trace",
+        "Successful write produces lineage + SBOM link"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-P-007",
+      "title": "Policy/Court at Syscall Boundary • PolicyAgent • BUILD",
+      "epic": "P",
+      "role": "PolicyAgent",
+      "type": "build",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-P-004"
+      ],
+      "acceptance_criteria": [
+        "Syscall write is denied when OPA rule returns false",
+        "Court veto recorded in trace",
+        "Successful write produces lineage + SBOM link"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-P-008",
+      "title": "Policy/Court at Syscall Boundary • PolicyAgent • BUILD",
+      "epic": "P",
+      "role": "PolicyAgent",
+      "type": "build",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-P-005"
+      ],
+      "acceptance_criteria": [
+        "Syscall write is denied when OPA rule returns false",
+        "Court veto recorded in trace",
+        "Successful write produces lineage + SBOM link"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-P-009",
+      "title": "Policy/Court at Syscall Boundary • PolicyAgent • BUILD",
+      "epic": "P",
+      "role": "PolicyAgent",
+      "type": "build",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-P-006"
+      ],
+      "acceptance_criteria": [
+        "Syscall write is denied when OPA rule returns false",
+        "Court veto recorded in trace",
+        "Successful write produces lineage + SBOM link"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-P-010",
+      "title": "Policy/Court at Syscall Boundary • PolicyAgent • BUILD",
+      "epic": "P",
+      "role": "PolicyAgent",
+      "type": "build",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-P-007"
+      ],
+      "acceptance_criteria": [
+        "Syscall write is denied when OPA rule returns false",
+        "Court veto recorded in trace",
+        "Successful write produces lineage + SBOM link"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-P-011",
+      "title": "Policy/Court at Syscall Boundary • PolicyAgent • TEST",
+      "epic": "P",
+      "role": "PolicyAgent",
+      "type": "test",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-P-006",
+        "CECCA-P-008"
+      ],
+      "acceptance_criteria": [
+        "Syscall write is denied when OPA rule returns false",
+        "Court veto recorded in trace",
+        "Successful write produces lineage + SBOM link"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-P-012",
+      "title": "Policy/Court at Syscall Boundary • PolicyAgent • TEST",
+      "epic": "P",
+      "role": "PolicyAgent",
+      "type": "test",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-P-009"
+      ],
+      "acceptance_criteria": [
+        "Syscall write is denied when OPA rule returns false",
+        "Court veto recorded in trace",
+        "Successful write produces lineage + SBOM link"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-P-013",
+      "title": "Policy/Court at Syscall Boundary • PolicyAgent • TEST",
+      "epic": "P",
+      "role": "PolicyAgent",
+      "type": "test",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-P-010"
+      ],
+      "acceptance_criteria": [
+        "Syscall write is denied when OPA rule returns false",
+        "Court veto recorded in trace",
+        "Successful write produces lineage + SBOM link"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-P-014",
+      "title": "Policy/Court at Syscall Boundary • PolicyAgent • TEST",
+      "epic": "P",
+      "role": "PolicyAgent",
+      "type": "test",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-P-011"
+      ],
+      "acceptance_criteria": [
+        "Syscall write is denied when OPA rule returns false",
+        "Court veto recorded in trace",
+        "Successful write produces lineage + SBOM link"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-P-015",
+      "title": "Policy/Court at Syscall Boundary • PolicyAgent • TEST",
+      "epic": "P",
+      "role": "PolicyAgent",
+      "type": "test",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-P-012"
+      ],
+      "acceptance_criteria": [
+        "Syscall write is denied when OPA rule returns false",
+        "Court veto recorded in trace",
+        "Successful write produces lineage + SBOM link"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-P-016",
+      "title": "Policy/Court at Syscall Boundary • PolicyAgent • TEST",
+      "epic": "P",
+      "role": "PolicyAgent",
+      "type": "test",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-P-011",
+        "CECCA-P-013"
+      ],
+      "acceptance_criteria": [
+        "Syscall write is denied when OPA rule returns false",
+        "Court veto recorded in trace",
+        "Successful write produces lineage + SBOM link"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-P-017",
+      "title": "Policy/Court at Syscall Boundary • PolicyAgent • TEST",
+      "epic": "P",
+      "role": "PolicyAgent",
+      "type": "test",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-P-014"
+      ],
+      "acceptance_criteria": [
+        "Syscall write is denied when OPA rule returns false",
+        "Court veto recorded in trace",
+        "Successful write produces lineage + SBOM link"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-P-018",
+      "title": "Policy/Court at Syscall Boundary • PolicyAgent • TEST",
+      "epic": "P",
+      "role": "PolicyAgent",
+      "type": "test",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-P-015"
+      ],
+      "acceptance_criteria": [
+        "Syscall write is denied when OPA rule returns false",
+        "Court veto recorded in trace",
+        "Successful write produces lineage + SBOM link"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-P-019",
+      "title": "Policy/Court at Syscall Boundary • PolicyAgent • TEST",
+      "epic": "P",
+      "role": "PolicyAgent",
+      "type": "test",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-P-016"
+      ],
+      "acceptance_criteria": [
+        "Syscall write is denied when OPA rule returns false",
+        "Court veto recorded in trace",
+        "Successful write produces lineage + SBOM link"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-P-020",
+      "title": "Policy/Court at Syscall Boundary • PolicyAgent • TEST",
+      "epic": "P",
+      "role": "PolicyAgent",
+      "type": "test",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-P-017"
+      ],
+      "acceptance_criteria": [
+        "Syscall write is denied when OPA rule returns false",
+        "Court veto recorded in trace",
+        "Successful write produces lineage + SBOM link"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-P-021",
+      "title": "Policy/Court at Syscall Boundary • Court • TEST",
+      "epic": "P",
+      "role": "Court",
+      "type": "test",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-P-016",
+        "CECCA-P-018"
+      ],
+      "acceptance_criteria": [
+        "Syscall write is denied when OPA rule returns false",
+        "Court veto recorded in trace",
+        "Successful write produces lineage + SBOM link"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-P-022",
+      "title": "Policy/Court at Syscall Boundary • Court • TEST",
+      "epic": "P",
+      "role": "Court",
+      "type": "test",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-P-019"
+      ],
+      "acceptance_criteria": [
+        "Syscall write is denied when OPA rule returns false",
+        "Court veto recorded in trace",
+        "Successful write produces lineage + SBOM link"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-P-023",
+      "title": "Policy/Court at Syscall Boundary • Court • TEST",
+      "epic": "P",
+      "role": "Court",
+      "type": "test",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-P-020"
+      ],
+      "acceptance_criteria": [
+        "Syscall write is denied when OPA rule returns false",
+        "Court veto recorded in trace",
+        "Successful write produces lineage + SBOM link"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-P-024",
+      "title": "Policy/Court at Syscall Boundary • Court • TEST",
+      "epic": "P",
+      "role": "Court",
+      "type": "test",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-P-021"
+      ],
+      "acceptance_criteria": [
+        "Syscall write is denied when OPA rule returns false",
+        "Court veto recorded in trace",
+        "Successful write produces lineage + SBOM link"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-P-025",
+      "title": "Policy/Court at Syscall Boundary • Court • TEST",
+      "epic": "P",
+      "role": "Court",
+      "type": "test",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-P-022"
+      ],
+      "acceptance_criteria": [
+        "Syscall write is denied when OPA rule returns false",
+        "Court veto recorded in trace",
+        "Successful write produces lineage + SBOM link"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-P-026",
+      "title": "Policy/Court at Syscall Boundary • Court • TEST",
+      "epic": "P",
+      "role": "Court",
+      "type": "test",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-P-021",
+        "CECCA-P-023"
+      ],
+      "acceptance_criteria": [
+        "Syscall write is denied when OPA rule returns false",
+        "Court veto recorded in trace",
+        "Successful write produces lineage + SBOM link"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-P-027",
+      "title": "Policy/Court at Syscall Boundary • Court • TEST",
+      "epic": "P",
+      "role": "Court",
+      "type": "test",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-P-024"
+      ],
+      "acceptance_criteria": [
+        "Syscall write is denied when OPA rule returns false",
+        "Court veto recorded in trace",
+        "Successful write produces lineage + SBOM link"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-P-028",
+      "title": "Policy/Court at Syscall Boundary • Court • TEST",
+      "epic": "P",
+      "role": "Court",
+      "type": "test",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-P-025"
+      ],
+      "acceptance_criteria": [
+        "Syscall write is denied when OPA rule returns false",
+        "Court veto recorded in trace",
+        "Successful write produces lineage + SBOM link"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-P-029",
+      "title": "Policy/Court at Syscall Boundary • Court • TEST",
+      "epic": "P",
+      "role": "Court",
+      "type": "test",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-P-026"
+      ],
+      "acceptance_criteria": [
+        "Syscall write is denied when OPA rule returns false",
+        "Court veto recorded in trace",
+        "Successful write produces lineage + SBOM link"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-P-030",
+      "title": "Policy/Court at Syscall Boundary • Court • TEST",
+      "epic": "P",
+      "role": "Court",
+      "type": "test",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-P-027"
+      ],
+      "acceptance_criteria": [
+        "Syscall write is denied when OPA rule returns false",
+        "Court veto recorded in trace",
+        "Successful write produces lineage + SBOM link"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-E-001",
+      "title": "EFG/Host-Awareness Kernel Probe • HostProfiler • BUILD",
+      "epic": "E",
+      "role": "HostProfiler",
+      "type": "build",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-P-026"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-E-002",
+      "title": "EFG/Host-Awareness Kernel Probe • HostProfiler • BUILD",
+      "epic": "E",
+      "role": "HostProfiler",
+      "type": "build",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-E-003",
+      "title": "EFG/Host-Awareness Kernel Probe • HostProfiler • BUILD",
+      "epic": "E",
+      "role": "HostProfiler",
+      "type": "build",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-E-004",
+      "title": "EFG/Host-Awareness Kernel Probe • HostProfiler • BUILD",
+      "epic": "E",
+      "role": "HostProfiler",
+      "type": "build",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-E-005",
+      "title": "EFG/Host-Awareness Kernel Probe • HostProfiler • BUILD",
+      "epic": "E",
+      "role": "HostProfiler",
+      "type": "build",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-E-006",
+      "title": "EFG/Host-Awareness Kernel Probe • HostProfiler • BUILD",
+      "epic": "E",
+      "role": "HostProfiler",
+      "type": "build",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-E-001"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-E-007",
+      "title": "EFG/Host-Awareness Kernel Probe • HostProfiler • BUILD",
+      "epic": "E",
+      "role": "HostProfiler",
+      "type": "build",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-E-008",
+      "title": "EFG/Host-Awareness Kernel Probe • HostProfiler • BUILD",
+      "epic": "E",
+      "role": "HostProfiler",
+      "type": "build",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-E-009",
+      "title": "EFG/Host-Awareness Kernel Probe • HostProfiler • BUILD",
+      "epic": "E",
+      "role": "HostProfiler",
+      "type": "build",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-E-010",
+      "title": "EFG/Host-Awareness Kernel Probe • HostProfiler • BUILD",
+      "epic": "E",
+      "role": "HostProfiler",
+      "type": "build",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-E-011",
+      "title": "EFG/Host-Awareness Kernel Probe • HostProfiler • BUILD",
+      "epic": "E",
+      "role": "HostProfiler",
+      "type": "build",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-E-006"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-E-012",
+      "title": "EFG/Host-Awareness Kernel Probe • HostProfiler • BUILD",
+      "epic": "E",
+      "role": "HostProfiler",
+      "type": "build",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-E-013",
+      "title": "EFG/Host-Awareness Kernel Probe • HostProfiler • TEST",
+      "epic": "E",
+      "role": "HostProfiler",
+      "type": "test",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-E-014",
+      "title": "EFG/Host-Awareness Kernel Probe • HostProfiler • TEST",
+      "epic": "E",
+      "role": "HostProfiler",
+      "type": "test",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-E-015",
+      "title": "EFG/Host-Awareness Kernel Probe • HostProfiler • TEST",
+      "epic": "E",
+      "role": "HostProfiler",
+      "type": "test",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-E-016",
+      "title": "EFG/Host-Awareness Kernel Probe • HostProfiler • TEST",
+      "epic": "E",
+      "role": "HostProfiler",
+      "type": "test",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-E-011"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-E-017",
+      "title": "EFG/Host-Awareness Kernel Probe • HostProfiler • TEST",
+      "epic": "E",
+      "role": "HostProfiler",
+      "type": "test",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-E-018",
+      "title": "EFG/Host-Awareness Kernel Probe • HostProfiler • TEST",
+      "epic": "E",
+      "role": "HostProfiler",
+      "type": "test",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-E-019",
+      "title": "EFG/Host-Awareness Kernel Probe • HostProfiler • TEST",
+      "epic": "E",
+      "role": "HostProfiler",
+      "type": "test",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-E-020",
+      "title": "EFG/Host-Awareness Kernel Probe • HostProfiler • TEST",
+      "epic": "E",
+      "role": "HostProfiler",
+      "type": "test",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-A-001",
+      "title": "A/B Updater, Staging & Rollback • Upgrader • BUILD",
+      "epic": "A",
+      "role": "Upgrader",
+      "type": "build",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-E-016"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-A-002",
+      "title": "A/B Updater, Staging & Rollback • Upgrader • BUILD",
+      "epic": "A",
+      "role": "Upgrader",
+      "type": "build",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-A-003",
+      "title": "A/B Updater, Staging & Rollback • Upgrader • BUILD",
+      "epic": "A",
+      "role": "Upgrader",
+      "type": "build",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-A-004",
+      "title": "A/B Updater, Staging & Rollback • Upgrader • BUILD",
+      "epic": "A",
+      "role": "Upgrader",
+      "type": "build",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-A-005",
+      "title": "A/B Updater, Staging & Rollback • Upgrader • BUILD",
+      "epic": "A",
+      "role": "Upgrader",
+      "type": "build",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-A-006",
+      "title": "A/B Updater, Staging & Rollback • Upgrader • BUILD",
+      "epic": "A",
+      "role": "Upgrader",
+      "type": "build",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-A-001"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-A-007",
+      "title": "A/B Updater, Staging & Rollback • Upgrader • BUILD",
+      "epic": "A",
+      "role": "Upgrader",
+      "type": "build",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-A-008",
+      "title": "A/B Updater, Staging & Rollback • Upgrader • BUILD",
+      "epic": "A",
+      "role": "Upgrader",
+      "type": "build",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-A-009",
+      "title": "A/B Updater, Staging & Rollback • Upgrader • BUILD",
+      "epic": "A",
+      "role": "Upgrader",
+      "type": "build",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-A-010",
+      "title": "A/B Updater, Staging & Rollback • Upgrader • BUILD",
+      "epic": "A",
+      "role": "Upgrader",
+      "type": "build",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-A-011",
+      "title": "A/B Updater, Staging & Rollback • Upgrader • TEST",
+      "epic": "A",
+      "role": "Upgrader",
+      "type": "test",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-A-006"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-A-012",
+      "title": "A/B Updater, Staging & Rollback • Upgrader • TEST",
+      "epic": "A",
+      "role": "Upgrader",
+      "type": "test",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-A-013",
+      "title": "A/B Updater, Staging & Rollback • Upgrader • TEST",
+      "epic": "A",
+      "role": "Upgrader",
+      "type": "test",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-A-014",
+      "title": "A/B Updater, Staging & Rollback • Upgrader • TEST",
+      "epic": "A",
+      "role": "Upgrader",
+      "type": "test",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-A-015",
+      "title": "A/B Updater, Staging & Rollback • Upgrader • TEST",
+      "epic": "A",
+      "role": "Upgrader",
+      "type": "test",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-A-016",
+      "title": "A/B Updater, Staging & Rollback • Upgrader • TEST",
+      "epic": "A",
+      "role": "Upgrader",
+      "type": "test",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-A-011"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-A-017",
+      "title": "A/B Updater, Staging & Rollback • Upgrader • TEST",
+      "epic": "A",
+      "role": "Upgrader",
+      "type": "test",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-A-018",
+      "title": "A/B Updater, Staging & Rollback • Upgrader • TEST",
+      "epic": "A",
+      "role": "Upgrader",
+      "type": "test",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-A-019",
+      "title": "A/B Updater, Staging & Rollback • Upgrader • TEST",
+      "epic": "A",
+      "role": "Upgrader",
+      "type": "test",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-A-020",
+      "title": "A/B Updater, Staging & Rollback • Upgrader • TEST",
+      "epic": "A",
+      "role": "Upgrader",
+      "type": "test",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-X-001",
+      "title": "Adapters (MinIO, Supabase, Docker) • ObjectChief • BUILD",
+      "epic": "X",
+      "role": "ObjectChief",
+      "type": "build",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-A-016"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-X-002",
+      "title": "Adapters (MinIO, Supabase, Docker) • Registrar • BUILD",
+      "epic": "X",
+      "role": "Registrar",
+      "type": "build",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-X-003",
+      "title": "Adapters (MinIO, Supabase, Docker) • ObjectChief • BUILD",
+      "epic": "X",
+      "role": "ObjectChief",
+      "type": "build",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-X-004",
+      "title": "Adapters (MinIO, Supabase, Docker) • ObjectChief • BUILD",
+      "epic": "X",
+      "role": "ObjectChief",
+      "type": "build",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-X-005",
+      "title": "Adapters (MinIO, Supabase, Docker) • Registrar • BUILD",
+      "epic": "X",
+      "role": "Registrar",
+      "type": "build",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-X-006",
+      "title": "Adapters (MinIO, Supabase, Docker) • ObjectChief • BUILD",
+      "epic": "X",
+      "role": "ObjectChief",
+      "type": "build",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-X-001"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-X-007",
+      "title": "Adapters (MinIO, Supabase, Docker) • ObjectChief • BUILD",
+      "epic": "X",
+      "role": "ObjectChief",
+      "type": "build",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-X-008",
+      "title": "Adapters (MinIO, Supabase, Docker) • PolicyAgent • BUILD",
+      "epic": "X",
+      "role": "PolicyAgent",
+      "type": "build",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-X-009",
+      "title": "Adapters (MinIO, Supabase, Docker) • ObjectChief • BUILD",
+      "epic": "X",
+      "role": "ObjectChief",
+      "type": "build",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-X-010",
+      "title": "Adapters (MinIO, Supabase, Docker) • Registrar • BUILD",
+      "epic": "X",
+      "role": "Registrar",
+      "type": "build",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-X-011",
+      "title": "Adapters (MinIO, Supabase, Docker) • ObjectChief • TEST",
+      "epic": "X",
+      "role": "ObjectChief",
+      "type": "test",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-X-006"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-X-012",
+      "title": "Adapters (MinIO, Supabase, Docker) • ObjectChief • TEST",
+      "epic": "X",
+      "role": "ObjectChief",
+      "type": "test",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-X-013",
+      "title": "Adapters (MinIO, Supabase, Docker) • ObjectChief • TEST",
+      "epic": "X",
+      "role": "ObjectChief",
+      "type": "test",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-X-014",
+      "title": "Adapters (MinIO, Supabase, Docker) • PolicyAgent • TEST",
+      "epic": "X",
+      "role": "PolicyAgent",
+      "type": "test",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-X-015",
+      "title": "Adapters (MinIO, Supabase, Docker) • ObjectChief • TEST",
+      "epic": "X",
+      "role": "ObjectChief",
+      "type": "test",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-X-016",
+      "title": "Adapters (MinIO, Supabase, Docker) • ObjectChief • TEST",
+      "epic": "X",
+      "role": "ObjectChief",
+      "type": "test",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-X-011"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-X-017",
+      "title": "Adapters (MinIO, Supabase, Docker) • PolicyAgent • TEST",
+      "epic": "X",
+      "role": "PolicyAgent",
+      "type": "test",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-X-018",
+      "title": "Adapters (MinIO, Supabase, Docker) • PolicyAgent • TEST",
+      "epic": "X",
+      "role": "PolicyAgent",
+      "type": "test",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-X-019",
+      "title": "Adapters (MinIO, Supabase, Docker) • PolicyAgent • TEST",
+      "epic": "X",
+      "role": "PolicyAgent",
+      "type": "test",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-X-020",
+      "title": "Adapters (MinIO, Supabase, Docker) • PolicyAgent • TEST",
+      "epic": "X",
+      "role": "PolicyAgent",
+      "type": "test",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-T-001",
+      "title": "Testing (k6/fuzz/integration) • Auditor • TEST",
+      "epic": "T",
+      "role": "Auditor",
+      "type": "test",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-X-016",
+        "CECCA-X-018"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-T-002",
+      "title": "Testing (k6/fuzz/integration) • Optimizer • TEST",
+      "epic": "T",
+      "role": "Optimizer",
+      "type": "test",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-X-019"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-T-003",
+      "title": "Testing (k6/fuzz/integration) • Auditor • TEST",
+      "epic": "T",
+      "role": "Auditor",
+      "type": "test",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-X-020"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-T-004",
+      "title": "Testing (k6/fuzz/integration) • UIKernel • TEST",
+      "epic": "T",
+      "role": "UIKernel",
+      "type": "test",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-T-001"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-T-005",
+      "title": "Testing (k6/fuzz/integration) • Auditor • TEST",
+      "epic": "T",
+      "role": "Auditor",
+      "type": "test",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-T-002"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-T-006",
+      "title": "Testing (k6/fuzz/integration) • UIKernel • TEST",
+      "epic": "T",
+      "role": "UIKernel",
+      "type": "test",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-T-001",
+        "CECCA-T-003"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-T-007",
+      "title": "Testing (k6/fuzz/integration) • UIKernel • TEST",
+      "epic": "T",
+      "role": "UIKernel",
+      "type": "test",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-T-004"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-T-008",
+      "title": "Testing (k6/fuzz/integration) • Auditor • TEST",
+      "epic": "T",
+      "role": "Auditor",
+      "type": "test",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-T-005"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-T-009",
+      "title": "Testing (k6/fuzz/integration) • Auditor • TEST",
+      "epic": "T",
+      "role": "Auditor",
+      "type": "test",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-T-006"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-T-010",
+      "title": "Testing (k6/fuzz/integration) • UIKernel • TEST",
+      "epic": "T",
+      "role": "UIKernel",
+      "type": "test",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-T-007"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-T-011",
+      "title": "Testing (k6/fuzz/integration) • UIKernel • TEST",
+      "epic": "T",
+      "role": "UIKernel",
+      "type": "test",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-T-006",
+        "CECCA-T-008"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-T-012",
+      "title": "Testing (k6/fuzz/integration) • Optimizer • TEST",
+      "epic": "T",
+      "role": "Optimizer",
+      "type": "test",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-T-009"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-T-013",
+      "title": "Testing (k6/fuzz/integration) • UIKernel • TEST",
+      "epic": "T",
+      "role": "UIKernel",
+      "type": "test",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-T-010"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-T-014",
+      "title": "Testing (k6/fuzz/integration) • UIKernel • TEST",
+      "epic": "T",
+      "role": "UIKernel",
+      "type": "test",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-T-011"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-T-015",
+      "title": "Testing (k6/fuzz/integration) • UIKernel • TEST",
+      "epic": "T",
+      "role": "UIKernel",
+      "type": "test",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-T-012"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-T-016",
+      "title": "Testing (k6/fuzz/integration) • Optimizer • TEST",
+      "epic": "T",
+      "role": "Optimizer",
+      "type": "test",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-T-011",
+        "CECCA-T-013"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-T-017",
+      "title": "Testing (k6/fuzz/integration) • Optimizer • TEST",
+      "epic": "T",
+      "role": "Optimizer",
+      "type": "test",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-T-014"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-T-018",
+      "title": "Testing (k6/fuzz/integration) • UIKernel • TEST",
+      "epic": "T",
+      "role": "UIKernel",
+      "type": "test",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-T-015"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-T-019",
+      "title": "Testing (k6/fuzz/integration) • Auditor • TEST",
+      "epic": "T",
+      "role": "Auditor",
+      "type": "test",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-T-016"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-T-020",
+      "title": "Testing (k6/fuzz/integration) • Optimizer • TEST",
+      "epic": "T",
+      "role": "Optimizer",
+      "type": "test",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-T-017"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-T-021",
+      "title": "Testing (k6/fuzz/integration) • UIKernel • TEST",
+      "epic": "T",
+      "role": "UIKernel",
+      "type": "test",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-T-016",
+        "CECCA-T-018"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-T-022",
+      "title": "Testing (k6/fuzz/integration) • Optimizer • TEST",
+      "epic": "T",
+      "role": "Optimizer",
+      "type": "test",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-T-019"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-T-023",
+      "title": "Testing (k6/fuzz/integration) • Auditor • TEST",
+      "epic": "T",
+      "role": "Auditor",
+      "type": "test",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-T-020"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-T-024",
+      "title": "Testing (k6/fuzz/integration) • Optimizer • TEST",
+      "epic": "T",
+      "role": "Optimizer",
+      "type": "test",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-T-021"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-T-025",
+      "title": "Testing (k6/fuzz/integration) • Auditor • TEST",
+      "epic": "T",
+      "role": "Auditor",
+      "type": "test",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-T-022"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-T-026",
+      "title": "Testing (k6/fuzz/integration) • UIKernel • TEST",
+      "epic": "T",
+      "role": "UIKernel",
+      "type": "test",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-T-021",
+        "CECCA-T-023"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-T-027",
+      "title": "Testing (k6/fuzz/integration) • Auditor • TEST",
+      "epic": "T",
+      "role": "Auditor",
+      "type": "test",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-T-024"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-T-028",
+      "title": "Testing (k6/fuzz/integration) • Auditor • TEST",
+      "epic": "T",
+      "role": "Auditor",
+      "type": "test",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-T-025"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-T-029",
+      "title": "Testing (k6/fuzz/integration) • Optimizer • TEST",
+      "epic": "T",
+      "role": "Optimizer",
+      "type": "test",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-T-026"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-T-030",
+      "title": "Testing (k6/fuzz/integration) • Auditor • TEST",
+      "epic": "T",
+      "role": "Auditor",
+      "type": "test",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-T-027"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-D-001",
+      "title": "Docs & Developer Experience • UIKernel • DOC",
+      "epic": "D",
+      "role": "UIKernel",
+      "type": "doc",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-T-026"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-D-002",
+      "title": "Docs & Developer Experience • UIKernel • DOC",
+      "epic": "D",
+      "role": "UIKernel",
+      "type": "doc",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-D-003",
+      "title": "Docs & Developer Experience • UIKernel • DOC",
+      "epic": "D",
+      "role": "UIKernel",
+      "type": "doc",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-D-004",
+      "title": "Docs & Developer Experience • UIKernel • DOC",
+      "epic": "D",
+      "role": "UIKernel",
+      "type": "doc",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-D-005",
+      "title": "Docs & Developer Experience • CEO • DOC",
+      "epic": "D",
+      "role": "CEO",
+      "type": "doc",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-D-006",
+      "title": "Docs & Developer Experience • CEO • DOC",
+      "epic": "D",
+      "role": "CEO",
+      "type": "doc",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-D-001"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-D-007",
+      "title": "Docs & Developer Experience • UIKernel • DOC",
+      "epic": "D",
+      "role": "UIKernel",
+      "type": "doc",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-D-008",
+      "title": "Docs & Developer Experience • Registrar • DOC",
+      "epic": "D",
+      "role": "Registrar",
+      "type": "doc",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-D-009",
+      "title": "Docs & Developer Experience • UIKernel • DOC",
+      "epic": "D",
+      "role": "UIKernel",
+      "type": "doc",
+      "priority": "P1",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-D-010",
+      "title": "Docs & Developer Experience • UIKernel • DOC",
+      "epic": "D",
+      "role": "UIKernel",
+      "type": "doc",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-D-011",
+      "title": "Docs & Developer Experience • CEO • DOC",
+      "epic": "D",
+      "role": "CEO",
+      "type": "doc",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-D-006"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-D-012",
+      "title": "Docs & Developer Experience • UIKernel • DOC",
+      "epic": "D",
+      "role": "UIKernel",
+      "type": "doc",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-D-013",
+      "title": "Docs & Developer Experience • Registrar • DOC",
+      "epic": "D",
+      "role": "Registrar",
+      "type": "doc",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-D-014",
+      "title": "Docs & Developer Experience • CEO • DOC",
+      "epic": "D",
+      "role": "CEO",
+      "type": "doc",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-D-015",
+      "title": "Docs & Developer Experience • Registrar • DOC",
+      "epic": "D",
+      "role": "Registrar",
+      "type": "doc",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-D-016",
+      "title": "Docs & Developer Experience • CEO • DOC",
+      "epic": "D",
+      "role": "CEO",
+      "type": "doc",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [
+        "CECCA-D-011"
+      ],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-D-017",
+      "title": "Docs & Developer Experience • CEO • DOC",
+      "epic": "D",
+      "role": "CEO",
+      "type": "doc",
+      "priority": "P2",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-D-018",
+      "title": "Docs & Developer Experience • CEO • DOC",
+      "epic": "D",
+      "role": "CEO",
+      "type": "doc",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-D-019",
+      "title": "Docs & Developer Experience • UIKernel • DOC",
+      "epic": "D",
+      "role": "UIKernel",
+      "type": "doc",
+      "priority": "P3",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "CECCA-D-020",
+      "title": "Docs & Developer Experience • UIKernel • DOC",
+      "epic": "D",
+      "role": "UIKernel",
+      "type": "doc",
+      "priority": "P0",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "All unit tests pass",
+        "Court/OPA gate evaluated with PASS",
+        "Trace event emitted with artifact digest"
+      ],
+      "artifacts": []
+    }
+  ]
+}

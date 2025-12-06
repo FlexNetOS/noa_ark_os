@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["create_channel","create_channel_inner","init","message_queues","receive_message","receive_message_inner","send_message","send_message_inner"],"struct":["IpcService","Message"],"type":["ChannelId"]};

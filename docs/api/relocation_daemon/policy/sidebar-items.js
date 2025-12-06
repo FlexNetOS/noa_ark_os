@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["NamingPattern"],"fn":["wildcard_match"],"struct":["NamingRules","PathPattern","PolicyDefaults","PolicyDocument","RelocationRule","RetentionPolicy","RuleFilters","RuntimePolicy","RuntimeRule"]};

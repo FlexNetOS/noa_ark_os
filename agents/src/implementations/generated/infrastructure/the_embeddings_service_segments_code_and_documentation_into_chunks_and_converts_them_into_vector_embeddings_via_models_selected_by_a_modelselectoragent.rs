@@ -8,7 +8,8 @@ use tokio::sync::RwLock;
 use uuid::Uuid;
 
 /// The Embeddings service segments code and documentation into chunks and converts them into vector embeddings via models selected by a ModelSelectorAgent
-pub struct TheEmbeddingsServiceSegmentsCodeAndDocumentationIntoChunksAndConvertsThemIntoVectorEmbeddingsViaModelsSelectedByAModelselectoragent {
+pub struct TheEmbeddingsServiceSegmentsCodeAndDocumentationIntoChunksAndConvertsThemIntoVectorEmbeddingsViaModelsSelectedByAModelselectoragent
+{
     metadata: AgentMetadata,
     state: RwLock<AgentState>,
 }
