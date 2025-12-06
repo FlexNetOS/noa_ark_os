@@ -55,9 +55,9 @@ fi
 
 chmod +x "$CADDY_BIN"
 
-declare -A HASHES
+CADDY_HASH="unknown"
 if command -v sha256sum >/dev/null 2>&1; then
-    HASHES["$CADDY_BIN"]="$(sha256sum "$CADDY_BIN" | awk '{print $1}')"
+    CADDY_HASH="$(sha256sum "$CADDY_BIN" | awk '{print $1}')"
 fi
 
 MANIFEST_PATH="$CADDY_ROOT/manifest.json"
@@ -68,7 +68,7 @@ cat > "$MANIFEST_PATH" <<JSON
   "archive": "${ARCHIVE_NAME}",
   "archive_path": "${ARCHIVE_PATH#${SCRIPT_DIR}/}",
   "caddy_binary": "${CADDY_BIN#${SCRIPT_DIR}/}",
-  "sha256": "${HASHES["$CADDY_BIN"]:-unknown}",
+  "sha256": "${CADDY_HASH}",
   "generated_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 }
 JSON

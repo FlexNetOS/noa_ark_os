@@ -203,11 +203,11 @@ impl CaddyManager {
         let payload = route.as_caddy_json();
         let target = self
             .admin_endpoint
-            .join("/config/apps/http/servers/srv0/routes")
+            .join("/config/apps/http/servers/srv0/routes/-")
             .context("invalid admin endpoint URL")?;
         let response = self
             .client
-            .post(target)
+            .patch(target)
             .json(&payload)
             .send()
             .await
