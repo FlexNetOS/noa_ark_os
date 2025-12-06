@@ -250,6 +250,8 @@ impl WorkflowEngine {
     pub fn with_kernel(kernel: KernelHandle) -> Self {
         let instrumentation =
             PipelineInstrumentation::new().expect("failed to initialise pipeline instrumentation");
+        let instrumentation =
+            PipelineInstrumentation::new().expect("failed to initialise pipeline instrumentation");
         let registry = AgentRegistry::with_default_data().unwrap_or_else(|_| AgentRegistry::new());
         let factory =
             AgentFactory::with_kernel(kernel.clone()).unwrap_or_else(|_| AgentFactory::new());
