@@ -7,10 +7,10 @@
 # Red Hat CodeReady Dependency Analytics.
 
 # Scans are triggered:
-# 1. On every Pull Request targeting the default branch
-# 2. On a weekly schedule
-# 3. Manually, on demand, via the "workflow_dispatch" event
-#    (Push triggers are not enabled by default. To enable, uncomment the 'push' trigger below.)
+# 1. On every push to default and protected branches
+# 2. On every Pull Request targeting the default branch
+# 3. On a weekly schedule
+# 4. Manually, on demand, via the "workflow_dispatch" event
 
 # 💁 The CRDA Starter workflow will:
 # - Checkout your repository
@@ -112,7 +112,7 @@ jobs:
       #
       # By default, CRDA will detect the manifest file and install the required dependencies
       # using the standard command for the project type.
-      # If your project doesn't align with the defaults mentioned in this action, you will
+      # If your project doesn't aligns with the defaults mentioned in this action, you will
       # need to set few inputs that are described here:
       # https://github.com/redhat-actions/crda/blob/main/README.md#3-installing-dependencies
       # Visit https://github.com/redhat-actions/crda/#4-set-up-authentication to understand
