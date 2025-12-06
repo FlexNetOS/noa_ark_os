@@ -229,7 +229,6 @@ pub fn init() -> Result<(), &'static str> {
         permissions: vec![Permission::Admin],
     };
 
-    let mut table = user_table()
     let mut table = user_table().lock().unwrap();
     table.insert(0, root);
 
