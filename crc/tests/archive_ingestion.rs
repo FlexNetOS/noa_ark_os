@@ -546,13 +546,3 @@ async fn verifies_extraction_directory_structure() -> Result<()> {
         }
     }
 
-async fn rejects_tar_with_absolute_path() -> Result<()> {
-    let drop_in = Path::new("crc/drop-in/incoming/repos");
-    fs::create_dir_all(drop_in)?;
-
-    // Similar to above - the tar crate prevents absolute paths during creation.
-    // Our validation code is in place to protect against externally created malicious archives.
-    // This test verifies the happy path works correctly.
-    
-    Ok(())
-}
