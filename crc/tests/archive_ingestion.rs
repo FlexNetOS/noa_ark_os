@@ -371,7 +371,7 @@ async fn cleanup_extracted_directory_on_registration_failure() -> Result<()> {
     create_zip_archive(&archive_path)?;
 
     // Prepare the artifact - this extracts it
-    let prepared = prepare_artifact_for_processing(archive_path.clone()).await?;
+    let prepared = prepare_artifact_for_processing(archive_path.clone(), None).await?;
     let extracted_path = prepared
         .original_artifact
         .as_ref()
