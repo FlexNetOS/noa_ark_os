@@ -63,7 +63,9 @@ fn gather_paths(args: &[String]) -> Result<Vec<PathBuf>> {
 fn git_output(args: &[&str]) -> Result<String> {
     let mut cmd = Command::new("git");
     cmd.args(args);
-    let output = cmd.output().with_context(|| format!("failed to run git {:?}", args))?;
+    let output = cmd
+        .output()
+        .with_context(|| format!("failed to run git {:?}", args))?;
     if !output.status.success() {
         return Ok(String::new());
     }
@@ -115,14 +117,19 @@ fn should_skip(path: &Path) -> bool {
     if path_str.contains(QUARANTINE_MARKER) {
         return true;
     }
+    // Skip the quarantine guard tool itself to avoid false positives from test fixtures
+    if path_str.ends_with("quarantine_guard.rs")
+        || path_str.ends_with("quarantine_guard/src/main.rs")
+    {
+        return true;
+    }
     false
 }
 
 fn is_code_extension(ext: &str) -> bool {
     matches!(
         ext.to_ascii_lowercase().as_str(),
-        "rs"
-            | "ts"
+        "rs" | "ts"
             | "tsx"
             | "js"
             | "jsx"
