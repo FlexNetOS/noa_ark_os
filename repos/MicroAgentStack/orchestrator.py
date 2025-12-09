@@ -8,9 +8,10 @@ from typing import Dict, Any, List
 MANIFESTS = [
     "global_agent_manifest.json",
     "director_agent_manifest.json",
-    "updated_agent_manifest.json"
+    "updated_agent_manifest.json",
 ]
 AGENTS_DIR = "agents"
+
 
 def load_manifest(path: str) -> Dict[str, Any]:
     try:
@@ -19,6 +20,7 @@ def load_manifest(path: str) -> Dict[str, Any]:
     except Exception as e:
         print(f"[orchestrator] Error loading manifest {path}: {e}")
         return {}
+
 
 def spawn_agent(agent_name: str, args: List[str] = []):
     agent_dir = os.path.join(AGENTS_DIR, agent_name)
@@ -29,6 +31,7 @@ def spawn_agent(agent_name: str, args: List[str] = []):
         subprocess.Popen(["python3", script] + args)
     else:
         print(f"[orchestrator] Script not found for {agent_name}, skipping.")
+
 
 def orchestrate():
     agents_started = set()
@@ -45,12 +48,18 @@ def orchestrate():
                 spawn_agent(agent_name)
                 agents_started.add(agent_name)
             else:
-                print(f"[orchestrator] autostart is false for {agent_name}, skipping launch.")
+                print(
+                    f"[orchestrator] autostart is false for {agent_name}, skipping launch."
+                )
     print(f"[orchestrator] All eligible agents spawned.")
+
 
 def send_task_to_agent(agent_name: str, task: str, params: Dict[str, Any] = {}):
     # For future: extend with IPC, HTTP API, or socket
-    print(f"[orchestrator] (Placeholder) Would send task '{task}' to {agent_name} with params {params}")
+    print(
+        f"[orchestrator] (Placeholder) Would send task '{task}' to {agent_name} with params {params}"
+    )
+
 
 if __name__ == "__main__":
     print("[orchestrator] Loading manifests and spawning agents ...")
@@ -60,4 +69,3 @@ if __name__ == "__main__":
         # (Placeholder) Periodically send health check or optimize tasks
         # send_task_to_agent('PCOperatorAgent', 'cleanup_temp_files')
         time.sleep(300)  # Every 5 mins, e.g.
-

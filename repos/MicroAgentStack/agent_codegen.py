@@ -1,13 +1,16 @@
-
 import os
 import json
 
-def generate_all_agents(manifest_path="updated_agent_manifest.json", agents_dir="agents"):
+
+def generate_all_agents(
+    manifest_path="updated_agent_manifest.json", agents_dir="agents"
+):
     with open(manifest_path, "r") as f:
         manifest = json.load(f)
     for agent_name, agent_entry in manifest["agents"].items():
         if agent_entry.get("approval_status") == "approved":
             generate_agent(agent_name, agent_entry, agents_dir=agents_dir)
+
 
 def generate_agent(agent_name, agent_entry, agents_dir="agents"):
     agent_dir = os.path.join(agents_dir, agent_name)
