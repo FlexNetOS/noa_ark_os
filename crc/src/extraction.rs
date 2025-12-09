@@ -263,7 +263,7 @@ async fn extract_zip(source: &Path, destination: &Path) -> Result<()> {
 ///
 /// # Security Considerations
 ///
-/// - The TAR library handles path validation internally to prevent directory traversal
+/// - Custom path validation is performed by the `extract_tar_entries()` helper function to prevent directory traversal
 /// - All archive entries are unpacked relative to the destination directory
 /// - Symbolic links and special files are handled according to the TAR library's defaults
 ///
@@ -272,7 +272,7 @@ async fn extract_zip(source: &Path, destination: &Path) -> Result<()> {
 /// - Runs in a blocking task via `tokio::task::spawn_blocking` to avoid blocking async operations
 /// - For uncompressed TAR: Directly creates a `tar::Archive` from the file
 /// - For GZIP-compressed TAR: Wraps the file in a `GzDecoder` before creating the archive
-/// - Uses the `tar` crate's `unpack()` method which handles all entry types automatically
+/// - Uses a custom `extract_tar_entries()` function that validates paths and handles all entry types securely
 async fn extract_tar(source: &Path, destination: &Path, compression: TarCompression) -> Result<()> {
     let source = source.to_path_buf();
     let destination = destination.to_path_buf();
@@ -332,6 +332,9 @@ fn extract_tar_entries<R: std::io::Read>(
             for component in entry_path.components() {
                 match component {
                     std::path::Component::Normal(name) => path_buf.push(name),
+                    std::path::Component::CurDir => {
+                        // Skip current directory components (.) as they don't change the path
+                    }
                     std::path::Component::RootDir => {
                         return Err(Error::ArchiveError(format!(
                             "Absolute paths are not allowed in tar archives: {}",
