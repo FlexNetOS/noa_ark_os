@@ -338,9 +338,9 @@ fn extract_tar_entries<R: std::io::Read>(
                             entry_path.display()
                         )));
                     }
-                    std::path::Component::ParentDir | std::path::Component::CurDir => {
+                    std::path::Component::ParentDir => {
                         return Err(Error::ArchiveError(format!(
-                            "Path traversal detected in tar entry: {}",
+                            "Parent directory traversal ('..') detected in tar entry: {}",
                             entry_path.display()
                         )));
                     }
