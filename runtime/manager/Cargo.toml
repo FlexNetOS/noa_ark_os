@@ -14,7 +14,6 @@ noa_core = { path = "../../core" }
 thiserror = "1.0"
 wasmtime = "39.0.0"
 wasmtime-wasi = "39.0.0"
-cap-std = "3.4.0"
 
 [dev-dependencies]
 serde_json = { workspace = true }
