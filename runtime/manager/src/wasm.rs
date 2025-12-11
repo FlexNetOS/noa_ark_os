@@ -6,7 +6,7 @@ use thiserror::Error;
 use wasmtime::ResourceLimiter;
 use wasmtime::{Config, Engine, Linker, Module, Store};
 use wasmtime_wasi::p1::{WasiP1Ctx, add_to_linker_sync};
-use wasmtime_wasi::p2::pipe::MemoryOutputPipe;
+use wasmtime_wasi::pipe::MemoryOutputPipe;
 use wasmtime_wasi::{WasiCtxBuilder, I32Exit};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
