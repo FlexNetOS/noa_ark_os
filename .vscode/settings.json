@@ -33,8 +33,7 @@
 
   "terminal.integrated.profiles.linux": {
     "bash": {
-      "path": "/bin/bash",
-      "args": ["-l"]
+      "path": "/bin/bash"
     }
   },
 
@@ -104,6 +103,18 @@
     "**/dist": true,
     "**/build": true
   },
+
+  // ============================================
+  // Rust Analyzer Configuration
+  // ============================================
+
+  // Rust analyzer diagnostics settings
+  "rust-analyzer.diagnostics.warningsAsHint": [
+    "unused_variables",
+    "unused_imports"
+  ],
+  "rust-analyzer.diagnostics.warningsAsInfo": ["dead_code"],
+  "rust-analyzer.checkOnSave.command": "check",
 
   // ============================================
   // Additional Editor Settings
@@ -275,6 +286,6 @@
   "chat.tools.terminal.ignoreDefaultAutoApproveRules": true,
   "chat.todoListTool.writeOnly": true,
   "chat.mcp.gallery.enabled": true,
-  "chat.agent.thinking.collapsedTools": "all",
+  "chat.agent.thinking.collapsedTools": "always",
   "chat.agent.thinkingStyle": "collapsedPreview"
 }
