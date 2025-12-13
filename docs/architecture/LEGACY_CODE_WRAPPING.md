@@ -1,6 +1,8 @@
 # Legacy Code Wrapping Strategy
 
-This document defines how to retain dead / deprecated code that references past projects while preventing it from polluting active builds and triggering noisy diagnostics.
+This document defines how to retain dead/deprecated code that references past
+projects while preventing it from polluting active builds and triggering noisy
+diagnostics.
 
 ## Goals
 
@@ -17,7 +19,7 @@ Create a `legacy` module (directory) inside the crate root (e.g. `core/src/legac
 
 Structure:
 
-```
+```text
 crate_root/
   src/
     legacy/
@@ -100,12 +102,14 @@ legacy_item! {
 
 ### 6. Explicit Dependency Isolation
 
-Avoid importing from `legacy` into active modules. The dependency direction should be one-way: active code may call a _revived_ item only after moving it out of `legacy`.
+Avoid importing from `legacy` into active modules. The dependency direction
+should be one-way: active code may call a _revived_ item only after moving it
+out of `legacy`.
 
 ### 7. Tracking and Audit
 
-List all legacy units in `docs/architecture/LEGACY_INVENTORY.md` (create when needed). Columns:
-`module | file | origin | revival_target | status | notes`
+List all legacy units in `docs/architecture/LEGACY_INVENTORY.md` (create when
+needed). Columns: `module | file | origin | revival_target | status | notes`
 
 ### 8. Removal Workflow
 
@@ -118,7 +122,9 @@ When reviving:
 
 ## rust-analyzer Diagnostics Mapping
 
-In `tools/devshell/config.json` (mirrored automatically to IDEs when you source `tools/devshell/env/pnpm.*`), configure more granular hints instead of global suppression:
+In `tools/devshell/config.json` (mirrored automatically to IDEs when you source
+`tools/devshell/env/pnpm.*`), configure more granular hints instead of global
+suppression:
 
 ```json
 "rust-analyzer.diagnostics.warningsAsHint": ["unused-imports"],

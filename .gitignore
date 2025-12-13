@@ -227,9 +227,15 @@ server/tools/node-portable/
 server/data/
 crc/temp/
 crc/archive/
+crc/crc/
+crc/crc/archive/
+crc/crc/temp/
+crc/storage/
 crc/sandboxes/*/active/
 crc/drop-in/incoming/stale/
 crc/drop-in/incoming/forks/*/
+crc/crc/
+crc/storage/
 
 # Devshell state snapshots
 tools/devshell/state/*
@@ -348,11 +354,14 @@ logs/**/!(.gitkeep|README.md)
 # Ignore pnpm cache store
 tools/.pnpm-home/store/
 
-# Ignore pnpm cache store
-tools/.pnpm-home/store/
-
 # Large notebooks kept locally, not pushed to GitHub
 notebooks/**/*.ipynb
 notebooks/.ipynb_checkpoints/
 archive/2025/11/notebooks/
 worktrees/
+
+# CRC test artifacts
+crc/crc/
+crc/out/
+crc/storage/
+>>>>>>> codex/enhance-ingestion-path-for-archive-formats
