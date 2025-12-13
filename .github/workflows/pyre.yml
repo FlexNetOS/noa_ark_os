@@ -19,8 +19,14 @@ on:
   workflow_dispatch:
   push:
     branches: [ "main" ]
+    paths:
+      - '**/*.py'
+      - 'requirements.txt'
   pull_request:
     branches: [ "main" ]
+    paths:
+      - '**/*.py'
+      - 'requirements.txt'
 
 permissions:
     contents: read
@@ -37,8 +43,20 @@ jobs:
         with:
           submodules: true
 
+      - name: Check for requirements.txt
+        id: check-requirements
+        run: |
+          if [ -f requirements.txt ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "Creating minimal requirements.txt for Pyre"
+            echo "pyre-check" > requirements.txt
+            echo "exists=true" >> $GITHUB_OUTPUT
+          fi
+
       - name: Run Pyre
-        uses: facebook/pyre-action@60697a7858f7cc8470d8cc494a3cf2ad6b06560d
+        if: steps.check-requirements.outputs.exists == 'true'
+        uses: facebook/pyre-action@v0.0.2
         with:
           # To customize these inputs:
           # See https://github.com/facebook/pyre-action#inputs

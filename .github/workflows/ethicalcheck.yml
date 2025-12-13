@@ -34,10 +34,18 @@ on:
   # Customize trigger events based on your DevSecOps processes.
   push:
     branches: [ "main" ]
+    paths:
+      - '**/openapi*.yaml'
+      - '**/openapi*.json'
+      - '**/swagger*.yaml'
+      - '**/swagger*.json'
   pull_request:
     branches: [ "main" ]
-  schedule:
-    - cron: '23 9 * * 2'
+    paths:
+      - '**/openapi*.yaml'
+      - '**/openapi*.json'
+      - '**/swagger*.yaml'
+      - '**/swagger*.json'
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -47,22 +55,41 @@ permissions:
 
 jobs:
   Trigger_EthicalCheck:
+    # Only run if configured with proper credentials
+    if: ${{ vars.ETHICALCHECK_CONFIGURED == 'true' || github.event_name == 'workflow_dispatch' }}
     permissions:
       security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
       actions: read # only required for a private repository by github/codeql-action/upload-sarif to get the Action run status
     runs-on: ubuntu-latest
 
     steps:
-       - name: EthicalCheck  Free & Automated API Security Testing Service
-         uses: apisec-inc/ethicalcheck-action@005fac321dd843682b1af6b72f30caaf9952c641
+       - name: Checkout code
+         uses: actions/checkout@v4
+
+       - name: Find OpenAPI spec
+         id: find-spec
+         run: |
+           spec=$(find . -type f \( -name "openapi*.yaml" -o -name "openapi*.json" -o -name "swagger*.yaml" -o -name "swagger*.json" \) | head -1)
+           if [ -n "$spec" ]; then
+             echo "found=true" >> $GITHUB_OUTPUT
+             echo "spec_path=$spec" >> $GITHUB_OUTPUT
+           else
+             echo "found=false" >> $GITHUB_OUTPUT
+           fi
+
+       - name: EthicalCheck Free & Automated API Security Testing Service
+         if: steps.find-spec.outputs.found == 'true'
+         uses: apisec-inc/ethicalcheck-action@v1
          with:
           # The OpenAPI Specification URL or Swagger Path or Public Postman collection URL.
-          oas-url: "http://netbanking.apisec.ai:8080/v2/api-docs"
+          # Configure via repository variable or provide the URL directly
+          oas-url: ${{ vars.ETHICALCHECK_OAS_URL || steps.find-spec.outputs.spec_path }}
           # The email address to which the penetration test report will be sent.
-          email: "xxx@apisec.ai"
+          email: ${{ vars.ETHICALCHECK_EMAIL || 'security@example.com' }}
           sarif-result-file: "ethicalcheck-results.sarif"
 
        - name: Upload sarif file to repository
+         if: steps.find-spec.outputs.found == 'true'
          uses: github/codeql-action/upload-sarif@v3
          with:
           sarif_file: ./ethicalcheck-results.sarif

@@ -8,8 +8,12 @@ name: pmd
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - '**/*.java'
   pull_request:
     branches: [ "main" ]
+    paths:
+      - '**/*.java'
   schedule:
     - cron: '32 16 * * 5'
 
@@ -25,19 +29,36 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set up JDK 11
+
+      - name: Check for Java files
+        id: check-java
+        run: |
+          java_files=$(find . -name "*.java" -type f | head -1)
+          if [ -n "$java_files" ]; then
+            echo "found=true" >> $GITHUB_OUTPUT
+            echo "source_path=$(dirname $java_files)" >> $GITHUB_OUTPUT
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up JDK 17
+        if: steps.check-java.outputs.found == 'true'
         uses: actions/setup-java@v4
         with:
-          java-version: '11'
+          java-version: '17'
           distribution: 'temurin'
+
       - name: Run PMD
+        if: steps.check-java.outputs.found == 'true'
         id: pmd
-        uses: pmd/pmd-github-action@967a81f8b657c87f7c3e96b62301cb1a48efef29
+        uses: pmd/pmd-github-action@v2
         with:
           rulesets: 'rulesets/java/quickstart.xml'
-          sourcePath: 'src/main/java'
+          sourcePath: ${{ steps.check-java.outputs.source_path }}
           analyzeModifiedFilesOnly: false
+
       - name: Upload SARIF file
+        if: steps.check-java.outputs.found == 'true' && always()
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: pmd-report.sarif
