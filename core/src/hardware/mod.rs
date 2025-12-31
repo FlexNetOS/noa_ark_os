@@ -178,8 +178,8 @@ fn query_nvidia_smi() -> Vec<GpuProfile> {
             for line in stdout.lines() {
                 let parts: Vec<_> = line.split(',').map(|s| s.trim()).collect();
                 // Skip empty lines and lines with empty first field
-                // Also ensure we have at least the name field
-                if parts.is_empty() || parts[0].is_empty() {
+                // Also ensure we have at least 3 fields (name, memory, driver)
+                if parts.is_empty() || parts[0].is_empty() || parts.len() < 3 {
                     continue;
                 }
 
