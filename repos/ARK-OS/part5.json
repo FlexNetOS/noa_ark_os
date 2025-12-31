@@ -1,0 +1,67 @@
+{
+  "bundle": {
+    "name": "noa-cecca-stemcell-bundle-part5",
+    "version": "0.5.1-part5",
+    "created": "2025-09-16T00:00:00Z",
+    "style": "kernel-first • message-passing • async-only • no-globals • zero-bloat",
+    "entry": "kernel/bootstrap",
+    "sbom": {
+      "policy": {
+        "failOnMissingModules": false,
+        "failOnMissingEnv": false
+      },
+      "expectedEnv": ["NOA_PORT", "OFFLINE_MODE", "BASE_URL"],
+      "autoFix": true
+    },
+    "modules": {
+      "docs/intelligence_learning.md": {
+        "language": "markdown",
+        "code": "[Placeholder for contents of intelligence_learning.md]"
+      },
+      "docs/issues_epics_tasks.md": {
+        "language": "markdown",
+        "code": "[Placeholder for contents of issues_epics_tasks.md]"
+      },
+      "docs/microagentstack.md": {
+        "language": "markdown",
+        "code": "[Placeholder for contents of microagentstack.md]"
+      },
+      "docs/model_selector_agents.md": {
+        "language": "markdown",
+        "code": "[Placeholder for contents of model_selector_agents.md]"
+      },
+      "docs/noa.md": {
+        "language": "markdown",
+        "code": "[Placeholder for contents of noa.md]"
+      },
+      "docs/updated_master_task_graph.md": {
+        "language": "markdown",
+        "code": "[Placeholder for contents of updated_master_task_graph.md]"
+      },
+      "arkos_noa_build_kit.zip": {
+        "language": "binary",
+        "code": "[Placeholder for binary contents of arkos_noa_build_kit.zip]"
+      },
+      "noa_integration_release_v5_5.zip": {
+        "language": "binary",
+        "code": "[Placeholder for binary contents of noa_integration_release_v5_5.zip]"
+      },
+      "noa_final_integration_verification_v5_6.zip": {
+        "language": "binary",
+        "code": "[Placeholder for binary contents of noa_final_integration_verification_v5_6.zip]"
+      },
+      "noa_integration_release_v5_4.zip": {
+        "language": "binary",
+        "code": "[Placeholder for binary contents of noa_integration_release_v5_4.zip]"
+      },
+      "noa_integration_release_v5_6.zip": {
+        "language": "binary",
+        "code": "[Placeholder for binary contents of noa_integration_release_v5_6.zip]"
+      },
+      "noa_directory_kit_v1/": {
+        "language": "directory",
+        "code": "[Placeholder for contents of noa_directory_kit_v1 directory]"
+      }
+    }
+  }
+}

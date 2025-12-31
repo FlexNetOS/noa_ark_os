@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["AST_INDEX","CONFIG_INDEX","DEFAULT_OUTPUT_DIR","OWNERSHIP_INDEX"],"enum":["IndexerError"],"fn":["write_json"],"mod":["ast","config","ownership"],"struct":["AstEdge","AstGraph","AstNode","ComponentOwnership","ConfigDependency","ConfigGraph","FileOwnership","IndexArtifacts","IndexerService","ManifestNode","OwnerInfo","OwnershipGraph"]};

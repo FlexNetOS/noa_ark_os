@@ -1,0 +1,34 @@
+name: Policy Conformance
+on: [pull_request]
+jobs:
+  policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Verify provider stubs point to AGENT.md
+        shell: bash
+        run: |
+          set -euo pipefail
+          ok=1
+          expect_copilot=$'# Defer to AGENT.md\nUse AGENT.md at repo root as the sole policy and instruction source. Do not duplicate logic here.'
+          expect_claude=$'This file intentionally contains no instructions. All policies and execution rules are defined in AGENT.md.'
+          expect_pointer=$'Provider/agent instruction policy lives in AGENT.md. Do not place instructions elsewhere.'
+          test -f AGENT.md || (echo "AGENT.md missing" >&2; exit 1)
+          if [ -f .copilot ]; then
+            diff -u <(printf "%s\n" "$expect_copilot") .copilot || ok=0
+          else ok=0; fi
+          if [ -f CLAUDE.md ]; then
+            diff -u <(printf "%s\n" "$expect_claude") CLAUDE.md || ok=0
+          else ok=0; fi
+          if [ -f .github/AGENT_POINTER.txt ]; then
+            diff -u <(printf "%s\n" "$expect_pointer") .github/AGENT_POINTER.txt || ok=0
+          else ok=0; fi
+          [ $ok -eq 1 ] || (echo "Provider stubs must match expected pointer text exactly." >&2; exit 1)
+      - name: Ensure guardrail workflows exist
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in deletion-lock.yml duplicate-fence.yml report-fence.yml change-budget.yml; do
+            test -f ".github/workflows/$f" || (echo "Missing .github/workflows/$f" >&2; exit 1)
+          done

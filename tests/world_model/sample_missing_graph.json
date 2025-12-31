@@ -1,0 +1,29 @@
+{
+  "version": "0.1.0",
+  "metadata": {
+    "generated": "2024-05-20T00:00:00Z",
+    "description": "Fixture graph with missing node",
+    "source": "test"
+  },
+  "nodes": [
+    {
+      "id": "repo-root",
+      "kind": "directory",
+      "path": ".",
+      "summary": "Root of the repository"
+    },
+    {
+      "id": "missing-target",
+      "kind": "file",
+      "path": "tests/world_model/fixtures/ghost.txt",
+      "summary": "Ghost file used to trigger drift"
+    }
+  ],
+  "edges": [
+    {
+      "source": "repo-root",
+      "target": "missing-target",
+      "relationship": "contains"
+    }
+  ]
+}

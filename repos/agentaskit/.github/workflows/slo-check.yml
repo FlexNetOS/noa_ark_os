@@ -1,0 +1,19 @@
+name: SLO Check
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+  push:
+    paths: [ 'agentaskit-production/slo/**' ]
+
+jobs:
+  slo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate SLO policy exists
+        run: |
+          test -f agentaskit-production/slo/policies.yaml || { echo "Missing slo/policies.yaml"; exit 1; }
+      - name: Burn-rate placeholder check
+        run: |
+          echo "SLO check stub - implement burn-rate from metrics backend"

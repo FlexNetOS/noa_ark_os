@@ -1,0 +1,585 @@
+﻿# AgentAsKit TODO List
+
+**Generated:** 2025-10-04  
+**System:** Enhanced Workflow Processing  
+**Version:** 1.0  
+**Status:** Active  
+
+## Current Task Queue
+
+### Task: COMPREHENSIVE-7PHASE-001 - Complete 7-Phase Workflow System Implementation
+
+**Priority:** Critical  
+**Created:** 2025-10-05T02:30:00Z  
+**Status:** In Progress  
+**Assigned Agents:** System Orchestrator, Performance Optimizer, Security Specialist, Architecture Designer  
+
+#### Deconstruct
+- **Core Intent:** Execute comprehensive triple cross-reference analysis across all system depths and implement complete 7-phase workflow system with 928-agent orchestration and performance optimization
+- **Key Entities:** 7-Phase Workflow System, 928 Agent Capability Matching, NOA Triple-Verification, FlexNetOS Tri-Sandbox, Model D Evolutionary Merge, Performance Metrics, Security Measures, Agent Hierarchy
+- **Output Requirements:** 
+  - Complete folder/file depth analysis with triple cross-referencing
+  - Full 7-phase workflow implementation (User Request Ingestion â†’ Post-Delivery Operations)
+  - Performance optimization (10K+ tasks/sec, 100K+ messages/sec, <100ms startup, <50ms response)
+  - Error/conflict/break identification system
+  - 928-agent orchestration framework with 6-layer hierarchy
+  - Security and integrity verification systems with capability tokens
+- **Constraints:** 
+  - Must achieve <100ms agent startup time
+  - Must maintain <50ms average response time
+  - Must ensure 99.99% system availability
+  - Must handle 100,000+ messages/second inter-agent communication
+  - Must use unified structure (no noa/flexnetos separation)
+  - Must comply with "Heal, Don't Harm" principle
+
+#### Diagnose
+- **Clarity Gaps:** 
+  - Specific implementation details for 928 agent capability matching algorithm
+  - Model D generation algorithm specifics for evolutionary merge
+  - Real-time health monitoring integration points with existing systems
+  - Performance bottleneck identification methodology across tri-sandbox execution
+- **Specificity Level:** Specific
+- **Completeness Score:** 0.92
+- **Complexity:** Highly Complex
+
+#### Develop
+- **Request Type:** Complex
+- **Techniques:** 
+  - Systematic Frameworks for 7-phase sequential processing
+  - Chain of Thought for verification protocols
+  - Constraint-based architecture for performance targets
+  - Precision-focused implementation for measurable metrics
+- **AI Role:** Senior Systems Architect specializing in Multi-Agent Orchestration, Performance Optimization, and Real-time System Design
+
+#### Deliver
+- **Execution Steps:**
+  1. Triple cross-reference analysis of all folder/file depths
+  2. 7-Phase workflow implementation (User Ingestion â†’ Post-Delivery)
+  3. Performance optimization system (10K+ tasks/sec capability)
+  4. 928-agent orchestration framework with capability matching
+  5. Security enhancement suite with triple verification
+  6. Integration testing with performance benchmarking
+  7. Documentation and optimization with evidence trails
+- **Deliverables:**
+  - `agentaskit-production/core/src/workflows/seven_phase/` (Complete 7-phase implementation)
+  - `agentaskit-production/core/src/orchestration/agent_management/` (928-agent orchestration)
+  - `agentaskit-production/performance/` (Performance optimization framework)
+  - `agentaskit-production/security/` (Security enhancement suite)
+  - `agentaskit-production/docs/comprehensive-implementation/` (Documentation with evidence)
+- **Timeline:**
+  - Phase 1-2 (Analysis & Core): 48 hours
+  - Phase 3-4 (Performance & Orchestration): 72 hours
+  - Phase 5-6 (Security & Testing): 48 hours
+  - Phase 7 (Documentation): 24 hours
+  - Total: 192 hours (8 days)
+- **Verification:** Triple-verification protocol with Pass A (self-check), Pass B (independent re-derivation), Pass C (adversarial validation)
+
+---
+
+### Task: WORKFLOW-001 - Enhanced Chat Request Processing Implementation
+
+**Priority:** High  
+**Created:** 2025-10-04T10:30:00Z  
+**Status:** In Progress  
+**Assigned Agents:** Integration Agent, System Orchestrator  
+
+#### Deconstruct
+- **Core Intent:** Implement complete user chat request processing workflow with AI model SOT reading, TODO updating, and 4D method application
+- **Key Entities:** ChatRequest, TaskSubject, SOTAnalysis, VerificationProtocol, Deliverable, TargetLocation
+- **Output Requirements:** 
+  - Enhanced workflow processor implementation
+  - SOP file for standardized procedures
+  - TODO management system
+  - Deliverable definition with target locations
+  - Triple-verification protocol implementation
+- **Constraints:** 
+  - Must follow production structure preference (agentaskit-production)
+  - Must comply with "Heal, Don't Harm" principle
+  - Must implement triple-verification protocol
+  - Must integrate with existing NOA and FlexNetOS systems
+
+#### Diagnose
+- **Clarity Gaps:** 
+  - Integration points with existing agent communication protocols
+  - Specific file format requirements for deliverables
+  - Performance requirements for real-time processing
+- **Specificity Level:** Specific
+- **Completeness Score:** 0.87
+- **Complexity:** Complex
+
+#### Develop
+- **Request Type:** Technical
+- **Techniques:** 
+  - Constraint-based architecture design
+  - Systematic framework implementation
+  - Precision-focused API design
+  - Chain-of-thought verification protocols
+- **AI Role:** Senior Rust Developer with Multi-Agent System expertise
+
+#### Deliver
+- **Execution Steps:**
+  1. Implement core workflow processor module
+  2. Create SOP documentation with procedures
+  3. Implement TODO management system
+  4. Define deliverable specifications and target locations
+  5. Integrate with agent communication protocols
+  6. Implement triple-verification system
+  7. Create comprehensive test suite
+  8. Generate documentation and evidence trails
+- **Deliverables:**
+  - `core/src/workflows/mod.rs` (Enhanced workflow processor)
+  - `core/src/orchestration/workflows.sop` (Standard operating procedures)
+  - `core/src/orchestration/tasks.todo` (TODO management system)
+  - `docs/ENHANCED_WORKFLOW_IMPLEMENTATION.md` (Implementation documentation)
+  - `tests/workflows/` (Test suite with verification protocols)
+- **Timeline:**
+  - Phase 1 (Implementation): 2025-10-04 to 2025-10-05
+  - Phase 2 (Integration): 2025-10-05 to 2025-10-06
+  - Phase 3 (Verification): 2025-10-06 to 2025-10-07
+- **Verification:** Triple-verification protocol with Pass A/B/C validation
+
+---
+
+### Task: WORKFLOW-002 - AI Model SOP Reading Integration
+
+**Priority:** High  
+**Created:** 2025-10-04T10:35:00Z  
+**Status:** Pending  
+**Assigned Agents:** Learning Agent, Integration Agent  
+
+#### Deconstruct
+- **Core Intent:** Integrate AI model capability to read and analyze SOP files before processing user requests
+- **Key Entities:** SOP Parser, AI Model Interface, Content Analyzer, Procedure Validator
+- **Output Requirements:**
+  - SOP file parsing and analysis capability
+  - AI model integration for procedure understanding
+  - Context-aware request processing based on SOP content
+  - Validation of SOP compliance in all workflows
+- **Constraints:**
+  - Must maintain real-time processing performance
+  - Must ensure accurate SOP interpretation
+  - Must provide audit trail for SOP usage
+
+#### Diagnose
+- **Clarity Gaps:**
+  - Specific AI model requirements for SOP understanding
+  - Performance impact of SOP analysis on request processing
+  - Error handling for malformed or missing SOP content
+- **Specificity Level:** Moderate
+- **Completeness Score:** 0.82
+- **Complexity:** Moderate
+
+#### Develop
+- **Request Type:** Technical
+- **Techniques:**
+  - Systematic framework for natural language processing
+  - Constraint-based validation rules
+  - Precision-focused content analysis
+- **AI Role:** Machine Learning Engineer with NLP expertise
+
+#### Deliver
+- **Execution Steps:**
+  1. Design SOP parsing architecture
+  2. Implement content analysis algorithms
+  3. Integrate with AI model interface
+  4. Create procedure validation system
+  5. Implement error handling and fallback mechanisms
+  6. Create comprehensive test suite
+  7. Generate performance benchmarks
+- **Deliverables:**
+  - `core/src/workflows/sop_parser.rs` (SOP parsing implementation)
+  - `core/src/ai/sop_analyzer.rs` (AI model integration)
+  - `tests/workflows/sop_integration/` (Test suite)
+  - `docs/SOP_INTEGRATION_GUIDE.md` (Integration documentation)
+- **Timeline:**
+  - Implementation: 2025-10-05 to 2025-10-06
+  - Testing: 2025-10-06 to 2025-10-07
+- **Verification:** Performance benchmarks and accuracy validation
+
+---
+
+### Task: WORKFLOW-003 - 4D Method Implementation Enhancement
+
+**Priority:** Medium  
+**Created:** 2025-10-04T10:40:00Z  
+**Status:** Pending  
+**Assigned Agents:** Strategy Board Agent, System Orchestrator  
+
+#### Deconstruct
+- **Core Intent:** Enhance existing 4D methodology implementation with comprehensive automation and verification
+- **Key Entities:** DeconstructPhase, DiagnosePhase, DevelopPhase, DeliverPhase, MethodologyEngine
+- **Output Requirements:**
+  - Automated 4D method application
+  - Quality gates for each phase
+  - Scoring and validation systems
+  - Integration with task subject generation
+- **Constraints:**
+  - Must maintain methodology integrity
+  - Must provide measurable quality metrics
+  - Must integrate seamlessly with workflow processing
+
+#### Diagnose
+- **Clarity Gaps:**
+  - Specific scoring algorithms for each phase
+  - Quality gate thresholds and validation criteria
+  - Integration points with existing task management
+- **Specificity Level:** Specific
+- **Completeness Score:** 0.85
+- **Complexity:** Moderate
+
+#### Develop
+- **Request Type:** Technical
+- **Techniques:**
+  - Systematic framework implementation
+  - Clear structure with validation gates
+  - Precision-focused methodology application
+- **AI Role:** Systems Architect with Process Optimization expertise
+
+#### Deliver
+- **Execution Steps:**
+  1. Enhance phase implementation with scoring
+  2. Create quality gate validation system
+  3. Implement methodology engine
+  4. Add comprehensive logging and metrics
+  5. Create validation test suite
+  6. Generate methodology documentation
+- **Deliverables:**
+  - Enhanced `core/src/workflows/mod.rs` (4D method implementation)
+  - `core/src/workflows/methodology_engine.rs` (Methodology automation)
+  - `docs/4D_METHOD_ENHANCEMENT.md` (Enhancement documentation)
+  - `tests/workflows/methodology/` (Methodology test suite)
+- **Timeline:**
+  - Enhancement: 2025-10-06 to 2025-10-07
+  - Validation: 2025-10-07 to 2025-10-08
+- **Verification:** Methodology validation and quality gate testing
+
+---
+
+### Task: WORKFLOW-004 - Deliverable and Target Location Management
+
+**Priority:** High  
+**Created:** 2025-10-04T10:45:00Z  
+**Status:** Pending  
+**Assigned Agents:** Deployment Agent, Integration Agent  
+
+#### Deconstruct
+- **Core Intent:** Implement comprehensive deliverable definition and target location management system
+- **Key Entities:** Deliverable, TargetLocation, FileSpecification, OrganizationRules, DeliverableManager
+- **Output Requirements:**
+  - Automated deliverable specification generation
+  - Target location determination based on production structure preference
+  - File organization and management automation
+  - Backup and archival system integration
+- **Constraints:**
+  - Must comply with production structure preference
+  - Must follow workspace organization rules
+  - Must provide backup and recovery capabilities
+
+#### Diagnose
+- **Clarity Gaps:**
+  - Specific organization rules for different deliverable types
+  - Backup strategy and retention policies
+  - Integration with existing file management systems
+- **Specificity Level:** Specific
+- **Completeness Score:** 0.88
+- **Complexity:** Moderate
+
+#### Develop
+- **Request Type:** Technical
+- **Techniques:**
+  - Constraint-based location determination
+  - Systematic file organization framework
+  - Precision-focused specification generation
+- **AI Role:** DevOps Engineer with File System Management expertise
+
+#### Deliver
+- **Execution Steps:**
+  1. Implement deliverable specification engine
+  2. Create target location determination algorithms
+  3. Implement file organization automation
+  4. Create backup and archival integration
+  5. Add validation and verification systems
+  6. Create comprehensive test suite
+  7. Generate management documentation
+- **Deliverables:**
+  - `core/src/workflows/deliverable_manager.rs` (Deliverable management)
+  - `core/src/workflows/location_manager.rs` (Target location management)
+  - `scripts/deliverable_automation.sh` (Automation scripts)
+  - `docs/DELIVERABLE_MANAGEMENT.md` (Management documentation)
+  - `tests/workflows/deliverables/` (Deliverable test suite)
+- **Timeline:**
+  - Implementation: 2025-10-07 to 2025-10-08
+  - Integration: 2025-10-08 to 2025-10-09
+- **Verification:** File organization validation and backup testing
+
+---
+
+### Task: WORKFLOW-005 - Integration Testing and Validation
+
+**Priority:** Critical  
+**Created:** 2025-10-04T10:50:00Z  
+**Status:** Pending  
+**Assigned Agents:** Testing Agent, Security Specialist Agent  
+
+#### Deconstruct
+- **Core Intent:** Comprehensive integration testing and validation of entire enhanced workflow system
+- **Key Entities:** IntegrationTestSuite, ValidationFramework, PerformanceBenchmarks, SecurityValidation
+- **Output Requirements:**
+  - End-to-end integration test suite
+  - Performance benchmarking and validation
+  - Security testing and vulnerability assessment
+  - Production readiness certification
+- **Constraints:**
+  - Must validate all integration points
+  - Must meet performance requirements
+  - Must pass security validation
+  - Must provide comprehensive coverage
+
+#### Diagnose
+- **Clarity Gaps:**
+  - Specific performance requirements and thresholds
+  - Security validation criteria and standards
+  - Production readiness certification process
+- **Specificity Level:** Specific
+- **Completeness Score:** 0.90
+- **Complexity:** Complex
+
+#### Develop
+- **Request Type:** Technical
+- **Techniques:**
+  - Systematic testing framework
+  - Comprehensive validation protocols
+  - Performance-focused benchmarking
+  - Security-focused vulnerability assessment
+- **AI Role:** Senior QA Engineer with Security Testing expertise
+
+#### Deliver
+- **Execution Steps:**
+  1. Design comprehensive integration test suite
+  2. Implement performance benchmarking framework
+  3. Create security validation protocols
+  4. Execute end-to-end testing scenarios
+  5. Generate performance and security reports
+  6. Create production readiness documentation
+  7. Implement continuous validation system
+- **Deliverables:**
+  - `tests/integration/enhanced_workflow/` (Integration test suite)
+  - `tests/performance/workflow_benchmarks/` (Performance tests)
+  - `tests/security/workflow_validation/` (Security tests)
+  - `docs/INTEGRATION_TEST_REPORT.md` (Test report)
+  - `docs/PRODUCTION_READINESS_CERTIFICATION.md` (Readiness certification)
+- **Timeline:**
+  - Test Development: 2025-10-08 to 2025-10-09
+  - Validation Execution: 2025-10-09 to 2025-10-10
+  - Certification: 2025-10-10 to 2025-10-11
+- **Verification:** Triple-verification protocol with comprehensive coverage analysis
+
+---
+
+### Task: WORKFLOW-006 - Archive Cross-Reference & Unification (V2â€“V7)
+
+**Priority:** High  
+**Created:** 2025-10-05T12:00:00Z  
+**Status:** In Progress  
+**Assigned Agents:** Program Integrator, Platform Engineer  
+
+#### Deconstruct
+- **Core Intent:** Cross-reference entire repo against archives V2â€“V7; report lineage, duplicates, and missing production components; wire CI and pre-push guard; produce evidence.
+- **Output Requirements:**
+  - cross-reference CI workflow and local hook
+  - manifest/report artifacts (JSON/MD)
+  - SoT executed entry with evidence paths
+- **Constraints:** Deterministic outputs; no placeholders; do not remove existing files.
+
+#### Deliver
+- **Execution Steps:**
+  1. Add `.github/workflows/cross-reference.yml` CI
+  2. Add `tools/analysis/cross_reference.py` scanner
+  3. Add `docs/reports/cross_reference/README.md`
+  4. Add `hooks/pre-push` scanner hook
+  5. Run CI and attach artifacts; update SoT
+- **Acceptance:** `report.md` lists summary, lineage, duplicates, and missing dirs; artifacts uploaded by CI; SoT updated
+- **Evidence:** `agentaskit-production/docs/reports/cross_reference/artifacts/`
+
+---
+
+### Task: WORKFLOW-007 - Observability & SLO Plumbing
+
+**Priority:** High  
+**Created:** 2025-10-05T12:10:00Z  
+**Status:** Pending  
+**Assigned Agents:** Observability, SRE  
+
+#### Deconstruct
+- **Core Intent:** Add dashboards dir, alerts, SLO policy, and CI SLO check; wire to PERF/SLA tasks.
+
+#### Deliver
+- **Execution Steps:**
+  1. Create `agentaskit-production/dashboards/` and seed README (done)
+  2. Add `agentaskit-production/alerts/` and stub README
+  3. Add `agentaskit-production/slo/policies.yaml` baseline
+  4. Add `.github/workflows/slo-check.yml` to enforce burn-rate
+- **Acceptance:** Dashboards/alerts committed; SLO policy present; CI passes
+- **Evidence:** `dashboards/*.json`, `alerts/*.yaml`, `slo/policies.yaml`, CI logs
+
+---
+
+### Task: WORKFLOW-008 - Subject Inbox Interpretation (7-Phase request)
+
+**Priority:** Critical  
+**Created:** 2025-10-05T12:20:00Z  
+**Status:** In Progress  
+**Assigned Agents:** System Orchestrator, Program Integrator  
+
+#### Deconstruct
+- **Core Intent:** Translate SUBJ-* items from `agentask.subject.todo` into WORKFLOW-* tasks and wire dependencies.
+- **Inputs:** SUBJ-CROSSREF, SUBJ-VERIFY, SUBJ-HEAL-UPGRADE, SUBJ-UNIFY, SUBJ-ZERO-INBOX, SUBJ-LLAMACPP, SUBJ-SLO-CI, SUBJ-SEC-CI
+
+#### Deliver
+- **Execution Steps:**
+  1. Map SUBJ-CROSSREF â†’ WORKFLOW-006 (exists)
+  2. Map SUBJ-VERIFY â†’ extend WORKFLOW-006 acceptance and SoT
+  3. Map SUBJ-HEAL-UPGRADE â†’ create WORKFLOW-009
+  4. Map SUBJ-UNIFY â†’ create WORKFLOW-010
+  5. Map SUBJ-ZERO-INBOX â†’ closure task as WORKFLOW-011
+  6. Map SUBJ-LLAMACPP â†’ create WORKFLOW-012 (integration)
+  7. Map SUBJ-SLO-CI â†’ WORKFLOW-007 (exists)
+  8. Map SUBJ-SEC-CI â†’ WORKFLOW-013 (security CI)
+- **Acceptance:** All SUBJ-* have matching WORKFLOW-* with acc/evid and dependencies.
+- **Evidence:** `core/src/orchestration/tasks.todo` entries and SoT links.
+
+---
+
+### Task: WORKFLOW-009 - Heal & Upgrade Fixes
+
+**Priority:** High  
+**Created:** 2025-10-05T12:22:00Z  
+**Status:** Pending  
+**Assigned Agents:** Platform Engineer, Docs  
+
+#### Deconstruct
+- **Core Intent:** Apply non-breaking fixes/upgrades discovered by cross-reference; update SoT; no downgrades.
+- **Dependencies:** WORKFLOW-006
+
+#### Deliver
+- **Execution Steps:**
+  1. Review `report.md` missing dirs and basenames
+  2. For each gap, add scaffolds (dirs/readmes/policies) without altering runtime
+  3. Add CI or docs to close operational gaps
+  4. Append SoT executed entries with artifact paths
+- **Acceptance:** No capability regression; CI green; SoT updated
+- **Evidence:** SoT, CI runs, added files
+
+#### Subtasks (auto-generated)
+<!-- AUTO:WORKFLOW-009:SUBTASKS:BEGIN -->
+- [ ] Review basenames present outside production (top sample):
+  - [ ] .gitattributes
+  - [ ] .gitignore
+  - [ ] .qoderignore
+  - [ ] agent_map_crosswalk.md
+  - [ ] agentaskit.todo
+  - [ ] analyze_all_repositories.csv
+  - [ ] ark-os repository analysis_ comprehensive feature catalog.md
+  - [ ] ark-os_ architectural positioning for agenticai os scaffold.md
+  - [ ] codeowners
+  - [ ] comprehensive agenticai os repository analysis.md
+  - [ ] contributing.md
+  - [ ] crosscheck_report.md
+  - [ ] data.csv
+  - [ ] enhanced_workflow_implementation.md
+  - [ ] final_report.md
+  - [ ] healing_report.md
+  - [ ] inference.capnp
+  - [ ] multi-agent-task-kit.md
+  - [ ] noaos_comprehensive_enhanced.xlsx
+  - [ ] optimize.ps1
+  - [ ] readme.txt
+  - [ ] reply.bin
+  - [ ] request.bin
+  - [ ] system_unification_success.md
+  - [ ] unification_summary.md
+  - [ ] unified_docs
+  - [ ] update.prompt.md
+<!-- AUTO:WORKFLOW-009:SUBTASKS:END -->
+
+---
+
+### Task: WORKFLOW-010 - Unify & Organize
+
+**Priority:** High  
+**Created:** 2025-10-05T12:24:00Z  
+**Status:** Pending  
+**Assigned Agents:** Program Integrator  
+
+#### Deconstruct
+- **Core Intent:** Apply unification changes based on cross-reference and UNIFICATION_PLAN.md
+- **Dependencies:** WORKFLOW-006, WORKFLOW-009
+
+#### Deliver
+- **Execution Steps:**
+  1. Remove doc drift; consolidate READMEs; ensure single SoT path
+  2. Normalize folder structure; ensure required dirs present
+  3. Update references in docs to final paths
+- **Acceptance:** No duplicates; clean structure; docs accurate
+- **Evidence:** Git diff, SoT
+
+---
+
+### Task: WORKFLOW-011 - Zero Subject Inbox
+
+**Priority:** Medium  
+**Created:** 2025-10-05T12:26:00Z  
+**Status:** Pending  
+**Assigned Agents:** Program Integrator  
+
+#### Deconstruct
+- **Core Intent:** Close all SUBJ-* items by verifying mapped WORKFLOW-* completion.
+- **Dependencies:** WORKFLOW-006..WORKFLOW-010, WORKFLOW-012, WORKFLOW-013
+
+#### Deliver
+- **Execution Steps:**
+  1. Reconcile agentask.subject.todo with tasks.todo status
+  2. Mark SUBJ-* items done; capture evidence in SoT
+- **Acceptance:** Inbox zero; SoT entries reflect closures
+- **Evidence:** subject.todo and SoT
+
+---
+
+### Task: WORKFLOW-012 - Integrate llama.cpp with Model Selector Agents
+
+**Priority:** Critical  
+**Created:** 2025-10-05T12:28:00Z  
+**Status:** Pending  
+**Assigned Agents:** Integration Agent, ML Engineer  
+
+#### Deconstruct
+- **Core Intent:** Bring llama.cpp into repo via submodule or fetch; add selector bridge skeleton; no runtime regression.
+- **Dependencies:** WORKFLOW-006, WORKFLOW-009
+
+#### Deliver
+- **Execution Steps:**
+  1. Add `integrations/llama.cpp/` with README and fetch/build script
+  2. Add `core/src/ai/model_selector_bridge.rs` skeleton with feature flag
+  3. Add CI job to build llama.cpp (linux) behind opt-in flag
+- **Acceptance:** Builds locally with script; feature flag compiles; no default build break
+- **Evidence:** integrations README, CI logs
+
+---
+
+### Task: WORKFLOW-013 - Security CI (CodeQL/SCA)
+
+**Priority:** High  
+**Created:** 2025-10-05T12:30:00Z  
+**Status:** Pending  
+**Assigned Agents:** Security  
+
+#### Deconstruct
+- **Core Intent:** Add CodeQL analysis and dependency SCA; block on high/critical.
+
+#### Deliver
+- **Execution Steps:**
+  1. Add `.github/workflows/codeql.yml`
+  2. Add `.github/workflows/sca.yml` (e.g., OSS Review/Trivy/GHAS)
+- **Acceptance:** CI green; zero high/critical findings
+- **Evidence:** CI runs, security/reports/
+

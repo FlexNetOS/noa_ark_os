@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["workspace_root"],"struct":["ReactAdapter","ReactNativeAdapter","ServerAdapter","SpatialAdapter","TauriAdapter"],"trait":["PlatformAdapter"]};

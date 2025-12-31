@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["NotificationLevel","WorkspacePersona"],"fn":["unix_time","uuid"],"struct":["GlobalState","GlobalStore","KnowledgeArticle","NavigationItem","NavigationState","Notification","UserSession","Workspace"]};

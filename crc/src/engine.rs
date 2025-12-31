@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -64,7 +64,7 @@ impl Engine {
     }
 
     async fn execute_node(&self, node: GraphNode) -> Result<NodeState> {
-        let mut cache = self.cache.lock().await;
+        let cache = self.cache.lock().await;
         if let Some(entry) = cache.get(&node.id) {
             let state = NodeState {
                 id: node.id.clone(),
@@ -164,7 +164,7 @@ mod tests {
     #[tokio::test]
     async fn cache_hits_skip_execution() {
         let mut graph = CRCGraph::new();
-        let node_id = graph.add_node(GraphNode::new("analyze", NodeKind::Analyze, Lane::Fast));
+        let _node_id = graph.add_node(GraphNode::new("analyze", NodeKind::Analyze, Lane::Fast));
         let engine = Engine::new(graph);
         let tmp = tempfile::tempdir().unwrap();
         let first = engine.run(tmp.path()).await.unwrap();

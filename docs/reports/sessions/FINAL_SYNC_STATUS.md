@@ -125,8 +125,8 @@ cargo audit
 
 ### 2. Add Remaining Files (Optional)
 ```powershell
-# Add VS Code settings (recommended for team)
-git add .vscode/settings.json .vscode/tasks.json
+# Add CLI devshell settings (recommended for team)
+git add tools/devshell/
 
 # Add solution file
 git add NoaArkOS.sln
@@ -138,7 +138,7 @@ git add LICENSE
 git add *.ps1 *.sh
 
 # Commit and push
-git commit -m "Add VS Code settings, solution file, and scripts"
+git commit -m "Add devshell settings, solution file, and scripts"
 git push origin main
 ```
 

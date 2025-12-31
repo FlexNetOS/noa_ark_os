@@ -95,22 +95,31 @@ workflow:
 ## Execution Modes
 
 ### Full Auto Mode
-- Zero human intervention
+- Orchestrator-directed execution with no manual overrides
 - Self-healing workflows
 - Auto-scaling resources
-- Continuous optimization
+- Continuous optimization coordinated by planner and worker agents
 
 ### Supervised Mode
-- Human approval gates
-- Manual intervention points
-- Override capabilities
-- Audit logging
+- Orchestrator and verifier approval gates
+- Controlled intervention points for orchestrator agents
+- Override capabilities governed by planner constraints
+- Audit logging across agent roles
 
 ### Debug Mode
-- Step-by-step execution
-- Breakpoints
-- State inspection
-- Detailed logging
+- Step-by-step execution coordinated by planner agents
+- Breakpoints for worker agent analysis
+- State inspection surfaced to orchestrator dashboards
+- Detailed logging for verifier review
+
+## Agent Role Assignments
+
+| Workflow Responsibility | Primary Agent Role | Supporting Roles | Notes |
+| --- | --- | --- | --- |
+| Intake and stage sequencing | Orchestrator | Planner | Routes requests to the correct stages and enforces dependency ordering. |
+| Stage planning and dependency validation | Planner | Orchestrator | Expands workflow definitions, ensures resources and inputs are ready. |
+| Task execution within stages | Worker | Planner | Performs the scripted actions for each stage while reporting telemetry. |
+| Quality gates and post-run checks | Verifier | Orchestrator | Confirms tests, hashes, and acceptance criteria before downstream promotion. |
 
 ## Workflow Engine
 

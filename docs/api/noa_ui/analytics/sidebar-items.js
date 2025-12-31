@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["AgentEfficiency","AnalyticsEngine","HeatmapPoint","Metric","ModelRoi","TelemetryInsights"]};

@@ -1,0 +1,12 @@
+{
+    "pwsh_version": "7.4.5",
+    "platform": "osx-arm64",
+    "archive": "powershell-7.4.5-osx-arm64.tar.gz",
+    "archive_sha256": "a4dd30bff8d5d65b9a2ced4d178411c1723c1737017aff150a488c712b37af52",
+    "source_url": "https://github.com/PowerShell/PowerShell/releases/download/v7.4.5/powershell-7.4.5-osx-arm64.tar.gz",
+    "bundle_root": "pwsh-portable/platforms/osx-arm64/powershell-7.4.5-osx-arm64",
+    "binary_kind": "pwsh",
+    "binary": "pwsh-portable/platforms/osx-arm64/powershell-7.4.5-osx-arm64/pwsh",
+    "sha256": "73de52c1af8e5e272ace7f5a179bc9dd82902a987b1dfff5d18dfbd3bd18fd8a",
+    "generated_at": "2025-11-21T15:24:34Z"
+}

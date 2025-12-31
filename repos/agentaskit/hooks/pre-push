@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+artifacts_dir="$repo_root/agentaskit-production/docs/reports/cross_reference/artifacts"
+
+run_python_crossref() {
+  if command -v python3 >/dev/null 2>&1; then
+    python3 "$repo_root/agentaskit-production/tools/analysis/cross_reference.py" \
+      --root "$repo_root" --out-dir "$artifacts_dir"
+    return $?
+  elif command -v python >/dev/null 2>&1; then
+    python "$repo_root/agentaskit-production/tools/analysis/cross_reference.py" \
+      --root "$repo_root" --out-dir "$artifacts_dir"
+    return $?
+  else
+    return 127
+  fi
+}
+
+run_pwsh_crossref() {
+  if command -v pwsh >/dev/null 2>&1; then
+    pwsh -NoProfile -ExecutionPolicy Bypass -File \
+      "$repo_root/agentaskit-production/tools/analysis/cross_reference.ps1" \
+      -Root "$repo_root" -OutDir "$artifacts_dir"
+    return $?
+  elif command -v powershell.exe >/dev/null 2>&1; then
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File \
+      "$repo_root/agentaskit-production/tools/analysis/cross_reference.ps1" \
+      -Root "$repo_root" -OutDir "$artifacts_dir"
+    return $?
+  else
+    return 127
+  fi
+}
+
+# Try Python first, fallback to PowerShell; never block push on failures
+if ! run_python_crossref >/dev/null 2>&1; then
+  run_pwsh_crossref >/dev/null 2>&1 || true
+fi
+
+sot="$repo_root/agentaskit-production/core/src/orchestration/sot.md"
+if [ -f "$sot" ]; then
+  if ! grep -q "Executed Tasks" "$sot"; then
+    echo "WARN: SoT has no 'Executed Tasks' entries. Consider updating before push." >&2
+  fi
+fi
+
+echo "pre-push: cross-reference artifacts refreshed."

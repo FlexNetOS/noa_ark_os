@@ -3,6 +3,7 @@
 #[cfg(test)]
 mod integration_tests {
     use noa_core;
+    use std::path::Path;
     
     #[test]
     fn test_full_system_init() {
@@ -32,6 +33,16 @@ mod integration_tests {
             .unwrap();
         let process = process_service.get_process(pid);
         assert!(process.is_some(), "Process should exist");
+        noa_core::kernel::shutdown();
+    }
+
+    #[test]
+    fn test_indexer_outputs_are_persisted() {
+        let _ = noa_core::init().unwrap();
+        let indexes = Path::new(".workspace/indexes");
+        assert!(indexes.join("ast_graph.json").exists());
+        assert!(indexes.join("ownership_graph.json").exists());
+        assert!(indexes.join("config_graph.json").exists());
         noa_core::kernel::shutdown();
     }
 }

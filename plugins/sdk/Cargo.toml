@@ -1,0 +1,16 @@
+[package]
+name = "noa-plugin-sdk"
+version = "0.1.0"
+edition = "2021"
+authors = ["NOA ARK OS Team"]
+description = "Plugin SDK utilities for discovering and integrating NOA Ark OS tools"
+license = "MIT"
+
+[dependencies]
+anyhow = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+anyhow = { workspace = true }

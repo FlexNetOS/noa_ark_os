@@ -1,0 +1,115 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "noa-server.fullname" . }}
+  labels:
+    {{- include "noa-server.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+<<<<<<< Updated upstream
+=======
+<<<<<<< HEAD
+>>>>>>> Stashed changes
+      {{- include "noa-server.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "noa-server.selectorLabels" . | nindent 8 }}
+        {{- include "noa-server.extraPodLabels" . | nindent 8 }}
+<<<<<<< Updated upstream
+=======
+=======
+      app.kubernetes.io/name: {{ include "noa-server.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        {{- include "noa-server.labels" . | nindent 8 }}
+>>>>>>> 4931f485 (server: add docker-compose stack, Helm chart, env_manager helper; README: document containerized deployment)
+>>>>>>> Stashed changes
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- if .Values.serviceAccount.create }}
+      serviceAccountName: {{ include "noa-server.fullname" . }}
+      {{- else if .Values.serviceAccount.name }}
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      {{- end }}
+      containers:
+        - name: noa-server
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+<<<<<<< Updated upstream
+=======
+<<<<<<< HEAD
+>>>>>>> Stashed changes
+              containerPort: {{ .Values.containerPort }}
+            - name: metrics
+              containerPort: {{ .Values.containerMetricsPort }}
+          env:
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              {{- if kindIs "string" $value }}
+              value: "{{ $value }}"
+              {{- else if hasKey $value "valueFrom" }}
+              valueFrom:
+                {{- if hasKey $value.valueFrom "secretKeyRef" }}
+                secretKeyRef:
+                  name: {{ $value.valueFrom.secretKeyRef.name | quote }}
+                  key: {{ $value.valueFrom.secretKeyRef.key | quote }}
+                  {{- if hasKey $value.valueFrom.secretKeyRef "optional" }}
+                  optional: {{ $value.valueFrom.secretKeyRef.optional }}
+                  {{- end }}
+                {{- end }}
+                {{- if hasKey $value.valueFrom "configMapKeyRef" }}
+                configMapKeyRef:
+                  name: {{ $value.valueFrom.configMapKeyRef.name | quote }}
+                  key: {{ $value.valueFrom.configMapKeyRef.key | quote }}
+                  {{- if hasKey $value.valueFrom.configMapKeyRef "optional" }}
+                  optional: {{ $value.valueFrom.configMapKeyRef.optional }}
+                  {{- end }}
+                {{- end }}
+              {{- else if hasKey $value "value" }}
+              value: "{{ $value.value }}"
+              {{- end }}
+<<<<<<< Updated upstream
+=======
+=======
+              containerPort: {{ .Values.service.port }}
+            - name: metrics
+              containerPort: {{ .Values.service.metricsPort }}
+          env:
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: "{{ $value }}"
+>>>>>>> 4931f485 (server: add docker-compose stack, Helm chart, env_manager helper; README: document containerized deployment)
+>>>>>>> Stashed changes
+            {{- end }}
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

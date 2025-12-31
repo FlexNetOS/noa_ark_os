@@ -1,6 +1,6 @@
 # Multi-Platform Settings - Configuration Summary
 
-**Last Updated**: 2024-10-08
+**Last Updated**: 2025-11-14
 
 ## ✅ Configuration Complete
 
@@ -13,13 +13,12 @@ The workspace is now configured for **multi-platform development** with access t
 
 ## 📁 Files Updated/Created
 
-### 1. `.vscode/settings.json`
-**Changes**:
-- ✅ Multi-platform terminal profiles (PowerShell, WSL, CMD, Git Bash)
-- ✅ Platform-specific environment variables
-- ✅ Windows: Portable Cargo paths
-- ✅ Linux/WSL: System Rust paths
-- ✅ Rust-analyzer configuration for all platforms
+### 1. `server/tools/dev_env_cli.py` **NEW**
+**Role**:
+- ✅ Unified CLI entry point for workspace configuration
+- ✅ Replaces editor-specific `.vscode` instructions
+- ✅ Provides JSON/Human output for automation or onboarding
+- ✅ Surfaces activation profiles for Windows, WSL, and Linux
 
 ### 2. `server/tools/activate-cargo.ps1` (Windows)
 **Features**:
@@ -45,9 +44,9 @@ The workspace is now configured for **multi-platform development** with access t
 
 ### 5. `server/tools/README.md`
 **Updated**:
-- Multi-platform quick start
+- Multi-platform quick start with CLI references
 - Links to detailed guides
-- Platform-specific instructions
+- Platform-specific instructions without IDE coupling
 
 ---
 
@@ -55,18 +54,21 @@ The workspace is now configured for **multi-platform development** with access t
 
 ### Windows PowerShell
 ```powershell
+python server/tools/dev_env_cli.py activate --platform windows
 .\server\tools\activate-cargo.ps1
 cargo build
 ```
 
 ### WSL/Ubuntu (Native Rust)
 ```bash
+python server/tools/dev_env_cli.py activate --platform linux
 source ./server/tools/activate-cargo.sh
 cargo build
 ```
 
 ### WSL/Ubuntu (Windows Cargo)
 ```bash
+python server/tools/dev_env_cli.py activate --platform wsl
 source ./server/tools/activate-cargo.sh
 # Choose option to use Windows Cargo
 cargo.exe build
@@ -74,27 +76,22 @@ cargo.exe build
 
 ---
 
-## 🔧 VS Code Terminal Selection
+## 🛠️ CLI Shortcuts
 
-**Available Terminal Profiles**:
-1. **PowerShell** - For Windows portable Cargo (default on Windows)
-2. **WSL** - For Ubuntu/Linux environment
-3. **Command Prompt** - Windows CMD if needed
-4. **Git Bash** - If installed
-
-**To Switch**:
-- Click dropdown (v) in terminal panel
-- Or `Ctrl+Shift+P` → "Terminal: Select Default Profile"
+- `python server/tools/dev_env_cli.py summary` – Show current workspace configuration.
+- `python server/tools/dev_env_cli.py activate --platform <windows|wsl|linux>` – Display activation steps.
+- `python server/tools/dev_env_cli.py doctor` – Verify required directories and scripts exist.
+- `python server/tools/dev_env_cli.py diagnostics` – Review rust-analyzer guidance without opening IDE settings.
 
 ---
 
 ## 📊 Platform Configuration
 
-| Platform | Cargo Location | Activation Command |
-|----------|---------------|-------------------|
-| **Windows** | `server/tools/cargo-portable/` | `.\server\tools\activate-cargo.ps1` |
-| **WSL (Native)** | `~/.cargo/` | `source ./server/tools/activate-cargo.sh` |
-| **WSL (Windows)** | `server/tools/cargo-portable/` | `source ./server/tools/activate-cargo.sh` |
+| Platform | Cargo Location | Activation Command | CLI Guidance |
+|----------|---------------|--------------------|--------------|
+| **Windows** | `server/tools/cargo-portable/` | `.\server\tools\activate-cargo.ps1` | `python server/tools/dev_env_cli.py activate --platform windows` |
+| **WSL (Native)** | `~/.cargo/` | `source ./server/tools/activate-cargo.sh` | `python server/tools/dev_env_cli.py activate --platform linux` |
+| **WSL (Windows)** | `server/tools/cargo-portable/` | `source ./server/tools/activate-cargo.sh` | `python server/tools/dev_env_cli.py activate --platform wsl` |
 
 ---
 
@@ -113,6 +110,7 @@ cargo.exe build
 - **Quick Start**: `server/tools/README.md`
 - **Quick Reference**: `server/tools/QUICK_START.md`
 - **Audit Report**: `server/TOOLS_AUDIT.md`
+- **CLI Help**: `python server/tools/dev_env_cli.py --help`
 
 ---
 
@@ -128,10 +126,11 @@ cargo.exe build
 
 ## 🚀 Next Steps
 
-1. **Choose your platform** (Windows, WSL, or both)
-2. **Run appropriate setup** (see MULTI_PLATFORM.md)
-3. **Activate Cargo** for your session
-4. **Start building!**
+1. **Run the CLI summary**: `python server/tools/dev_env_cli.py summary`
+2. **Choose your platform** (Windows, WSL, or both)
+3. **Run appropriate setup** (see MULTI_PLATFORM.md)
+4. **Activate Cargo** for your session
+5. **Start building!**
 
 ---
 

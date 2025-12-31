@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["DropCommands"],"fn":["cancel_drop","drop_fork","drop_mirror","drop_repo","drop_stale","execute_command","extract_name_from_url","list_drops","parse_priority","retry_drop","show_status"],"struct":["DropCli"]};

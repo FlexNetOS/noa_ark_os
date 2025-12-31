@@ -1,0 +1,9 @@
+(function() {
+    var implementors = Object.fromEntries([["crc_server",[["impl Args for <a class=\"struct\" href=\"crc_server/struct.CasArgs.html\" title=\"struct crc_server::CasArgs\">CasArgs</a>"],["impl Args for <a class=\"struct\" href=\"crc_server/struct.Cli.html\" title=\"struct crc_server::Cli\">Cli</a>"],["impl Args for <a class=\"struct\" href=\"crc_server/struct.GraphArgs.html\" title=\"struct crc_server::GraphArgs\">GraphArgs</a>"],["impl Args for <a class=\"struct\" href=\"crc_server/struct.IngestArgs.html\" title=\"struct crc_server::IngestArgs\">IngestArgs</a>"],["impl Args for <a class=\"struct\" href=\"crc_server/struct.MigrateArgs.html\" title=\"struct crc_server::MigrateArgs\">MigrateArgs</a>"],["impl Args for <a class=\"struct\" href=\"crc_server/struct.RunArgs.html\" title=\"struct crc_server::RunArgs\">RunArgs</a>"]]],["noa",[["impl Args for <a class=\"struct\" href=\"noa/struct.Cli.html\" title=\"struct noa::Cli\">Cli</a>"],["impl Args for <a class=\"struct\" href=\"noa/struct.DaemonArgs.html\" title=\"struct noa::DaemonArgs\">DaemonArgs</a>"],["impl Args for <a class=\"struct\" href=\"noa/struct.EvidenceArgs.html\" title=\"struct noa::EvidenceArgs\">EvidenceArgs</a>"],["impl Args for <a class=\"struct\" href=\"noa/struct.RegistryArgs.html\" title=\"struct noa::RegistryArgs\">RegistryArgs</a>"]]],["noa_crc",[["impl Args for <a class=\"struct\" href=\"noa_crc/commands/struct.DropCli.html\" title=\"struct noa_crc::commands::DropCli\">DropCli</a>"]]]]);
+    if (window.register_implementors) {
+        window.register_implementors(implementors);
+    } else {
+        window.pending_implementors = implementors;
+    }
+})()
+//{"start":57,"fragment_lengths":[793,489,154]}

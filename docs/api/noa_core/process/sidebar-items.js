@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["ProcessState"],"fn":["create_process","create_process_inner","get_process","get_process_inner","init","next_pid","process_table"],"struct":["Process","ProcessService"],"type":["ProcessId"]};

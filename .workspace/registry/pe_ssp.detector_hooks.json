@@ -1,0 +1,117 @@
+{
+  "version": "1.0.0",
+  "owner": "pe-ssp",
+  "description": "Detector-to-fixer routing manifest for the Policy Enforcement Subject Specialist (pe-ssp).",
+  "detectors": [
+    {
+      "id": "detector.cargo.test",
+      "description": "Detect workspace cargo test failures and relay remediation steps to the self-check loop.",
+      "sub_agent": "self-check_pe-ssp01-sub01",
+      "trigger": {
+        "command": "source ./server/tools/activate-cargo-wsl.sh && source ./server/tools/activate-node.sh && cargo test --workspace",
+        "cwd": "."
+      },
+      "artifacts": [
+        "test_output.txt",
+        "target/debug/test-logs.json"
+      ],
+      "fix_actions": [
+        {
+          "type": "command",
+          "label": "Retry cargo test with verbose output",
+          "command": "source ./server/tools/activate-cargo-wsl.sh && source ./server/tools/activate-node.sh && cargo test --workspace -- --nocapture"
+        },
+        {
+          "type": "evidence",
+          "label": "Update Truth Gate",
+          "files": [
+            "claims.table.md",
+            "evidence.ledger.json",
+            "truth_gate.checklist.md"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "detector.launcher.smoke",
+      "description": "Monitor scripts/full_stack_launch.sh --prepare-only for kernel/CUDA/llama readiness regressions.",
+      "sub_agent": "smoke_pe-ssp01-sub01",
+      "trigger": {
+        "command": "bash scripts/full_stack_launch.sh --prepare-only",
+        "cwd": "."
+      },
+      "artifacts": [
+        "build_output/gateway-self-heal-local.json",
+        "logs/launcher-phase-summary.json"
+      ],
+      "fix_actions": [
+        {
+          "type": "command",
+          "label": "Force kernel rebuild",
+          "command": "make kernel && make image"
+        },
+        {
+          "type": "command",
+          "label": "Provision CUDA + llama prerequisites",
+          "command": "pwsh -NoProfile -File scripts/setup/setup-cuda.ps1 && pwsh -NoProfile -File scripts/dev/setup-llama-cpp.ps1"
+        }
+      ]
+    },
+    {
+      "id": "detector.truth_gate.completeness",
+      "description": "Ensure every task emits 4-D plans, evidence, and Truth Gate artifacts before completion.",
+      "sub_agent": "4-D_policy-enforcement_pe-ssp01",
+      "trigger": {
+        "command": "python tools/policy/verify_truth_gate.py --claims claims.table.md --ledger evidence.ledger.json --checklist truth_gate.checklist.md",
+        "cwd": "."
+      },
+      "artifacts": [
+        "claims.table.md",
+        "evidence.ledger.json",
+        "truth_gate.checklist.md"
+      ],
+      "fix_actions": [
+        {
+          "type": "command",
+          "label": "Generate missing RESULT block",
+          "command": "python tools/policy/create_result_block.py --source claims.table.md"
+        },
+        {
+          "type": "escalation",
+          "label": "Notify Truth Gate steward",
+          "route": "Evidence/Truth Gate_pe-ssp-01"
+        }
+      ]
+    },
+    {
+      "id": "detector.todo.duplicates",
+      "description": "Prevent duplicate tasks from being introduced under .workspace/todo.",
+      "sub_agent": "planner_pe-ssp01-sub02",
+      "trigger": {
+        "command": "python tools/automation/check_todo_duplicates.py --output json",
+        "cwd": "."
+      },
+      "artifacts": [
+        ".workspace/todo/current-sprint.md",
+        ".workspace/todo/launch-codex/claims.table.md",
+        ".workspace/todo/mcp-health-remote/claims.table.md"
+      ],
+      "fix_actions": [
+        {
+          "type": "command",
+          "label": "Deduplicate current sprint tasks",
+          "command": "python tools/automation/check_todo_duplicates.py --output text"
+        },
+        {
+          "type": "evidence",
+          "label": "Update Truth Gate artifacts for the affected TODO workspace",
+          "files": [
+            "claims.table.md",
+            "evidence.ledger.json",
+            "truth_gate.checklist.md"
+          ]
+        }
+      ]
+    }
+  ]
+}

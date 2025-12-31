@@ -1,0 +1,75 @@
+{
+  "events": [
+    {
+      "client_id": "self-heal::gateway",
+      "fs_scope": "fs.policy.read",
+      "latency_ms": 0.03265001578256488,
+      "method": "GET",
+      "network_scope": "net.gateway",
+      "path": "/v1/policy",
+      "service": "gateway",
+      "timestamp": 1763503142.8355865,
+      "token_rate_limit": 120
+    },
+    {
+      "client_id": "self-heal::runtime-manager",
+      "fs_scope": "fs.runtime.control",
+      "latency_ms": 0.018919003196060658,
+      "method": "POST",
+      "network_scope": "net.runtime",
+      "path": "/v1/schedule",
+      "service": "runtime-manager",
+      "timestamp": 1763503142.8356302,
+      "token_rate_limit": 60
+    },
+    {
+      "client_id": "self-heal::openai",
+      "fs_scope": null,
+      "latency_ms": 0.011828029528260231,
+      "method": "POST",
+      "network_scope": null,
+      "path": "/v1/chat/completions",
+      "service": "openai",
+      "timestamp": 1763503142.8356562,
+      "token_rate_limit": 90
+    },
+    {
+      "client_id": "self-heal::anthropic",
+      "fs_scope": null,
+      "latency_ms": 0.009604031220078468,
+      "method": "POST",
+      "network_scope": null,
+      "path": "/v1/messages",
+      "service": "anthropic",
+      "timestamp": 1763503142.8356788,
+      "token_rate_limit": 90
+    },
+    {
+      "client_id": "self-heal::llama.cpp",
+      "fs_scope": null,
+      "latency_ms": 0.0015830155462026596,
+      "method": "POST",
+      "network_scope": null,
+      "path": "/completion",
+      "service": "llama.cpp",
+      "timestamp": 1763503142.8356833,
+      "token_rate_limit": null
+    },
+    {
+      "client_id": "self-heal::notebook-sync",
+      "fs_scope": "fs.notebooks.sync",
+      "latency_ms": 0.010985997505486012,
+      "method": "POST",
+      "network_scope": "net.notebooks.loopback",
+      "path": "/v1/notebooks/sync",
+      "service": "notebook-sync",
+      "timestamp": 1763503142.835707,
+      "token_rate_limit": 60
+    }
+  ],
+  "p95_latency_ms": 0.03265001578256488,
+  "rejected_auth": 0,
+  "rejected_policy": 0,
+  "rejected_rate": 0,
+  "requests_total": 6
+}

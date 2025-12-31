@@ -387,7 +387,7 @@ Follow commands in `WORKSPACE_ORGANIZATION_PLAN.md`
 ```
 noa_ark_os/
 ├── .github/
-├── .vscode/
+├── tools/devshell/
 ├── agents/               # Source
 ├── crc/                  # Source
 ├── cicd/                 # Source
@@ -402,6 +402,7 @@ noa_ark_os/
 ├── services/             # Source
 ├── tests/                # Tests
 ├── tools/                # Tools
+├── .vscode/              # Optional editor hints (mirrors devshell)
 ├── ui/                   # Source
 ├── workflow/             # Source
 ├── .gitignore

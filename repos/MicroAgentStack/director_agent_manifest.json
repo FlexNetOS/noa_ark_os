@@ -1,0 +1,98 @@
+
+{
+    "agents": {
+        "ExecutiveCommanderChiefAgent": {
+            "purpose": "Oversees all operations and agents; ensures alignment with company goals.",
+            "functionality": "def oversee_operations(self): ...",
+            "paired_llm": "llama3-70b",
+            "reports_to": null,
+            "oversees": [
+                "CommanderChiefAgent_DataStack",
+                "CommanderChiefAgent_DevOps"
+            ],
+            "escalation_path": null,
+            "requires_human": true,
+            "approval_status": "approved"
+        },
+        "CommanderChiefAgent_DataStack": {
+            "purpose": "Local director/VP for DataStack; manages agents and operations within the data stack.",
+            "functionality": "def manage_stack(self, tasks): ...",
+            "paired_llm": "qwen2.5",
+            "model_selector": "ModelSelectorAgent_DataStack",
+            "pc_operator": "PCOperatorAgent_DataStack",
+            "reports_to": "ExecutiveCommanderChiefAgent",
+            "oversees": [
+                "PCOperatorAgent_DataStack",
+                "ModelSelectorAgent_DataStack"
+            ],
+            "escalation_path": "ExecutiveCommanderChiefAgent",
+            "requires_human": false,
+            "approval_status": "approved"
+        },
+        "CommanderChiefAgent_DevOps": {
+            "purpose": "Local director/VP for DevOps Stack; manages DevOps agents and operations.",
+            "functionality": "def manage_stack(self, tasks): ...",
+            "paired_llm": "mixtral-8x22b",
+            "model_selector": "ModelSelectorAgent_DevOps",
+            "pc_operator": "PCOperatorAgent_DevOps",
+            "reports_to": "ExecutiveCommanderChiefAgent",
+            "oversees": [
+                "PCOperatorAgent_DevOps",
+                "ModelSelectorAgent_DevOps"
+            ],
+            "escalation_path": "ExecutiveCommanderChiefAgent",
+            "requires_human": false,
+            "approval_status": "approved"
+        },
+        "ModelSelectorAgent_DataStack": {
+            "purpose": "Selects best LLM for data stack tasks.",
+            "functionality": "def select_llm(self, task): ...",
+            "llm_options": [
+                "qwen2.5",
+                "mixtral-8x22b",
+                "phi-3"
+            ],
+            "reports_to": "CommanderChiefAgent_DataStack",
+            "escalation_path": "CommanderChiefAgent_DataStack",
+            "requires_human": false,
+            "approval_status": "approved"
+        },
+        "PCOperatorAgent_DataStack": {
+            "purpose": "Executes system-level and Docker operations for DataStack.",
+            "functionality": "def operate_system(self, command): ...",
+            "reports_to": "CommanderChiefAgent_DataStack",
+            "escalation_path": "CommanderChiefAgent_DataStack",
+            "requires_human": false,
+            "approval_status": "approved"
+        },
+        "ModelSelectorAgent_DevOps": {
+            "purpose": "Selects best LLM for DevOps stack tasks.",
+            "functionality": "def select_llm(self, task): ...",
+            "llm_options": [
+                "mixtral-8x22b",
+                "llama3-8b",
+                "phi-3"
+            ],
+            "reports_to": "CommanderChiefAgent_DevOps",
+            "escalation_path": "CommanderChiefAgent_DevOps",
+            "requires_human": false,
+            "approval_status": "approved"
+        },
+        "PCOperatorAgent_DevOps": {
+            "purpose": "Executes system-level and Docker operations for DevOps stack.",
+            "functionality": "def operate_system(self, command): ...",
+            "reports_to": "CommanderChiefAgent_DevOps",
+            "escalation_path": "CommanderChiefAgent_DevOps",
+            "requires_human": false,
+            "approval_status": "approved"
+        }
+        // ...add more stacks/agents as needed
+    },
+    "llm_endpoints": {
+        "llama3-70b": "http://localhost:11434/api/generate?model=llama3",
+        "qwen2.5": "http://localhost:11434/api/generate?model=qwen2",
+        "mixtral-8x22b": "http://localhost:11434/api/generate?model=mixtral",
+        "phi-3": "http://localhost:11434/api/generate?model=phi3",
+        "mllm-vision": "http://localhost:11500/api/generate?model=mllm-vision"
+    }
+}

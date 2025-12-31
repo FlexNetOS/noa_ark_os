@@ -1,0 +1,41 @@
+[
+  {
+    "timestamp": "2025-11-21T14:52:00Z",
+    "action": "rsync-import",
+    "details": {
+      "command": "rsync -a --delete --exclude '.git' --exclude 'node_modules' --exclude '.cache' /home/deflex/workspace/noa_ark_os/ ./",
+      "source": "/home/deflex/workspace/noa_ark_os",
+      "destination": "worktrees/workspace-noa",
+      "result": "Workspace copy mirrored into branch archive/workspace-noa-20251121"
+    }
+  },
+  {
+    "timestamp": "2025-11-21T15:37:00Z",
+    "action": "git-archive",
+    "details": {
+      "command": "git archive --format=tar origin/main | zstd -T0 -3 -o archive/2025/11/origin-main-snapshot-20251121.tar.zst",
+      "sha256": "b39b0a15fba18bca3621da3e1fa53e512252c545fcdc79fde989945ae75e530d",
+      "notes": "captures pre-import tree for rollback"
+    }
+  },
+  {
+    "timestamp": "2025-11-21T15:41:05Z",
+    "action": "ledger-entry",
+    "details": {
+      "file": "archive/2025/11/ledger.jsonl",
+      "branch": "archive/workspace-noa-20251121",
+      "reason": "workspace-noa-20251121 import baseline"
+    }
+  },
+  {
+    "timestamp": "2025-11-21T15:43:00Z",
+    "action": "truth-gate-artifacts",
+    "details": {
+      "files": [
+        "archives/workspace-noa-20251121/claims.table.md",
+        "archives/workspace-noa-20251121/evidence.ledger.json",
+        "archives/workspace-noa-20251121/truth_gate.checklist.md"
+      ]
+    }
+  }
+]

@@ -133,7 +133,7 @@ logs/
 ```
 noa_ark_os/
 ├── .github/                      # GitHub config
-├── .vscode/                      # VS Code config
+├── tools/devshell/               # Cross-terminal devshell config (authoritative)
 ├── agents/                       # Source code
 ├── crc/                          # Source code
 ├── cicd/                         # Source code
@@ -148,6 +148,7 @@ noa_ark_os/
 ├── services/                     # Service code
 ├── tests/                        # Integration tests
 ├── tools/                        # Development tools
+├── .vscode/                      # Optional editor hints (mirrors devshell)
 ├── ui/                           # Source code
 ├── workflow/                     # Source code
 ├── .gitignore                    # Git config

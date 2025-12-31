@@ -1,8 +1,5 @@
 import { NextResponse } from "next/server";
 
-import { assertUser } from "../../../../lib/session";
-import { getWorkspace } from "../../../../../server/workspace-store";
-import { workspaceEventHub } from "../../../../../server/workspace-events";
 import { assertUser } from "@/app/lib/session";
 import { getWorkspace } from "@/server/workspace-store";
 import { workspaceEventHub } from "@/server/workspace-events";
@@ -11,7 +8,7 @@ export async function POST(
   request: Request,
   { params }: { params: { workspaceId: string } }
 ) {
-  const user = assertUser();
+  const user = await assertUser();
   const workspace = await getWorkspace(params.workspaceId);
   if (!workspace || !workspace.members.some((member) => member.id === user.id)) {
     return new NextResponse("Not Found", { status: 404 });
@@ -30,7 +27,7 @@ export async function DELETE(
   _request: Request,
   { params }: { params: { workspaceId: string } }
 ) {
-  const user = assertUser();
+  const user = await assertUser();
   const workspace = await getWorkspace(params.workspaceId);
   if (!workspace || !workspace.members.some((member) => member.id === user.id)) {
     return new NextResponse("Not Found", { status: 404 });

@@ -85,6 +85,9 @@ crc/
 automation:
   mode: full-auto
   ai_supervision: enabled
+  agent_supervision:
+    telemetry: pipeline_events.log
+    escalation_role: sentinel-controller
   auto_approve:
     threshold: 0.95  # 95% confidence for auto-approve
     requires_tests: true
@@ -105,7 +108,7 @@ automation:
 ### Auto-Approve Logic
 
 ```
-AI Confidence > 95% ────────────────────> Auto-Approve
+AI Confidence > 95% ────────────────────> Auto-Approve (telemetry broadcast)
     │
     ├─ All Tests Pass
     ├─ No Security Issues
@@ -113,8 +116,12 @@ AI Confidence > 95% ────────────────────
     ├─ Backward Compatible
     └─ Code Quality Met
 
-AI Confidence 80-95% ───────────────────> Human Review Queue
-AI Confidence < 80% ────────────────────> Reject + Feedback
+AI Confidence 80-95% ───────────────────> Agent Review (role-based approvals)
+AI Confidence < 80% ────────────────────> Agent Escalation + Evidence Expansion
+
+Agent approvals are recorded in `pipeline_events.log` with trust scores and evidence references. When a role cannot meet the
+policy thresholds, the pipeline status flips to `AgentEscalated` and the sentinel-controller role receives an automatic task
+with the evidence ledger pointers required to continue.
 ```
 
 ## Directory Structure Detail

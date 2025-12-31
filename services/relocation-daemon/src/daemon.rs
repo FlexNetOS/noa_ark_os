@@ -423,7 +423,7 @@ impl RelocationDaemon {
             if ttl_days > 0 {
                 if let Some(last_seen) = entry.last_seen() {
                     let age = Utc::now().signed_duration_since(last_seen);
-                    if age < Duration::days(ttl_days.into()) {
+                    if age < Duration::days(ttl_days) {
                         return Some(format!("file younger than {} days", ttl_days));
                     }
                 }

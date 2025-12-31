@@ -9,9 +9,19 @@ Set the following variables before running `pnpm dev` or `pnpm start` from `ui/v
 | Variable | Description |
 | --- | --- |
 | `AI_PROVIDER` | Provider selector. Accepted values: `llama.cpp`, `openai`, `anthropic`. Leave unset to skip remote calls. |
+| `AI_PROVIDER_CHAIN` | Optional comma-separated fallback order (for example `openai,anthropic,llama.cpp`). The router will fail over in this order. |
 | `LLAMA_CPP_ENDPOINT` | Base URL for a local llama.cpp server when `AI_PROVIDER=llama.cpp`. |
-| `OPENAI_API_KEY` | API key for OpenAI models. Optional `OPENAI_BASE_URL` and `OPENAI_MODEL` override defaults. |
-| `ANTHROPIC_API_KEY` | API key for Anthropic models. Optional `ANTHROPIC_BASE_URL` and `ANTHROPIC_MODEL` override defaults. |
+| `LLAMA_CPP_MODEL` | Friendly model name reported in telemetry when llama.cpp is active. |
+| `OPENAI_API_KEY` | API key for OpenAI models. |
+| `OPENAI_BASE_URL` | Optional override for hosted gateways or proxies. Defaults to `https://api.openai.com`. |
+| `OPENAI_MODEL` | Optional override for the deployed model identifier. |
+| `OPENAI_ORG` | Optional OpenAI organisation identifier forwarded in requests. |
+| `OPENAI_TIMEOUT_SECS` | Request timeout budget applied to the OpenAI client (default `30`). |
+| `ANTHROPIC_API_KEY` | API key for Anthropic models. |
+| `ANTHROPIC_BASE_URL` | Optional override for gateways wrapping the Anthropic API. Defaults to `https://api.anthropic.com`. |
+| `ANTHROPIC_MODEL` | Optional model identifier override. |
+| `ANTHROPIC_VERSION` | Anthropic API version header value (default `2023-06-01`). |
+| `ANTHROPIC_TIMEOUT_SECS` | Request timeout budget applied to the Anthropic client (default `30`). |
 
 > **Tip:** The AI Assist feature always returns the rendered engineer prompt. When a provider is configured, the response also includes the provider completion payload.
 
@@ -35,3 +45,5 @@ Set the following variables before running `pnpm dev` or `pnpm start` from `ui/v
 - Each request is stored in `ui/vibe-kanban/.data/ai_assist.sqlite` with latency, provider, and status metadata.
 - Use the exported `listRecentAiRequests` helper from `ui/vibe-kanban/server/ai-database.ts` to build custom admin dashboards or CLI summaries.
 - Rate limits default to five requests per minute per client identity. Adjust by editing `ui/vibe-kanban/server/rate-limiter.ts`.
+- CLI operators can stream completions via `noa agent invoke --stream` or run quick checks with `noa query`. Both commands emit
+  `InferenceMetric` entries so that CLI usage contributes to the Evidence Ledger alongside service traffic.

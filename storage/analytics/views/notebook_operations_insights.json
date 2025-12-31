@@ -1,0 +1,79 @@
+{
+  "view_id": "notebook_operations_insights",
+  "description": "Combines notebook automation health with CRC throughput and agent efficiency.",
+  "layout": {
+    "rows": [
+      {
+        "title": "Automation Cadence",
+        "widgets": [
+          {
+            "type": "timeseries",
+            "metric": "notebook_update_cadence",
+            "dimensions": ["workspace_id", "automation_scope"],
+            "value_field": "cadence_per_hour",
+            "comparison": {
+              "metric": "crc_throughput",
+              "value_field": "p90_cycle_time_minutes",
+              "relationship": "inverse"
+            },
+            "thresholds": [
+              {
+                "label": "cadence-drop",
+                "operator": "<",
+                "value": 0.05,
+                "severity": "warn"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Adoption Coverage vs Agent Efficiency",
+        "widgets": [
+          {
+            "type": "heatmap",
+            "metric": "notebook_adoption",
+            "dimensions": ["blueprint_id", "adoption_mode"],
+            "value_field": "unique_authors",
+            "comparison": {
+              "metric": "agent_efficiency",
+              "value_field": "efficiency_ratio",
+              "relationship": "direct"
+            },
+            "annotations": [
+              "Highlight blueprints where notebooks remain manual despite high agent efficiency."
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Run Volume vs CRC Throughput",
+        "widgets": [
+          {
+            "type": "combo",
+            "series": [
+              {
+                "metric": "notebook_update_cadence",
+                "chart": "column",
+                "value_field": "minutes_between_runs",
+                "aggregation": "avg"
+              },
+              {
+                "metric": "crc_throughput",
+                "chart": "line",
+                "value_field": "completed_tasks",
+                "aggregation": "sum"
+              }
+            ],
+            "dimensions": ["activity_date"]
+          }
+        ]
+      }
+    ]
+  },
+  "refresh_hint": "Align dashboard refresh with notebook_update_cadence pipeline (hourly).",
+  "governance": {
+    "evidence_required": true,
+    "ledger_reference": "docs/storage/governance.md"
+  }
+}

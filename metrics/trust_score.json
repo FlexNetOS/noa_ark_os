@@ -1,0 +1,43 @@
+{
+  "generated_at": 1763503221,
+  "policy_version": "2024.07",
+  "composite_score": 0.92800003,
+  "metrics": {
+    "capability": {
+      "score": 0.8,
+      "status": "nominal",
+      "description": "Confidence that capability scopes can remain fully open.",
+      "thresholds": {
+        "warning": 0.78,
+        "critical": 0.55
+      },
+      "weight": 0.3
+    },
+    "integrity": {
+      "score": 1.0,
+      "status": "nominal",
+      "description": "Integrity of artifacts, attestations, and audit logs.",
+      "thresholds": {
+        "warning": 0.88,
+        "critical": 0.72
+      },
+      "weight": 0.4
+    },
+    "reversibility": {
+      "score": 0.96,
+      "status": "nominal",
+      "description": "Success rate of rollbacks, snapshots, and state recovery.",
+      "thresholds": {
+        "warning": 0.82,
+        "critical": 0.65
+      },
+      "weight": 0.3
+    }
+  },
+  "triggered_escalations": [],
+  "scope_directive": {
+    "optional_multiplier": 1.0,
+    "minimum_optional": 0,
+    "status": "nominal"
+  }
+}

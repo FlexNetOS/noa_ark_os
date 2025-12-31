@@ -1,0 +1,1 @@
+// WASM connector 2 placeholder

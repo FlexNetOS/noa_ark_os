@@ -28,7 +28,9 @@ fn process_table() -> &'static Mutex<HashMap<ProcessId, Process>> {
 
 fn next_pid() -> ProcessId {
     static NEXT_PID: OnceLock<AtomicU64> = OnceLock::new();
-    NEXT_PID.get_or_init(|| AtomicU64::new(1)).fetch_add(1, Ordering::SeqCst)
+    NEXT_PID
+        .get_or_init(|| AtomicU64::new(1))
+        .fetch_add(1, Ordering::SeqCst)
 }
 
 /// Initialize process management
@@ -80,10 +82,10 @@ impl ProcessService {
 
 /// Create a new process.
 pub fn create_process(name: String) -> Result<ProcessId, &'static str> {
-    ProcessService::default().create_process(name)
+    ProcessService.create_process(name)
 }
 
 /// Get process by ID.
 pub fn get_process(pid: ProcessId) -> Option<Process> {
-    ProcessService::default().get_process(pid)
+    ProcessService.get_process(pid)
 }

@@ -1,0 +1,57 @@
+{
+  "bundle": {
+    "name": "noa-cecca-stemcell-bundle-part4",
+    "version": "0.5.1-part4",
+    "created": "2025-09-16T00:00:00Z",
+    "style": "kernel-first • message-passing • async-only • no-globals • zero-bloat",
+    "entry": "kernel/bootstrap",
+    "sbom": {
+      "policy": {
+        "failOnMissingModules": false,
+        "failOnMissingEnv": false
+      },
+      "expectedEnv": ["NOA_PORT", "OFFLINE_MODE", "BASE_URL"],
+      "autoFix": true
+    },
+    "modules": {
+      "kernel/bootstrap": {
+        "language": "javascript",
+        "code": "(function(api,deps,state,require,exports,module){'use strict';\nexports.main=async function(bundle,host){\n  const loader=require('kernel/loader').createLoader(bundle,host); const req=loader.require; const {bus}=loader.state; const scheduler=req('kernel/scheduler').createScheduler(loader);\n  const registrar=req('governance/registrar').createRegistrar(); loader.state.registrar=registrar;\n  const court=req('governance/court').createCourt(loader); loader.state.court=court; bus.sub('court/evaluate',(p)=>court.evaluate(p));\n  const sbom=req('security/sbom'); const tracer=req('observability/trace').createTracer(loader); const prof=req('host/profiler'); const efgMod=req('host/efg');\n  const selector=req('runtime/model/select').createSelector(loader); const secrets=req('secrets/vault_lite').createSecrets(loader);\n  const auditor=req('workspace/auditor').createAuditor(loader); const digest=req('digest/ingest').createDigest(loader);\n  const crm=req('services/crm/strangler').createProxy(loader); const upgrader=req('upgrade/self').createUpgrader(loader); upgrader.init();\n  const hive=req('agent/hive').createHive(loader); const optimizer=req('planner/optimizer').createOptimizer(loader);\n  const sb=await sbom.scan(bundle,loader); loader.state.sbom=sb; tracer.event('sbom.ready',{modules:sb.modules.length,holes:sb.holes});\n  const profile=await prof.profile(loader); const efg=efgMod.buildEFG(profile); loader.state.efg=efg; registrar.register('EFG',{nodes:Object.keys(efg.nodes)});\n  const CEO={ init:({bus,log})=>{ log('[CEO] boot'); scheduler.enqueue(async()=>{\n      tracer.event('boot.start'); const choice=await selector.choose(efg,{kind:'nlp'}); tracer.event('model.choice',choice);\n      await secrets.get('API_TOKEN'); const man=await auditor.manifest(); loader.state.storage.set('workspace.manifest',man);\n      await bus.pub('digest/scan',{sources:['repo://.']}); const verdict=await bus.ask('court/evaluate',{ verify_status:'passed', holes:sb.holes}); tracer.event('court.decision',verdict);\n      await crm.call('customers.list',{limit:1}); optimizer.start(); });\n    bus.sub('ui/request',()=>({ dashboard: req('ui/dynamic').render({efg, trace: tracer.dump().slice(-10), workspace: loader.state.storage.get('workspace.manifest')||{} }) }));\n    bus.sub('upgrade/request', async (m)=> bus.ask('upgrade/apply',m));\n  } };\n  req('kernel/capsule').spawn(loader,CEO);\n  bus.sub('digest/scan', async (m)=> digest.scan(m&&m.sources));\n  return { loader, bus, state:loader.state };\n};\n})"
+      },
+      
+      // Placeholder modules for documentation files to be included in later parts
+      "backend.md": {
+        "language": "markdown",
+        "code": "[Placeholder for backend.md]"
+      },
+      "board_agents.md": {
+        "language": "markdown",
+        "code": "[Placeholder for board_agents.md]"
+      },
+      "combined-architecture-v.2.txt": {
+        "language": "text",
+        "code": "[Placeholder for combined-architecture-v.2.txt]"
+      },
+      "combined.md": {
+        "language": "markdown",
+        "code": "[Placeholder for combined.md]"
+      },
+      "combined_framework_architecture.md": {
+        "language": "markdown",
+        "code": "[Placeholder for combined_framework_architecture.md]"
+      },
+      "data_storage.md": {
+        "language": "markdown",
+        "code": "[Placeholder for data_storage.md]"
+      },
+      "digest_agent.md": {
+        "language": "markdown",
+        "code": "[Placeholder for digest_agent.md]"
+      },
+      "heygen_clone_stack.md": {
+        "language": "markdown",
+        "code": "[Placeholder for heygen_clone_stack.md]"
+      }
+    }
+  }
+}

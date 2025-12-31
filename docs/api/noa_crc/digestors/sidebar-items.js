@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["AssetKind"],"fn":["compute_trust"],"mod":["api","bin","config","git","sbom"],"struct":["AssetRecord"],"trait":["Digestor"]};

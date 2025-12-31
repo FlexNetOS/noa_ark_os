@@ -1,0 +1,15 @@
+# Development overlay: enable an internal CA certificate for local testing.
+import ../Caddyfile
+
+https://localhost:8443 {
+    tls internal
+    encode zstd gzip
+    reverse_proxy {$NOA_CADDY_DEV_UPSTREAM:-127.0.0.1:8080} {
+        lb_policy least_conn
+        health_uri /health
+    }
+    log {
+        output file logs/applications/caddy/dev-access.log
+        format console
+    }
+}

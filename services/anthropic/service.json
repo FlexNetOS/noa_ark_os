@@ -1,0 +1,5 @@
+{
+  "id": "anthropic",
+  "version": "0.1.0",
+  "interfaces": ["external-http"]
+}

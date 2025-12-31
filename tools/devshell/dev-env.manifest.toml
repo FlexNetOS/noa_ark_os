@@ -1,0 +1,41 @@
+[image]
+name = "mcr.microsoft.com/devcontainers/base:ubuntu-24.04"
+
+[user]
+name = "vscode"
+uid = 1000
+gid = 1000
+
+[node]
+version = "lts"
+enable_pnpm = true
+
+[rust]
+profile = "minimal"
+toolchain = "stable"
+
+[packages]
+apt = [
+  "build-essential",
+  "ca-certificates",
+  "curl",
+  "git"
+]
+
+[editor]
+npm_package_manager = "pnpm"
+terminal_profile = "bash"
+extensions = [
+  "rust-lang.rust-analyzer",
+  "tamasfe.even-better-toml",
+  "esbenp.prettier-vscode",
+  "dbaeumer.vscode-eslint"
+]
+
+[rust_analyzer]
+check_on_save = true
+check_command = "check"
+all_features = true
+
+[post_create]
+script = ".devcontainer/post-create.sh"

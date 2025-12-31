@@ -1,0 +1,429 @@
+{
+  "schema": "cecca.bundle.v1",
+  "generated": "UTC-2025-09-15",
+  "entry": "kernel/boot",
+  "meta": {
+    "name": "CECCA Capsule-First Kernel",
+    "style": "Biological-Inspired Stem-Cell CECCA (NOA/CEO) • Agentic Neural OS • Local-first • Offline • Self-Upgrade",
+    "principles": ["offline-only","kernel-first","message-passing","async-first","no-globals","zero-bloat","auditable","sandbox-first","budget-bound"]
+  },
+  "config": {
+    "paths": { "root": ".", "registry": "state/registry.jsonl", "snapshots": "snapshots", "eval": "eval" },
+    "router": { "topK": 2, "epsilon": 0.05, "loadBalanceTau": 0.1 },
+    "budgets": { "latencyMs": 150, "memoryMB": 512, "paramPctCap": 0.2, "regressionPct": 0.5 },
+    "sandbox": { "trafficFraction": 0.15, "timeoutMs": 30000 },
+    "promotion": { "generalSigma": 0.8, "recentSigma": 2.0, "noSafetyRegressions": true }
+  },
+  "modules": {
+    "kernel/loader": {
+      "lang": "javascript",
+      "code": [
+        "export default function makeLoader(bundle){",
+        "  const cache=new Map();",
+        "  const sys={}; // filled by boot",
+        "  const getMod=(name)=>{",
+        "    if(cache.has(name)) return cache.get(name);",
+        "    const rec=bundle.modules[name];",
+        "    if(!rec) throw new Error('Module not found: '+name);",
+        "    if(rec.lang!=='javascript') throw new Error('Unsupported lang: '+rec.lang);",
+        "    const src=(Array.isArray(rec.code)?rec.code.join('\\n'):rec.code);",
+        "    const module={exports:{}};",
+        "    const exports=module.exports;",
+        "    const localRequire=(n)=>getMod(n);",
+        "    const factory=new Function('exports','module','system','require','define','asyncRequire',src+'\\n//# sourceURL='+name);",
+        "    const define=(fn)=>{ const m={}; const res=fn(localRequire,m,m); module.exports=res||m.exports||m; };",
+        "    const asyncRequire=async(n)=>getMod(n);",
+        "    factory(exports,module,sys,localRequire,define,asyncRequire);",
+        "    cache.set(name,module.exports);",
+        "    return module.exports;",
+        "  };",
+        "  getMod.loaderApi={ get sys(){return sys;}, set sys(v){Object.assign(sys,v);} };",
+        "  return getMod;",
+        "}"
+      ]
+    },
+    "core/bus": {
+      "lang": "javascript",
+      "code": [
+        "export default function makeBus(){",
+        "  const topics=new Map();",
+        "  const onceWaiters=new Map();",
+        "  const sub=(topic,handler)=>{",
+        "    if(!topics.has(topic)) topics.set(topic,new Set());",
+        "    topics.get(topic).add(handler);",
+        "    return ()=>topics.get(topic)?.delete(handler);",
+        "  };",
+        "  const pub=async(topic,msg)=>{",
+        "    const handlers=[...(topics.get(topic)||[])];",
+        "    for(const h of handlers){",
+        "      try{ await Promise.resolve(h(msg)); }catch(e){ /* swallow to keep bus live */ }",
+        "    }",
+        "    if(onceWaiters.has(topic)){",
+        "      onceWaiters.get(topic).forEach(r=>r(msg));",
+        "      onceWaiters.delete(topic);",
+        "    }",
+        "  };",
+        "  const req=async(topic,msg,timeoutMs=15000)=>{",
+        "    const id='req:'+Date.now()+Math.random().toString(36).slice(2);",
+        "    return new Promise((resolve,reject)=>{",
+        "      const to=setTimeout(()=>reject(new Error('bus timeout '+topic)),timeoutMs);",
+        "      sub(id,(resp)=>{ clearTimeout(to); resolve(resp); })",
+        "      ._req=true;",
+        "      pub(topic,{...msg,__replyTo:id}).catch(reject);",
+        "    });",
+        "  };",
+        "  const once=(topic)=>new Promise(res=>{",
+        "    if(!onceWaiters.has(topic)) onceWaiters.set(topic,[]);",
+        "    onceWaiters.get(topic).push(res);",
+        "  });",
+        "  return { sub, pub, req, once };",
+        "}"
+      ]
+    },
+    "core/io": {
+      "lang": "javascript",
+      "code": [
+        "export default function makeIO(){",
+        "  // No globals: resolve lazily & safely",
+        "  const hasRequire = (typeof require!=='undefined');",
+        "  let fs=null, path=null;",
+        "  try{ if(hasRequire){ fs=require('fs'); path=require('path'); } }catch{}",
+        "  const mem=new Map();",
+        "  const norm=(p)=> (path?path.normalize(p):p.replace(/\\\\/g,'/'));",
+        "  const exists=async(p)=>{ p=norm(p); if(fs){ try{ return fs.existsSync(p); }catch{} } return mem.has(p); };",
+        "  const readText=async(p)=>{ p=norm(p); if(fs){ return fs.promises.readFile(p,'utf8').catch(()=>{ if(mem.has(p)) return mem.get(p); throw new Error('read fail '+p);}); } return mem.get(p)||''; };",
+        "  const writeText=async(p,txt)=>{ p=norm(p); if(fs){ await fs.promises.mkdir(path.dirname(p),{recursive:true}).catch(()=>{}); await fs.promises.writeFile(p,txt,'utf8'); } mem.set(p,txt); return true; };",
+        "  const list=async(dir)=>{ dir=norm(dir); if(fs){ try{ return await fs.promises.readdir(dir); }catch{ return [...new Set([...mem.keys()].filter(k=>k.startsWith(dir)).map(k=>k.slice(dir.length)).map(s=>s.split('/')[0]))]; } } return [...new Set([...mem.keys()].filter(k=>k.startsWith(dir)).map(k=>k.slice(dir.length)).map(s=>s.split('/')[0]))]; };",
+        "  const copyTree=async(from,to)=>{",
+        "    const entries=await list(from);",
+        "    for(const e of entries){",
+        "      const src=(from.replace(/\\/$/,'')+'/'+e).replace(/\\/+/g,'/');",
+        "      const dst=(to.replace(/\\/$/,'')+'/'+e).replace(/\\/+/g,'/');",
+        "      if((await exists(src+'/'))) { await copyTree(src+'/',dst+'/'); }",
+        "      else { const data=await readText(src).catch(()=>null); if(data!=null) await writeText(dst,data); }",
+        "    }",
+        "  };",
+        "  return { exists, readText, writeText, list, copyTree, backend: fs?'fs':'mem' };",
+        "}"
+      ]
+    },
+    "core/crypto": {
+      "lang": "javascript",
+      "code": [
+        "export default function makeCrypto(){",
+        "  const web=(typeof crypto!=='undefined' && crypto.subtle)?crypto.subtle:null;",
+        "  async function sha256(text){",
+        "    if(web){",
+        "      const enc=new (typeof TextEncoder!=='undefined'?TextEncoder:function(){ return { encode:(s)=>new Uint8Array([...unescape(encodeURIComponent(s))].map(c=>c.charCodeAt(0))) };})();",
+        "      const buf=await web.digest('SHA-256',enc.encode(text));",
+        "      return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');",
+        "    }",
+        "    // Tiny non-crypto fallback (xxhash-like mixing) — SBOM will warn when used",
+        "    let h=2166136261>>>0; for(let i=0;i<text.length;i++){ h^=text.charCodeAt(i); h=(h*16777619)>>>0; }",
+        "    return ('00000000'+(h>>>0).toString(16)).slice(-8).repeat(8).slice(0,64);",
+        "  }",
+        "  return { sha256, strong: !!web };",
+        "}"
+      ]
+    },
+    "core/sbom": {
+      "lang": "javascript",
+      "code": [
+        "export default async function sbom(system){",
+        "  const { io, crypto } = system;",
+        "  const env=(typeof process!=='undefined' && process.env)?process.env:{};",
+        "  const holes=[]; const fixes=[];",
+        "  // Detect IO backend",
+        "  if(io.backend!=='fs'){ holes.push('fs-missing'); fixes.push('io->memfs fallback active'); }",
+        "  // Detect crypto strength",
+        "  if(!crypto.strong){ holes.push('weak-hash'); fixes.push('using fallback hash; integrity degraded'); }",
+        "  // Detect TextEncoder",
+        "  if(typeof TextEncoder==='undefined'){ holes.push('TextEncoder-missing'); fixes.push('polyfilled encoder in crypto module'); }",
+        "  // Detect timing source",
+        "  if(!(typeof performance!=='undefined' && performance.now)){ fixes.push('using Date.now for timing'); }",
+        "  // Detect required env vars (none mandatory by design) — report only",
+        "  const required=[]; const missing=required.filter(k=>!(k in env));",
+        "  if(missing.length) { holes.push('env-missing:'+missing.join(',')); }",
+        "  const report={ backend: io.backend, holes, fixes, ts: Date.now() };",
+        "  // Persist minimal SBOM report (best-effort)",
+        "  try{ await io.writeText('state/sbom.json',JSON.stringify(report,null,2)); }catch{}",
+        "  return report;",
+        "}"
+      ]
+    },
+    "core/config": {
+      "lang": "javascript",
+      "code": [
+        "export default function makeConfig(defaults){",
+        "  let cfg=JSON.parse(JSON.stringify(defaults||{}));",
+        "  const get=()=>JSON.parse(JSON.stringify(cfg));",
+        "  const set=(delta)=>{ cfg=Object.freeze({...cfg,...delta}); return get(); };",
+        "  return { get, set };",
+        "}"
+      ]
+    },
+    "core/registry": {
+      "lang": "javascript",
+      "code": [
+        "export default function makeRegistry(system){",
+        "  const { io, crypto, config } = system;",
+        "  const path=config.get().paths.registry;",
+        "  const append=async(entry)=>{",
+        "    const line=JSON.stringify(entry);",
+        "    const hash=await crypto.sha256(line);",
+        "    await io.writeText(path, ((await io.readText(path).catch(()=>'')) + line+'\\n'));",
+        "    return { ok:true, hash };",
+        "  };",
+        "  const list=async()=>{",
+        "    const txt=await io.readText(path).catch(()=>''), out=[];",
+        "    for(const ln of txt.split(/\\r?\\n/)){ if(!ln.trim()) continue; try{ out.push(JSON.parse(ln)); }catch{} }",
+        "    return out;",
+        "  };",
+        "  return { append, list };",
+        "}"
+      ]
+    },
+    "core/snapshot": {
+      "lang": "javascript",
+      "code": [
+        "export default function makeSnapshot(system){",
+        "  const { io, config } = system;",
+        "  const snap=async()=>{",
+        "    const ts=new Date().toISOString().replace(/[:.]/g,'-');",
+        "    const root=config.get().paths.root, dest=`${config.get().paths.snapshots}/${ts}`;",
+        "    try{ await io.copyTree('config',`${dest}/config`); }catch{}",
+        "    try{ await io.copyTree('state',`${dest}/state`); }catch{}",
+        "    try{ await io.copyTree('eval',`${dest}/eval`); }catch{}",
+        "    return { ok:true, dest };",
+        "  };",
+        "  return { snap };",
+        "}"
+      ]
+    },
+    "agents/router": {
+      "lang": "javascript",
+      "code": [
+        "export default function RouterAgent(system){",
+        "  const { bus, config } = system;",
+        "  const util=new Map(); // capsuleId -> utilization",
+        "  const route=async({tokens,capsules,context,__replyTo})=>{",
+        "    const { topK, epsilon }=config.get().router;",
+        "    const picks=[]; // naive: topK by utilization complement, with epsilon explore",
+        "    const ids=capsules.map(c=>c.id);",
+        "    for(const id of ids){ if(!util.has(id)) util.set(id,0); }",
+        "    const explore=Math.random()<epsilon;",
+        "    const sorted=[...ids].sort((a,b)=> (util.get(a)||0)-(util.get(b)||0));",
+        "    const chosen= (explore? sorted.sort(()=>0.5-Math.random()) : sorted).slice(0,Math.min(topK,sorted.length));",
+        "    chosen.forEach(id=>util.set(id,(util.get(id)||0)+1));",
+        "    await bus.pub(__replyTo,{chosen});",
+        "  };",
+        "  bus.sub('ROUTER.ROUTE',route);",
+        "  return { id:'router', route };",
+        "}"
+      ]
+    },
+    "agents/sandbox": {
+      "lang": "javascript",
+      "code": [
+        "export default function SandboxAgent(system){",
+        "  const { bus, config } = system;",
+        "  const evalSandbox=async ({ capsule, data, __replyTo })=>{",
+        "    const t0=Date.now();",
+        "    let ok=true, errors=[];",
+        "    try{ for(const item of data){ await Promise.resolve(capsule.run(item)); } }",
+        "    catch(e){ ok=false; errors.push(String(e?.message||e)); }",
+        "    const dt=Date.now()-t0;",
+        "    const breach= dt>config.get().sandbox.timeoutMs;",
+        "    await bus.pub(__replyTo,{ ok: ok && !breach, ms:dt, errors });",
+        "  };",
+        "  bus.sub('SANDBOX.EVAL',evalSandbox);",
+        "  return { id:'sandbox', evalSandbox };",
+        "}"
+      ]
+    },
+    "agents/evaluator": {
+      "lang": "javascript",
+      "code": [
+        "export default function EvaluatorAgent(system){",
+        "  const { bus, config } = system;",
+        "  const score=async ({ results, __replyTo })=>{",
+        "    // Minimal scoring: success ratio and time",
+        "    const ok=results.filter(r=>r.ok).length/Math.max(1,results.length);",
+        "    const ms=results.reduce((a,r)=>a+r.ms,0)/Math.max(1,results.length);",
+        "    const pass = ok>=0.98 && ms<=config.get().budgets.latencyMs;",
+        "    await bus.pub(__replyTo,{ ok:pass, okRate:ok, latencyAvgMs:ms });",
+        "  };",
+        "  bus.sub('EVAL.SCORE',score);",
+        "  return { id:'evaluator', score };",
+        "}"
+      ]
+    },
+    "agents/registry": {
+      "lang": "javascript",
+      "code": [
+        "export default function RegistryAgent(system){",
+        "  const { bus, registry } = system;",
+        "  bus.sub('REGISTRY.APPEND', async ({entry,__replyTo})=>{",
+        "    const res=await registry.append(entry);",
+        "    await bus.pub(__replyTo,res);",
+        "  });",
+        "  bus.sub('REGISTRY.LIST', async ({__replyTo})=>{",
+        "    const res=await registry.list();",
+        "    await bus.pub(__replyTo,res);",
+        "  });",
+        "  return { id:'registry' };",
+        "}"
+      ]
+    },
+    "agents/telemetry": {
+      "lang": "javascript",
+      "code": [
+        "export default function TelemetryAgent(system){",
+        "  const { bus }=system; const hard=[];",
+        "  bus.sub('TEL.HARD', async ({sample})=>{ hard.push(sample); if(hard.length>5000) hard.shift(); });",
+        "  bus.sub('TEL.GET_HARD', async ({__replyTo})=>{ await bus.pub(__replyTo,{items:[...hard]}); });",
+        "  return { id:'telemetry' };",
+        "}"
+      ]
+    },
+    "agents/builder": {
+      "lang": "javascript",
+      "code": [
+        "export default function BuilderAgent(system){",
+        "  const { bus, registry, crypto }=system;",
+        "  const mkCapsule=(kind,spec)=>({",
+        "    id: kind+':'+Math.random().toString(36).slice(2),",
+        "    kind,",
+        "    spec,",
+        "    run: async (input)=>({output: '[stub-'+kind+'] '+JSON.stringify(input).slice(0,120)})",
+        "  });",
+        "  bus.sub('BUILD.SPAWN', async ({ kind, spec, __replyTo })=>{",
+        "    const cap=mkCapsule(kind,spec||{});",
+        "    await registry.append({ t:Date.now(), event:'spawn', capsule: { id:cap.id, kind } });",
+        "    await bus.pub(__replyTo,cap);",
+        "  });",
+        "  return { id:'builder' };",
+        "}"
+      ]
+    },
+    "agents/merge": {
+      "lang": "javascript",
+      "code": [
+        "export default function MergeAgent(system){",
+        "  const { bus, registry }=system;",
+        "  bus.sub('MERGE.RUN', async ({capsules,__replyTo})=>{",
+        "    // stub: pick first as survivor",
+        "    const survivor=capsules[0];",
+        "    await registry.append({t:Date.now(),event:'merge',survivor:survivor?.id,merged:capsules.map(c=>c.id)});",
+        "    await bus.pub(__replyTo,{ok:true,survivor});",
+        "  });",
+        "  return { id:'merge' };",
+        "}"
+      ]
+    },
+    "agents/safety": {
+      "lang": "javascript",
+      "code": [
+        "export default function SafetyAgent(system){",
+        "  const { bus }=system;",
+        "  bus.sub('SAFETY.CHECK', async ({capsule,__replyTo})=>{",
+        "    // stub: always safe in offline kit; extend with policy tests",
+        "    await bus.pub(__replyTo,{ok:true, tests:[]});",
+        "  });",
+        "  return { id:'safety' };",
+        "}"
+      ]
+    },
+    "agents/orchestrator": {
+      "lang": "javascript",
+      "code": [
+        "export default function Orchestrator(system){",
+        "  const { bus }=system;",
+        "  const start=async()=>{",
+        "    // Simple smoke: spawn -> sandbox -> eval -> possibly promote (logged)",
+        "    const cap=await bus.req('BUILD.SPAWN',{kind:'lora',spec:{rank:8}}).catch(()=>null);",
+        "    if(!cap) return;",
+        "    const sandboxRes=await bus.req('SANDBOX.EVAL',{capsule:cap,data:[{x:1},{x:2},{x:3}]});",
+        "    const evalRes=await bus.req('EVAL.SCORE',{results:[sandboxRes]});",
+        "    await bus.req('REGISTRY.APPEND',{entry:{t:Date.now(),event:'eval',cap:cap.id,metrics:evalRes}}).catch(()=>{});",
+        "  };",
+        "  return { id:'orchestrator', start };",
+        "}"
+      ]
+    },
+    "app/serve": {
+      "lang": "javascript",
+      "code": [
+        "export default function makeServe(system){",
+        "  const { bus }=system;",
+        "  // No HTTP; provide in-process interface compatible with '--serve' semantics",
+        "  const handle=async(message)=>{",
+        "    if(message?.type==='route'){",
+        "      return await bus.req('ROUTER.ROUTE',{ tokens:message.tokens||[], capsules: message.capsules||[], context:message.context||{} });",
+        "    }",
+        "    if(message?.type==='spawn'){",
+        "      return await bus.req('BUILD.SPAWN',{kind: message.kind||'lora', spec: message.spec||{} });",
+        "    }",
+        "    return { ok:false, error:'unknown message type' };",
+        "  };",
+        "  return { handle };",
+        "}"
+      ]
+    },
+    "kernel/boot": {
+      "lang": "javascript",
+      "code": [
+        "import makeLoader from 'kernel/loader';",
+        "import makeBus from 'core/bus';",
+        "import makeIO from 'core/io';",
+        "import makeCrypto from 'core/crypto';",
+        "import sbom from 'core/sbom';",
+        "import makeConfig from 'core/config';",
+        "import makeRegistry from 'core/registry';",
+        "import makeSnapshot from 'core/snapshot';",
+        "import RouterAgent from 'agents/router';",
+        "import SandboxAgent from 'agents/sandbox';",
+        "import EvaluatorAgent from 'agents/evaluator';",
+        "import RegistryAgent from 'agents/registry';",
+        "import TelemetryAgent from 'agents/telemetry';",
+        "import BuilderAgent from 'agents/builder';",
+        "import MergeAgent from 'agents/merge';",
+        "import SafetyAgent from 'agents/safety';",
+        "import Orchestrator from 'agents/orchestrator';",
+        "import makeServe from 'app/serve';",
+        "",
+        "export default async function boot(bundle){",
+        "  const load=makeLoader(bundle);",
+        "  const bus=makeBus();",
+        "  const io=makeIO();",
+        "  const crypto=makeCrypto();",
+        "  const config=makeConfig(bundle.config||{});",
+        "  const registry=makeRegistry({ io, crypto, config });",
+        "  const snapshot=makeSnapshot({ io, config });",
+        "  // Expose system to modules via loader.sys (no globals) ",
+        "  load.loaderApi.sys={ bus, io, crypto, config, registry, snapshot };",
+        "  const system={ bus, io, crypto, config, registry, snapshot };",
+        "  // Agents",
+        "  const router=RouterAgent(system);",
+        "  const sandbox=SandboxAgent(system);",
+        "  const evaluator=EvaluatorAgent(system);",
+        "  const regAgent=RegistryAgent(system);",
+        "  const tel=TelemetryAgent(system);",
+        "  const build=BuilderAgent(system);",
+        "  const merge=MergeAgent(system);",
+        "  const safe=SafetyAgent(system);",
+        "  const orch=Orchestrator(system);",
+        "  const serve=makeServe(system);",
+        "  // SBOM + self-heal report",
+        "  const sb=await sbom(system);",
+        "  await registry.append({t:Date.now(),event:'sbom',sb});",
+        "  // Snapshot on first boot (best-effort)",
+        "  try{ await snapshot.snap(); }catch{}",
+        "  // Kick minimal workflow (non-blocking)",
+        "  orch.start().catch(()=>{});",
+        "  return { system, agents:{router,sandbox,evaluator,regAgent,tel,build,merge,safe,orch}, serve };",
+        "}"
+      ]
+    }
+  }
+}

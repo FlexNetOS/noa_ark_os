@@ -15,6 +15,13 @@
       "description": "Maintains metadata propagation and file graph surfaces.",
       "contacts": ["vfs@noa-ark.example"],
       "note": "Contact email is a placeholder. Replace with a real address for production use."
+    },
+    {
+      "id": "crew-mlops",
+      "name": "Inference MLOps Crew",
+      "description": "Owns managed provider gateways, telemetry exports, and inference runtime health.",
+      "contacts": ["mlops@noa-ark.example"],
+      "note": "Placeholder contact until production address is issued."
     }
   ],
   "components": [
@@ -46,6 +53,25 @@
       "tags": ["core", "filesystem", "graph"],
       "links": {
         "handbook": "docs/architecture/registry-knowledge-graph.md"
+      }
+    },
+    {
+      "id": "ai.inference.router",
+      "name": "Provider Router & Telemetry",
+      "version": "0.3.0",
+      "description": "Manages inference provider chaining, health checks, and telemetry emission.",
+      "files": [
+        "server/ai/inference/src/router.rs",
+        "server/ai/inference/src/providers",
+        "apps/cli/src/main.rs",
+        "docs/architecture/inference/README.md"
+      ],
+      "dependencies": ["core.fs.registry-sync"],
+      "owners": ["crew-mlops"],
+      "tags": ["ai", "inference", "observability"],
+      "links": {
+        "handbook": "docs/architecture/inference/README.md",
+        "env": ".workspace/registry/environment.ai.json"
       }
     }
   ]

@@ -1,0 +1,34 @@
+{
+  "bundle": "research-notebook-bundle",
+  "version": "2024.06.12",
+  "artifacts": [
+    {
+      "path": "notebooks/development/01_core_os_development.ipynb",
+      "hash": "sha256:d48b45885307c29015c0dde8fc244563bb3c60ad513e100fdff8d60a3c3eb908",
+      "sanitized_at": "2024-06-12T18:30:00Z",
+      "notes": "Outputs cleared, metadata pinned for CRC automation."
+    },
+    {
+      "path": "notebooks/analysis/performance_analysis.ipynb",
+      "hash": "sha256:d36255efd0f75edd7157481f66ce84b63591c42fcd2c8ea29214bb8f6cfb75fb",
+      "sanitized_at": "2024-06-12T18:40:00Z",
+      "notes": "Validated dataset dependency declarations."
+    },
+    {
+      "path": "datasets/workspace_metrics_daily.csv",
+      "hash": "sha256:9dfa6d5a437c5041403d9d3bdca48252a5eb3d5202d8681932aa1a523fac27a3",
+      "sanitized_at": "2024-06-12T18:45:00Z",
+      "notes": "Sample metrics aggregated from CRC telemetry exports."
+    }
+  ],
+  "tests": [
+    {
+      "name": "crc digest smoke",
+      "command": "cargo test -p noa_crc --test digest_smoke -- --nocapture",
+      "result": "pass",
+      "run_at": "2024-06-12T19:10:00Z",
+      "log_reference": "chunk:325bde#L1-L7"
+    }
+  ],
+  "approvals": []
+}

@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NOA Capsule",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "layer",
+    "scope",
+    "inputs",
+    "outputs",
+    "tools",
+    "guardrails",
+    "escalation_to"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "layer": {
+      "type": "string",
+      "enum": [
+        "cecca",
+        "board",
+        "executive",
+        "stack_chief",
+        "specialist",
+        "micro"
+      ]
+    },
+    "scope": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "outputs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "tools": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "guardrails": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "escalation_to": {
+      "type": "string"
+    },
+    "compression": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "strategy": {
+          "type": "string"
+        }
+      }
+    },
+    "upgrade": {
+      "type": "object",
+      "properties": {
+        "policy": {
+          "type": "string"
+        },
+        "last_upgraded": {
+          "type": "string"
+        }
+      }
+    },
+    "integration": {
+      "type": "object",
+      "properties": {
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

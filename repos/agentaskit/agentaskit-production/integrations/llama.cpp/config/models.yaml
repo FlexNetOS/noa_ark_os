@@ -1,0 +1,16 @@
+# llama.cpp models configuration
+# Provide absolute or repo-relative paths to your GGUF models.
+# Do not commit proprietary weights unless licensed.
+
+models:
+  primary_3b:
+    path: "<path-to-your-3b-gguf>"   # e.g., /models/open/3b-q4_0.gguf
+    tokens: 64
+  secondary_7b:
+    path: "<path-to-your-7b-gguf>"   # e.g., /models/open/7b-q4_0.gguf
+    tokens: 64
+
+stacks:
+  count: 4
+  prompt: "ping"
+  threads: 4

@@ -1,0 +1,1 @@
+Place offline signing keys here (minisign.key or GPG).

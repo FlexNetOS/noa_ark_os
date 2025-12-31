@@ -1,0 +1,125 @@
+{
+  "workspaces": [
+    {
+      "id": "studio",
+      "name": "Vibe Studio",
+      "accent": "from-indigo-500 via-purple-500 to-blue-500",
+      "createdAt": "2025-11-17T20:22:40.961Z",
+      "billingPlan": "starter",
+      "members": [
+        {
+          "id": "ava",
+          "name": "Ava",
+          "role": "owner",
+          "avatarHue": 265
+        },
+        {
+          "id": "kai",
+          "name": "Kai",
+          "role": "member",
+          "avatarHue": 190
+        },
+        {
+          "id": "sol",
+          "name": "Sol",
+          "role": "member",
+          "avatarHue": 20
+        }
+      ],
+      "boards": [
+        {
+          "id": "launchpad",
+          "workspaceId": "studio",
+          "goalId": "launchpad",
+          "projectName": "Vibe Coding Launchpad",
+          "description": "Ship the new kanban workspace with presence-aware collaboration.",
+          "lastUpdated": "2025-11-17T20:22:40.961Z",
+          "accent": "from-indigo-500 via-purple-500 to-blue-500",
+          "columns": [
+            {
+              "id": "todo",
+              "title": "To Do",
+              "accent": "from-indigo-500 via-purple-500 to-blue-500",
+              "goals": [
+                {
+                  "id": "goal-1",
+                  "title": "Ideate hero motion",
+                  "notes": "Sketch the flowing hero animation that loops smoothly across the dashboard.",
+                  "createdAt": "2025-11-17T20:22:40.961Z",
+                  "mood": "flow",
+                  "automation": null
+                },
+                {
+                  "id": "goal-2",
+                  "title": "Sound-reactive palette",
+                  "notes": "Research how to tie track BPM to gradient shifts on the home screen.",
+                  "createdAt": "2025-11-17T20:22:40.961Z",
+                  "mood": "focus",
+                  "automation": null
+                }
+              ]
+            },
+            {
+              "id": "in-progress",
+              "title": "In Progress",
+              "accent": "from-sky-500 via-cyan-400 to-emerald-400",
+              "goals": [
+                {
+                  "id": "goal-3",
+                  "title": "Prototype kanban drag",
+                  "notes": "Polish easing curve + inertia for drag transitions.",
+                  "createdAt": "2025-11-17T20:22:40.961Z",
+                  "mood": "hype",
+                  "automation": null
+                }
+              ]
+            },
+            {
+              "id": "done",
+              "title": "Completed",
+              "accent": "from-violet-500 via-indigo-400 to-fuchsia-500",
+              "goals": [
+                {
+                  "id": "goal-4",
+                  "title": "Mood-driven theme",
+                  "notes": "Shipped gradient system that syncs with vibes.",
+                  "createdAt": "2025-11-17T20:22:40.961Z",
+                  "mood": "chill",
+                  "automation": null
+                }
+              ]
+            }
+          ],
+          "metrics": {
+            "completedGoals": 1,
+            "activeGoals": 3,
+            "goalMomentum": 72
+          },
+          "archived": false,
+          "moodSamples": [
+            {
+              "recordedAt": "2025-11-17T20:22:40.961Z",
+              "focus": 0.4,
+              "flow": 0.3,
+              "chill": 0.1,
+              "hype": 0.2
+            }
+          ]
+        }
+      ],
+      "activity": [
+        {
+          "id": "act-1",
+          "type": "board.created",
+          "actorId": "ava",
+          "actorName": "Ava",
+          "boardId": "launchpad",
+          "description": "Ava spawned the Launchpad board",
+          "createdAt": "2025-11-17T20:22:40.961Z"
+        }
+      ],
+      "notifications": [],
+      "uploadReceipts": []
+    }
+  ]
+}

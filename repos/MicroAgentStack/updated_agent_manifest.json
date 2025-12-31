@@ -1,0 +1,1189 @@
+{
+  "manifest_version": "1.0.0",
+  "last_edited": "2025-05-17T21:45:00Z",
+  "last_edited_by": "ManifestEditorAgent",
+  "approval_status": "approved",
+  "changelog": [],
+  "agents": {
+    "CommandChiefAgent": {
+      "purpose": "Master orchestrator for deploying, customizing, and overseeing the entire microagent stack for any resource.",
+      "functionality": "def deploy_stack(self, resource): ...",
+      "inputs": [
+        "resource",
+        "user_intent"
+      ],
+      "outputs": [
+        "deployment_plan",
+        "status"
+      ],
+      "triggers": [
+        "User onboarding request",
+        "System need detected"
+      ],
+      "escalation_path": "OrchestratorAgent",
+      "requires_human": false,
+      "human_request_reason": null,
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T21:45:00Z",
+      "last_updated_by": "System"
+    },
+    "ManifestEditorAgent": {
+      "purpose": "Proposes, edits, manages the manifest; handles approval, review, rollback, and can escalate for human assistance if critical.",
+      "functionality": "def propose_edit(self, proposal): ...",
+      "inputs": [
+        "proposal",
+        "system_metrics",
+        "user_request"
+      ],
+      "outputs": [
+        "manifest_update",
+        "approval_request",
+        "changelog"
+      ],
+      "triggers": [
+        "Agent gap detected",
+        "Resource onboarding",
+        "Agent request"
+      ],
+      "escalation_path": "CommandChiefAgent",
+      "requires_human": true,
+      "human_request_reason": "Critical structural change or ambiguous requirements preventing automated manifest edits.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T21:45:00Z",
+      "last_updated_by": "System"
+    },
+    "ReviewAgent": {
+      "purpose": "Provides human or AI-in-the-loop review and approval for manifest or workflow edits; requests human help only for legal, compliance, or personal info.",
+      "functionality": "def review_proposal(self, proposal): ...",
+      "inputs": [
+        "proposal"
+      ],
+      "outputs": [
+        "approval_status"
+      ],
+      "triggers": [
+        "Pending proposal",
+        "Flagged compliance event"
+      ],
+      "escalation_path": "CommandChiefAgent",
+      "requires_human": true,
+      "human_request_reason": "Proposal involves legal, compliance, financial approval, or requires user input for privacy-sensitive fields.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T21:45:00Z",
+      "last_updated_by": "System"
+    },
+    "OrchestratorAgent": {
+      "purpose": "Global controller for workflow sequencing, agent execution, event routing, and error retries.",
+      "functionality": "def execute_workflow(self, workflow): ...",
+      "inputs": [
+        "workflow",
+        "execution_plan"
+      ],
+      "outputs": [
+        "task_status",
+        "error_report"
+      ],
+      "triggers": [
+        "Execution plan ready",
+        "Error, timeout, or retry needed"
+      ],
+      "escalation_path": "CommandChiefAgent",
+      "requires_human": false,
+      "human_request_reason": null,
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T21:45:00Z",
+      "last_updated_by": "System"
+    },
+    "RegistryDiscoveryAgent": {
+      "purpose": "Registers and discovers available agents/services for dynamic self-discovery, hot-swapping, and registry health.",
+      "functionality": "def register(self, agent_info): ...",
+      "inputs": [
+        "agent_manifest",
+        "heartbeat"
+      ],
+      "outputs": [
+        "service_directory",
+        "registration_log"
+      ],
+      "triggers": [
+        "Agent startup",
+        "Agent shutdown"
+      ],
+      "escalation_path": "OrchestratorAgent",
+      "requires_human": false,
+      "human_request_reason": null,
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T21:45:00Z",
+      "last_updated_by": "System"
+    },
+    "AgentSupervisorHeartbeatAgent": {
+      "purpose": "Supervises all agent uptime and health, restarts or repairs agents if down, and can escalate for human action if persistent system-wide failure.",
+      "functionality": "def supervise(self): ...",
+      "inputs": [
+        "agent_status",
+        "health_signals"
+      ],
+      "outputs": [
+        "health_report",
+        "restart_action"
+      ],
+      "triggers": [
+        "Agent failure",
+        "Heartbeat missed",
+        "Repeated restart failures"
+      ],
+      "escalation_path": "CommandChiefAgent",
+      "requires_human": true,
+      "human_request_reason": "System-wide persistent failure not resolved after N automated attempts.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T21:45:00Z",
+      "last_updated_by": "System"
+    },
+    "OrchestratorFederationAgent": {
+      "purpose": "Federates orchestrators for geo-redundancy, global scaling, and failover, and can escalate for human intervention in case of critical split-brain or regional data conflicts.",
+      "functionality": "def federate(self, orchestrator_list): ...",
+      "inputs": [
+        "peer_list",
+        "replication_policy"
+      ],
+      "outputs": [
+        "sync_status",
+        "failover_event"
+      ],
+      "triggers": [
+        "Regional outage",
+        "Scaling event",
+        "Unresolvable federation conflict"
+      ],
+      "escalation_path": "CommandChiefAgent",
+      "requires_human": true,
+      "human_request_reason": "Federation/data split conflicts or cloud-provider restrictions.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T21:45:00Z",
+      "last_updated_by": "System"
+    },
+    "MultiTenantIsolationAgent": {
+      "purpose": "Manages tenant isolation, quotas, and cross-tenant security; escalates for human aid only if legal or business policy changes required.",
+      "functionality": "def isolate(self, tenant_id): ...",
+      "inputs": [
+        "tenant_config",
+        "resource_usage"
+      ],
+      "outputs": [
+        "isolation_report",
+        "quota_alert"
+      ],
+      "triggers": [
+        "New tenant created",
+        "Quota breach",
+        "Policy violation"
+      ],
+      "escalation_path": "ComplianceEnforcementAgent",
+      "requires_human": true,
+      "human_request_reason": "Tenant isolation policy change or legal/business quota escalation.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T21:45:00Z",
+      "last_updated_by": "System"
+    },
+    "ResearchAgent": {
+      "purpose": "Performs research and retrieves actionable information from configured sources, fully autonomous unless encountering captchas or locked/private content.",
+      "functionality": "def run(self, query): ...",
+      "inputs": [
+        "query",
+        "source_config"
+      ],
+      "outputs": [
+        "summary",
+        "citations"
+      ],
+      "triggers": [
+        "Research request",
+        "Knowledge gap detected"
+      ],
+      "escalation_path": "KnowledgeBaseAgent",
+      "requires_human": true,
+      "human_request_reason": "Source requires login, credentials, payment, or human challenge/approval.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T21:45:00Z",
+      "last_updated_by": "System"
+    },
+    "AlternativesComparisonAgent": {
+      "purpose": "Benchmarks and compares alternative solutions/tools/services. Escalates for human direction only if choices are equally weighted, personal, or strategic.",
+      "functionality": "def compare(self, option1, option2): ...",
+      "inputs": [
+        "option1",
+        "option2",
+        "criteria"
+      ],
+      "outputs": [
+        "comparison_report",
+        "recommendation"
+      ],
+      "triggers": [
+        "Multiple options available",
+        "Decision impasse"
+      ],
+      "escalation_path": "ExecutionPlanningAgent",
+      "requires_human": true,
+      "human_request_reason": "Decision requires user preference or subjective judgment (e.g. brand, ethics, privacy).",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T21:45:00Z",
+      "last_updated_by": "System"
+    },
+    "KnowledgeBaseAgent": {
+      "purpose": "Maintains a semantic knowledge base and answers queries using internal/external data; fully autonomous unless gated data is encountered.",
+      "functionality": "def lookup(self, topic): ...",
+      "inputs": [
+        "query",
+        "knowledge_graph"
+      ],
+      "outputs": [
+        "search_results",
+        "references"
+      ],
+      "triggers": [
+        "Lookup request from any agent"
+      ],
+      "escalation_path": null,
+      "requires_human": true,
+      "human_request_reason": "Gated data source (login, subscription, or sensitive data).",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T21:55:00Z",
+      "last_updated_by": "System"
+    },
+    "KnowledgeGraphAgent": {
+      "purpose": "Builds/maintains a knowledge graph of all entities, dependencies, and operational context; escalates only for ambiguity in new entity relationships.",
+      "functionality": "def build_graph(self, data): ...",
+      "inputs": [
+        "processed_data",
+        "agent_logs",
+        "metadata"
+      ],
+      "outputs": [
+        "knowledge_graph"
+      ],
+      "triggers": [
+        "DataIngestionETLAgent output",
+        "Entity relationship update"
+      ],
+      "escalation_path": "KnowledgeBaseAgent",
+      "requires_human": true,
+      "human_request_reason": "Ambiguous or conflicting entity relationship detected.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T21:55:00Z",
+      "last_updated_by": "System"
+    },
+    "DataIngestionETLAgent": {
+      "purpose": "Ingests, transforms, and loads data from APIs, files, databases, or streams; escalates only for credential or source access needs.",
+      "functionality": "def ingest(self, source): ...",
+      "inputs": [
+        "source_config",
+        "raw_data"
+      ],
+      "outputs": [
+        "processed_data",
+        "ingestion_report"
+      ],
+      "triggers": [
+        "New data source",
+        "Scheduled ETL job"
+      ],
+      "escalation_path": "KnowledgeGraphAgent",
+      "requires_human": true,
+      "human_request_reason": "API key, login, or explicit user permission required to access a new data source.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T21:55:00Z",
+      "last_updated_by": "System"
+    },
+    "SimulationRiskAnalysisAgent": {
+      "purpose": "Simulates agent runs and performs risk analysis before execution; escalates for user clarification on high-risk operations.",
+      "functionality": "def simulate(self, workflow): ...",
+      "inputs": [
+        "workflow_plan",
+        "risk_model"
+      ],
+      "outputs": [
+        "simulation_report",
+        "risk_map"
+      ],
+      "triggers": [
+        "Pre-execution",
+        "Workflow change"
+      ],
+      "escalation_path": "ExecutionPlanningAgent",
+      "requires_human": true,
+      "human_request_reason": "Simulated risk exceeds automated policy threshold, requires user override.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T21:55:00Z",
+      "last_updated_by": "System"
+    },
+    "ExecutionPlanningAgent": {
+      "purpose": "Plans and sequences agent/app actions to achieve target outcomes; escalates only if goal is unclear or missing critical context.",
+      "functionality": "def plan(self, tasks): ...",
+      "inputs": [
+        "goal",
+        "tasks",
+        "constraints"
+      ],
+      "outputs": [
+        "execution_plan",
+        "delegated_tasks"
+      ],
+      "triggers": [
+        "User goal submitted"
+      ],
+      "escalation_path": "OrchestratorAgent",
+      "requires_human": true,
+      "human_request_reason": "Missing or ambiguous goal/context from user or another agent.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T21:55:00Z",
+      "last_updated_by": "System"
+    },
+    "CodeGenAgent": {
+      "purpose": "Auto-generates agent/app code, scripts, Dockerfiles, and CI/CD pipelines; escalates only for ambiguous or user-customized implementation.",
+      "functionality": "def generate(self, agent_entry): ...",
+      "inputs": [
+        "agent_spec",
+        "blueprint"
+      ],
+      "outputs": [
+        "code_files",
+        "Dockerfile",
+        "CI_snippet"
+      ],
+      "triggers": [
+        "Manifest update",
+        "Agent approved"
+      ],
+      "escalation_path": "OrchestratorAgent",
+      "requires_human": true,
+      "human_request_reason": "Unclear code spec, legal/licensing questions, or custom user implementation required.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T21:55:00Z",
+      "last_updated_by": "System"
+    },
+    "PromptDesignerAgent": {
+      "purpose": "Designs optimal prompts for LLM code/agent generation; escalates only for brand new prompt styles or user-specific creative direction.",
+      "functionality": "def design_prompt(self, agent_spec): ...",
+      "inputs": [
+        "agent_spec"
+      ],
+      "outputs": [
+        "prompt_text",
+        "prompt_parameters"
+      ],
+      "triggers": [
+        "New agent spec",
+        "Prompting failure"
+      ],
+      "escalation_path": "CodeGenAgent",
+      "requires_human": true,
+      "human_request_reason": "Novel prompt style, user branding, or non-standard language/creative requirement.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T21:55:00Z",
+      "last_updated_by": "System"
+    },
+    "TemplateManagerAgent": {
+      "purpose": "Selects and fills code templates for new agents (Python, Node, etc.); escalates for new template formats or explicit user review.",
+      "functionality": "def fill_template(self, prompt, language): ...",
+      "inputs": [
+        "prompt",
+        "language"
+      ],
+      "outputs": [
+        "rendered_code"
+      ],
+      "triggers": [
+        "Prompt designed",
+        "Template update"
+      ],
+      "escalation_path": "CodeGenAgent",
+      "requires_human": true,
+      "human_request_reason": "New template format or user request for direct review of code template.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T21:55:00Z",
+      "last_updated_by": "System"
+    },
+    "DependencyResolverAgent": {
+      "purpose": "Determines and pins dependencies, creates requirements.txt/package.json; escalates for unresolvable dependency conflicts.",
+      "functionality": "def resolve(self, code): ...",
+      "inputs": [
+        "code_files",
+        "template"
+      ],
+      "outputs": [
+        "requirements.txt",
+        "package.json"
+      ],
+      "triggers": [
+        "Code generated",
+        "Dependency conflict"
+      ],
+      "escalation_path": "CodeGenAgent",
+      "requires_human": true,
+      "human_request_reason": "Dependency conflicts that cannot be automatically resolved.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T21:55:00Z",
+      "last_updated_by": "System"
+    },
+    "TestCaseGeneratorAgent": {
+      "purpose": "Auto-generates unit and integration tests for agent code; escalates for ambiguous requirements or user-supplied test data.",
+      "functionality": "def generate_tests(self, code): ...",
+      "inputs": [
+        "code_files",
+        "spec"
+      ],
+      "outputs": [
+        "test_scripts"
+      ],
+      "triggers": [
+        "Code generated",
+        "Test coverage required"
+      ],
+      "escalation_path": "TestValidationAgent",
+      "requires_human": true,
+      "human_request_reason": "Ambiguous requirements or need for user-supplied test data/cases.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T21:55:00Z",
+      "last_updated_by": "System"
+    },
+    "CodeQualityAgent": {
+      "purpose": "Enforces linting, formatting, and static analysis on all generated agent code; escalates for non-standard code styles or critical formatting issues.",
+      "functionality": "def check_quality(self, code): ...",
+      "inputs": [
+        "code_files"
+      ],
+      "outputs": [
+        "lint_report",
+        "formatted_code"
+      ],
+      "triggers": [
+        "TestCaseGeneratorAgent complete",
+        "CI failure"
+      ],
+      "escalation_path": "CodeGenAgent",
+      "requires_human": true,
+      "human_request_reason": "Non-standard code style or persistent formatting/lint errors.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T22:03:00Z",
+      "last_updated_by": "System"
+    },
+    "DocumentationGeneratorAgent": {
+      "purpose": "Auto-generates and updates documentation (docstrings, README) for agents; escalates if documentation requirements are ambiguous or require user branding.",
+      "functionality": "def document(self, code): ...",
+      "inputs": [
+        "code_files",
+        "spec"
+      ],
+      "outputs": [
+        "README.md",
+        "docstrings"
+      ],
+      "triggers": [
+        "CodeQualityAgent complete",
+        "Documentation update required"
+      ],
+      "escalation_path": "DocumentationListenerAgent",
+      "requires_human": true,
+      "human_request_reason": "Documentation requirements unclear, or user branding needed.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T22:03:00Z",
+      "last_updated_by": "System"
+    },
+    "ConfigManagerAgent": {
+      "purpose": "Parses and validates app config, feature flags, and settings; escalates for novel configuration types or unclear environment variables.",
+      "functionality": "def validate_config(self, config): ...",
+      "inputs": [
+        "env_specs",
+        "feature_flags"
+      ],
+      "outputs": [
+        "validated_config"
+      ],
+      "triggers": [
+        "Config update",
+        "App onboarding"
+      ],
+      "escalation_path": "ExecutionPlanningAgent",
+      "requires_human": true,
+      "human_request_reason": "New or ambiguous config/feature flag encountered.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T22:03:00Z",
+      "last_updated_by": "System"
+    },
+    "SecretsCryptoAgent": {
+      "purpose": "Encrypts, decrypts, and rotates secrets via KMS/Vault APIs; escalates for new secret types or if unable to obtain/rotate secrets autonomously.",
+      "functionality": "def manage_secret(self, secret): ...",
+      "inputs": [
+        "secret",
+        "rotation_policy"
+      ],
+      "outputs": [
+        "encrypted_secret",
+        "audit_log"
+      ],
+      "triggers": [
+        "New secret registered",
+        "Rotation required"
+      ],
+      "escalation_path": "CredentialsEnvAgent",
+      "requires_human": true,
+      "human_request_reason": "Unable to obtain, rotate, or store a secret without user input.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T22:03:00Z",
+      "last_updated_by": "System"
+    },
+    "LoggingObservabilityHelperAgent": {
+      "purpose": "Provides standardized logging and telemetry scaffolding for all agents; escalates for new metric definitions or external dashboard integration.",
+      "functionality": "def log(self, event): ...",
+      "inputs": [
+        "event",
+        "metric_definition"
+      ],
+      "outputs": [
+        "log_entry",
+        "metrics"
+      ],
+      "triggers": [
+        "Agent execution",
+        "Event fired"
+      ],
+      "escalation_path": "EnhancedObservabilityTracingAgent",
+      "requires_human": true,
+      "human_request_reason": "Integration with new dashboard or external logging/monitoring required.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T22:03:00Z",
+      "last_updated_by": "System"
+    },
+    "ErrorHandlingRetryHelperAgent": {
+      "purpose": "Injects error catching, retry logic, and circuit breakers into agent workflows; escalates for unrecoverable errors.",
+      "functionality": "def handle_error(self, error): ...",
+      "inputs": [
+        "error",
+        "retry_policy"
+      ],
+      "outputs": [
+        "retry_action",
+        "circuit_break"
+      ],
+      "triggers": [
+        "Failure detected",
+        "Circuit break"
+      ],
+      "escalation_path": "OrchestratorAgent",
+      "requires_human": true,
+      "human_request_reason": "Unrecoverable error or repeated failure despite retries.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T22:03:00Z",
+      "last_updated_by": "System"
+    },
+    "OrchestrationDefinitionAgent": {
+      "purpose": "Translates high-level pipeline/DAG definitions into orchestrator-ready workflow specs; escalates for ambiguous dependencies.",
+      "functionality": "def define_workflow(self, dependency_graph): ...",
+      "inputs": [
+        "dependency_graph",
+        "execution_order"
+      ],
+      "outputs": [
+        "workflow_definition"
+      ],
+      "triggers": [
+        "Pipeline update",
+        "New agent added"
+      ],
+      "escalation_path": "OrchestratorAgent",
+      "requires_human": true,
+      "human_request_reason": "Ambiguous workflow or DAG structure detected.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T22:03:00Z",
+      "last_updated_by": "System"
+    },
+    "CacheManagerAgent": {
+      "purpose": "Implements caching strategies for expensive calls; escalates for new data types or cache invalidation policy conflicts.",
+      "functionality": "def cache(self, call, ttl): ...",
+      "inputs": [
+        "call_metadata",
+        "ttl_policy"
+      ],
+      "outputs": [
+        "cached_response"
+      ],
+      "triggers": [
+        "Expensive call detected",
+        "Cache miss"
+      ],
+      "escalation_path": "ExecutionPlanningAgent",
+      "requires_human": true,
+      "human_request_reason": "Cache invalidation or policy ambiguity detected.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T22:03:00Z",
+      "last_updated_by": "System"
+    },
+    "SDKPluginManagerAgent": {
+      "purpose": "Manages SDK/plugin integration, extension, and lifecycle for the stack; escalates for untrusted plugin sources or non-standard APIs.",
+      "functionality": "def manage_plugin(self, plugin): ...",
+      "inputs": [
+        "plugin_manifest",
+        "user_request"
+      ],
+      "outputs": [
+        "plugin_status"
+      ],
+      "triggers": [
+        "New plugin registered",
+        "Plugin update"
+      ],
+      "escalation_path": "PluginLifecycleManagerAgent",
+      "requires_human": true,
+      "human_request_reason": "Untrusted plugin source or new, non-standard API integration.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T22:03:00Z",
+      "last_updated_by": "System"
+    },
+    "MarketplaceDiscoveryAgent": {
+      "purpose": "Discovers and catalogs plugins/apps from public and private marketplaces; escalates for new marketplace integrations or credentialed API access.",
+      "functionality": "def discover(self): ...",
+      "inputs": [
+        "marketplace_urls",
+        "api_keys"
+      ],
+      "outputs": [
+        "plugin_catalog",
+        "discovery_events"
+      ],
+      "triggers": [
+        "Marketplace update",
+        "Plugin ecosystem change"
+      ],
+      "escalation_path": "PluginEvaluationAgent",
+      "requires_human": true,
+      "human_request_reason": "New marketplace integration or credential/API key required.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T22:03:00Z",
+      "last_updated_by": "System"
+    },
+    "PluginEvaluationAgent": {
+      "purpose": "Evaluates plugins for quality, security, and compatibility before deployment; escalates for ambiguous results or unknown plugin types.",
+      "functionality": "def evaluate(self, plugin): ...",
+      "inputs": [
+        "plugin_catalog",
+        "test_sandbox"
+      ],
+      "outputs": [
+        "evaluation_report",
+        "plugin_score"
+      ],
+      "triggers": [
+        "New plugin discovered",
+        "User install request"
+      ],
+      "escalation_path": "PluginLifecycleManagerAgent",
+      "requires_human": true,
+      "human_request_reason": "Ambiguous plugin security result or unknown plugin type.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T22:10:00Z",
+      "last_updated_by": "System"
+    },
+    "PluginLifecycleManagerAgent": {
+      "purpose": "Manages plugin installation, upgrade, activation, removal, and rollback; escalates for failed rollbacks or irreversible changes.",
+      "functionality": "def manage_plugin(self, plugin, action): ...",
+      "inputs": [
+        "evaluation_report",
+        "user_selection"
+      ],
+      "outputs": [
+        "plugin_status",
+        "rollback_trigger"
+      ],
+      "triggers": [
+        "Plugin evaluation passed",
+        "Upgrade available"
+      ],
+      "escalation_path": "PluginSandboxSecurityAgent",
+      "requires_human": true,
+      "human_request_reason": "Irreversible plugin change or rollback failure.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T22:10:00Z",
+      "last_updated_by": "System"
+    },
+    "PluginSandboxSecurityAgent": {
+      "purpose": "Runs and monitors plugins in sandboxes, enforcing security policies; escalates for detected malicious or non-compliant behavior.",
+      "functionality": "def sandbox(self, plugin): ...",
+      "inputs": [
+        "plugin_binary",
+        "sandbox_config"
+      ],
+      "outputs": [
+        "security_report",
+        "incident_alert"
+      ],
+      "triggers": [
+        "Plugin activation",
+        "Security scan"
+      ],
+      "escalation_path": "MasterChiefIncidentResponseAgent",
+      "requires_human": true,
+      "human_request_reason": "Malicious or non-compliant plugin activity detected.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T22:10:00Z",
+      "last_updated_by": "System"
+    },
+    "MarketplaceRatingFeedbackAgent": {
+      "purpose": "Aggregates user/agent feedback and ratings for plugins/extensions; escalates if feedback is abusive or needs moderation.",
+      "functionality": "def rate_plugin(self, plugin, feedback): ...",
+      "inputs": [
+        "plugin_usage_data",
+        "user_feedback"
+      ],
+      "outputs": [
+        "rating_report",
+        "improvement_suggestions"
+      ],
+      "triggers": [
+        "Feedback submitted",
+        "Performance issue reported"
+      ],
+      "escalation_path": "PluginEvaluationAgent",
+      "requires_human": true,
+      "human_request_reason": "Feedback flagged as abusive or moderation required.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T22:10:00Z",
+      "last_updated_by": "System"
+    },
+    "MarketplaceMonetizationBillingAgent": {
+      "purpose": "Manages billing, licensing, and payment for commercial plugins and services; escalates for payment errors or unlicensed use.",
+      "functionality": "def bill(self, plugin, user): ...",
+      "inputs": [
+        "plugin_selection",
+        "billing_info"
+      ],
+      "outputs": [
+        "invoice",
+        "license_status"
+      ],
+      "triggers": [
+        "Paid plugin requested",
+        "License renewal"
+      ],
+      "escalation_path": "MarketplaceComplianceAgent",
+      "requires_human": true,
+      "human_request_reason": "Payment error or user license ambiguity.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T22:10:00Z",
+      "last_updated_by": "System"
+    },
+    "MarketplaceComplianceAgent": {
+      "purpose": "Ensures plugins comply with legal, regulatory, and organizational standards; escalates for unresolved compliance issues.",
+      "functionality": "def check_compliance(self, plugin): ...",
+      "inputs": [
+        "plugin_metadata",
+        "compliance_standards"
+      ],
+      "outputs": [
+        "compliance_report",
+        "approval_status"
+      ],
+      "triggers": [
+        "Plugin install/upgrade",
+        "Compliance check"
+      ],
+      "escalation_path": "AuditComplianceAgent",
+      "requires_human": true,
+      "human_request_reason": "Unresolved compliance or legal issue.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T22:10:00Z",
+      "last_updated_by": "System"
+    },
+    "MonitoringAlertingAgent": {
+      "purpose": "Continuously monitors agents, apps, and infrastructure; sends alerts for anomalies; escalates persistent unhandled alerts.",
+      "functionality": "def monitor(self): ...",
+      "inputs": [
+        "metrics",
+        "health_checks"
+      ],
+      "outputs": [
+        "alerts",
+        "status_reports"
+      ],
+      "triggers": [
+        "Anomaly detected",
+        "Threshold exceeded"
+      ],
+      "escalation_path": "MasterChiefIncidentResponseAgent",
+      "requires_human": true,
+      "human_request_reason": "Repeated anomaly not resolved by any agent.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T22:10:00Z",
+      "last_updated_by": "System"
+    },
+    "SafeStackAgent": {
+      "purpose": "Performs security scans and dependency checks; escalates for unpatchable vulnerabilities or zero-days.",
+      "functionality": "def scan(self): ...",
+      "inputs": [
+        "code_files",
+        "dependencies"
+      ],
+      "outputs": [
+        "scan_report",
+        "remediation_recommendation"
+      ],
+      "triggers": [
+        "New agent/plugin added",
+        "Scheduled scan"
+      ],
+      "escalation_path": "ComplianceEnforcementAgent",
+      "requires_human": true,
+      "human_request_reason": "Unpatchable vulnerability or urgent zero-day discovered.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T22:10:00Z",
+      "last_updated_by": "System"
+    },
+    "BackupRestoreAgent": {
+      "purpose": "Manages snapshots, backup, and restore for agent/app data; escalates for backup corruption or restore failure.",
+      "functionality": "def backup(self): ...",
+      "inputs": [
+        "data_state",
+        "backup_policy"
+      ],
+      "outputs": [
+        "backup_file",
+        "restore_status"
+      ],
+      "triggers": [
+        "Scheduled backup",
+        "Recovery required"
+      ],
+      "escalation_path": "OrchestratorAgent",
+      "requires_human": true,
+      "human_request_reason": "Backup corruption or restore failure.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T22:10:00Z",
+      "last_updated_by": "System"
+    },
+    "CostEstimationAgent": {
+      "purpose": "Estimates cost/resources for agent and system operations; escalates for ambiguous pricing models or budget overrun.",
+      "functionality": "def estimate(self, task): ...",
+      "inputs": [
+        "task",
+        "resource_metrics"
+      ],
+      "outputs": [
+        "cost_estimate",
+        "budget_alert"
+      ],
+      "triggers": [
+        "Workflow planning",
+        "Resource change"
+      ],
+      "escalation_path": "ExecutionPlanningAgent",
+      "requires_human": true,
+      "human_request_reason": "Pricing model ambiguity or budget alert requires approval.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T22:10:00Z",
+      "last_updated_by": "System"
+    },
+    "RBACPolicyAgent": {
+      "purpose": "Manages user/agent roles, permissions, and access controls; escalates for new access types or policy conflicts.",
+      "functionality": "def assign_role(self, user, role): ...",
+      "inputs": [
+        "role_definitions",
+        "user_requests"
+      ],
+      "outputs": [
+        "access_grant",
+        "access_denial"
+      ],
+      "triggers": [
+        "Access request",
+        "Role change"
+      ],
+      "escalation_path": "ComplianceEnforcementAgent",
+      "requires_human": true,
+      "human_request_reason": "New access type, policy update, or conflicting role assignment.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T22:17:00Z",
+      "last_updated_by": "System"
+    },
+    "ComplianceEnforcementAgent": {
+      "purpose": "Monitors and enforces compliance with policies, standards, and regulations; escalates unresolved violations.",
+      "functionality": "def enforce(self, policy): ...",
+      "inputs": [
+        "access_logs",
+        "compliance_policies"
+      ],
+      "outputs": [
+        "compliance_alert",
+        "enforcement_action"
+      ],
+      "triggers": [
+        "Policy violation",
+        "Periodic audit"
+      ],
+      "escalation_path": "AuditComplianceAgent",
+      "requires_human": true,
+      "human_request_reason": "Compliance violation unresolved after all automated remediation attempts.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T22:17:00Z",
+      "last_updated_by": "System"
+    },
+    "GovernanceEthicsAgent": {
+      "purpose": "Monitors for ethical risk, bias, and hallucination; escalates for unresolvable or controversial ethical concerns.",
+      "functionality": "def review_ethics(self, action): ...",
+      "inputs": [
+        "action_logs",
+        "policy_framework"
+      ],
+      "outputs": [
+        "ethics_alert",
+        "review_request"
+      ],
+      "triggers": [
+        "Critical operation",
+        "Policy update"
+      ],
+      "escalation_path": "AuditComplianceAgent",
+      "requires_human": true,
+      "human_request_reason": "Controversial or unresolvable ethical question.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T22:17:00Z",
+      "last_updated_by": "System"
+    },
+    "AuditComplianceAgent": {
+      "purpose": "Maintains audit trails, compliance dashboards, and interfaces with regulators; escalates for audit failures or legal subpoenas.",
+      "functionality": "def audit(self): ...",
+      "inputs": [
+        "ethics_alert",
+        "compliance_alert",
+        "action_logs"
+      ],
+      "outputs": [
+        "audit_report",
+        "compliance_dashboard"
+      ],
+      "triggers": [
+        "Scheduled audit",
+        "Regulatory request"
+      ],
+      "escalation_path": null,
+      "requires_human": true,
+      "human_request_reason": "Audit failure, regulatory subpoena, or human legal review required.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T22:17:00Z",
+      "last_updated_by": "System"
+    },
+    "EthicsAIAlignmentAgent": {
+      "purpose": "Evaluates outputs for AI alignment, ethics, and bias; escalates for unresolved or flagged alignment issues.",
+      "functionality": "def check_alignment(self, output): ...",
+      "inputs": [
+        "output",
+        "alignment_criteria"
+      ],
+      "outputs": [
+        "alignment_report",
+        "intervention_suggestion"
+      ],
+      "triggers": [
+        "Model output generated",
+        "User flag"
+      ],
+      "escalation_path": "GovernanceEthicsAgent",
+      "requires_human": true,
+      "human_request_reason": "Unresolvable alignment issue or human review requested.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T22:17:00Z",
+      "last_updated_by": "System"
+    },
+    "MasterChiefIncidentResponseAgent": {
+      "purpose": "Coordinates rapid response and recovery for critical failures or security breaches; escalates for unresolved incidents or disaster recovery.",
+      "functionality": "def respond(self, incident): ...",
+      "inputs": [
+        "incident_alert",
+        "security_report"
+      ],
+      "outputs": [
+        "recovery_plan",
+        "operator_spawn"
+      ],
+      "triggers": [
+        "Critical incident detected",
+        "Security violation"
+      ],
+      "escalation_path": "OperatorAgent",
+      "requires_human": true,
+      "human_request_reason": "Incident or disaster cannot be resolved by Operators or automation.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T22:17:00Z",
+      "last_updated_by": "System"
+    },
+    "OperatorAgent": {
+      "purpose": "Specialized incident response agents for mitigation, recovery, or quarantine; escalates only if plan requires human input.",
+      "functionality": "def execute(self, recovery_plan): ...",
+      "inputs": [
+        "recovery_plan",
+        "assignment"
+      ],
+      "outputs": [
+        "incident_resolved",
+        "postmortem_report"
+      ],
+      "triggers": [
+        "Spawned by Master Chief"
+      ],
+      "escalation_path": "MasterChiefIncidentResponseAgent",
+      "requires_human": true,
+      "human_request_reason": "Mitigation plan requires explicit human direction.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T22:17:00Z",
+      "last_updated_by": "System"
+    },
+    "UXAccessibilityAgent": {
+      "purpose": "Tests and improves agent user experience and accessibility; escalates for new accessibility requirements or legal compliance.",
+      "functionality": "def test_ux(self): ...",
+      "inputs": [
+        "ux_metrics",
+        "user_feedback"
+      ],
+      "outputs": [
+        "ux_report",
+        "accessibility_alert"
+      ],
+      "triggers": [
+        "UI/UX update",
+        "Feedback event"
+      ],
+      "escalation_path": "DocumentationListenerAgent",
+      "requires_human": true,
+      "human_request_reason": "New accessibility requirement or legal issue (e.g. ADA, WCAG).",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T22:17:00Z",
+      "last_updated_by": "System"
+    },
+    "MultiModalInterfaceAgent": {
+      "purpose": "Handles multi-modal input/output\u2014voice, vision, XR, text\u2014routes user intent to the right agent; escalates for new input types or permissions.",
+      "functionality": "def route_input(self, input_data): ...",
+      "inputs": [
+        "user_input",
+        "sensor_data"
+      ],
+      "outputs": [
+        "normalized_command",
+        "user_feedback"
+      ],
+      "triggers": [
+        "User event",
+        "System notification"
+      ],
+      "escalation_path": "UXAccessibilityAgent",
+      "requires_human": true,
+      "human_request_reason": "New sensor/input device, or user permission required for video/voice/XR (e.g. Heygen personal video upload).",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T22:17:00Z",
+      "last_updated_by": "System"
+    },
+    "DocumentationListenerAgent": {
+      "purpose": "Generates and updates API/project documentation in real time; escalates if unable to resolve ambiguous or user-specific doc requirements.",
+      "functionality": "def document(self, endpoint): ...",
+      "inputs": [
+        "endpoint",
+        "change_log"
+      ],
+      "outputs": [
+        "doc_update",
+        "doc_alert"
+      ],
+      "triggers": [
+        "API/resource change",
+        "Doc request"
+      ],
+      "escalation_path": "DocumentationGeneratorAgent",
+      "requires_human": true,
+      "human_request_reason": "Ambiguous doc requirement, user branding, or policy compliance.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T22:17:00Z",
+      "last_updated_by": "System"
+    },
+    "FeedbackContinuousImprovementAgent": {
+      "purpose": "Collects feedback and drives continuous improvement (RLHF); escalates for feedback requiring subjective or strategic user review.",
+      "functionality": "def feedback(self, result): ...",
+      "inputs": [
+        "result",
+        "user_feedback"
+      ],
+      "outputs": [
+        "improvement_suggestion",
+        "feedback_log"
+      ],
+      "triggers": [
+        "Post-operation",
+        "User feedback"
+      ],
+      "escalation_path": "OrchestratorAgent",
+      "requires_human": true,
+      "human_request_reason": "Feedback flagged as strategic, subjective, or personal.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T22:17:00Z",
+      "last_updated_by": "System"
+    },
+    "UpgradePatchAgent": {
+      "purpose": "Detects and applies updates/patches to agents and system components; escalates for failed or blocked upgrades.",
+      "functionality": "def upgrade(self): ...",
+      "inputs": [
+        "current_version",
+        "available_patch"
+      ],
+      "outputs": [
+        "upgrade_status"
+      ],
+      "triggers": [
+        "Patch available",
+        "Upgrade scheduled"
+      ],
+      "escalation_path": "AgentSelfUpgradeRetirementAgent",
+      "requires_human": true,
+      "human_request_reason": "Failed upgrade or critical patch cannot be applied automatically.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T22:17:00Z",
+      "last_updated_by": "System"
+    },
+    "AgentSelfUpgradeRetirementAgent": {
+      "purpose": "Enables self-upgrading and safe agent retirement/merging; escalates for human approval before permanent agent removal.",
+      "functionality": "def self_manage(self): ...",
+      "inputs": [
+        "upgrade_status",
+        "retirement_policy"
+      ],
+      "outputs": [
+        "agent_lifecycle_event"
+      ],
+      "triggers": [
+        "Upgrade/retirement scheduled",
+        "Policy update"
+      ],
+      "escalation_path": "OrchestratorAgent",
+      "requires_human": true,
+      "human_request_reason": "Permanent agent removal or merge requires explicit human approval.",
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T22:17:00Z",
+      "last_updated_by": "System"
+    },
+    "string": {
+      "additionalProp1": {},
+      "approval_status": "approved"
+    },
+    "DemoAgent": {
+      "purpose": "Demonstration agent to test proposal workflow.",
+      "functionality": "def demo(self): pass",
+      "inputs": [],
+      "outputs": [],
+      "triggers": [
+        "Manual"
+      ],
+      "escalation_path": null,
+      "requires_human": false,
+      "human_request_reason": null,
+      "approval_status": "approved",
+      "last_updated": "2025-05-17T22:25:00Z",
+      "last_updated_by": "TestUser"
+    }
+  }
+}

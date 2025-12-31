@@ -1,5 +1,4 @@
-use crate::inference::{InferenceConfig, InferenceEngine};
-use crate::{AgentId, AgentMetadata, Error, Result};
+use crate::{AgentMetadata, Error, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
@@ -70,7 +69,7 @@ pub struct ModelSelectorAgent {
 }
 
 #[derive(Debug, Clone)]
-struct UsageStats {
+pub struct UsageStats {
     total_uses: usize,
     successes: usize,
     failures: usize,
@@ -109,7 +108,7 @@ impl ModelSelectorAgent {
         }
 
         // Filter models by privacy tier
-        let mut candidates: Vec<_> = models
+        let candidates: Vec<_> = models
             .values()
             .filter(|m| self.matches_privacy_tier(m, &requirements.privacy_tier))
             .cloned()
@@ -145,7 +144,10 @@ impl ModelSelectorAgent {
         Ok(ModelSelection {
             model: best.0.clone(),
             confidence: best.1,
-            rationale: best.2.clone(),
+            rationale: format!(
+                "{} selected {} for {:?}: {}",
+                self.metadata.name, best.0.name, requirements.use_case, best.2
+            ),
             alternatives,
         })
     }
@@ -191,6 +193,11 @@ impl ModelSelectorAgent {
     pub fn get_stats(&self, model_name: &str) -> Option<UsageStats> {
         let stats = self.usage_stats.read().unwrap();
         stats.get(model_name).cloned()
+    }
+
+    /// Expose agent metadata for callers that embed this selector.
+    pub fn metadata(&self) -> &AgentMetadata {
+        &self.metadata
     }
 
     // Private helper methods

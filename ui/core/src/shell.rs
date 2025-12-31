@@ -76,8 +76,8 @@ impl UnifiedShell {
         let context = init(platform.clone())?;
         let renderer = Renderer::new(context.clone());
         let state = UIState::new(context.clone());
-        let store = GlobalStore::global().clone();
-        store.update(|global| *global = GlobalState::default());
+        // Each shell instance holds its own store to avoid test interference when run in parallel.
+        let store = GlobalStore::new(GlobalState::default());
 
         if let Some(session) = session {
             store.update(|state| state.session = session);
@@ -338,7 +338,6 @@ impl UnifiedShell {
         let mut workspaces: Vec<_> = state_snapshot
             .workspaces
             .values()
-            .cloned()
             .filter(|workspace| {
                 workspace.allowed_roles.is_empty()
                     || workspace
@@ -346,6 +345,7 @@ impl UnifiedShell {
                         .iter()
                         .any(|role| session_roles.iter().any(|r| r == role))
             })
+            .cloned()
             .collect();
         workspaces.sort_by(|a, b| a.label.cmp(&b.label));
 

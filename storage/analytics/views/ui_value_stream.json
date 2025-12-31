@@ -1,0 +1,6 @@
+{
+  "name": "value_stream_dashboard",
+  "description": "Placeholder layout metadata for value stream analytics.",
+  "refresh_cadence": "nightly",
+  "panels": []
+}

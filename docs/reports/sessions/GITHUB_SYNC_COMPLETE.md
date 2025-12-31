@@ -70,7 +70,7 @@
 
 ### Pending (Need Review)
 - 📋 `.vs/` - Visual Studio temp files
-- 📋 `.vscode/` - VS Code settings (should include?)
+- 📋 `tools/devshell/` - Devshell configuration (authoritative CLI path)
 - 📋 `.workspace/` - Workspace indexes
 - 📋 `NoaArkOS.sln` - Solution file
 - 📋 PowerShell scripts (`*.ps1`)
@@ -95,7 +95,7 @@ Your branch is up to date with 'origin/main'.
 - `.env.example`
 - `.graphs/` directories
 - `.vs/` - Visual Studio
-- `.vscode/` - VS Code settings
+- `tools/devshell/` - CLI devshell overrides
 - `.workspace/` - Workspace data
 - `LICENSE` - License file
 - `NoaArkOS.sln` - Solution file
@@ -112,8 +112,8 @@ Your branch is up to date with 'origin/main'.
 ```powershell
 cd D:\dev\workspaces\noa_ark_os
 
-# Add VS Code settings (useful for team)
-git add .vscode/
+# Promote CLI devshell config
+git add tools/devshell/
 
 # Add solution file
 git add NoaArkOS.sln

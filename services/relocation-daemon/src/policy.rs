@@ -16,21 +16,12 @@ pub struct PolicyDocument {
     pub relocations: Vec<RelocationRule>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct PolicyDefaults {
     #[serde(default)]
     pub retention: RetentionPolicy,
     #[serde(default)]
     pub naming: NamingRules,
-}
-
-impl Default for PolicyDefaults {
-    fn default() -> Self {
-        Self {
-            retention: RetentionPolicy::default(),
-            naming: NamingRules::default(),
-        }
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

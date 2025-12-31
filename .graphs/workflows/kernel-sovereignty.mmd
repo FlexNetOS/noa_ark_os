@@ -1,0 +1,12 @@
+%% Kernel sovereignty control loop
+flowchart TD
+    OperatorCLI[CLI / Pipeline] --> GatewayAdapter[Gateway Adapter]
+    GatewayAdapter --> KernelHandle[Kernel Handle]
+    KernelHandle --> CapabilityRegistry[Capability Registry]
+    CapabilityRegistry --> CapabilityTokens[Capability Tokens]
+    CapabilityTokens --> CoreServices[Core Services]
+    CapabilityTokens --> ExternalRuntimes[Registry-Approved Runtimes]
+    CoreServices --> EvidenceLedger[Evidence Ledger]
+    ExternalRuntimes --> EvidenceLedger
+    EvidenceLedger --> SnapshotArchive[Snapshot & Archive]
+    SnapshotArchive --> OperatorCLI

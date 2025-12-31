@@ -1,0 +1,93 @@
+syntax = "proto3";
+
+package noa.tools.v1;
+
+// Mirrors the noa CLI capabilities defined in registry/tools.registry.json.
+message MetricsRequest {
+  string target = 1;
+  uint32 window = 2;
+}
+
+message MetricsSnapshot {
+  map<string, MetricSeries> entries = 1;
+}
+
+message MetricSeries {
+  repeated MetricPoint points = 1;
+}
+
+message MetricPoint {
+  double value = 1;
+  uint32 window_seconds = 2;
+  string unit = 3;
+}
+
+message ExecutePlanRequest {
+  string plan_id = 1;
+  bool dry_run = 2;
+}
+
+message AutomationReceipt {
+  string plan_id = 1;
+  bool dry_run = 2;
+  repeated string approvals = 3;
+  repeated string actions = 4;
+}
+
+message SecurityScanRequest {
+  string scope = 1;
+  string since = 2;
+}
+
+message SecurityReport {
+  string scope = 1;
+  string generated_at = 2;
+  repeated Finding findings = 3;
+}
+
+message Finding {
+  string severity = 1;
+  string component = 2;
+  string evidence = 3;
+}
+
+message CollaborationRequest {
+  string workflow_id = 1;
+  bool include_logs = 2;
+}
+
+message CollaborationPacket {
+  string workflow_id = 1;
+  string expires_at = 2;
+  string artifact_path = 3;
+}
+
+message PluginDescribeRequest {
+  string surface = 1;
+}
+
+message PluginDescriptor {
+  string surface = 1;
+  repeated string cli_commands = 2;
+  repeated string api_methods = 3;
+}
+
+service ObservabilityService {
+  rpc GetMetricsSnapshot(MetricsRequest) returns (MetricsSnapshot);
+}
+
+service AutomationService {
+  rpc ExecutePlan(ExecutePlanRequest) returns (AutomationReceipt);
+}
+
+service AnalysisService {
+  rpc RunSecurityScan(SecurityScanRequest) returns (SecurityReport);
+}
+
+service CollaborationService {
+  rpc PrepareReviewPackage(CollaborationRequest) returns (CollaborationPacket);
+}
+
+service PluginService {
+  rpc Describe(PluginDescribeRequest) returns (PluginDescriptor);
+}

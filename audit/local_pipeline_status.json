@@ -1,0 +1,17 @@
+{
+  "commit": null,
+  "timestamp": null,
+  "status": "uninitialized",
+  "node": null,
+  "pnpm": null,
+  "cargo": null,
+  "build_log": {
+    "path": "build_output.txt",
+    "sha256": null
+  },
+  "test_log": {
+    "path": "test_output.txt",
+    "sha256": null
+  },
+  "commands": []
+}

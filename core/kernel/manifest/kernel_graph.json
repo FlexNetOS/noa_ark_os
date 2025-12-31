@@ -113,6 +113,84 @@
       "resources": {"cpu": 1, "memoryMb": 768}
     },
     {
+      "id": "openai",
+      "name": "OpenAI Gateway Proxy",
+      "category": "integration",
+      "version": "0.1.0",
+      "interfaces": [
+        {"name": "external-http", "version": "1.0.0"}
+      ],
+      "dependencies": ["gateway"],
+      "optionalDependencies": ["observability"],
+      "artifacts": {
+        "container": {"image": "registry.local/inference/openai-proxy:0.1.0", "digest": "sha256:openai-proxy"},
+        "tarball": {"file": "openai-proxy-0.1.0.tar.gz"},
+        "ociLayout": {"path": "oci/openai-proxy/0.1.0"}
+      },
+      "healthChecks": [
+        {"type": "http", "path": "/v1/models"}
+      ],
+      "compatibility": {
+        "linux": {"status": "supported"},
+        "macos": {"status": "supported"},
+        "container": {"status": "supported"}
+      },
+      "boot": {"order": 20, "role": "integration"},
+      "resources": {"cpu": 1, "memoryMb": 512}
+    },
+    {
+      "id": "anthropic",
+      "name": "Anthropic Gateway Proxy",
+      "category": "integration",
+      "version": "0.1.0",
+      "interfaces": [
+        {"name": "external-http", "version": "1.0.0"}
+      ],
+      "dependencies": ["gateway"],
+      "optionalDependencies": ["observability"],
+      "artifacts": {
+        "container": {"image": "registry.local/inference/anthropic-proxy:0.1.0", "digest": "sha256:anthropic-proxy"},
+        "tarball": {"file": "anthropic-proxy-0.1.0.tar.gz"},
+        "ociLayout": {"path": "oci/anthropic-proxy/0.1.0"}
+      },
+      "healthChecks": [
+        {"type": "http", "path": "/v1/models"}
+      ],
+      "compatibility": {
+        "linux": {"status": "supported"},
+        "macos": {"status": "supported"},
+        "container": {"status": "supported"}
+      },
+      "boot": {"order": 21, "role": "integration"},
+      "resources": {"cpu": 1, "memoryMb": 512}
+    },
+    {
+      "id": "llama.cpp",
+      "name": "Llama.cpp Gateway",
+      "category": "integration",
+      "version": "0.1.0",
+      "interfaces": [
+        {"name": "external-http", "version": "1.0.0"}
+      ],
+      "dependencies": ["gateway"],
+      "optionalDependencies": ["observability"],
+      "artifacts": {
+        "container": {"image": "registry.local/inference/llama-proxy:0.1.0", "digest": "sha256:llama-proxy"},
+        "tarball": {"file": "llama-proxy-0.1.0.tar.gz"},
+        "ociLayout": {"path": "oci/llama-proxy/0.1.0"}
+      },
+      "healthChecks": [
+        {"type": "http", "path": "/health"}
+      ],
+      "compatibility": {
+        "linux": {"status": "supported"},
+        "macos": {"status": "supported"},
+        "container": {"status": "supported"}
+      },
+      "boot": {"order": 22, "role": "integration"},
+      "resources": {"cpu": 1, "memoryMb": 512}
+    },
+    {
       "id": "observability",
       "name": "Observability Bundle",
       "category": "observability",

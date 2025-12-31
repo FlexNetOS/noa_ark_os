@@ -1,0 +1,15 @@
+%% Capsule Lifecycle & Integration
+flowchart TD
+    C[Create Capsule] --> B[Bind Tools & Guardrails]
+    B --> P[Persist Inputs/State (artifact://)]
+    P --> R[Run Tasks]
+    R --> V[Validate & Score]
+    V -->|pass| U[Upgrade Capsule]
+    V -->|fail| H[Heal / Retrain]
+    U --> C2[Compress & Deduplicate]
+    H --> C2
+    C2 --> X[Connect to Stack]
+    X --> I[Integrate Across Stacks]
+    I --> M[Map Hierarchy (CECCA→Board→Exec→Stack-Chief→Spec→Micro)]
+    M --> O[Operational Loop]
+    O --> R

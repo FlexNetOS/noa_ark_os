@@ -1,0 +1,53 @@
+[profile]
+name = "air_gapped"
+description = "Offline execution profile for isolated networks and classified labs"
+version = "0.1.0"
+
+[tools]
+allowed = [
+  "bash",
+  "cargo",
+  "pytest",
+  "rustc",
+  "tar",
+]
+denied = [
+  "curl",
+  "wget",
+  "git",
+]
+
+[egress]
+mode = "denied"
+allowed_domains = []
+notes = "No outbound network access; all artifacts must be sideloaded via removable media."
+
+[budgets.cpu]
+reserved_cores = 2
+max_cores = 4
+
+[budgets.memory]
+soft_mb = 8192
+hard_mb = 12288
+
+[budgets.network]
+egress_mbps = 0
+burst_mbps = 0
+
+[[storage.roots]]
+name = "workspace"
+path = "/srv/noa/workspaces"
+mode = "read_write"
+quota_mb = 10240
+
+[[storage.roots]]
+name = "artifacts"
+path = "/srv/noa/artifacts"
+mode = "read_only"
+quota_mb = 5120
+
+[[storage.roots]]
+name = "evidence_ledger"
+path = "/srv/noa/evidence"
+mode = "read_write"
+quota_mb = 2048

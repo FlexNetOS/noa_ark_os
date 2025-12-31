@@ -5,5 +5,7 @@
 //! single host deployment profile.
 
 pub mod adaptive_scaling;
+pub mod orchestrator;
 
 pub use adaptive_scaling::{AdaptiveScalingPolicy, InferenceMode, ScalingDecision};
+pub use orchestrator::UnifiedOrchestrator;

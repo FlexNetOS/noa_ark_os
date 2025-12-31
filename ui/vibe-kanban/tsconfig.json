@@ -12,11 +12,11 @@
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
-    "baseUrl": "../..",
+    "baseUrl": ".",
     "isolatedModules": true,
-    "jsx": "preserve",
+    "jsx": "react-jsx",
     "incremental": true,
     "plugins": [
       {
@@ -28,10 +28,10 @@
     ],
     "paths": {
       "@/*": [
-        "ui/vibe-kanban/*"
+        "./*"
       ],
       "@noa-ark/shared-ui/*": [
-        "ui/shared/src/*"
+        "../shared/src/*"
       ],
       "@noa-ark/shared-ui": [
         "../shared/src/index"
@@ -54,7 +54,8 @@
     "**/*.tsx",
     "**/*.js",
     "**/*.jsx",
-    ".next/types/**/*.ts"
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

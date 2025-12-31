@@ -1,0 +1,24 @@
+[package]
+name = "quarantine_guard"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+walkdir = "2"
+sha2 = "0.10"
+
+[dev-dependencies]
+tempfile = "3"
+
+[[bin]]
+name = "quarantine_guard"
+path = "src/bin/guard.rs"
+
+[[bin]]
+name = "quarantine_rotate"
+path = "src/bin/rotate.rs"

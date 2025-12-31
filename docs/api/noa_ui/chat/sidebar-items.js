@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["ChatAction"],"struct":["ChatCommandDescriptor","ChatWorkspace","QuickAction"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["ALLOW_MARKER","QUARANTINE_MARKER"],"fn":["check_files","gather_paths","git_output","is_code_extension","run","should_skip"],"struct":["Violation"]};

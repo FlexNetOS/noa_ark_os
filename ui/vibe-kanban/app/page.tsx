@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import type React from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { PageEnvelope, ResumeToken } from "@noa-ark/shared-ui/schema";
-import { createSchemaClient, SessionContinuityClient } from "@noa-ark/shared-ui/session";
+import { createSchemaClient } from "@noa-ark/shared-ui/session";
 import { vibeDashboardEnvelope } from "@noa-ark/shared-ui/samples";
+import { ensureTraceId, logInfo } from "@noa-ark/shared-ui/logging";
 
 import { NotificationCenter } from "./components/NotificationCenter";
 import { SchemaDrivenRenderer } from "./components/SchemaDrivenRenderer";
@@ -14,7 +16,10 @@ export default function Page() {
   const session = useSession();
   const state = useBoardState(session.user);
   const [envelope, setEnvelope] = useState<PageEnvelope>(vibeDashboardEnvelope);
-  const [resumeToken, setResumeToken] = useState<ResumeToken | undefined>(vibeDashboardEnvelope.resumeToken);
+  const [resumeToken, setResumeToken] = useState<ResumeToken | undefined>(
+    vibeDashboardEnvelope.resumeToken ?? undefined
+  );
+  const traceIdRef = useRef<string>(ensureTraceId());
 
   const ready = session.status === "ready" && !!session.user && state.hydrated && state.snapshot;
 
@@ -32,50 +37,70 @@ export default function Page() {
       });
   }, []);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const endpoint = process.env.NEXT_PUBLIC_WORKFLOW_STREAM ?? "ws://localhost:8787/ui/session";
-    const client = new SessionContinuityClient({ workflowEndpoint: endpoint });
-    client.on("workflow:update", (event) => {
-      if (event.eventType === "workflow/state" && event.payload?.state === "completed") {
-        state.refreshBoard().catch((error) => console.error("Failed to refresh board", error));
-      }
-      if (event.eventType === "workflow/stage" && event.payload?.resumeToken) {
-        setResumeToken(event.payload.resumeToken as ResumeToken);
-      }
-    });
-    client.on("workflow:resume", (token) => setResumeToken(token));
-    try {
-      client.connectWebSocket();
-    } catch (error) {
-      console.warn("Unable to connect to workflow stream", error);
-    }
-    return () => client.disconnect();
-  }, [state]);
+  const plannerResumeToken = state.planner.plans.find((plan) => plan.resumeToken)?.resumeToken;
+  const effectiveResumeToken: ResumeToken | undefined = plannerResumeToken ?? resumeToken;
 
   const schemaRenderer = useMemo(() => {
     return ready
       ? (
-          <SchemaDrivenRenderer
-            schema={envelope.schema}
-            context={{
-              resumeWorkflow: (workflowId) => {
-                console.info("Requesting resume for", workflowId);
-                void state.refreshBoard();
-              },
-              triggerEvent: (bindingId) => {
-                console.info("UI event triggered", bindingId);
-              },
-              data: {
-                boardState: state,
-                session,
-                resumeToken,
-              },
-            }}
-          />
-        )
+        <SchemaDrivenRenderer
+          schema={envelope.schema}
+          context={{
+            resumeWorkflow: (token) => {
+              if (!token) {
+                return;
+              }
+              const resumeArg: ResumeToken =
+                typeof token === "string"
+                  ? {
+                      workflowId: token,
+                      stageId: undefined,
+                      checkpoint: "",
+                      issuedAt: new Date().toISOString(),
+                      expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+                    }
+                  : token;
+              if (!resumeArg.workflowId) {
+                logInfo({
+                  component: "vibe.page",
+                  event: "workflow_resume_rejected",
+                  message: "Resume token missing workflow identifier",
+                  outcome: "rejected",
+                  traceId: traceIdRef.current,
+                  context: { reason: "missing_workflow_id" },
+                });
+                return;
+              }
+              logInfo({
+                component: "vibe.page",
+                event: "workflow_resume_requested",
+                message: "Requesting workflow resume",
+                outcome: "pending",
+                traceId: traceIdRef.current,
+                context: { workflowId: resumeArg.workflowId },
+              });
+              state.resumePlan(resumeArg);
+            },
+            triggerEvent: (bindingId) => {
+              logInfo({
+                component: "vibe.page",
+                event: "ui_event_triggered",
+                message: "UI event triggered",
+                outcome: "observed",
+                traceId: traceIdRef.current,
+                context: { bindingId },
+              });
+            },
+            data: {
+              boardState: state,
+              session,
+              resumeToken: effectiveResumeToken,
+            },
+          }}
+        />
+      )
       : null;
-  }, [ready, envelope.schema, state, session, resumeToken]);
+  }, [ready, envelope.schema, state, session, effectiveResumeToken]);
 
   if (session.status === "loading") {
     return <FullScreenMessage label="Initializing workspace…" />;

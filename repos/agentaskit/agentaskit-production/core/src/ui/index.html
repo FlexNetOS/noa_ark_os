@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARK-OS Desktop</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1rem 2rem;
+            backdrop-filter: blur(10px);
+        }
+        
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 300;
+        }
+        
+        .main {
+            flex: 1;
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .card h2 {
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+            font-weight: 400;
+        }
+        
+        .button {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            color: white;
+            cursor: pointer;
+            font-size: 1rem;
+            margin: 0.5rem 0.5rem 0.5rem 0;
+            transition: all 0.3s ease;
+        }
+        
+        .button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .status {
+            display: flex;
+            align-items: center;
+            margin: 0.5rem 0;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+        
+        .status-dot.healthy {
+            background: #4ade80;
+        }
+        
+        .status-dot.degraded {
+            background: #fbbf24;
+        }
+        
+        .status-dot.unhealthy {
+            background: #ef4444;
+        }
+        
+        .output {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .metric {
+            text-align: center;
+        }
+        
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            display: block;
+        }
+        
+        .metric-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>ARK-OS Desktop</h1>
+        <p>Autonomous Rust Kernel Operating System</p>
+    </div>
+    
+    <div class="main">
+        <div class="card">
+            <h2>System Status</h2>
+            <div id="components"></div>
+            <button class="button" onclick="refreshStatus()">Refresh Status</button>
+            <button class="button" onclick="runHealthCheck()">Health Check</button>
+        </div>
+        
+        <div class="card">
+            <h2>ML Operations</h2>
+            <button class="button" onclick="runMLInference()">Run ML Inference</button>
+            <button class="button" onclick="queryDatabase()">Query Database</button>
+            <div class="output" id="ml-output"></div>
+        </div>
+        
+        <div class="card">
+            <h2>System Metrics</h2>
+            <div class="metrics" id="metrics"></div>
+            <button class="button" onclick="refreshMetrics()">Refresh Metrics</button>
+        </div>
+        
+        <div class="card">
+            <h2>Notifications</h2>
+            <button class="button" onclick="sendTestNotification()">Send Test Notification</button>
+            <div class="output" id="notifications"></div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Tauri API
+        const { invoke } = window.__TAURI__.tauri;
+        const { listen } = window.__TAURI__.event;
+        
+        // Listen for notifications
+        listen('notification', (event) => {
+            const notification = event.payload;
+            const notificationsDiv = document.getElementById('notifications');
+            notificationsDiv.innerHTML += `
+                <div style="margin: 0.5rem 0; padding: 0.5rem; background: rgba(255,255,255,0.1); border-radius: 4px;">
+                    <strong>${notification.title}</strong><br>
+                    ${notification.message}<br>
+                    <small>${new Date(notification.timestamp).toLocaleTimeString()}</small>
+                </div>
+            `;
+        });
+        
+        async function refreshStatus() {
+            try {
+                const appInfo = await invoke('get_app_info');
+                const componentsDiv = document.getElementById('components');
+                
+                let html = '';
+                for (const [name, status] of Object.entries(appInfo.components)) {
+                    const statusClass = status === 'healthy' ? 'healthy' : 
+                                      status === 'ready' ? 'healthy' : 
+                                      status === 'initialized' ? 'degraded' : 'unhealthy';
+                    html += `
+                        <div class="status">
+                            <div class="status-dot ${statusClass}"></div>
+                            ${name}: ${status}
+                        </div>
+                    `;
+                }
+                
+                componentsDiv.innerHTML = html;
+            } catch (error) {
+                console.error('Failed to refresh status:', error);
+            }
+        }
+        
+        async function runHealthCheck() {
+            try {
+                const result = await invoke('execute_command', { 
+                    command: 'health_check', 
+                    args: [] 
+                });
+                alert('Health Check: ' + result);
+            } catch (error) {
+                alert('Health Check Failed: ' + error);
+            }
+        }
+        
+        async function runMLInference() {
+            try {
+                const result = await invoke('execute_command', { 
+                    command: 'run_ml_inference', 
+                    args: [] 
+                });
+                document.getElementById('ml-output').innerHTML = 
+                    '<strong>ML Inference Result:</strong><br>' + 
+                    JSON.stringify(JSON.parse(result), null, 2);
+            } catch (error) {
+                document.getElementById('ml-output').innerHTML = 
+                    '<strong>Error:</strong> ' + error;
+            }
+        }
+        
+        async function queryDatabase() {
+            try {
+                const result = await invoke('execute_command', { 
+                    command: 'query_database', 
+                    args: ['SELECT * FROM ark_os_test LIMIT 5'] 
+                });
+                document.getElementById('ml-output').innerHTML = 
+                    '<strong>Database Query Result:</strong><br>' + 
+                    JSON.stringify(JSON.parse(result), null, 2);
+            } catch (error) {
+                document.getElementById('ml-output').innerHTML = 
+                    '<strong>Error:</strong> ' + error;
+            }
+        }
+        
+        async function refreshMetrics() {
+            try {
+                const metrics = await invoke('get_system_metrics');
+                const metricsDiv = document.getElementById('metrics');
+                
+                metricsDiv.innerHTML = `
+                    <div class="metric">
+                        <span class="metric-value">${metrics.cpu_usage}%</span>
+                        <span class="metric-label">CPU Usage</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-value">${metrics.memory_usage}%</span>
+                        <span class="metric-label">Memory Usage</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-value">${metrics.disk_usage}%</span>
+                        <span class="metric-label">Disk Usage</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-value">${Math.floor(metrics.uptime_seconds / 60)}m</span>
+                        <span class="metric-label">Uptime</span>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Failed to refresh metrics:', error);
+            }
+        }
+        
+        async function sendTestNotification() {
+            try {
+                await invoke('send_notification', {
+                    title: 'Test Notification',
+                    message: 'This is a test notification from ARK-OS Desktop!'
+                });
+            } catch (error) {
+                console.error('Failed to send notification:', error);
+            }
+        }
+        
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', () => {
+            refreshStatus();
+            refreshMetrics();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["AgentDispatchError","ToolExecutionStatus"],"fn":["compute_trust_guardrails","role_directory"],"struct":["AgentDispatcher","RoleMapping","TaskDispatchReceipt","ToolExecutionReceipt","ToolRequirement"]};

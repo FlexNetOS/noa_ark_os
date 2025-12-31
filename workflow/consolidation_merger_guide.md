@@ -9,30 +9,30 @@
 
 ## Purpose
 
-Single, comprehensive workflow from user input to deployment with copy/paste templates, automation gates, and constitutional governance.
+Single, comprehensive workflow from orchestrator intake to deployment with copy/paste templates, automation gates, and constitutional governance.
 
 ---
 
-## All-in-One Flow (User Input → Deployment)
+## Agent-Orchestrated Flow (Intake → Deployment)
 
 ```mermaid
 flowchart TD
-    A[User Input] --> B[4D Analysis]
-    B --> C[subject.todo: Inbox]
-    C --> D[Under Analysis]
-    D --> E[Ready for Promotion]
-    E --> F[Create TASK STUB: agentask.todo]
-    F --> G[Author]
-    G --> H[Index/Sign]
-    H --> I[Seal/Policy]
-    I --> J[Tri-Run]
-    J --> K[Merge(D)]
-    K --> L[Verify/Contract]
-    L --> M[WASM Build]
-    M --> N[Run Core]
-    N --> O[Anchor]
-    O --> P[Promote]
-    P --> Q[Completed: SOT.md]
+    A[Orchestrator Intake] --> B[Planner 4D Analysis]
+    B --> C[Orchestrator Inbox]
+    C --> D[Planner Under Analysis]
+    D --> E[Orchestrator Ready for Promotion]
+    E --> F[Planner Create TASK STUB]
+    F --> G[Worker Author]
+    G --> H[Worker Index/Sign]
+    H --> I[Planner Seal/Policy]
+    I --> J[Worker Tri-Run]
+    J --> K[Worker Merge(D)]
+    K --> L[Verifier Contract]
+    L --> M[Worker WASM Build]
+    M --> N[Worker Run Core]
+    N --> O[Orchestrator Anchor]
+    O --> P[Orchestrator Promote]
+    P --> Q[Orchestrator Completed: SOT.md]
     style A fill:#f9f,stroke:#333
     style Q fill:#bbf,stroke:#333
     subgraph "Automated Gates"
@@ -46,12 +46,20 @@ flowchart TD
 
 ## Quick Checklist
 
-- **Capture**: Add raw request in `agentask.subject.todo` (Inbox)
-- **Analyze**: Apply 4D in (Under Analysis) and write 1–3 sentence 4D summary
-- **Promote**: Move to (Ready for Promotion) and complete Promotion Checklist
-- **Create TASK STUB**: Add to `agentask.todo` (Current Tasks), link SUBJECT_ID → TASK_ID
-- **Execute**: Follow phased table with evidence and hashes (PRE/POST)
-- **Deploy**: Complete Promote step and record summary
+- **Capture (Orchestrator)**: Add raw request in `agentask.subject.todo` (Inbox)
+- **Analyze (Planner)**: Apply 4D in (Under Analysis) and write a 1–3 sentence 4D summary
+- **Promote (Orchestrator)**: Move to (Ready for Promotion) and complete Promotion Checklist
+- **Create TASK STUB (Planner)**: Add to `agentask.todo` (Current Tasks), link SUBJECT_ID → TASK_ID
+- **Execute (Worker)**: Follow phased table with evidence and hashes (PRE/POST)
+- **Deploy (Orchestrator + Verifier)**: Complete Promote step and record summary with verifier sign-off
+
+## Agent Role Responsibility Map
+
+| Flow Segment | Orchestrator | Planner | Worker | Verifier |
+| --- | --- | --- | --- | --- |
+| Intake & promotion | Capture requests, manage state transitions, authorize deployment gates | Outline 4D analysis and prepare manifests | Provide effort estimates and implementation notes | Confirm readiness before promotion |
+| Execution phases | Coordinate worker assignments and ensure policy alignment | Update constraints and phase sequencing | Perform code, build, and runtime tasks; emit telemetry | Validate tests, hashes, and acceptance evidence |
+| Post-execution | Append anchors, publish outputs, and archive artifacts | Refresh manifests with post-run adjustments | Hand over artifacts and logs | Sign-off final promote step and ledger entries |
 
 ---
 
@@ -183,7 +191,9 @@ Acceptance:
   - Criterion 1
   - Criterion 2
 Priority: (A|B|C)
-Proposed OWNER: <agent-or-person>
+Responsible_Agent:
+  role: <orchestrator|planner|worker|verifier>
+  id: <agent-identifier>
 Risks/Dependencies: <notes>
 ```
 
@@ -193,7 +203,7 @@ Risks/Dependencies: <notes>
 - [ ] SUBJECT_ID present and unique
 - [ ] Acceptance criteria listed (≥1)
 - [ ] Priority set
-- [ ] Proposed OWNER set
+- [ ] Responsible agent role assigned
 - [ ] Risks/dependencies noted
 - [ ] Ready to create TASK_ID in agentask.todo
 ```
@@ -216,7 +226,9 @@ TASK_ID: TASK-YYYYMMDD-NNN
 SUBJECT_ID: SUBJ-YYYYMMDD-NNN
 Title: <short name>
 Intent: <outcome desired>
-OWNER: <agent-or-person>
+Responsible_Agent:
+  role: <orchestrator|planner|worker|verifier>
+  id: <agent-identifier>
 PRIORITY: (A|B|C)
 EFFORT: (XS|S|M|L|XL)  # Total est. (e.g., XS=0.5d)
 DUE: YYYY-MM-DD
@@ -231,22 +243,22 @@ Links: <evidence, PRs, hashes, manifests>
 
 ## Phased Execution Table
 
-| Phase               | Inputs                   | Actions                                      | Evidence                          | Gate                           | Effort Est. |
-| ------------------- | ------------------------ | -------------------------------------------- | --------------------------------- | ------------------------------ | ----------- |
-| 0. User Input       | Raw request              | Capture in subject.todo (Inbox)              | Timestamped entry                 | captured=true                  | -           |
-| 1. 4D Analysis      | Request context          | Write 1–3 sentence summary                   | 4D Summary text                   | promotion_checklist pre-filled | XS          |
-| 2. Promotion        | Subject metadata         | Complete checklist; assign TASK_ID           | Checklist ticks; ID regex match   | ready_to_create_task=true      | XS          |
-| 3. Create TASK STUB | SUBJECT_ID, metadata     | Assign OWNER/DUE/EFFORT; create manifest     | Task block + manifest file        | manifest.present=true          | S           |
-| 4. Author           | Task metadata            | Set strategy in manifest.phases.author.notes | Non-empty notes                   | notes.present=true             | S           |
-| 5. Index/Sign       | Inputs listed            | Write HASHES_PRE.txt; update manifest        | HASHES_PRE.txt; SBOM              | hashes.pre.present=true        | M           |
-| 6. Seal/Policy      | Policies                 | Record constraints in manifest               | Committed constraints array       | constraints.locked=true        | XS          |
-| 7. Tri-Run          | Plan, env                | Simulate/dry-run; record plan                | tri_run.log (opt.)                | tri_run.plan.present=true      | M           |
-| 8. Merge(D)         | Approved plan            | Perform safe changes; list actions           | Commit/ops log                    | merge.actions.recorded=true    | L           |
-| 9. Verify/Contract  | Tests, acceptance        | Run tests; write HASHES_POST.txt             | tests.passed; HASHES_POST.txt     | verify.pass=true               | M           |
-| 10. WASM (req.)     | Module path, target, cmd | Build/package                                | Artifact + build logs             | wasm.built=true                | L           |
-| 11. Run Core        | Command                  | Execute workload                             | run_core.log                      | run_core.done=true             | XL          |
-| 12. Anchor          | SOT path                 | Append sot_entry; write receipt              | SOT entry; anchor-${TASK_ID}.json | sot.appended=true              | S           |
-| 13. Promote         | Destination              | Deploy/publish                               | deploy.proof (URL/path/tag)       | deploy.proof=true              | M           |
+| Phase | Inputs | Actions (Agent Focus) | Evidence | Gate | Effort |
+| --- | --- | --- | --- | --- | --- |
+| 0. Orchestrator Intake | Raw request | Orchestrator agent captures entry in `subject.todo` (Inbox). | Timestamped entry | captured=true | - |
+| 1. Planner 4D Analysis | Request context | Planner agent writes 1–3 sentence summary. | 4D Summary text | promotion_checklist pre-filled | XS |
+| 2. Orchestrator Promotion | Subject metadata | Orchestrator completes checklist and assigns `TASK_ID`. | Checklist ticks; ID regex match | ready_to_create_task=true | XS |
+| 3. Planner TASK STUB | `SUBJECT_ID`, metadata | Planner assigns agent role/effort and creates manifest. | Task block + manifest file | manifest.present=true | S |
+| 4. Worker Author | Task metadata | Worker agent records implementation strategy in manifest. | Non-empty notes | notes.present=true | S |
+| 5. Worker Index/Sign | Inputs listed | Worker agent writes `HASHES_PRE.txt` and updates manifest. | `HASHES_PRE.txt`; SBOM | hashes.pre.present=true | M |
+| 6. Planner Seal/Policy | Policies | Planner agent records constraints in manifest. | Constraint array committed | constraints.locked=true | XS |
+| 7. Worker Tri-Run | Plan, env | Worker agent simulates/dry-runs and records plan. | `tri_run.log` (opt.) | tri_run.plan.present=true | M |
+| 8. Worker Merge(D) | Approved plan | Worker agent performs safe changes and documents actions. | Commit/ops log | merge.actions.recorded=true | L |
+| 9. Verifier Contract | Tests, acceptance | Verifier agent runs tests and writes `HASHES_POST.txt`. | tests.passed; `HASHES_POST.txt` | verify.pass=true | M |
+| 10. Worker WASM (req.) | Module path, target, cmd | Worker agent builds and packages artifacts. | Artifact + build logs | wasm.built=true | L |
+| 11. Worker Run Core | Command | Worker agent executes workload. | `run_core.log` | run_core.done=true | XL |
+| 12. Orchestrator Anchor | SOT path | Orchestrator agent appends `sot_entry` and writes receipt. | `anchor-${TASK_ID}.json` | sot.appended=true | S |
+| 13. Orchestrator Promote | Destination | Orchestrator agent deploys/publishes with verifier confirmation. | deploy.proof (URL/path/tag) | deploy.proof=true | M |
 
 ---
 
@@ -255,7 +267,7 @@ Links: <evidence, PRs, hashes, manifests>
 ### SOP (Standard Operating Procedure)
 - **Purpose**: Prescriptive "how we work" playbook
 - **When Used**: Author (plan), Seal/Policy (lock), Verify/Contract (gates source)
-- **Ownership**: Canonical, versioned; updated deliberately
+- **Agent Stewardship**: Canonical, versioned; updated deliberately
 - **Location**: `agentask.sop`
 
 ### SOT (Source of Truth Ledger)
@@ -277,7 +289,9 @@ sot_entry:
   subject_id: "SUBJ-YYYYMMDD-NNN"
   title: "Short title"
   intent: "Outcome"
-  owner: "agent-or-person"
+  responsible_agent:
+    role: "orchestrator|planner|worker|verifier"
+    id: "agent-identifier"
   completed_at: "YYYY-MM-DDThh:mm:ssZ"
   flow:
     phases:
@@ -305,8 +319,8 @@ sot_entry:
       - "https://repo/pull/123"
   notes: "Key decisions and 4D summary."
   signoff:
-    owner: "name"
-    approver: "name"
+    orchestrator_agent: "agent-id"
+    verifier_agent: "agent-id"
     timestamp: "YYYY-MM-DDThh:mm:ssZ"
 ```
 
@@ -320,7 +334,9 @@ manifest:
   subject_id: "SUBJ-YYYYMMDD-NNN"
   title: "Short title"
   intent: "Outcome statement"
-  owner: "agent-or-person"
+  responsible_agent:
+    role: "orchestrator|planner|worker|verifier"
+    id: "agent-identifier"
   priority: "A|B|C"
   acceptance:
     - "Criterion 1"
@@ -478,7 +494,7 @@ all-phases: phase1 phase2 phase3 phase4 phase5-preflight phase5-run phase6 phase
 
 ## Quick Start
 
-### 1. Capture User Request
+### 1. Capture Orchestrator Intake
 ```bash
 # Add to agentask.subject.todo under (Inbox)
 SUBJECT_ID: SUBJ-20250115-001
@@ -487,7 +503,7 @@ Intent: Add OAuth2 authentication
 Priority: A
 ```
 
-### 2. Apply 4D Analysis
+### 2. Apply Planner 4D Analysis
 ```bash
 # Move to (Under Analysis), add:
 4D Summary:
@@ -497,14 +513,16 @@ Priority: A
 - Deliver: Integration tests + documentation
 ```
 
-### 3. Promote to Task
+### 3. Promote to Task (Planner + Orchestrator)
 ```bash
 # Move to (Ready for Promotion), complete checklist
-# Create in agentask.todo:
+# Create in agentask.todo with planner/orchestrator pairing:
 TASK_ID: TASK-20250115-042
 SUBJECT_ID: SUBJ-20250115-001
 Title: OAuth2 Integration
-OWNER: auth-team
+Responsible_Agent:
+  role: orchestrator
+  id: orchestrator.auth
 PRIORITY: A
 EFFORT: L
 DUE: 2025-01-30

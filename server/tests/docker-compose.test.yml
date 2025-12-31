@@ -1,0 +1,49 @@
+name: noa-server-stack
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: noa
+      POSTGRES_PASSWORD: noa_local
+      POSTGRES_USER: noa
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U noa"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    ports:
+      - "6379:6379"
+
+  ui-api:
+    build:
+      context: ../..
+      dockerfile: server/tests/ui_api.Dockerfile
+    environment:
+      NOA_UI_API_ADDR: 0.0.0.0:8787
+      NOA_UI_API_GRPC_ADDR: 0.0.0.0:50051
+      RUST_LOG: info
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8787:8787"
+      - "50051:50051"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8787/readyz"]
+      interval: 5s
+      timeout: 3s
+      retries: 20

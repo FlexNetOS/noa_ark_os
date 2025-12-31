@@ -1,0 +1,19 @@
+{
+  "pr": 2,
+  "check": "lint",
+  "status": "failed",
+  "analysis": {
+    "check": "lint",
+    "summary": "Investigation required for failing check.",
+    "suggestions": [
+      "Re-run the suite with verbose logging.",
+      "Escalate to maintainers with the captured artifact."
+    ],
+    "matched": null
+  },
+  "createdAt": "2025-11-21T18:10:23.181Z",
+  "logPath": "tools/offline_pr_queue/check_logs/pr-2-lint.log",
+  "mode": "offline",
+  "note": "Offline triage stored locally.",
+  "path": "tools/offline_pr_queue/triage/pr-2-lint-236a361e11a8.json"
+}

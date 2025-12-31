@@ -24,6 +24,7 @@ export class LlamaCppProvider implements AIProvider {
       );
     }
     this.fetchImpl = options.fetchImpl ?? fetch;
+  }
 
   isConfigured(): boolean {
     return typeof this.endpoint === "string" && this.endpoint.length > 0;

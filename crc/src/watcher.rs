@@ -254,6 +254,28 @@ impl CRCWatcher {
                 info!("  Source type: {:?}", source_type);
                 info!("  Priority: {:?}", config.priority);
                 info!("  Default sandbox: {}", config.default_sandbox);
+        // Generate manifest
+        let manifest = self
+            .generate_manifest(&processing_path, source_type.clone(), config, metadata)
+            .await?;
+
+        // Register drop with CRC system
+        let drop_id = self
+            .crc_system
+            .register_drop(
+                processing_path.clone(),
+                manifest,
+                prepared.original_artifact.clone(),
+            )
+            .map_err(Error::SystemError)?;
+
+        info!("✓ Drop registered: {} ({})", drop_id, config.name);
+        info!("  Source type: {:?}", source_type);
+        info!("  Priority: {:?}", config.priority);
+        info!("  Default sandbox: {}", config.default_sandbox);
+
+        // TODO: Trigger processing via message queue or channel
+        // For now, processing will be handled by the parallel processor
 
                 // TODO: Trigger processing via message queue or channel
                 // For now, processing will be handled by the parallel processor

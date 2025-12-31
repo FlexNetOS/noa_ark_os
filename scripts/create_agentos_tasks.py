@@ -29,6 +29,7 @@ import argparse
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -253,8 +254,6 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.dry_run:
         print_plan(tasks)
         return 0
-
-    import shutil  # local import to keep module load fast when not executing
 
     ensure_gh_available()
 

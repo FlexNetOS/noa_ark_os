@@ -1,0 +1,18 @@
+%% Tokenized gateway execution flow
+sequenceDiagram
+    participant Operator
+    participant CLI as CLI / Makefile
+    participant Gateway
+    participant Kernel
+    participant Registry
+    participant Runtime as Runtime Capsule
+
+    Operator->>CLI: Execute Phase Action
+    CLI->>Gateway: Request capability token
+    Gateway->>Kernel: Validate capability + policy
+    Kernel->>Registry: Verify manifest + token scope
+    Registry-->>Kernel: Issue signed capability token
+    Kernel-->>Gateway: Return token + constraints
+    Gateway-->>Runtime: Launch only if token valid
+    Runtime-->>Gateway: Emit telemetry + hashes
+    Gateway-->>CLI: Report status + evidence bundle

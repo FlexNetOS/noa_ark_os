@@ -5,6 +5,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
+use crate::implementations::specialist::PolicyEnforcementAgent;
 use noa_core::capabilities::{
     CapabilityDefinition, CapabilityError, CapabilityResult, DynCapability, KernelHandle,
 };
@@ -18,6 +19,7 @@ pub mod factory;
 pub mod implementations;
 pub mod inference;
 pub mod registry;
+pub mod runtime;
 pub mod unified_types;
 
 // Re-export unified types
@@ -26,6 +28,7 @@ pub use unified_types::*;
 // Re-export key components
 pub use inference::{InferenceConfig, InferenceEngine, LlamaInferenceEngine};
 pub use registry::AgentRegistry;
+pub use runtime::RuntimeManager;
 
 /// Version of the agent system
 pub const VERSION: &str = "0.1.0";
@@ -99,12 +102,21 @@ impl AgentFactory {
     }
 
     pub fn new() -> Self {
-        Self::new_with_kernel(None)
+        let factory = Self::new_with_kernel(None);
+        if let Err(err) = factory.bootstrap_policy_specialist() {
+            eprintln!(
+                "[FACTORY] Failed to seed policy specialist (pe-ssp): {}",
+                err
+            );
+        }
+        factory
     }
 
     /// Create an agent factory bound to a kernel handle.
     pub fn with_kernel(kernel: KernelHandle) -> Result<Self> {
-        Ok(Self::new_with_kernel(Some(kernel)))
+        let factory = Self::new_with_kernel(Some(kernel));
+        factory.bootstrap_policy_specialist()?;
+        Ok(factory)
     }
 
     /// Create a new agent
@@ -199,6 +211,12 @@ impl AgentFactory {
             swarm_name, count
         );
         Ok(swarm_ids)
+    }
+
+    fn bootstrap_policy_specialist(&self) -> Result<()> {
+        let policy_agent = PolicyEnforcementAgent::new();
+        policy_agent.ensure_factory_registration(self)?;
+        Ok(())
     }
 }
 

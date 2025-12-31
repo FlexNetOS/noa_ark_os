@@ -3,6 +3,7 @@ use std::path::Path;
 
 use anyhow::Result;
 use serde::Deserialize;
+use serde_yaml;
 use walkdir::WalkDir;
 
 use super::{compute_trust, AssetKind, AssetRecord, Digestor};
@@ -37,7 +38,15 @@ impl Digestor for ApiDigestor {
                 continue;
             }
             let contents = fs::read_to_string(path)?;
-            let trust = serde_json::from_str::<OpenApiDoc>(&contents).is_ok();
+            let trust = if name.ends_with(".yaml") || name.ends_with(".yml") {
+                serde_yaml::from_str::<OpenApiDoc>(&contents)
+                    .map(|doc| doc.openapi.is_some() || doc.info.is_some())
+                    .unwrap_or(false)
+            } else {
+                serde_json::from_str::<OpenApiDoc>(&contents)
+                    .map(|doc| doc.openapi.is_some() || doc.info.is_some())
+                    .unwrap_or(false)
+            };
             let digest = blake3::hash(contents.as_bytes());
             assets.push(AssetRecord {
                 path: path

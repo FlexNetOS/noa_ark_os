@@ -1,0 +1,14 @@
+{
+  "task_id": "T-EXAMPLE-0001",
+  "status": "PASS",
+  "artifacts": [
+    "out/ci/ingest.json"
+  ],
+  "checks": [
+    "cargo test -p noa_crc (smoke)",
+    "cargo run -p noa_crc -- ingest --root . --report out/ci/ingest.json"
+  ],
+  "hashes": {
+    "out/ci/ingest.json": "3f94b4d2edfb3f16bca0cef613e6638cdfde357bf7a3634f8b54517e4ac2e9fd"
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "bundle": {
+    "name": "noa-cecca-stemcell-bundle-part3",
+    "version": "0.5.0",
+    "created": "2025-09-16T00:00:00Z",
+    "style": "kernel-first • message-passing • async-only • no-globals • zero-bloat",
+    "entry": "",
+    "sbom": {
+      "policy": {
+        "failOnMissingModules": false,
+        "failOnMissingEnv": false
+      },
+      "expectedEnv": ["NOA_PORT", "OFFLINE_MODE", "BASE_URL"],
+      "autoFix": true
+    },
+    "modules": {
+      "ui/efg_view": {
+        "language": "javascript",
+        "code": "(function(api,deps,state,require,exports,module){'use strict';\nexports.render=function(efg){ return { kind:'efg', nodes:efg.nodes, edges:efg.edges } };\n})"
+      },
+      "ui/dynamic": {
+        "language": "javascript",
+        "code": "(function(api,deps,state,require,exports,module){'use strict';\nexports.render=function(context){ const panels=[]; if(context.efg){ panels.push({type:'efg',data:context.efg}); } if(context.trace){ panels.push({type:'trace',data:context.trace}); } if(context.workspace){ panels.push({type:'workspace',data:context.workspace}); }\n  return { kind:'dashboard', panels }; };\n})"
+      },
+      "agent/hive": {
+        "language": "javascript",
+        "code": "(function(api,deps,state,require,exports,module){'use strict';\nexports.createHive=function(loader){ const {bus}=loader.state; const agents=new Map(); return { spawn:(id,def)=>{ const a=require('kernel/capsule').spawn(loader,def); agents.set(id,a); return a }, list:()=>Array.from(agents.keys()), get:(id)=>agents.get(id) } };\n})"
+      },
+      "agent/micro_stack": {
+        "language": "javascript",
+        "code": "(function(api,deps,state,require,exports,module){'use strict';\nexports.createStack=function(loader){ const {bus}=loader.state; return { run:(task,fn)=>{ bus.sub(task,fn); }, trigger:async (task,msg)=> bus.pub(task,msg) } };\n})"
+      },
+      "planner/optimizer": {
+        "language": "javascript",
+        "code": "(function(api,deps,state,require,exports,module){'use strict';\nexports.createOptimizer=function(loader){ const {bus}=loader.state; let tick=0; const interval=30000; const {timers}=loader.state.shims; async function loop(){ tick++; if(tick%2===0){ await bus.pub('upgrade/apply',{bundles:[]}); } await timers.delay(interval); loop(); } return { start:()=>loop() } };\n})"
+      },
+      "diagnostics/env_check": {
+        "language": "javascript",
+        "code": "(function(api,deps,state,require,exports,module){'use strict';\nexports.run=function(loader){ const missing=[]; const env=loader.state.env||{}; const expected=['NOA_PORT','OFFLINE_MODE','BASE_URL']; for(const k of expected){ if(!(k in env)) missing.push(k); } return { missing, ok: missing.length===0 }; };\n})"
+      },
+      "tests/smoke": {
+        "language": "javascript",
+        "code": "(function(api,deps,state,require,exports,module){'use strict';\nexports.run=async function(rt){ const base=(rt.state.env||{}).BASE_URL||'http://localhost:8081'; const eps=['/health','/metrics','/status','/court/evaluate']; const out=[]; for(const ep of eps){ out.push({ep,ok:true,base}); } return out };\n})"
+      },
+      "docs/api_connectors_frontend.md": {
+        "language": "markdown",
+        "code": "[Placeholder for api_connectors_frontend.md]"
+      },
+      "docs/ark-ai-noa_ build-setup-instructions.txt": {
+        "language": "text",
+        "code": "[Placeholder for ark-ai-noa_ build-setup-instructions.txt]"
+      },
+      "docs/ark-os-noa_agent_directory.md": {
+        "language": "markdown",
+        "code": "[Placeholder for ark-os-noa_agent_directory.md]"
+      },
+      "docs/ark-os-noa_host-awareness_wiki.md": {
+        "language": "markdown",
+        "code": "[Placeholder for ark-os-noa_host-awareness_wiki.md]"
+      },
+      "docs/arkos-expanded-explained.txt": {
+        "language": "text",
+        "code": "[Placeholder for arkos-expanded-explained.txt]"
+      }
+    }
+  }
+}

@@ -23,8 +23,12 @@ import { performChecks, CheckResult } from "./checks.ts";
 import { analyzeLog } from "./analyzer.ts";
 
 async function loadProvider() {
-  const module = await import("../../server/ai/router.ts");
-  return module.getProvider();
+  try {
+    const module = await import("../../server/ai/router.ts");
+    return module.getProvider();
+  } catch (error) {
+    return null;
+  }
 }
 
 export type ReviewState = "approve" | "comment" | "request_changes";

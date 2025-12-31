@@ -1,0 +1,96 @@
+boot_order:
+  - kernel
+  - storage
+  - observability
+  - runtime-manager
+  - adaptive-runtime
+  - gateway
+  - ui-api
+  - agent-factory
+  - automation-kits
+  - vibe-kanban
+  - goal-insights
+
+services:
+  - id: kernel
+    requires: []
+    optional: []
+    supported_classes:
+      - minimal
+      - standard
+      - accelerated
+
+  - id: storage
+    requires: ["kernel"]
+    optional: []
+    supported_classes:
+      - minimal
+      - standard
+      - accelerated
+
+  - id: observability
+    requires: ["kernel"]
+    optional: []
+    supported_classes:
+      - minimal
+      - standard
+      - accelerated
+
+  - id: runtime-manager
+    requires: ["kernel"]
+    optional: ["observability"]
+    supported_classes:
+      - minimal
+      - standard
+      - accelerated
+
+  - id: adaptive-runtime
+    requires: ["runtime-manager"]
+    optional: ["observability"]
+    supported_classes:
+      - standard
+      - accelerated
+
+  - id: gateway
+    requires: ["adaptive-runtime"]
+    optional: ["observability"]
+    supported_classes:
+      - standard
+      - accelerated
+
+  - id: ui-api
+    requires: ["gateway"]
+    optional: ["storage"]
+    supported_classes:
+      - minimal
+      - standard
+      - accelerated
+
+  - id: agent-factory
+    requires: ["ui-api"]
+    optional: ["automation-kits"]
+    supported_classes:
+      - standard
+      - accelerated
+
+  - id: automation-kits
+    requires: ["agent-factory"]
+    optional: []
+    supported_classes:
+      - standard
+      - accelerated
+
+  - id: vibe-kanban
+    requires: ["ui-api", "agent-factory"]
+    optional: ["automation-kits"]
+    supported_classes:
+      - minimal
+      - standard
+      - accelerated
+
+  - id: goal-insights
+    requires: ["vibe-kanban"]
+    optional: ["agent-factory"]
+    supported_classes:
+      - standard
+      - accelerated

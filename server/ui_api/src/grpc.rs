@@ -9,7 +9,7 @@ use serde_json::Value as JsonValue;
 use tokio_stream::StreamExt;
 use tonic::{Request, Response, Status};
 
-use crate::schema::{PageEnvelope, RealTimeEvent};
+use crate::schema::{LayoutSlot, PageEnvelope, RealTimeEvent};
 use crate::server::UiApiState;
 use crate::session::SessionBridge;
 
@@ -82,6 +82,7 @@ impl proto::ui_schema_service_server::UiSchemaService for UiSchemaGrpc {
     }
 }
 
+#[allow(clippy::result_large_err)]
 fn page_envelope_to_proto(envelope: PageEnvelope) -> Result<proto::PageEnvelope, Status> {
     let metadata = proto::PageMetadata {
         title: envelope.schema.metadata.title,
@@ -100,14 +101,18 @@ fn page_envelope_to_proto(envelope: PageEnvelope) -> Result<proto::PageEnvelope,
             let widgets = region
                 .widgets
                 .into_iter()
-                .map(|widget| -> Result<proto::WidgetSchema, Status> {
-                    let props = widget.props.map(value_to_struct).transpose()?;
+                .map(|widget| {
+                    let props = widget
+                        .props
+                        .map(json_to_struct)
+                        .transpose()?
+                        .unwrap_or_else(empty_struct);
 
                     Ok(proto::WidgetSchema {
                         id: widget.id,
                         kind: format!("{:?}", widget.kind),
                         variant: widget.variant.unwrap_or_default(),
-                        props,
+                        props: Some(props),
                     })
                 })
                 .collect::<Result<Vec<_>, Status>>()?;
@@ -118,7 +123,7 @@ fn page_envelope_to_proto(envelope: PageEnvelope) -> Result<proto::PageEnvelope,
                 columns: region.columns.unwrap_or_default(),
                 gap: region.gap.unwrap_or_default(),
                 surface: region.surface.unwrap_or_default(),
-                slot: region.slot.map(|slot| slot.to_string()).unwrap_or_default(),
+                slot: region.slot.map(slot_to_string).unwrap_or_default(),
                 widgets,
             })
         })
@@ -148,6 +153,7 @@ fn page_envelope_to_proto(envelope: PageEnvelope) -> Result<proto::PageEnvelope,
     })
 }
 
+#[allow(clippy::result_large_err)]
 fn resume_token_to_proto(token: crate::schema::ResumeToken) -> Result<proto::ResumeToken, Status> {
     Ok(proto::ResumeToken {
         workflow_id: token.workflow_id,
@@ -158,15 +164,17 @@ fn resume_token_to_proto(token: crate::schema::ResumeToken) -> Result<proto::Res
     })
 }
 
+#[allow(clippy::result_large_err)]
 fn realtime_to_proto(event: RealTimeEvent) -> Result<proto::RealTimeEvent, Status> {
     Ok(proto::RealTimeEvent {
         event_type: event.event_type,
         workflow_id: event.workflow_id,
-        payload: Some(value_to_struct(event.payload)?),
+        payload: Some(json_to_struct(event.payload)?),
         timestamp: Some(timestamp_from_str(&event.timestamp)?),
     })
 }
 
+#[allow(clippy::result_large_err)]
 fn timestamp_from_str(value: &str) -> Result<Timestamp, Status> {
     let parsed: DateTime<Utc> = value
         .parse()
@@ -178,7 +186,12 @@ fn timestamp_from_str(value: &str) -> Result<Timestamp, Status> {
     })
 }
 
-fn value_to_struct(value: JsonValue) -> Result<Struct, Status> {
+fn slot_to_string(slot: LayoutSlot) -> String {
+    slot.to_string()
+}
+
+#[allow(clippy::result_large_err)]
+fn json_to_struct(value: JsonValue) -> Result<Struct, Status> {
     match value {
         JsonValue::Object(map) => {
             let fields = map
@@ -198,6 +211,7 @@ fn value_to_struct(value: JsonValue) -> Result<Struct, Status> {
     }
 }
 
+#[allow(clippy::result_large_err)]
 fn value_to_prost_value(value: JsonValue) -> Result<ProstValue, Status> {
     let kind = match value {
         JsonValue::Null => ProstKind::NullValue(0),
@@ -225,6 +239,12 @@ fn value_to_prost_value(value: JsonValue) -> Result<ProstValue, Status> {
     };
 
     Ok(ProstValue { kind: Some(kind) })
+}
+
+fn empty_struct() -> Struct {
+    Struct {
+        fields: BTreeMap::new(),
+    }
 }
 
 #[cfg(test)]

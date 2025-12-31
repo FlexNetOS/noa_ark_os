@@ -1,0 +1,22 @@
+name: ml-rollout-gate
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [ main ]
+
+jobs:
+  gate-rollout:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Evaluate latest drift report
+        run: |
+          python cicd/ml/scripts/rollout_gate.py \
+            --report cicd/ml/reports/drift_report.jsonl \
+            --threshold 0.05
+      - name: Block rollout when drift detected
+        if: env.ML_ROLLOUT_STATUS == 'blocked'
+        run: |
+          echo "Rollout blocked due to drift. Review cicd/ml/reports/drift_report.jsonl" >&2
+          exit 1

@@ -1,0 +1,73 @@
+replicaCount: 3
+
+image:
+  repository: noa-unified-server
+  tag: latest
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+service:
+  type: ClusterIP
+  port: 8080
+  metricsPort: 9090
+  annotations: {}
+
+resources:
+  limits:
+    cpu: 2000m
+    memory: 4Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+env:
+  RUST_LOG: info
+  NOA_SERVER__HOST: 0.0.0.0
+  NOA_SERVER__PORT: "8080"
+  NOA_DATABASE__URL: postgresql://noa:noa@postgres:5432/noa
+  NOA_CACHE__URL: redis://redis:6379/0
+  NOA_QDRANT__URL: http://qdrant:6333
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /ready
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+affinity: {}
+nodeSelector: {}
+tolerations: []
+
+topologySpreadConstraints: []
+
+serviceMonitor:
+  enabled: true
+  namespace: ""
+  interval: 30s
+  scrapeTimeout: 10s
+  labels: {}
+  annotations: {}

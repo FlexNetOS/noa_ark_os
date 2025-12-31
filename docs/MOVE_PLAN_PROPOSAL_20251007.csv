@@ -1,0 +1,12 @@
+source_path,target_path,notes
+services/agent-registry,mono/services/agent-registry,crate
+services/ark-ai-os-workspace,mono/services/ark-ai-os-workspace,crate
+services/ark_workspace,mono/services/ark_workspace,crate
+services/board-agents,mono/services/board-agents,crate
+services/coordinator-cluster,mono/services/coordinator-cluster,crate
+services/deployed-app-cluster,mono/services/deployed-app-cluster,crate
+services/noa-commander,mono/services/noa-commander,crate
+services/phase1,mono/services/phase1,crate
+services/phase6,mono/services/phase6,crate
+services/sandbox-cluster,mono/services/sandbox-cluster,crate
+services/workspace_source,mono/services/workspace_source,crate

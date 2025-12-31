@@ -1,0 +1,99 @@
+{
+  "meta": {
+    "name": "NOA_AgenticOS_Bundle",
+    "version": "0.2.0",
+    "ts": "2025-09-15T00:00:00Z",
+    "provenance": {
+      "created_files": [
+        {"path":"NOA_Deployment_Kit_v3_1_UPDATED.zip","sha256":"00eb2ac1115e0a8281103ec73b2183f776c4d37347c243cd12bd26aade6f1df3"},
+        {"path":"All_Inclusive_Agent_Directory_v6_plus.normalized.fixed.csv","sha256":"9205826e6aebe9d9c57891ffce05fa8ef3a97dbbbdda4af3040b5b02e6e74ffd"},
+        {"path":"csv_update_report.json"},
+        {"path":"update_checksums.json"},
+        {"path":"FINAL_REPORT.md"}
+      ],
+      "truth_gate": {
+        "policy_file": "TRUTH_GATE_AND_DECEPTION_POLICY.md",
+        "claims": "No readiness/verification claimed here. Smoke test provided but not executed."
+      }
+    }
+  },
+
+  "kernel": {
+    "id": "cecca.kernel",
+    "code": "(function(){ 'use strict'; return async function Kernel(){ const subscribers=new Map(); const routes=new Map(); const time=()=>Date.now(); const api=Object.freeze({publish,subscribe,route,invoke,now:time}); function subscribe(topic,fn){ if(!subscribers.has(topic)) subscribers.set(topic,[]); subscribers.get(topic).push(fn); return ()=>{ const a=subscribers.get(topic)||[]; const i=a.indexOf(fn); if(i>=0)a.splice(i,1); }; } async function publish(topic,msg){ const a=(subscribers.get(topic)||[]).slice(); for(const fn of a){ await Promise.resolve(fn(Object.freeze({topic,msg,t:time()}))); } } function route(name,fn){ routes.set(name,fn); return ()=>routes.delete(name); } async function invoke(name,payload){ const fn=routes.get(name); if(!fn) throw new Error('route_not_found:'+name); return await fn(Object.freeze(payload)); } return Object.freeze({api}); }; })();"
+  },
+
+  "shims": {
+    "id": "runtime.shims",
+    "code": "(function(){ 'use strict'; return function makeShims(){ const modules=Object.create(null); const env=Object.create(null); function safeRequire(name){ if(modules[name]) return modules[name]; modules[name]=Object.freeze({__shim:true}); return modules[name]; } function getEnv(k,f){ return Object.prototype.hasOwnProperty.call(env,k)?env[k]:f; } function setEnv(k,v){ env[k]=String(v==null?'':v); } return Object.freeze({safeRequire,getEnv,setEnv,__modules:modules,__env:env}); }; })();"
+  },
+
+  "sbom": {
+    "id": "sbom.scan",
+    "code": "(function(){ 'use strict'; return async function sbomScan(bundle){ const out={requires:[],envVars:[],globals:[],modulesMissing:[],fixes:[]}; const code=[]; (function walk(o){ if(!o) return; for(const k of Object.keys(o)){ const v=o[k]; if(k==='code' && typeof v==='string') code.push(v); else if(v && typeof v==='object') walk(v); } })(bundle); const reqRe=/require\\(\\s*['\\\"]([^'\\\"]+)['\\\"]\\s*\\)/g; const envRe=/process\\.env\\.([A-Z0-9_]+)/ig; const globRe=/\\b(window|global|globalThis)\\b/g; const seenReq=new Set(), seenEnv=new Set(), seenG=new Set(); for(const src of code){ let m; while((m=reqRe.exec(src))){ if(!seenReq.has(m[1])){ seenReq.add(m[1]); out.requires.push(m[1]); } } while((m=envRe.exec(src))){ const k=m[1].toUpperCase(); if(!seenEnv.has(k)){ seenEnv.add(k); out.envVars.push(k); } } while((m=globRe.exec(src))){ const g=m[1]; if(!seenG.has(g)){ seenG.add(g); out.globals.push(g); } } } const internal=new Set(['internal']); for(const r of out.requires){ if(!internal.has(r)) out.modulesMissing.push(r); } for(const miss of out.modulesMissing){ out.fixes.push({type:'module_shim',name:miss,action:'provide_noop_object'}); } for(const e of out.envVars){ out.fixes.push({type:'env_default',name:e,action:'set_empty_string'}); } if(out.globals.length){ out.fixes.push({type:'global_guard',names:out.globals,action:'avoid_globals'}); } return Object.freeze(out); }; })();"
+  },
+
+  "vfs": {
+    "id": "vfs.mem",
+    "code": "(function(){ 'use strict'; return function MemVFS(){ const files=new Map(); const norm=p=>('/'+String(p).replace(/\\\\/g,'/').replace(/\\/+$/,'')).replace(/\\/+/g,'/'); async function write(path,bytes){ files.set(norm(path), bytes); return true; } async function read(path){ const b=files.get(norm(path)); if(b==null) throw new Error('vfs_not_found:'+path); return b; } async function exists(path){ return files.has(norm(path)); } async function list(prefix){ const pre=norm(prefix); return Array.from(files.keys()).filter(k=>k.startsWith(pre)); } return Object.freeze({write,read,exists,list,__files:files}); }; })();"
+  },
+
+  "hash": {
+    "id": "hash.sha256",
+    "code": "(function(){ 'use strict'; return async function sha256(bytes){ function rrot(x,n){ return (x>>>n)|(x<<(32-n)); } function toUint8(a){ if(a instanceof Uint8Array) return a; if(typeof a==='string'){ const out=new Uint8Array(a.length); for(let i=0;i<a.length;i++) out[i]=a.charCodeAt(i)&255; return out; } return new Uint8Array(a); } const K=new Uint32Array([1116352408,1899447441,3049323471,3921009573,961987163,1508970993,2453635748,2870763221,3624381080,310598401,607225278,1426881987,1925078388,2162078206,2614888103,3248222580,3835390401,4022224774,264347078,604807628,770255983,1249150122,1555081692,1996064986,2554220882,2821834349,2952996808,3210313671,3336571891,3584528711,113926993,338241895,666307205,773529912,1294757372,1396182291,1695183700,1986661051,2177026350,2456956037,2730485921,2820302411,3259730800,3345764771,3516065817,3600352804,4094571909,275423344,430227734,506948616,659060556,883997877,958139571,1322822218,1537002063,1747873779,1955562222,2024104815,2227730452,2361852424,2428436474,2756734187,3204031479,3329325298]); const H=new Uint32Array([1779033703,3144134277,1013904242,2773480762,1359893119,2600822924,528734635,1541459225]); const m=toUint8(bytes); const l=m.length; const bitLen=l*8; const withOne=new Uint8Array(((l+9+63)&~63)); withOne.set(m); withOne[l]=0x80; const dv=new DataView(withOne.buffer); dv.setUint32(withOne.length-4, bitLen>>>0, false); dv.setUint32(withOne.length-8, Math.floor(bitLen/4294967296)>>>0, false); const w=new Uint32Array(64); for(let i=0;i<withOne.length;i+=64){ for(let t=0;t<16;t++) w[t]=dv.getUint32(i+t*4,false); for(let t=16;t<64;t++){ const s0=rrot(w[t-15],7)^rrot(w[t-15],18)^(w[t-15]>>>3); const s1=rrot(w[t-2],17)^rrot(w[t-2],19)^(w[t-2]>>>10); w[t]=(w[t-16]+s0+w[t-7]+s1)>>>0; } let a=H[0],b=H[1],c=H[2],d=H[3],e=H[4],f=H[5],g=H[6],h=H[7]; for(let t=0;t<64;t++){ const S1=rrot(e,6)^rrot(e,11)^rrot(e,25); const ch=(e&f)^(~e&g); const temp1=(h+S1+ch+K[t]+w[t])>>>0; const S0=rrot(a,2)^rrot(a,13)^rrot(a,22); const maj=(a&b)^(a&c)^(b&c); const temp2=(S0+maj)>>>0; h=g; g=f; f=e; e=(d+temp1)>>>0; d=c; c=b; b=a; a=(temp1+temp2)>>>0; } H[0]=(H[0]+a)>>>0; H[1]=(H[1]+b)>>>0; H[2]=(H[2]+c)>>>0; H[3]=(H[3]+d)>>>0; H[4]=(H[4]+e)>>>0; H[5]=(H[5]+f)>>>0; H[6]=(H[6]+g)>>>0; H[7]=(H[7]+h)>>>0; } function hex(n){ return ('00000000'+n.toString(16)).slice(-8); } return hex(H[0])+hex(H[1])+hex(H[2])+hex(H[3])+hex(H[4])+hex(H[5])+hex(H[6])+hex(H[7]); }; })();"
+  },
+
+  "detect": {
+    "id": "detect.lang",
+    "code": "(function(){ 'use strict'; return async function detect(filename, sample){ const ext=(String(filename).split('.').pop()||'').toLowerCase(); if(ext==='csv') return 'csv'; if(ext==='md') return 'markdown'; if(ext==='json') return 'json'; if(ext==='zip') return 'binary/zip'; const s=(sample||'').slice(0,2000); if(/^\\s*\\{[\\s\\S]*\\}\\s*$/.test(s)) return 'json'; if(/,#|,\\n|\\n[^,]*,/.test(s)) return 'csv'; if(/\\b(function|=>|const|let|var|class|import|export)\\b/.test(s)) return 'javascript'; return 'text'; }; })();"
+  },
+
+  "csv": {
+    "id": "csv.merge",
+    "code": "(function(){ 'use strict'; function parseCSV(text){ const rows=[]; let i=0,cell='',row=[],inQ=false; for(;i<text.length;i++){ const c=text[i],n=text[i+1]; if(inQ){ if(c==='\"'&&n==='\"'){cell+='\"';i++;} else if(c==='\"'){inQ=false;} else {cell+=c;} } else { if(c==='\"'){inQ=true;} else if(c===','){row.push(cell);cell='';} else if(c==='\\n'||c==='\\r'){ if(cell!==''||row.length){row.push(cell);rows.push(row);row=[];cell='';} } else {cell+=c;} } } if(cell!==''||row.length){row.push(cell);rows.push(row);} return rows; } function toCSV(rows){ return rows.map(r=>r.map(x=>{ const s=String(x??''); return (/[\",\\n\\r]/.test(s))?('\"'+s.replace(/\"/g,'\"\"')+'\"'):s; }).join(',')).join('\\n'); } function unionCols(a,b){ const seen=new Set(), out=[]; for(const c of a){ if(!seen.has(c)){seen.add(c); out.push(c);} } for(const c of b){ if(!seen.has(c)){seen.add(c); out.push(c);} } return out; } function colIndex(h){ const m=new Map(); h.forEach((c,i)=>m.set(c,i)); return m; } function project(row, idx, headers){ const out=new Array(headers.length).fill(''); for(let i=0;i<headers.length;i++){ const col=headers[i]; const si=idx.get(col); if(si!=null) out[i]=row[si]??''; } return out; } return async function merge({newCsvText, oldCsvText}){ const nr=parseCSV(newCsvText), or=parseCSV(oldCsvText); if(!nr.length||!or.length) throw new Error('empty_csv'); const hN=nr[0], dN=nr.slice(1), hO=or[0], dO=or.slice(1); const headers=unionCols(hN,hO); const pN=dN.map(r=>project(r,colIndex(hN),headers)); const pO=dO.map(r=>project(r,colIndex(hO),headers)); const seen=new Set(pN.map(r=>JSON.stringify(r))); const oldOnly=[]; for(const r of pO){ const k=JSON.stringify(r); if(!seen.has(k)) oldOnly.push(r); } const merged=[headers,...pN,...oldOnly]; return Object.freeze({headers,rows:merged.length-1,csv:toCSV(merged),new_rows:pN.length,old_only_rows:oldOnly.length}); }; })();"
+  },
+
+  "report": {
+    "id": "report.final",
+    "code": "(function(){ 'use strict'; return async function build({artifactTree, hashes, mergeSummary, sbomFindings}){ const out=[]; out.push('# FINAL_REPORT.md (Generated, no readiness claim)'); out.push(''); out.push('## Artifact Tree'); out.push('```'); for(const a of artifactTree||[]) out.push(a); out.push('```'); out.push(''); out.push('## SHA-256'); out.push('```'); for(const h of hashes||[]) out.push((h.path||'')+' '+(h.sha256||'')); out.push('```'); out.push(''); out.push('## Merge Summary'); out.push('```'); out.push(JSON.stringify(mergeSummary||{},null,2)); out.push('```'); out.push(''); out.push('## SBOM Findings & Auto-Fixes'); out.push('```'); out.push(JSON.stringify(sbomFindings||{},null,2)); out.push('```'); return out.join('\\n'); }; })();"
+  },
+
+  "agents": {
+    "cecca": {
+      "id": "agent.cecca",
+      "code": "(function(){ 'use strict'; return async function CECCA(ctx){ const {kernel,shims,sbom,mods,vfs,hash}=ctx; const bus=kernel.api; // routes\n bus.route('kernel.boot', async (payload)=>{ const findings=await sbom(ctx.bundle); for(const fx of findings.fixes){ if(fx.type==='module_shim') shims.__modules[fx.name]=Object.freeze({__shim:true}); if(fx.type==='env_default' && !shims.__env[fx.name]) shims.__env[fx.name]=''; } await bus.publish('sbom.findings', findings); let mergeRes=null; if(payload && payload.csv && payload.csv.old && payload.csv.new){ mergeRes=await mods['csv.merge']({newCsvText:payload.csv.new, oldCsvText:payload.csv.old}); await vfs.write('/kit/All_Inclusive_Agent_Directory_v6_plus.normalized.fixed.csv', new TextEncoder().encode(mergeRes.csv)); } const files=await vfs.list('/kit'); const hashes=[]; for(const p of files){ const b=await vfs.read(p); hashes.push({path:p, sha256: await hash(b)}); } const report=await mods['report.final']({ artifactTree: files, hashes, mergeSummary: mergeRes||{}, sbomFindings: findings }); await vfs.write('/kit/FINAL_REPORT.md', new TextEncoder().encode(report)); await bus.publish('report.ready', { ok:true }); // exporter: file map and optional host zipper\n let exported={ kind:'filemap', files:{} }; for(const p of files){ exported.files[p]=Array.from(await vfs.read(p)); } if(payload && typeof payload.zipProvider==='function'){ try{ const zipped=await payload.zipProvider(exported); exported={kind:'zip', bytes:zipped}; await bus.publish('zip.ready', {ok:true}); } catch(e){ await bus.publish('zip.error', {error:String(e)}); } } return { status:'ok', exported, report }; }); return Object.freeze({}); }; })();"
+    },
+
+    "fs": {
+      "id": "agent.fs",
+      "code": "(function(){ 'use strict'; return async function FSAgent(ctx){ const {kernel,vfs}=ctx; const bus=kernel.api; bus.route('fs.write', async ({path,bytes})=>vfs.write(path,bytes)); bus.route('fs.read', async ({path})=>vfs.read(path)); bus.route('fs.list', async ({prefix})=>vfs.list(prefix)); return Object.freeze({}); }; })();"
+    },
+
+    "csv": {
+      "id": "agent.csv",
+      "code": "(function(){ 'use strict'; return async function CSVA(ctx){ const {kernel,mods}=ctx; const bus=kernel.api; bus.route('csv.merge', async (p)=>mods['csv.merge'](p)); return Object.freeze({}); }; })();"
+    },
+
+    "hash": {
+      "id": "agent.hash",
+      "code": "(function(){ 'use strict'; return async function HashA(ctx){ const {kernel,hash}=ctx; const bus=kernel.api; bus.route('hash.sha256', async ({bytes})=>hash(bytes)); return Object.freeze({}); }; })();"
+    },
+
+    "report": {
+      "id": "agent.report",
+      "code": "(function(){ 'use strict'; return async function ReportA(ctx){ const {kernel,mods}=ctx; const bus=kernel.api; bus.route('report.build', async (p)=>mods['report.final'](p)); return Object.freeze({}); }; })();"
+    }
+  },
+
+  "boot": {
+    "id": "boot.sequence",
+    "code": "(async function(){ 'use strict'; return async function boot(bundle){ const Kernel=eval(bundle.kernel.code)(); const makeShims=eval(bundle.shims.code)(); const sbomScan=eval(bundle.sbom.code); const VFS=eval(bundle.vfs.code)(); const sha256=await eval(bundle.hash.code); const mods=Object.fromEntries(Object.entries({ 'csv.merge':bundle.csv, 'report.final':bundle.report }).map(([k,v])=>[k, eval(v.code)])); const agents=Object.fromEntries(Object.entries(bundle.agents).map(([k,v])=>[k, eval(v.code)])); const kernel=await Kernel(); const shims=makeShims(); const vfs=VFS; const ctx={ kernel, shims, sbom: (b)=>sbomScan(b), mods, vfs, hash: (b)=>sha256(b), bundle }; await agents.fs(ctx); await agents.csv(ctx); await agents.hash(ctx); await agents.report(ctx); const cecca=await agents.cecca(ctx); return async function run(opts){ const payload=opts||{}; return await kernel.api.invoke('kernel.boot', payload); }; }; })();"
+  },
+
+  "tests": {
+    "smoke": {
+      "id": "smoke.test",
+      "code": "(async function(){ 'use strict'; return async function smoke(bundle, oldCsvText, newCsvText){ const run=await eval(bundle.boot.code)(bundle); // seed VFS with kit paths\n await (async()=>{ const vfs=eval(bundle.vfs.code)(); await vfs.write('/kit/placeholder.txt', new TextEncoder().encode('ok')); })(); const res=await run({ csv:{old:oldCsvText,new:newCsvText} }); return res; }; })();"
+    }
+  }
+}

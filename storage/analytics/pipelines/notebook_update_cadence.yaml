@@ -1,0 +1,21 @@
+# Notebook Update Cadence Pipeline Specification
+# Orchestrated by the analytics batch runner. Materializes cadence facts in parquet format.
+
+pipeline_id: notebook_update_cadence
+owner: analytics-governance
+schedule: "0 * * * *"  # hourly refresh to capture automation trends
+model: storage/analytics/models/notebook_update_cadence.sql
+materialization:
+  format: parquet
+  output_path: storage/analytics/pipelines/notebook_update_cadence.parquet
+sources:
+  - analytics.notebooks_run_log
+  - analytics.workspace_registry
+telemetry_tags:
+  feature: notebook-automation
+  sensitivity: internal
+checks:
+  - assertion: "minutes_between_runs >= 0"
+    severity: error
+  - assertion: "cadence_per_hour IS NULL OR cadence_per_hour < 60"
+    severity: warn

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["NotebookSymbolChangeKind"],"fn":["metadata_changed"],"struct":["NotebookMetadataDiff","NotebookSymbolChange","NotebookSymbolMetadata"]};

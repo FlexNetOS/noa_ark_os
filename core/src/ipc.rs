@@ -79,15 +79,15 @@ impl IpcService {
 
 /// Create a new channel.
 pub fn create_channel(channel_id: ChannelId) -> Result<(), &'static str> {
-    IpcService::default().create_channel(channel_id)
+    IpcService.create_channel(channel_id)
 }
 
 /// Send a message.
 pub fn send_message(channel_id: ChannelId, message: Message) -> Result<(), &'static str> {
-    IpcService::default().send_message(channel_id, message)
+    IpcService.send_message(channel_id, message)
 }
 
 /// Receive a message.
 pub fn receive_message(channel_id: ChannelId) -> Option<Message> {
-    IpcService::default().receive_message(channel_id)
+    IpcService.receive_message(channel_id)
 }

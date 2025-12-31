@@ -28,7 +28,7 @@ pub fn register_default_capabilities(registry: &CapabilityRegistry) -> Capabilit
             .description("Process management subsystem")
             .init_with(|_| {
                 crate::process::init().map_err(|err| wrap_init_error(CAPABILITY_PROCESS, err))?;
-                Ok(Arc::new(ProcessService::default()) as DynCapability)
+                Ok(Arc::new(ProcessService) as DynCapability)
             })
             .build(),
     )?;
@@ -38,7 +38,7 @@ pub fn register_default_capabilities(registry: &CapabilityRegistry) -> Capabilit
             .description("Memory management subsystem")
             .init_with(|_| {
                 crate::memory::init().map_err(|err| wrap_init_error(CAPABILITY_MEMORY, err))?;
-                Ok(Arc::new(MemoryManager::default()) as DynCapability)
+                Ok(Arc::new(MemoryManager) as DynCapability)
             })
             .build(),
     )?;
@@ -48,7 +48,7 @@ pub fn register_default_capabilities(registry: &CapabilityRegistry) -> Capabilit
             .description("Inter-process communication subsystem")
             .init_with(|_| {
                 crate::ipc::init().map_err(|err| wrap_init_error(CAPABILITY_IPC, err))?;
-                Ok(Arc::new(IpcService::default()) as DynCapability)
+                Ok(Arc::new(IpcService) as DynCapability)
             })
             .build(),
     )?;
@@ -58,7 +58,7 @@ pub fn register_default_capabilities(registry: &CapabilityRegistry) -> Capabilit
             .description("File system subsystem")
             .init_with(|_| {
                 crate::fs::init().map_err(|err| wrap_init_error(CAPABILITY_FILESYSTEM, err))?;
-                Ok(Arc::new(FileSystemService::default()) as DynCapability)
+                Ok(Arc::new(FileSystemService) as DynCapability)
             })
             .build(),
     )?;
@@ -68,7 +68,7 @@ pub fn register_default_capabilities(registry: &CapabilityRegistry) -> Capabilit
             .description("Security subsystem")
             .init_with(|_| {
                 crate::security::init().map_err(|err| wrap_init_error(CAPABILITY_SECURITY, err))?;
-                Ok(Arc::new(SecurityService::default()) as DynCapability)
+                Ok(Arc::new(SecurityService) as DynCapability)
             })
             .build(),
     )?;

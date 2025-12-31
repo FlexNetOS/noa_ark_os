@@ -1,0 +1,8 @@
+{
+  "feature_flags": [
+    "offline-first",
+    "fast-health-gate",
+    "schema-validation",
+    "commit-metadata-verification"
+  ]
+}

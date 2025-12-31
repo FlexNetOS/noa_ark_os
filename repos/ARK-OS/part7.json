@@ -1,0 +1,55 @@
+{
+  "bundle": {
+    "name": "noa-cecca-stemcell-bundle-part7",
+    "version": "0.5.1-part7",
+    "created": "2025-09-16T00:00:00Z",
+    "style": "kernel-first • message-passing • async-only • no-globals • zero-bloat",
+    "entry": "kernel/bootstrap",
+    "sbom": {
+      "policy": {
+        "failOnMissingModules": false,
+        "failOnMissingEnv": false
+      },
+      "expectedEnv": ["NOA_PORT", "OFFLINE_MODE", "BASE_URL"],
+      "autoFix": true
+    },
+    "modules": {
+      "answer.js": {
+        "language": "javascript",
+        "code": "[Placeholder for contents of answer.js]"
+      },
+      "create_montage.py": {
+        "language": "python",
+        "code": "[Placeholder for contents of create_montage.py]"
+      },
+      "pptx_to_img.py": {
+        "language": "python",
+        "code": "[Placeholder for contents of pptx_to_img.py]"
+      },
+      "slides_template.js": {
+        "language": "javascript",
+        "code": "[Placeholder for contents of slides_template.js]"
+      },
+      "package.json": {
+        "language": "json",
+        "code": "[Placeholder for contents of package.json]"
+      },
+      "package-lock.json": {
+        "language": "json",
+        "code": "[Placeholder for contents of package-lock.json]"
+      },
+      "node_modules": {
+        "language": "directory",
+        "code": "[Placeholder for contents of node_modules directory]"
+      },
+      "placeholder_light_gray_block.png": {
+        "language": "binary",
+        "code": "[Placeholder for binary image file placeholder_light_gray_block.png]"
+      },
+      "Combined_Agent_Directory.csv": {
+        "language": "csv",
+        "code": "[Placeholder for Combined_Agent_Directory.csv]"
+      }
+    }
+  }
+}

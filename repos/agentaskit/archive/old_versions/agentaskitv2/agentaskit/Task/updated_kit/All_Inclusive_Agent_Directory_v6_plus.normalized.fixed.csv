@@ -1,0 +1,885 @@
+agent_name,role,layer,scope,tools,inputs,outputs,guardrails,escalation_to,stack
+agent_0001,Micro Agent,micro,,,upgrade_status;retirement_policy,agent_lifecycle_event,,Stack-Chief,Subject-001
+agent_0002,Micro Agent,micro,,,tenant_config;resource_usage,isolation_report;quota_alert,,Stack-Chief,Subject-001
+agent_0003,Micro Agent,micro,,,current_version;available_patch,upgrade_status,,Stack-Chief,Subject-001
+agent_0004,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0005,Micro Agent,micro,,,agent_status;health_signals,health_report;restart_action,,Stack-Chief,Subject-001
+agent_0006,Micro Agent,micro,,,data_state;backup_policy,backup_file;restore_status,,Stack-Chief,Subject-001
+agent_0007,Micro Agent,micro,,,call_metadata;ttl_policy,cached_response,,Stack-Chief,Subject-001
+agent_0008,Micro Agent,micro,,,env_specs;feature_flags,validated_config,,Stack-Chief,Subject-001
+agent_0009,Micro Agent,micro,,,task;resource_metrics,cost_estimate;budget_alert,,Stack-Chief,Subject-001
+agent_0010,Micro Agent,micro,,,error;retry_policy,retry_action;circuit_break,,Stack-Chief,Subject-001
+agent_0011,Micro Agent,micro,,,event;metric_definition,log_entry;metrics,,Stack-Chief,Subject-001
+agent_0012,Micro Agent,micro,,,incident_alert;security_report,recovery_plan;operator_spawn,,Stack-Chief,Subject-001
+agent_0013,Micro Agent,micro,,,metrics;health_checks,alerts;status_reports,,Stack-Chief,Subject-001
+agent_0014,Micro Agent,micro,,,recovery_plan;assignment,incident_resolved;postmortem_report,,Stack-Chief,Subject-001
+agent_0015,Micro Agent,micro,,,code_files;dependencies,scan_report;remediation_recommendation,,Stack-Chief,Subject-001
+agent_0016,Micro Agent,micro,,,option1;option2;criteria,comparison_report;recommendation,,Stack-Chief,Subject-001
+agent_0017,Micro Agent,micro,,,source_config;raw_data,processed_data;ingestion_report,,Stack-Chief,Subject-001
+agent_0018,Micro Agent,micro,,,query;knowledge_graph,search_results;references,,Stack-Chief,Subject-001
+agent_0019,Micro Agent,micro,,,processed_data;agent_logs;metadata,knowledge_graph,,Stack-Chief,Subject-001
+agent_0020,Micro Agent,micro,,,query;source_config,summary;citations,,Stack-Chief,Subject-001
+agent_0021,Micro Agent,micro,,,workflow_plan;risk_model,simulation_report;risk_map,,Stack-Chief,Subject-001
+agent_0022,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0023,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0024,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0025,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0026,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0027,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0028,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0029,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0030,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0031,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0032,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0033,Micro Agent,micro,,,ethics_alert;compliance_alert;action_logs,audit_report;compliance_dashboard,,Stack-Chief,Subject-001
+agent_0034,Micro Agent,micro,,,access_logs;compliance_policies,compliance_alert;enforcement_action,,Stack-Chief,Subject-001
+agent_0035,Micro Agent,micro,,,output;alignment_criteria,alignment_report;intervention_suggestion,,Stack-Chief,Subject-001
+agent_0036,Micro Agent,micro,,,action_logs;policy_framework,ethics_alert;review_request,,Stack-Chief,Subject-001
+agent_0037,Micro Agent,micro,,,proposal;system_metrics;user_request,manifest_update;approval_request;changelog,,Stack-Chief,Subject-001
+agent_0038,Micro Agent,micro,,,role_definitions;user_requests,access_grant;access_denial,,Stack-Chief,Subject-001
+agent_0039,Micro Agent,micro,,,proposal,approval_status,,Stack-Chief,Subject-001
+agent_0040,Micro Agent,micro,,,agent_spec;blueprint,code_files;Dockerfile;CI_snippet,,Stack-Chief,Subject-001
+agent_0041,Micro Agent,micro,,,code_files,lint_report;formatted_code,,Stack-Chief,Subject-001
+agent_0042,Micro Agent,micro,,,code_files;template,requirements.txt;package.json,,Stack-Chief,Subject-001
+agent_0043,Micro Agent,micro,,,code_files;spec,README.md;docstrings,,Stack-Chief,Subject-001
+agent_0044,Micro Agent,micro,,,endpoint;change_log,doc_update;doc_alert,,Stack-Chief,Subject-001
+agent_0045,Micro Agent,micro,,,goal;tasks;constraints,execution_plan;delegated_tasks,,Stack-Chief,Subject-001
+agent_0046,Micro Agent,micro,,,agent_spec,prompt_text;prompt_parameters,,Stack-Chief,Subject-001
+agent_0047,Micro Agent,micro,,,prompt;language,rendered_code,,Stack-Chief,Subject-001
+agent_0048,Micro Agent,micro,,,code_files;spec,test_scripts,,Stack-Chief,Subject-001
+agent_0049,Micro Agent,micro,,,resource;user_intent,deployment_plan;status,,Stack-Chief,Subject-001
+agent_0050,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0051,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0052,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0053,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0054,Micro Agent,micro,,,result;user_feedback,improvement_suggestion;feedback_log,,Stack-Chief,Subject-001
+agent_0055,Micro Agent,micro,,,user_input;sensor_data,normalized_command;user_feedback,,Stack-Chief,Subject-001
+agent_0056,Micro Agent,micro,,,ux_metrics;user_feedback,ux_report;accessibility_alert,,Stack-Chief,Subject-001
+agent_0057,Micro Agent,micro,,,plugin_metadata;compliance_standards,compliance_report;approval_status,,Stack-Chief,Subject-001
+agent_0058,Micro Agent,micro,,,marketplace_urls;api_keys,plugin_catalog;discovery_events,,Stack-Chief,Subject-001
+agent_0059,Micro Agent,micro,,,plugin_selection;billing_info,invoice;license_status,,Stack-Chief,Subject-001
+agent_0060,Micro Agent,micro,,,plugin_usage_data;user_feedback,rating_report;improvement_suggestions,,Stack-Chief,Subject-001
+agent_0061,Micro Agent,micro,,,plugin_catalog;test_sandbox,evaluation_report;plugin_score,,Stack-Chief,Subject-001
+agent_0062,Micro Agent,micro,,,evaluation_report;user_selection,plugin_status;rollback_trigger,,Stack-Chief,Subject-001
+agent_0063,Micro Agent,micro,,,plugin_binary;sandbox_config,security_report;incident_alert,,Stack-Chief,Subject-001
+agent_0064,Micro Agent,micro,,,plugin_manifest;user_request,plugin_status,,Stack-Chief,Subject-001
+agent_0065,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0066,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0067,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0068,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0069,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0070,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0071,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0072,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0073,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0074,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0075,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0076,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0077,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0078,Micro Agent,micro,,,dependency_graph;execution_order,workflow_definition,,Stack-Chief,Subject-001
+agent_0079,Micro Agent,micro,,,workflow;execution_plan,task_status;error_report,,Stack-Chief,Subject-001
+agent_0080,Micro Agent,micro,,,peer_list;replication_policy,sync_status;failover_event,,Stack-Chief,Subject-001
+agent_0081,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0082,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0083,Micro Agent,micro,,,agent_manifest;heartbeat,service_directory;registration_log,,Stack-Chief,Subject-001
+agent_0084,Micro Agent,micro,,,secret;rotation_policy,encrypted_secret;audit_log,,Stack-Chief,Subject-001
+agent_0085,Micro Agent,micro,,,upgrade_status;retirement_policy,agent_lifecycle_event,,Stack-Chief,Subject-001
+agent_0086,Micro Agent,micro,,,tenant_config;resource_usage,isolation_report;quota_alert,,Stack-Chief,Subject-001
+agent_0087,Micro Agent,micro,,,current_version;available_patch,upgrade_status,,Stack-Chief,Subject-001
+agent_0088,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0089,Micro Agent,micro,,,agent_status;health_signals,health_report;restart_action,,Stack-Chief,Subject-001
+agent_0090,Micro Agent,micro,,,data_state;backup_policy,backup_file;restore_status,,Stack-Chief,Subject-001
+agent_0091,Micro Agent,micro,,,call_metadata;ttl_policy,cached_response,,Stack-Chief,Subject-001
+agent_0092,Micro Agent,micro,,,env_specs;feature_flags,validated_config,,Stack-Chief,Subject-001
+agent_0093,Micro Agent,micro,,,task;resource_metrics,cost_estimate;budget_alert,,Stack-Chief,Subject-001
+agent_0094,Micro Agent,micro,,,error;retry_policy,retry_action;circuit_break,,Stack-Chief,Subject-001
+agent_0095,Micro Agent,micro,,,event;metric_definition,log_entry;metrics,,Stack-Chief,Subject-001
+agent_0096,Micro Agent,micro,,,incident_alert;security_report,recovery_plan;operator_spawn,,Stack-Chief,Subject-001
+agent_0097,Micro Agent,micro,,,metrics;health_checks,alerts;status_reports,,Stack-Chief,Subject-001
+agent_0098,Micro Agent,micro,,,recovery_plan;assignment,incident_resolved;postmortem_report,,Stack-Chief,Subject-001
+agent_0099,Micro Agent,micro,,,code_files;dependencies,scan_report;remediation_recommendation,,Stack-Chief,Subject-001
+agent_0100,Micro Agent,micro,,,option1;option2;criteria,comparison_report;recommendation,,Stack-Chief,Subject-001
+agent_0101,Micro Agent,micro,,,source_config;raw_data,processed_data;ingestion_report,,Stack-Chief,Subject-001
+agent_0102,Micro Agent,micro,,,query;knowledge_graph,search_results;references,,Stack-Chief,Subject-001
+agent_0103,Micro Agent,micro,,,processed_data;agent_logs;metadata,knowledge_graph,,Stack-Chief,Subject-001
+agent_0104,Micro Agent,micro,,,query;source_config,summary;citations,,Stack-Chief,Subject-001
+agent_0105,Micro Agent,micro,,,workflow_plan;risk_model,simulation_report;risk_map,,Stack-Chief,Subject-001
+agent_0106,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0107,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0108,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0109,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0110,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0111,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0112,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0113,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0114,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0115,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0116,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0117,Micro Agent,micro,,,ethics_alert;compliance_alert;action_logs,audit_report;compliance_dashboard,,Stack-Chief,Subject-001
+agent_0118,Micro Agent,micro,,,access_logs;compliance_policies,compliance_alert;enforcement_action,,Stack-Chief,Subject-001
+agent_0119,Micro Agent,micro,,,output;alignment_criteria,alignment_report;intervention_suggestion,,Stack-Chief,Subject-001
+agent_0120,Micro Agent,micro,,,action_logs;policy_framework,ethics_alert;review_request,,Stack-Chief,Subject-001
+agent_0121,Micro Agent,micro,,,proposal;system_metrics;user_request,manifest_update;approval_request;changelog,,Stack-Chief,Subject-001
+agent_0122,Micro Agent,micro,,,role_definitions;user_requests,access_grant;access_denial,,Stack-Chief,Subject-001
+agent_0123,Micro Agent,micro,,,proposal,approval_status,,Stack-Chief,Subject-001
+agent_0124,Micro Agent,micro,,,agent_spec;blueprint,code_files;Dockerfile;CI_snippet,,Stack-Chief,Subject-001
+agent_0125,Micro Agent,micro,,,code_files,lint_report;formatted_code,,Stack-Chief,Subject-001
+agent_0126,Micro Agent,micro,,,code_files;template,requirements.txt;package.json,,Stack-Chief,Subject-001
+agent_0127,Micro Agent,micro,,,code_files;spec,README.md;docstrings,,Stack-Chief,Subject-001
+agent_0128,Micro Agent,micro,,,endpoint;change_log,doc_update;doc_alert,,Stack-Chief,Subject-001
+agent_0129,Micro Agent,micro,,,goal;tasks;constraints,execution_plan;delegated_tasks,,Stack-Chief,Subject-001
+agent_0130,Micro Agent,micro,,,agent_spec,prompt_text;prompt_parameters,,Stack-Chief,Subject-001
+agent_0131,Micro Agent,micro,,,prompt;language,rendered_code,,Stack-Chief,Subject-001
+agent_0132,Micro Agent,micro,,,code_files;spec,test_scripts,,Stack-Chief,Subject-001
+agent_0133,Micro Agent,micro,,,resource;user_intent,deployment_plan;status,,Stack-Chief,Subject-001
+agent_0134,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0135,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0136,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0137,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0138,Micro Agent,micro,,,result;user_feedback,improvement_suggestion;feedback_log,,Stack-Chief,Subject-001
+agent_0139,Micro Agent,micro,,,user_input;sensor_data,normalized_command;user_feedback,,Stack-Chief,Subject-001
+agent_0140,Micro Agent,micro,,,ux_metrics;user_feedback,ux_report;accessibility_alert,,Stack-Chief,Subject-001
+agent_0141,Micro Agent,micro,,,plugin_metadata;compliance_standards,compliance_report;approval_status,,Stack-Chief,Subject-001
+agent_0142,Micro Agent,micro,,,marketplace_urls;api_keys,plugin_catalog;discovery_events,,Stack-Chief,Subject-001
+agent_0143,Micro Agent,micro,,,plugin_selection;billing_info,invoice;license_status,,Stack-Chief,Subject-001
+agent_0144,Micro Agent,micro,,,plugin_usage_data;user_feedback,rating_report;improvement_suggestions,,Stack-Chief,Subject-001
+agent_0145,Micro Agent,micro,,,plugin_catalog;test_sandbox,evaluation_report;plugin_score,,Stack-Chief,Subject-001
+agent_0146,Micro Agent,micro,,,evaluation_report;user_selection,plugin_status;rollback_trigger,,Stack-Chief,Subject-001
+agent_0147,Micro Agent,micro,,,plugin_binary;sandbox_config,security_report;incident_alert,,Stack-Chief,Subject-001
+agent_0148,Micro Agent,micro,,,plugin_manifest;user_request,plugin_status,,Stack-Chief,Subject-001
+agent_0149,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0150,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0151,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0152,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0153,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0154,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0155,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0156,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0157,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0158,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0159,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0160,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0161,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0162,Micro Agent,micro,,,dependency_graph;execution_order,workflow_definition,,Stack-Chief,Subject-001
+agent_0163,Micro Agent,micro,,,workflow;execution_plan,task_status;error_report,,Stack-Chief,Subject-001
+agent_0164,Micro Agent,micro,,,peer_list;replication_policy,sync_status;failover_event,,Stack-Chief,Subject-001
+agent_0165,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0166,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0167,Micro Agent,micro,,,agent_manifest;heartbeat,service_directory;registration_log,,Stack-Chief,Subject-001
+agent_0168,Micro Agent,micro,,,secret;rotation_policy,encrypted_secret;audit_log,,Stack-Chief,Subject-001
+agent_0169,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0170,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0171,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0172,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0173,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0174,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0175,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0176,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0177,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0178,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0179,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+agent_0180,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+NOA ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Specialized Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+NOA ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Sub-Agents per Specialized Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Specialized Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Sub-Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Sub-Agent Task,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+SUB as Sub-Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+SA as Specialized Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Sub-Agent Ready,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+"Deploy Specialized Agent
+            SA",Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+"Deploy Sub-Agent
+                SUB",Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Sub-Agent Deployment,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Specialized Agent Deployment,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Specialized Agent Deploy,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Sub-Agent Deploy,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Seamless integration with Agent Orchestration,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Phase Agent ID,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Micro-Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Multi-Factor Agent Authentication,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Micro-Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Micro-Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Micro-Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Micro-Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Micro-Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Fixed Agent Gateway,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Seamless integration with ARK-AI-OS ecosystem components including Agent Initialization,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The Agent Gateway,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+API Gateway Integration for Agent Monitoring,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Successful implementation and rigorous benchmarking of core functionalities including Agent Deployment,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CompressionAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Inter-Agent Communication,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Inter-Agent Communication,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Optimized Agent Initialization,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+This included integration with the Agent Core,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Inter-Agent Communication,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Inter-Agent Communication,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStack,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Sub-Agent Coordination,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The Orchestrator Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Orchestrated Parallel Repair Execution - Complete Team with Dynamic Agent Spawning,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Sub-Agent Collaboration,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The Orchestrator Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Orchestrator Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Significant performance improvements and optimizations were realized throughout the VoltAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Comprehensive security enhancements and hardening measures were implemented to protect the VoltAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Advanced capabilities were successfully implemented across the VoltAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+All agents were deployed strategically to cover various aspects of the VoltAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Create VoltAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The VoltAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+VoltAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+As the Orchestrator Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Continuous optimization by the Performance Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The Performance Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Orchestrator Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Security Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Advanced Human-Agent Collaboration,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The task involved creating a Xata Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Validation Agent Team,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The Orchestrator Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Create Xata Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Begin phased rollout of the VoltAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Total Agent Deployment,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Dynamic Agent Management,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Specialized Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Hierarchical Agent Structure,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Hierarchical Agent Structure,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Digest Everything Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+"Digest Everything Agent
+Generated",Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Digest Everything Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStack,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+VoltAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+AI MicroAgentStack,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Xata Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Digest Everything Agent Architecture,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Digest Everything Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Chief Deconstruction Engineer Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+AI Model Chop Shop Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Software Ecosystem Chop Shop Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Firmware & Driver Extraction Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Network Protocol Chop Shop Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Operating System Deconstruction Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Application Architecture Mining Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Digest Everything Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Micro-Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Execution Planning Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Credentials & Env Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Orchestrator Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Orchestration Definition Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Performance & Resource Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Registry/Discovery Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+UX/Accessibility Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Feedback & Continuous Improvement Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Upgrade & Patch Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Test Case Generator Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+SDK/Plugin Manager Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Test & Validation Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Prompt Designer Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Config Manager Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Enhanced Observability & Tracing Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Cost Estimation Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Code Quality Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+App Research Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Orchestrator Federation Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Dependency Resolver Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Agent Self-Upgrade/Retirement Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Simulation & Risk Analysis Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CodeGen Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Agent Supervisor/Heartbeat Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Secrets Crypto Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Policy Enforcement Agent,Board Policy,board,,,,,,,Subject-001
+SafeStack Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Documentation Listener Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Modular AI Micro-Agent Orchestration,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Backup & Restore Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Multi-Tenant Isolation Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Governance & Audit Agent,Board Policy,board,,,,,,,Subject-001
+Template Manager Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Documentation Generator Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Micro-Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Monitoring & Alerting Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Cache Manager Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Knowledge-Base Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Alternatives Comparison Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Execution Planning Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Credentials & Env Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Orchestrator Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+"Test & Validation Agent
+Internal",Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Performance & Resource Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+"Credentials & Env Agent
+Security",Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Registry/Discovery Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+UX/Accessibility Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Feedback & Continuous Improvement Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Upgrade & Patch Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Test Case Generator Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+"Template Manager Agent
+Codegen",Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+SDK/Plugin Manager Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Versioning & Rollback Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+"Code Quality Agent
+Linting",Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Test & Validation Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Prompt Designer Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Enhanced Observability & Tracing Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Cost Estimation Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+"Test Case Generator Agent
+Automated",Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+"Prompt Designer Agent
+LLM",Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The CodeGen Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Code Quality Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+App Research Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+"Execution Planning Agent
+Prompt",Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Agent Self-Upgrade/Retirement Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Dependency Resolver Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Orchestrator Federation Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+"UX/Accessibility Agent
+Internal",Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+"Cost Estimation Agent
+FinOps",Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Simulation & Risk Analysis Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Agent Supervisor/Heartbeat Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Policy Enforcement Agent,Board Policy,board,,,,,,,Subject-001
+"Orchestrator Agent
+MLOps",Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+SafeStack Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+"Dependency Resolver Agent
+Package",Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Documentation Listener Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+"App Research Agent
+Research",Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Backup & Restore Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+"Upgrade & Patch Agent
+Release",Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Multi-Tenant Isolation Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Governance & Audit Agent,Board Policy,board,,,,,,,Subject-001
+Template Manager Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+"SafeStack Agent
+Red",Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Agent Implementation Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Documentation Generator Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+"Backup & Restore Agent
+Disaster",Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Micro-Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+"Knowledge-Base Agent
+Embedding",Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Monitoring & Alerting Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Knowledge-Base Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Alternatives Comparison Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ModelSelectorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+NOA can instruct a MicroAgentStack,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Memory / Agent Layer,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStack,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStack,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CommandChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CommandChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Board Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CommandChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CommandChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Each stack reports to its Board Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Often uses MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Each stack digests one or more sources and returns results to the Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ReviewAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ModelSelectorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Board Agent or CommandChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+By delegating model/tool choice to a dedicated ModelSelectorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Telemetry Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Policy Agent,Board Policy,board,,,,,,,Subject-001
+ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Board Agents and MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Board Agents and MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Growth/Partnerships Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+COO Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Legal/Compliance Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Security Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CFO/FinOps Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Strategy/CTO Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Board Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CommandChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ModelSelectorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Each stack operates autonomously but reports progress to its Board Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ModelSelectorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Board Agent or CommandChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStack,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+By delegating model/tool choice to a dedicated ModelSelectorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStack,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CommandChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CommandChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Board Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CommandChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CommandChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Each stack reports to its Board Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Often uses MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Each stack digests one or more sources and returns results to the Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ModelSelectorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Commission digestion tasks and consume the Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Telemetry Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Policy Agent,Board Policy,board,,,,,,,Subject-001
+Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ModelSelectorAgents and Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Each can commission work via MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CommandChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Telemetry Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Policy Agent,Board Policy,board,,,,,,,Subject-001
+MicroAgentStack,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ModelSelectorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+They request MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CommandChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ModelSelectorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+NOA can instruct a MicroAgentStack,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Growth/Partnerships Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+COO Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Legal/Compliance Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Security Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CFO/FinOps Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Strategy/CTO Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Board Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CommandChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ModelSelectorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Each stack operates autonomously but reports progress to its Board Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ModelSelectorAgents and Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Each can commission work via MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CommandChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Telemetry Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Policy Agent,Board Policy,board,,,,,,,Subject-001
+MicroAgentStack,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ModelSelectorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+They request MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+COO Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Each stack has its own CommandChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+"NOA - ExecutiveCommanderChiefAgent
+Overview",Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+A MicroAgentStack,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+By delegating model/tool choice to a dedicated ModelSelectorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Each stack reports to its Board Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStack,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Board Agents can spin up one or more MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Each stack digests one or more sources and returns results to the Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Growth/Partnerships Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+A ModelSelectorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CommandChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CFO/FinOps Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Board Agents and MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Often uses MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ModelSelectorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Board Agent requests a ModelSelectorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Policy Agent,Board Policy,board,,,,,,,Subject-001
+Board Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Commission digestion tasks and consume the Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Each stack operates autonomously but reports progress to its Board Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Legal/Compliance Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Security Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Used to parallelize large digests-each stack handles a set of sources and feeds results back to the Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Micro-Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Strategy/CTO Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Board Agent or CommandChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Telemetry Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+On-demand work pods orchestrated by a CommandChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Each can commission work via MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+They request MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CommandChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The ModelSelectorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+NOA can instruct a MicroAgentStack,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Policy Agent,Board Policy,board,,,,,,,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Telemetry Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStack,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ModelSelectorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ModelSelectorAgents and Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Digest Everything Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Digest Everything Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CommandChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ModelSelectorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Commission digestion tasks and consume the Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Micro-Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Each Board Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The Legal Board Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+NOA can then spin up a MicroAgentStack,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The Strategy Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Perhaps the Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+When NOA or a Board Agent decides to launch a MicroAgentStack,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+NOA now orchestrates multiple MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The Model Selector Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStack,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Autonomous Agent Utilization,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+If the Security Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The Strategy/CTO Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Strategy Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Whenever a MicroAgentStack,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The CommandChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+NOA then spins up a new MicroAgentStack,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CommandChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Security Board Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+When a Board Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ModelSelectorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+When the Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Growth Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Board Agent can deploy multiple MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The Strategy/CTO Board Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Strategy/CTO agent or the CommandChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Legal Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The Strategy Board Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Illusion approach means that each MicroAgentStack,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Board Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Each MicroAgentStack,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+This is done by the CommandChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The MicroAgentStack,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The Security Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The CFO Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Security Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+When delegating to a MicroAgentStack,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Micro-Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Each MicroAgentStack or Board Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+It gives the CommandChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CFO Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The Board Agents also have the authority to spawn MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Micro-Agent Stacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Micro-Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The NOA ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+IngestAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+PlanAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+SearchAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MultiActionAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Micro-Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Open Policy Agent,Board Policy,board,,,,,,,Subject-001
+SearchAgent to fetch data and then the SummarizeAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Building Micro-Agent Stacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CodeExecutorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+SummarizeAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The SearchAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Micro-Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+SummarizeAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Build a Local AI Agent Operating,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Understanding AI Agent Operating,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Open-Source AI Agent Stack,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Micro-Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Micro-Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+"ExecutiveCommanderChiefAgent
+NOA",Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+They commission MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CommandChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+A MicroAgentStack,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+"Digest Agent
+The",Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Digest Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStack,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+A Board Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+The Embeddings service segments code and documentation into chunks and converts them into vector embeddings via models selected by a ModelSelectorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ModelSelectorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Each MicroAgentStack,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+These prompts can be issued to a ModelSelectorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Comprehensive Agent Directory,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+EthicsBoardAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+VisionBoardAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+StrategyBoardAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+FinanceBoardAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+LegalComplianceBoardAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+SecurityBoardAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+AuditBoardAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+OperationsBoardAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+HRBoardAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MarketingBoardAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+TechnologyBoardAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutionPlanningAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+PromptDesignerAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+DocumentationGeneratorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CodeGenAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+DependencyResolverAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+TemplateManagerAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CodeQualityAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+DocumentationListenerAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+TestCaseGeneratorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+AuditComplianceAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+GovernanceEthicsAgent,Board Policy,board,,,,,,,Subject-001
+ReviewAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+EthicsAIAlignmentAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ManifestEditorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+RBACPolicyAgent,Board Policy,board,,,,,,,Subject-001
+ComplianceEnforcementAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+DemoAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ConfigManagerAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+OperatorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+SafeStackAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MonitoringAlertingAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CacheManagerAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+BackupRestoreAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+LoggingObservabilityHelperAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+AgentSupervisorHeartbeatAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MasterChiefIncidentResponseAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CostEstimationAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ErrorHandlingRetryHelperAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+OrchestratorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+OrchestratorFederationAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+OrchestrationDefinitionAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MarketplaceRatingFeedbackAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+PluginEvaluationAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+PluginSandboxSecurityAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+PluginLifecycleManagerAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MarketplaceMonetizationBillingAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MarketplaceDiscoveryAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+SDKPluginManagerAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MarketplaceComplianceAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+RegistryDiscoveryAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ResearchAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+DataIngestionETLAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+AlternativesComparisonAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+KnowledgeBaseAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+SimulationRiskAnalysisAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+KnowledgeGraphAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+SecretsCryptoAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CommandChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Micro-Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+UXAccessibilityAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MultiModalInterfaceAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+FeedbackContinuousImprovementAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+AgentSelfUpgradeRetirementAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MultiTenantIsolationAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+UpgradePatchAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+AgentSelfUpgradeRetirementAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+OrchestratorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+AgentSupervisorHeartbeatAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CommandChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+AlternativesComparisonAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutionPlanningAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+AuditBoardAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+AuditComplianceAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+BackupRestoreAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+OrchestratorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CacheManagerAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutionPlanningAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CodeGenAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+OrchestratorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CodeQualityAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+TestCaseGeneratorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CodeGenAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CommandChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+Micro-Agent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+OrchestratorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ComplianceEnforcementAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+AuditComplianceAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ConfigManagerAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutionPlanningAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CostEstimationAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutionPlanningAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+DataIngestionETLAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+KnowledgeGraphAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+DemoAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+DependencyResolverAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CodeGenAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+DocumentationGeneratorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CodeQualityAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+DocumentationListenerAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+DocumentationListenerAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+DocumentationGeneratorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ErrorHandlingRetryHelperAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+OrchestratorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+EthicsAIAlignmentAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+GovernanceEthicsAgent,Board Policy,board,,,,,,,Subject-001
+EthicsBoardAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutionPlanningAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+OrchestratorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+EthicsBoardAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+VisionBoardAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+StrategyBoardAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+FinanceBoardAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+LegalComplianceBoardAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+SecurityBoardAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+AuditBoardAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+OperationsBoardAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+HRBoardAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MarketingBoardAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+TechnologyBoardAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+FeedbackContinuousImprovementAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+OrchestratorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+FinanceBoardAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+GovernanceEthicsAgent,Board Policy,board,,,,,,,Subject-001
+AuditComplianceAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+HRBoardAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+KnowledgeBaseAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+KnowledgeGraphAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+DataIngestionETLAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+KnowledgeBaseAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+LegalComplianceBoardAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+LoggingObservabilityHelperAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+EnhancedObservabilityTracingAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ManifestEditorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CommandChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MarketingBoardAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MarketplaceComplianceAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+AuditComplianceAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MarketplaceDiscoveryAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+PluginEvaluationAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MarketplaceMonetizationBillingAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MarketplaceComplianceAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MarketplaceRatingFeedbackAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+PluginEvaluationAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MasterChiefIncidentResponseAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+OperatorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MonitoringAlertingAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MasterChiefIncidentResponseAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MultiModalInterfaceAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+UXAccessibilityAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MultiTenantIsolationAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ComplianceEnforcementAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+OperationsBoardAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+OperatorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MasterChiefIncidentResponseAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+OrchestrationDefinitionAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+OrchestratorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+OrchestratorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CommandChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+OrchestratorFederationAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CommandChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+PluginEvaluationAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+PluginLifecycleManagerAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+PluginLifecycleManagerAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+PluginSandboxSecurityAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+PluginSandboxSecurityAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MasterChiefIncidentResponseAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+PromptDesignerAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CodeGenAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+RBACPolicyAgent,Board Policy,board,,,,,,,Subject-001
+ComplianceEnforcementAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+RegistryDiscoveryAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+OrchestratorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ResearchAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+KnowledgeBaseAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ReviewAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CommandChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+SDKPluginManagerAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+PluginLifecycleManagerAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+SafeStackAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ComplianceEnforcementAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+SecretsCryptoAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CredentialsEnvAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+SecurityBoardAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+SimulationRiskAnalysisAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutionPlanningAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+StrategyBoardAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+TechnologyBoardAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+TemplateManagerAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+CodeGenAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+TestCaseGeneratorAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+TestValidationAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+UXAccessibilityAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+DocumentationListenerAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+UpgradePatchAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+AgentSelfUpgradeRetirementAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+VisionBoardAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+NOA ExecutiveCommanderChiefAgent,Micro Agent,micro,,,,,,Stack-Chief,Subject-001
+MicroAgentStacks,Micro Agent,micro,,,,,,Stack-Chief,Subject-001

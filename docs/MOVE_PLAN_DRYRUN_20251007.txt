@@ -1,0 +1,23 @@
+[propose_moves] Using plan: /home/deflex/workspace/repos/noa_ark_os/docs/MOVE_PLAN_PROPOSAL_20251007.csv
+# crate
+git mv "services/agent-registry" "mono/services/agent-registry"
+# crate
+git mv "services/ark-ai-os-workspace" "mono/services/ark-ai-os-workspace"
+# crate
+git mv "services/ark_workspace" "mono/services/ark_workspace"
+# crate
+git mv "services/board-agents" "mono/services/board-agents"
+# crate
+git mv "services/coordinator-cluster" "mono/services/coordinator-cluster"
+# crate
+git mv "services/deployed-app-cluster" "mono/services/deployed-app-cluster"
+# crate
+git mv "services/noa-commander" "mono/services/noa-commander"
+# crate
+git mv "services/phase1" "mono/services/phase1"
+# crate
+git mv "services/phase6" "mono/services/phase6"
+# crate
+git mv "services/sandbox-cluster" "mono/services/sandbox-cluster"
+# crate
+git mv "services/workspace_source" "mono/services/workspace_source"

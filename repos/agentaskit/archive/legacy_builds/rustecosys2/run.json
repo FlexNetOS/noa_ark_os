@@ -1,0 +1,29 @@
+  "status": "ok",
+  "started": "2025-10-01T22:06:02.550211475+00:00",
+  "ended": "2025-10-01T22:06:02.550695583+00:00",
+  "results": [
+    {
+      "task": "TASK-001",
+      "queue": "Queue A — Workspace Bootstrapping",
+      "agent": "noop",
+      "status": "noop",
+      "evidence": "runs/20251001_220602Z/logs/TASK-001_noop_20251001_220602Z.txt",
+      "error": null,
+      "commands": null
+    },
+    {
+      "task": "TASK-002",
+      "queue": "Queue A — Workspace Bootstrapping",
+      "agent": "noop",
+      "status": "noop",
+      "evidence": "runs/20251001_220602Z/logs/TASK-002_noop_20251001_220602Z.txt",
+      "error": null,
+      "commands": null
+    },
+    {
+      "task": "TASK-003",
+      "queue": "Queue A — Workspace Bootstrapping",
+      "agent": "noop",
+      "status": "noop",
+      "evidence": "runs/20251001_220602Z/logs/TASK-003_noop_20251001_220602Z.txt",
+      "error": null,

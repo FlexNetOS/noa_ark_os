@@ -1,10 +1,15 @@
 use std::collections::HashSet;
+use std::fs;
+use std::path::{Path, PathBuf};
 
 use noa_core::hardware::{AcceleratorKind, HardwareProfile};
 #[cfg(test)]
 use noa_core::hardware::{CpuProfile, GpuBackend, GpuProfile, MemoryProfile};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+
+mod wasm;
+pub use wasm::{WasmProbeConfig, WasmProbeError, WasmProbeReport, WasmProbeRunner};
 
 /// Policy describing how runtime backends should be prioritized.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -14,6 +19,10 @@ pub struct RuntimePolicy {
     pub prefer_lightweight_python_on_low_memory: bool,
     pub lightweight_memory_threshold_gb: f64,
     pub allow_accelerator_experiments: bool,
+    #[serde(default)]
+    pub enable_wasm_probes: bool,
+    #[serde(default)]
+    pub wasm_probe_config: WasmProbeConfig,
 }
 
 impl Default for RuntimePolicy {
@@ -24,6 +33,8 @@ impl Default for RuntimePolicy {
             prefer_lightweight_python_on_low_memory: true,
             lightweight_memory_threshold_gb: 6.0,
             allow_accelerator_experiments: true,
+            enable_wasm_probes: false,
+            wasm_probe_config: WasmProbeConfig::default(),
         }
     }
 }
@@ -86,18 +97,13 @@ impl RuntimePlan {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum HostClassification {
     Minimal,
+    #[default]
     Standard,
     Accelerated,
-}
-
-impl Default for HostClassification {
-    fn default() -> Self {
-        HostClassification::Standard
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -125,9 +131,43 @@ pub struct KernelRuntimeGraph {
     pub services: Vec<KernelRuntimeService>,
 }
 
+#[derive(Debug, Error)]
+pub enum KernelRuntimeGraphError {
+    #[error("failed to read kernel runtime graph at {path}: {source}")]
+    Read {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("failed to parse kernel runtime graph at {path}: {source}")]
+    Parse {
+        path: PathBuf,
+        #[source]
+        source: serde_yaml::Error,
+    },
+}
+
 impl KernelRuntimeGraph {
     pub fn service(&self, id: &str) -> Option<&KernelRuntimeService> {
         self.services.iter().find(|service| service.id == id)
+    }
+
+    pub fn load_from_path(
+        path: impl AsRef<Path>,
+    ) -> std::result::Result<Self, KernelRuntimeGraphError> {
+        let path_ref = path.as_ref();
+        let path_buf = path_ref.to_path_buf();
+        let data =
+            fs::read_to_string(path_ref).map_err(|source| KernelRuntimeGraphError::Read {
+                path: path_buf.clone(),
+                source,
+            })?;
+        let graph =
+            serde_yaml::from_str(&data).map_err(|source| KernelRuntimeGraphError::Parse {
+                path: path_buf,
+                source,
+            })?;
+        Ok(graph)
     }
 }
 
@@ -170,7 +210,11 @@ impl AdaptiveRuntimeController {
         }
     }
 
-    fn unsupported(&self, classification: &HostClassification, workloads: &[String]) -> Vec<String> {
+    fn unsupported(
+        &self,
+        classification: &HostClassification,
+        workloads: &[String],
+    ) -> Vec<String> {
         let mut unsupported = Vec::new();
         for workload in workloads {
             if let Some(service) = self.graph.service(workload) {
@@ -202,12 +246,12 @@ impl AdaptiveRuntimeController {
                 "Unsupported workloads for classification {:?}: {:?}",
                 classification, unsupported
             ));
-            plan.notes.push("Applied degraded mode for unsupported workloads".to_string());
+            plan.notes
+                .push("Applied degraded mode for unsupported workloads".to_string());
         }
 
         if classification == HostClassification::Minimal {
-            plan.fallbacks
-                .push(ExecutionBackend::PythonLightweight);
+            plan.fallbacks.push(ExecutionBackend::PythonLightweight);
             plan.notes
                 .push("Enforced lightweight fallbacks for minimal profile".to_string());
             deduplicate_fallbacks(&mut plan);
@@ -221,12 +265,31 @@ impl AdaptiveRuntimeController {
             fallback_notes,
         })
     }
+
+    pub fn run_wasm_probe<P: AsRef<Path>>(
+        &self,
+        module_path: P,
+        args: &[String],
+    ) -> Result<Option<WasmProbeReport>> {
+        if !self.policy.enable_wasm_probes {
+            return Ok(None);
+        }
+        let runner = WasmProbeRunner::new(self.policy.wasm_probe_config.clone())?;
+        let report = runner.run_probe(module_path, args)?;
+        Ok(Some(report))
+    }
 }
+
 /// Errors reported when a suitable backend cannot be selected.
 #[derive(Debug, Error)]
 pub enum RuntimeSelectionError {
     #[error("no backend available for {component:?}")]
     NoBackend { component: RuntimeComponent },
+    #[error("wasm probe failed: {source}")]
+    WasmProbe {
+        #[from]
+        source: WasmProbeError,
+    },
 }
 
 pub type Result<T> = std::result::Result<T, RuntimeSelectionError>;
@@ -393,6 +456,11 @@ fn deduplicate_fallbacks(plan: &mut RuntimePlan) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
+    use std::path::PathBuf;
+
+    use tempfile::tempdir;
+    use wat::parse_str;
 
     fn cpu() -> CpuProfile {
         CpuProfile {
@@ -409,6 +477,21 @@ mod tests {
             total_bytes: total_gb * 1024 * 1024 * 1024,
             available_bytes: available_gb * 1024 * 1024 * 1024,
         }
+    }
+
+    #[test]
+    fn load_graph_from_yaml_fixture() {
+        let graph_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../kernel/graph.yaml");
+        let graph =
+            KernelRuntimeGraph::load_from_path(&graph_path).expect("graph fixture should load");
+        assert!(
+            !graph.services.is_empty(),
+            "fixture graph must contain at least one service"
+        );
+        assert!(
+            !graph.boot_order.is_empty(),
+            "fixture graph must declare a boot order"
+        );
     }
 
     #[test]
@@ -519,7 +602,7 @@ mod tests {
             .plan
             .selections
             .iter()
-            .any(|selection| matches!(selection.backend, ExecutionBackend::LlamaCppGpu { .. }))); 
+            .any(|selection| matches!(selection.backend, ExecutionBackend::LlamaCppGpu { .. })));
     }
 
     #[test]
@@ -534,12 +617,117 @@ mod tests {
         let workloads = vec!["gateway".to_string()];
         let assessment = controller.plan(&profile, &workloads).unwrap();
         assert_eq!(assessment.classification, HostClassification::Minimal);
-        assert_eq!(assessment.unsupported_dependencies, vec!["gateway".to_string()]);
+        assert_eq!(
+            assessment.unsupported_dependencies,
+            vec!["gateway".to_string()]
+        );
         assert!(assessment
             .plan
             .fallbacks
             .iter()
             .any(|backend| matches!(backend, ExecutionBackend::PythonLightweight)));
         assert!(!assessment.fallback_notes.is_empty());
+    }
+
+    #[test]
+    fn wasm_probe_runner_executes_minimal_module() {
+        let dir = tempdir().unwrap();
+        let module_path = dir.path().join("probe.wasm");
+        let wasm_bytes = parse_str(
+            r#"(module
+                (import "wasi_snapshot_preview1" "proc_exit" (func $__wasi_proc_exit (param i32)))
+                (memory (export "memory") 1)
+                (func $_start
+                    i32.const 0
+                    call $__wasi_proc_exit)
+                (export "_start" (func $_start)))"#,
+        )
+        .unwrap();
+        fs::write(&module_path, wasm_bytes).unwrap();
+
+        let mut policy = RuntimePolicy::default();
+        policy.enable_wasm_probes = true;
+        policy.wasm_probe_config = WasmProbeConfig {
+            allow_network: false,
+            ..WasmProbeConfig::default()
+        };
+
+        let controller = AdaptiveRuntimeController::new(policy, runtime_graph());
+        let report = controller
+            .run_wasm_probe(&module_path, &[])
+            .expect("probe run should succeed")
+            .expect("runner enabled");
+        assert!(report.duration_ms < 1_000);
+        assert!(report.stdout.is_empty());
+        assert!(report.stderr.is_empty());
+    }
+
+    #[test]
+    fn wasm_probe_respects_timeout_budget() {
+        let dir = tempdir().unwrap();
+        let module_path = dir.path().join("timeout.wasm");
+        let wasm_bytes = parse_str(
+            r#"(module
+                (import "wasi_snapshot_preview1" "proc_exit" (func $__wasi_proc_exit (param i32)))
+                (memory (export "memory") 1)
+                (func $_start
+                    (loop
+                        br 0))
+                (export "_start" (func $_start)))"#,
+        )
+        .unwrap();
+        fs::write(&module_path, wasm_bytes).unwrap();
+
+        let mut policy = RuntimePolicy::default();
+        policy.enable_wasm_probes = true;
+        policy.wasm_probe_config = WasmProbeConfig {
+            max_execution_time_ms: 1,
+            ..WasmProbeConfig::default()
+        };
+
+        let controller = AdaptiveRuntimeController::new(policy, runtime_graph());
+        let result = controller.run_wasm_probe(&module_path, &[]);
+        assert!(matches!(
+            result,
+            Err(RuntimeSelectionError::WasmProbe { .. })
+        ));
+    }
+
+    #[test]
+    fn wasm_probe_enforces_memory_limits() {
+        let dir = tempdir().unwrap();
+        let module_path = dir.path().join("memory.wasm");
+        let wasm_bytes = parse_str(
+            r#"(module
+                (import "wasi_snapshot_preview1" "proc_exit" (func $__wasi_proc_exit (param i32)))
+                (memory (export "memory") 1)
+                (func $_start
+                    i32.const 0
+                    loop
+                        i32.const 1
+                        memory.grow
+                        drop
+                        br 0
+                    end
+                    i32.const 0
+                    call $__wasi_proc_exit)
+                (export "_start" (func $_start)))"#,
+        )
+        .unwrap();
+        fs::write(&module_path, wasm_bytes).unwrap();
+
+        let mut policy = RuntimePolicy::default();
+        policy.enable_wasm_probes = true;
+        policy.wasm_probe_config = WasmProbeConfig {
+            max_memory_mb: 1,
+            ..WasmProbeConfig::default()
+        };
+
+        let controller = AdaptiveRuntimeController::new(policy, runtime_graph());
+        let result = controller.run_wasm_probe(&module_path, &[]);
+        assert!(matches!(
+            result,
+            Err(RuntimeSelectionError::WasmProbe { .. })
+        ));
     }
 }

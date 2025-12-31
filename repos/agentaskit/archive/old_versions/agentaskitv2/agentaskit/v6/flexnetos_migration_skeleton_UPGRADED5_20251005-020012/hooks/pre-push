@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+echo "[pre-push] verify + contract-test + seal/mount status (advisory)"
+make gen-sbom >/dev/null || true
+make sign >/dev/null || true
+make verify
+CAPNP_STRICT=1 make contract-test
+if command -v fsverity >/dev/null 2>&1; then fsverity measure artifacts/MANIFEST.sha256 || true; fi
+if command -v lsattr >/dev/null 2>&1; then lsattr artifacts/MANIFEST.sha256 || true; fi
+grep -q "ro" /proc/self/mountinfo && echo "[pre-push] mountinfo present"
+echo "[pre-push] OK"

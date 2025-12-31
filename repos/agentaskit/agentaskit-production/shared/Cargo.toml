@@ -1,0 +1,22 @@
+[package]
+name = "agentaskit-shared"
+version = "0.1.0"
+edition = "2021"
+authors = ["AgentAsKit Contributors"]
+license = "MIT OR Apache-2.0"
+description = "Shared data models, protocols, types, and utilities for AgentAsKit systems"
+
+[dependencies]
+# Core serialization and async
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+async-trait = "0.1"
+tokio = { version = "1.0", features = ["rt", "macros"] }
+
+# Common utilities
+uuid = { version = "1.0", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+anyhow = "1.0"
+
+# For file operations and configuration
+std = []

@@ -1,0 +1,97 @@
+{
+  "id": "research-notebook-suite",
+  "name": "Research Notebook Experience Suite",
+  "version": "0.1.0",
+  "publisher": {
+    "name": "NOA Ark Labs",
+    "contact": "research@noa-ark.systems"
+  },
+  "licensing": {
+    "model": "workspace-entitlement",
+    "price_tiers": [
+      { "tier": "community", "monthly_usd": 0 },
+      { "tier": "enterprise", "monthly_usd": 499 }
+    ]
+  },
+  "compatibility": {
+    "kernels": ["noa-ark>=1.1.0"],
+    "ui_targets": ["web-shell", "desktop-shell", "mobile-shell"]
+  },
+  "capabilities": [
+    "research-notebook-rendering",
+    "structured-citation-tracking",
+    "workspace-marketplace-toggle"
+  ],
+  "dependencies": [
+    "@noa-ark/shared-ui",
+    "@noa-ark/research-notebook"
+  ],
+  "entitlements": {
+    "workspace_toggles": [
+      {
+        "id": "workspace.research.notebook",
+        "label": "Enable research notebook surface",
+        "description": "Adds the research notebook module to the workspace switcher and registers renderer bindings.",
+        "required_roles": ["researcher", "admin"]
+      },
+      {
+        "id": "workspace.research.media-audit",
+        "label": "Expose notebook media gallery",
+        "description": "Allows notebook exports to stream media artifacts into the shell media gallery.",
+        "required_roles": ["researcher", "operator"]
+      }
+    ]
+  },
+  "media": {
+    "cover": "crc://media/research-notebook-suite/cover.png",
+    "gallery": [
+      "crc://media/research-notebook-suite/dashboard.png",
+      "crc://media/research-notebook-suite/mobile.png"
+    ],
+    "video": "crc://media/research-notebook-suite/overview.mp4"
+  },
+  "install": {
+    "prerequisites": [
+      "Linked package: ui/research-notebook",
+      "Shared UI tokens synced"
+    ],
+    "workflow": "kernel-marketplace-install",
+    "steps": [
+      {
+        "id": "hydrate-ui",
+        "action": "register-ui-module",
+        "params": {
+          "module": "research-notebook",
+          "surfaces": ["web", "desktop", "mobile"]
+        }
+      },
+      {
+        "id": "enable-workspace-toggle",
+        "action": "set-workspace-entitlement",
+        "params": {
+          "toggle": "workspace.research.notebook",
+          "enabled": true
+        }
+      },
+      {
+        "id": "sync-media",
+        "action": "fetch-media-assets",
+        "params": {
+          "sources": [
+            "crc://media/research-notebook-suite/cover.png",
+            "crc://media/research-notebook-suite/dashboard.png",
+            "crc://media/research-notebook-suite/mobile.png"
+          ]
+        }
+      }
+    ]
+  },
+  "marketing": {
+    "summary": "Transform research exports into curated notebooks with citations, media, and responsive layouts.",
+    "highlights": [
+      "One-click workspace enablement via marketplace toggles",
+      "Automated citation registry with provenance metadata",
+      "Responsive rendering across web, desktop, and mobile shells"
+    ]
+  }
+}

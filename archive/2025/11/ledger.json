@@ -1,0 +1,50 @@
+[
+  {
+    "original": "ui/vibe-kanban/server/ai/router.ts",
+    "archive": "archive/2025/11/ui/vibe-kanban/server/ai/router.ts",
+    "sha256": "cb99136e286359899e06fce7b15dd83546e73e062c4a3fdee6bc0edb318774fd",
+    "timestamp": "2025-11-13T00:43:30Z",
+    "reason": "Replaced bespoke router with canonical gateway re-export to enforce single entry point.",
+    "replacement": "ui/vibe-kanban/server/ai/router.ts"
+  },
+  {
+    "original": "ui/vibe-kanban/server/ai/controllers/prompt.ts",
+    "archive": "archive/2025/11/ui/vibe-kanban/server/ai/controllers/prompt.ts",
+    "sha256": "f1270aa8e1ed937c01214a5297cde4c374644b5505132af7e37e8faecdac8c55",
+    "timestamp": "2025-11-13T00:43:30Z",
+    "reason": "Replaced bespoke prompt controller with canonical gateway re-export to eliminate duplication.",
+    "replacement": "ui/vibe-kanban/server/ai/controllers/prompt.ts"
+  },
+  {
+    "original": "ui/vibe-kanban/server/ai/types.ts",
+    "archive": "archive/2025/11/ui/vibe-kanban/server/ai/types.ts",
+    "sha256": "f5721b28ae74984738322aa694c0d90b8b1d1702c92b76a2b37f5ad1aea1e3ba",
+    "timestamp": "2025-11-13T00:43:30Z",
+    "reason": "Replaced bespoke AI provider type definition with canonical gateway re-export.",
+    "replacement": "ui/vibe-kanban/server/ai/types.ts"
+  },
+  {
+    "original": "scripts/triage_analyzer.py",
+    "archive": "archive/2025/11/scripts/triage_analyzer.py.archive.json",
+    "sha256": "98f8769d13e53e6c39002d9c726e4cefa071cd55e5361fb75dba89a7630736e0",
+    "timestamp": "2025-11-14T21:51:21.395212Z",
+    "reason": "Upgraded CLI script into event-driven triage service with remediation automation. Legacy script replaced with text-armored snapshot to satisfy no-binary policy.",
+    "replacement": "scripts/triage_analyzer.py"
+    "original": ".vscode/",
+    "archive": "archive/2025/11/.vscode.tar.b64",
+    "sha256": "a00da042a7a416a5ff9f594899a14876fae5a835b130b0c405eb5ef7aae5c7fd",
+    "timestamp": "2025-11-14T23:06:38Z",
+    "reason": "Captured IDE configuration prior to CLI-first workflow adoption.",
+    "replacement": "server/tools/dev_env_cli.py",
+    "notes": "Base64 encoded tarball replaces binary .tar.zst artifact to satisfy GitHub storage policy."
+  },
+  {
+    "original": ".devcontainer/",
+    "archive": "archive/2025/11/.devcontainer.tar.b64",
+    "sha256": "9969593c8ee60bb3d524871906287205854367a67fe931c267c99a0b6d78dd17",
+    "timestamp": "2025-11-14T23:06:38Z",
+    "reason": "Prepared devcontainer assets for archival after CLI parity verification.",
+    "replacement": "docs/roadmap/cli_config_migration_checklist.md",
+    "notes": "Base64 encoded tarball replaces binary .tar.zst artifact to satisfy GitHub storage policy."
+  }
+]

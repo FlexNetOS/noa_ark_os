@@ -1,0 +1,38 @@
+{
+  "name": "research-notebook-bundle",
+  "source_type": "repos",
+  "version": "2024.06.12",
+  "description": "Curated CRC research notebooks prepared for ready-state promotion.",
+  "notebooks": [
+    {
+      "path": "notebooks/development/01_core_os_development.ipynb",
+      "version": "1.2.0",
+      "kernel": "python3",
+      "tags": ["development", "crc", "core-os"]
+    },
+    {
+      "path": "notebooks/analysis/performance_analysis.ipynb",
+      "version": "0.9.5",
+      "kernel": "python3",
+      "tags": ["analysis", "metrics"]
+    }
+  ],
+  "datasets": [
+    {
+      "path": "datasets/workspace_metrics_daily.csv",
+      "description": "Daily CRC deployment metrics extracted from telemetry exports",
+      "refresh_cadence": "daily"
+    }
+  ],
+  "installation": [
+    "python -m venv .venv",
+    "source .venv/bin/activate",
+    "pip install -r notebooks/requirements.txt",
+    "jupyter nbextension enable --py widgetsnbextension"
+  ],
+  "promotion_steps": [
+    "Copy bundle into crc/drop-in/ready/research-notebook/repos",
+    "Register notebooks via crc orchestrator manifest sync",
+    "Execute CRC digest smoke test to confirm ingestion"
+  ]
+}

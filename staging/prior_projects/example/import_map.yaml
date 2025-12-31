@@ -1,0 +1,4 @@
+# Rename/move/merge rules for importing prior project assets
+# - from: quarantine/path/file.ext
+#   to:   normalized/path/file.ext
+#   action: copy | move | merge

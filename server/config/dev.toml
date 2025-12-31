@@ -1,0 +1,8 @@
+[server]
+host = "0.0.0.0"
+workers = 2
+
+[observability]
+log_level = "debug"
+metrics_bind = "127.0.0.1"
+metrics_port = 9200

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["documentation","generated","micro","ml_controller","model_selector","orchestrator","specialist"]};

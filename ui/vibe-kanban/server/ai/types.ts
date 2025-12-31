@@ -1,5 +1,4 @@
-export interface AIProvider {
-  name: string;
-  isConfigured(): boolean;
-  completePrompt(prompt: string): Promise<string>;
-}
+/**
+ * Re-export canonical AI provider types so existing imports continue to work.
+ */
+export type { AIProvider } from "@noa-ark/server/ai/providers/provider";

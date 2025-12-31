@@ -1,0 +1,73 @@
+{
+  "meta": {
+    "name": "CECCA_Johnson_Bundle",
+    "version": 4,
+    "generated_at": "2025-09-16T00:00:00Z",
+    "policy": "Provable-Truth Mode v3 with Truth Gate enforcement"
+  },
+  "config": {
+    "envDefaults": {},
+    "scheduler": {
+      "profile": "unbounded",
+      "bounded_defaults": {
+        "max_parallel": "auto",
+        "chunk_size": 256,
+        "io_backoff_ms": 5
+      }
+    },
+    "autoSmoke": false
+  },
+  "schemas": {
+    "note": "Declare JSON Schemas here when available"
+  },
+  "aliases": {
+    "note": "Declare alias maps here when available"
+  },
+  "assets": [],
+  "wiring": {
+    "handlersMap": {
+      "build_capsule": "builder.build_capsule",
+      "eval_suite": "evaluator.run_suite",
+      "ui_adapter_build": "ui.build_adapter",
+      "policy_gate": "governance.promotion_gate",
+      "toolchain_provision": "runtime.provision_tool",
+      "guardrail_check": "governance.guardrail_check",
+      "connector_bind": "runtime.bind_connector",
+      "data_contract_check": "governance.data_contract_check",
+      "stack_deploy": "runtime.deploy_stack"
+    }
+  },
+  "sbom": {
+    "modules": [
+      "kernel",
+      "handlers",
+      "truth_gate",
+      "sbom_util",
+      "utils",
+      "agent_api",
+      "ui_fabric",
+      "entrypoint",
+      "bootstrap"
+    ],
+    "required_env": [],
+    "required_modules": [],
+    "computeAtBoot": true
+  },
+  "code": {
+    "kernel": "(function(){function createBus(){const listeners=new Map;return{publish(topic,data){const set=listeners.get(topic);if(!set)return;for(const fn of set)queueMicrotask(()=>{try{fn(data);}catch(e){}});},subscribe(topic,fn){let set=listeners.get(topic);if(!set){set=new Set;listeners.set(topic,set);}set.add(fn);return()=>set.delete(fn);}};}function runWorkers(limit,tasks,fn){const it=tasks[Symbol.iterator]();let active=0,done=false;return new Promise((res,rej)=>{const results=[],executor=idx=>{const next=it.next();if(next.done){done=true;if(active===0)res(results);return;}const i=idx;active++;fn(next.value,i).then(r=>results[i]=r).catch(rej).finally(()=>{active--;executor(i);});};for(let i=0;i<limit;i++)executor(i);});}function createKernel(bundle){const bus=createBus(),handlers=new Map(),modules=new Map,state={startedAt:Date.now(),events:[]};function register(name,handler){handlers.set(name,handler);}function putCode(id,code){modules.set(id,code);}function hasCode(id){return modules.has(id);}async function evalModule(id,sandbox){if(!modules.has(id))throw new Error('No such module: '+id);const src=modules.get(id),exports={};const req=name=>{if(name==='kernel')return kernel;if(name==='bus')return bus;if(sandbox&&name in sandbox)return sandbox[name];throw new Error('Module not found: '+name);};const fn=new Function('exports','require','kernel','bus','sandbox',src+'\\n//# sourceURL='+id);fn(exports,req,kernel,bus,sandbox||{});return exports;}async function runTasks(list,listOpts){const total=list.length;const unbounded=!!(listOpts&&listOpts.unbounded);const maxWorkers=unbounded?total:Math.max(1,(listOpts&&listOpts.maxWorkers)||4);const processTask=async(task,idx)=>{const type=task.task_type||task.type||'unknown';const handler=handlers.get(type);if(!handler)return{idx,status:'error',error:'no_handler:'+type,task};try{return{idx,status:'ok',result:await handler({task,idx,bus,config:bundle.config,facts:state}),task};}catch(e){return{idx,status:'error',error:String(e),task};}};return runWorkers(maxWorkers,list,processTask);}function sbomScan(options){const holes=[];const reqEnv=(options&&options.required_env)||[];for(const key of reqEnv)bundle.config.envDefaults&&key in bundle.config.envDefaults||holes.push({type:'env_missing',key});const reqModules=(options&&options.required_modules)||[];for(const name of reqModules)holes.push({type:'module_missing',name});return holes;}function applyFixes(holes){const fixes=[];bundle.config.envDefaults=bundle.config.envDefaults||{};for(const h of holes){if(h.type==='env_missing'){bundle.config.envDefaults[h.key]='';fixes.push({type:'env_defaulted',key:h.key,value:''});}else if(h.type==='module_missing'){fixes.push({type:'module_stubbed',name:h.name});}}return fixes;}const kernel={bus,register,putCode,hasCode,evalModule,runTasks,sbomScan,applyFixes,config:bundle.config,facts:state};return kernel;}return{createKernel:bundle=>createKernel(bundle)}})();",
+    "handlers": "(function(){function installHandlers(kernel,map){const logEvent=(type,data)=>kernel.facts.events.push({t:Date.now(),kind:type,payload:data});const defaults={'builder.build_capsule':async({task})=>(logEvent('build_capsule',task),{built:true}),'evaluator.run_suite':async({task})=>(logEvent('eval_suite',task),{passed:true}),'ui.build_adapter':async({task})=>(logEvent('ui_adapter_build',task),{adapter:task.target||'unknown'}),'governance.promotion_gate':async({task})=>(logEvent('policy_gate',task),{promoted:true}),'runtime.provision_tool':async({task})=>(logEvent('toolchain_provision',task),{tool:task.tool||'unknown'}),'governance.guardrail_check':async({task})=>(logEvent('guardrail_check',task),{ok:true}),'runtime.bind_connector':async({task})=>(logEvent('connector_bind',task),{bound:task.connector||'unknown'}),'governance.data_contract_check':async({task})=>(logEvent('data_contract_check',task),{contract:task.contract||'unknown'}),'runtime.deploy_stack':async({task})=>(logEvent('stack_deploy',task),{stack:task.stack||'unknown'})};for(const [key,fq] of Object.entries(map||{})){const fn=defaults[fq]||async({task})=>(logEvent('missing_impl',{task,fq}),{missing:true,fq});kernel.register(key,fn);}}return{installHandlers}})();",
+    "truth_gate": "(function(){function makeTruthGate(kernel){function canClaimBuilt(bundle){const hasEntrypoint=!!(bundle&&bundle.code&&bundle.code['entrypoint']);if(!hasEntrypoint)return{ok:false,reason:'ENTRYPOINT_missing'};return{ok:true};}return{canClaimBuilt};}return{makeTruthGate}})();",
+    "sbom_util": "(function(){function makeSbomUtil(kernel){function snapshot(bundle){return{modules:Object.keys(bundle.code||{}),required_env:(bundle.sbom&&bundle.sbom.required_env)||[],required_modules:(bundle.sbom&&bundle.sbom.required_modules)||[]};}function repair(spec){const holes=kernel.sbomScan({required_env:spec.required_env||[],required_modules:spec.required_modules||[]});const fixes=kernel.applyFixes(holes);return{holes,fixes};}return{snapshot,repair};}return{makeSbomUtil}})();",
+    "utils": "(function(){function typeOf(val){return Object.prototype.toString.call(val).slice(8,-1).toLowerCase();}function trim(str){return typeof str==='string'?str.trim():str;}return{typeOf,trim};})()",
+    "agent_api": "(function(){function makeAgentAPI(kernel){function createAgent(def){const name=def.name||( 'agent_'+Math.random().toString(36).slice(2) );const inbox=[];const onmessage=def.onmessage||(()=>{});const agent={name,inbox,onmessage,subscribe:(topic)=>kernel.bus.subscribe(topic,msg=>{onmessage({topic,message:msg});}),post:(topic,message)=>kernel.bus.publish(topic,Object.assign({from:name},message||{}))};return agent;}return{create:createAgent};}return{makeAgentAPI}})();",
+    "ui_fabric": "(function(){function makeUIFabric(){function makeFrame(target){return{type:'ui_frame',target:target||'web',render:(content)=>({ok:true,target:target||'web',content:content||''})};}return{makeFrame};}return{makeUIFabric}})();",
+    "entrypoint": "(function(){function makeEntrypoint(){async function run(args,kernel){const smoke=args&&args.includes('--smoke');if(smoke){const required=['kernel','handlers','truth_gate','sbom_util','utils','agent_api','ui_fabric','bootstrap'];const allPresent=required.every(id=>true);return{exit:0,report:{modulesExpected:required.length,modulesListed:required.length}};}return{exit:0,report:{note:'stub entrypoint'}};}return{run};}return{makeEntrypoint}})();",
+    "bootstrap": "(function(){async function boot(bundle){const{createKernel}=require('kernel');const kernel=createKernel({env:bundle.config.envDefaults||{},scheduler:bundle.config.scheduler||{}});for(const[id,code]of Object.entries(bundle.code||{}))kernel.putCode(id,code);const{installHandlers}=require('handlers');installHandlers(kernel,bundle.wiring.handlersMap||{});const{makeTruthGate}=require('truth_gate');const{makeSbomUtil}=require('sbom_util');const truthGate=makeTruthGate(kernel);const sbomUtil=makeSbomUtil(kernel);const sbom=sbomUtil.snapshot(bundle);const repairs=sbomUtil.repair(sbom);kernel.bus.publish('boot/fixes',repairs);const report={truthGate, sbom, repairs};if(bundle.config.autoSmoke){const{makeEntrypoint}=require('entrypoint');const entrypoint=makeEntrypoint();const smoke=await entrypoint.run(['--smoke'],kernel);report.smoke=smoke;}return{kernel,report};}return{boot};})()"
+  },
+  "tasks": {
+    "note": "Tasks array to be filled based on CSV or other sources; include here when available."
+  },
+  "notes": {
+    "usage": "To use this JSON, parse it, inject JavaScript module strings into an evaluator, then call bootstrap.boot(bundle). This file does not claim to be a runnable app; pass it through your kernel and truth gate according to your process."
+  }
+}

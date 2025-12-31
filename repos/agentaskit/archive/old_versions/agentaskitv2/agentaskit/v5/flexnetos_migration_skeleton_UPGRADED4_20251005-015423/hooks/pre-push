@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+echo "[pre-push] verify + contract-test + seal status (advisory)"
+make gen-sbom >/dev/null || true
+make sign >/dev/null || true
+make verify
+CAPNP_STRICT=1 make contract-test
+if command -v fsverity >/dev/null 2>&1; then fsverity measure artifacts/MANIFEST.sha256 || true; fi
+if command -v lsattr >/dev/null 2>&1; then lsattr artifacts/MANIFEST.sha256 || true; fi
+echo "[pre-push] OK"

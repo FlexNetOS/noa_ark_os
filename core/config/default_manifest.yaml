@@ -37,6 +37,20 @@ capabilities:
       - core.memory
       - core.security
       - core.gateway
+token_policies:
+  - scope: host.environment.takeover
+    description: "Allows an actor to request exclusive control over a managed environment"
+    ttl_seconds: 600
+    capabilities:
+      - core.process
+      - core.security
+  - scope: host.resource.arbitrate
+    description: "Allows an actor to arbitrate CPU/memory allocations for an environment"
+    ttl_seconds: 600
+    capabilities:
+      - core.process
+      - core.memory
+      - core.security
 runtimes:
   - name: rust
     kind: rust

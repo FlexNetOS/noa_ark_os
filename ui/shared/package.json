@@ -37,6 +37,10 @@
       "import": "./dist/session/index.js",
       "types": "./dist/session/index.d.ts"
     },
+    "./logging": {
+      "import": "./dist/logging.js",
+      "types": "./dist/logging.d.ts"
+    },
     "./samples": {
       "import": "./dist/samples/index.js",
       "types": "./dist/samples/index.d.ts"
@@ -51,9 +55,9 @@
     "react": ">=18"
   },
   "devDependencies": {
-    "@types/react": "18.2.73",
-    "tsx": "4.7.1",
-    "typescript": "5.4.5"
+    "@types/react": "19.2.6",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3"
   },
   "dependencies": {}
 }

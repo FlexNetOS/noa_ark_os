@@ -1,0 +1,12 @@
+[package]
+name = "noa_server_core"
+description = "Shared configuration and bootstrap primitives for the NOA server"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+config = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+thiserror = { workspace = true }

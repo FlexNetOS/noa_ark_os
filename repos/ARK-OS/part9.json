@@ -1,0 +1,23 @@
+{
+  "bundle": {
+    "name": "noa-cecca-stemcell-bundle-part9",
+    "version": "0.5.1-part9",
+    "created": "2025-09-16T00:00:00Z",
+    "style": "kernel-first • message-passing • async-only • no-globals • zero-bloat",
+    "entry": "kernel/bootstrap",
+    "sbom": {
+      "policy": {
+        "failOnMissingModules": false,
+        "failOnMissingEnv": false
+      },
+      "expectedEnv": ["NOA_PORT", "OFFLINE_MODE", "BASE_URL"],
+      "autoFix": true
+    },
+    "modules": {
+      "NOTE": {
+        "language": "text",
+        "code": "This part is intentionally left minimal. All documents and assets have been encoded in previous parts (parts1 through 8). Use this part as a final placeholder to indicate completion of the bundle partitioning."
+      }
+    }
+  }
+}

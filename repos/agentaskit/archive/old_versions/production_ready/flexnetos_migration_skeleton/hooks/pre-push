@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+echo "[pre-push] verify + contract-test gates"
+make gen-sbom >/dev/null || true
+make sign >/dev/null || true
+make verify
+make contract-test
+echo "[pre-push] OK"

@@ -1,0 +1,224 @@
+{
+  "bundle": "ark-ai-noa",
+  "version": "1.0.1",
+  "style": "CECCA Stem-Cell Kernel + Capsule-First + Cell-Based Architecture",
+  "principles": [
+    "kernel-first",
+    "message-passing only",
+    "async-first",
+    "no-globals",
+    "local-first",
+    "capsule-first",
+    "decentralized & distributed",
+    "auditable & reversible",
+    "zero-bloat"
+  ],
+  "aliases": ["Ark-AI", "Ark AI OS", "Flex Net OS", "Deflex", "Element Ark", "micro-agent", "nano-agent", "Ark-OS-NOA", "NOA"],
+  "targets": {
+    "platforms": ["windows11-pro", "ubuntu", "android-mobile", "android-xr"],
+    "tiers": {
+      "base": { "role": "orchestrator+heavy-infer", "gpu": true },
+      "mobile": { "role": "companion+mid-infer", "gpu": "optional" },
+      "xr": { "role": "capture+ultralight-infer", "gpu": false }
+    }
+  },
+  "connectivityModes": {
+    "default": "offline",
+    "offline": {
+      "allowInternet": false,
+      "updateMechanism": "signed-capsules",
+      "modelSources": ["local://models", "capsule://models"],
+      "telemetry": "disabled"
+    },
+    "connected": {
+      "allowInternet": true,
+      "p2pMesh": "enabled",
+      "modelSources": ["hf://", "ollama://optional", "local://"],
+      "telemetry": "opt-in",
+      "egressPolicy": "deny-by-default; allowlist by capsule"
+    }
+  },
+  "naming": { "canonical": "Ark-AI-NOA", "rootKernel": "CECCA", "aka": ["ChiefExecutiveChiefCommanderAgent", "CEO", "NOA"] },
+  "kernel": {
+    "id": "cecca.kernel",
+    "type": "stem-cell",
+    "msgBus": {
+      "transport": "inproc|ipc|p2p",
+      "topics": [
+        "perception.*",
+        "telemetry.*",
+        "artifact.*",
+        "intent.*",
+        "control.*",
+        "court.*",
+        "capsule.*",
+        "digest.*",
+        "optimizer.*",
+        "verify.*",
+        "report"
+      ],
+      "delivery": "at-least-once",
+      "ordering": "causal"
+    },
+    "scheduler": {
+      "policy": "work-stealing async",
+      "priorities": ["realtime", "interactive", "batch", "maintenance"],
+      "budgeting": { "cpu_ms": 20, "gpu_pct": 40, "mem_mb": 512, "io_mbps": 50 }
+    },
+    "governance": {
+      "court": {
+        "gates": ["unit-tests", "policy-packs", "eval-suites", "security-scan", "repro-sim"],
+        "policyPacks": ["licenses", "CVE-thresholds", "network-egress", "privacy-modes"]
+      },
+      "audit": { "enabled": true, "format": "jsonl", "sign": true }
+    },
+    "capsuleRuntime": {
+      "format": "capsule.v1",
+      "manifest": "capsule.yaml",
+      "signing": "ed25519",
+      "storage": "content-addressed",
+      "sandbox": "seccomp+nsjail (platform-specific)"
+    }
+  },
+  "dataPlane": {
+    "objects": { "store": "minio|local-fs", "addressing": "sha256://", "encryption": "aes-gcm" },
+    "vectors": { "store": "pgvector|lite", "dimensions": [384, 768, 1024] },
+    "events": { "bus": "redis|nats|inproc", "nlSchema": "NLDB.envelope.v1" },
+    "graphs": { "knowledge": "entities+edges", "environment": "EFG: environment+function graph" }
+  },
+  "security": {
+    "identity": { "perDevice": "ed25519", "mtls": true },
+    "authz": { "model": "capability-scoped-per-capsule", "default": "deny" },
+    "privacy": { "modes": ["strict-offline", "local-share", "trusted-mesh"], "default": "strict-offline" }
+  },
+  "p2p": {
+    "discovery": ["mdns", "static-peers", "invite-capsule"],
+    "overlay": "wireguard-like",
+    "replication": {
+      "crdtLogs": ["notes", "tasks", "context"],
+      "artifacts": "content-addressed",
+      "topicsMirror": ["perception.*", "artifact.*"]
+    },
+    "failover": { "mobileCanPromoteTo": "base-lite", "xrFallback": "mobile or nearest peer" }
+  },
+  "capsuleStorage": {
+    "namespaces": ["user/*", "device/*", "project/*", "org/*"],
+    "contents": ["models", "adapters", "tools", "ui", "playbooks", "policies", "evals", "sbom", "manifests", "state"],
+    "lifecycle": "sandbox -> court -> live",
+    "rollback": "digest-pin-revert"
+  },
+  "modelPlane": {
+    "apis": ["/infer/generate", "/infer/vision", "/infer/embeddings", "/asr", "/tts"],
+    "sources": {
+      "primary": ["hf://direct", "local://bundles"],
+      "optional": ["ollama://adapter"]
+    },
+    "tiers": {
+      "xr": ["asr.tiny", "vlm.lite", "kws.tiny"],
+      "mobile": ["llm.7b-13b", "whisper.small-base", "vlm.medium"],
+      "base": ["llm.30b-70b", "batch.embedder", "vision.heavy"]
+    }
+  },
+  "ui": {
+    "style": "dynamic-contextual",
+    "channels": ["desktop", "mobile", "xr"],
+    "intents": ["build", "ingest", "analyze", "compose", "optimize", "govern"],
+    "push": "websocket|ipc"
+  },
+  "digestEverything": {
+    "ingestors": ["fs-watch", "repo-spider", "db-tap", "net-sensor", "app/driver/browser/firmware-inspector"],
+    "parsers": ["code", "docs", "tables", "binaries", "telemetry"],
+    "embed": ["clip", "sentence-transformers", "audio-text"],
+    "graphers": ["efg", "knowledge-graph"],
+    "proposers": ["optimizer", "fixer", "tool-composer"]
+  },
+  "agents": {
+    "executive": { "id": "noa.exec", "role": "CECCA.top", "loop": ["sense", "plan", "act", "verify", "report"] },
+    "board": [
+      { "id": "board.strategy", "role": "strategy" },
+      { "id": "board.ops", "role": "operations" },
+      { "id": "board.security", "role": "security" },
+      { "id": "board.legal", "role": "legal" },
+      { "id": "board.finance", "role": "finance" },
+      { "id": "board.growth", "role": "growth" },
+      { "id": "board.digest", "role": "research-digest" }
+    ],
+    "modelSelectors": [
+      { "id": "selector.route.llm", "policy": "latency/cost/accuracy" },
+      { "id": "selector.route.vlm", "policy": "modality-fit" },
+      { "id": "selector.route.asr", "policy": "noise/battery" }
+    ],
+    "storage": { "id": "store.master", "role": "artifacts+vectors+graphs" },
+    "microAgentStacks": {
+      "spawner": { "id": "cmdchief", "role": "stack-orchestrator" },
+      "why": ["ephemeral focused swarms", "budgeted & auditable", "parallelizable and composable"],
+      "lifecycle": ["brief", "plan", "execute", "verify", "report", "teardown"]
+    },
+    "persona": {
+      "id": "persona.capsule",
+      "purpose": "on-device voice/face assistant for calls with disclosure",
+      "safety": { "badge": true, "periodicChime": true, "livenessCheck": true, "legalApprovalRequired": true }
+    }
+  },
+  "platformTiers": {
+    "base": {
+      "services": ["gateway", "data-plane", "court", "optimizer", "ui"],
+      "endpoints": ["/devices/register", "/nldb/ingest", "/artifacts/:sha256", "/health"]
+    },
+    "mobile": { "services": ["register", "sync-daemon", "edge-cache", "ui"], "policies": ["wifi-only-uplink", "power-aware"] },
+    "xr": { "services": ["long-record", "asr-tiny", "vlm-lite", "publisher"], "transport": ["ble", "wifi-direct", "lan"] }
+  },
+  "flow": {
+    "boot": ["sbom.scan", "sbom.patch-shims", "mode.detect", "p2p.init-if-allowed", "court.load-policies", "capsules.mount-live", "exec.loop.start"],
+    "ingestToAction": ["ingest.* -> parse.* -> embed.* -> graph.* -> board.digest.review -> selectors.pick-models -> stacks.spawn -> court.gate -> apply/rollback"],
+    "optimize": ["optimizer.detect -> propose.capsule -> sandbox.test -> court.approve -> promote.live"]
+  },
+  "sbom": {
+    "autoScanOnBoot": true,
+    "checks": {
+      "envVars": ["NOA_MODE", "NOA_DATA_DIR", "NOA_GPU", "HTTP_PROXY", "HTTPS_PROXY"],
+      "modulesRequired": ["llm.runtime", "vlm.runtime", "asr.runtime", "vector.index", "object.store", "msgbus.runtime"],
+      "filesRequired": ["capsules/*/capsule.yaml", "models/*", "policies/*", "playbooks/*"]
+    },
+    "repair": {
+      "shims": [
+        { "id": "shim.msgbus", "provides": "msgbus.runtime", "fallback": "inproc" },
+        { "id": "shim.objects", "provides": "object.store", "fallback": "local-fs" },
+        { "id": "shim.vector", "provides": "vector.index", "fallback": "lite-index" }
+      ],
+      "fetchers": [{ "id": "shim.hf", "source": "hf://", "policy": "checksum+signatures", "enabledIf": "connected" }]
+    }
+  },
+  "capsules": [
+    {
+      "id": "capsule.persona",
+      "kind": "tool+ui+policy",
+      "manifest": { "disclosure": true, "liveness": true, "watermark": true, "legalApproval": "required" },
+      "provides": ["ui.persona", "tts.voice", "face.render"],
+      "policies": ["no-exfiltration", "meeting-domain-allowlist"]
+    },
+    {
+      "id": "capsule.optimizer.host-awareness",
+      "kind": "analyzer+fixer",
+      "ingestors": ["os", "drivers", "browser", "firmware"],
+      "proposes": ["gpu-driver-tune", "power-governor", "browser-hardening"],
+      "gates": ["tests", "policy", "rollback-ok"]
+    },
+    {
+      "id": "capsule.ingest.everything",
+      "kind": "ingest+embed+graph",
+      "sources": ["fs", "repos", "db", "network"],
+      "outputs": ["artifacts", "vectors", "efg", "knowledge-graph"]
+    }
+  ],
+  "policies": {
+    "egress": "block-all-by-default",
+    "capsuleApproval": "court-required",
+    "personaDisclosure": "mandatory"
+  },
+  "dev": {
+    "apiSurface": ["/devices/register", "/nldb/ingest", "/artifacts/:hash", "/infer/*", "/asr", "/tts", "/health"],
+    "migrations": ["aliases->canonical", "models to content-addressed paths"]
+  },
+  "expectations": { "latencyInteractiveSec": 2, "taskBurst": 200, "taskSuccessPct": 98 }
+}

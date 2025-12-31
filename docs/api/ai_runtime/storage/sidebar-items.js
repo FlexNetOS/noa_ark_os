@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["ArtifactRecord","CapabilityRegistry","FilesystemArtifactStore"],"trait":["ModelArtifactStore","RegistryGateway"]};

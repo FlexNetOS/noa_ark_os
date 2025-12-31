@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["CodeGenerationAgent","CodeTemplate","GeneratedCode","GenerationData","GenerationRequest"]};

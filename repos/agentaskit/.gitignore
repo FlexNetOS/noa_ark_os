@@ -1,0 +1,49 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors/IDEs
+.vscode/
+.idea/
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.vsidx
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Node
+node_modules/
+
+# Rust/Cargo
+/target/
+**/target/
+
+# Logs & caches (keep TEST/ tracked for evidence)
+*.log
+!.github/**
+!agentaskit-production/TEST/**
+
+# Build artifacts (do not ignore evidence dirs)
+*.tmp
+*.cache
+
+# Git
+*.orig
+*.rej
+
+# Models / binaries
+*.gguf
+agentaskit-production/integrations/llama.cpp/llama.cpp/build/
+agentaskit-production/integrations/llama.cpp/llama.cpp/bin/
+agentaskit-production/integrations/llama.cpp/llama.cpp/main
+
+# Do not ignore evidence/e2e directories by default
+!agentaskit-production/operational_hash/**
+!agentaskit-production/sbom/**
+!agentaskit-production/anchors/**

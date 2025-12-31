@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["RiskGrade"],"fn":["execute_plan"],"struct":["DiffArtifact","DummyVerifier","FileReplacePlan","VerifierOutcome"],"trait":["TransformPlan","Verifier"]};

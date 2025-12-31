@@ -1,0 +1,11 @@
+name: Container Build
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build container (stub)
+        run: echo "Build container image here"

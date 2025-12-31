@@ -52,7 +52,9 @@ export const vibeDashboardEnvelope: PageEnvelope = {
         surface: "surface.glass",
         widgets: [
           { id: "presence", kind: "workspace.presence", component: "PresenceBar" },
+          { id: "planner", kind: "workspace.planner", component: "PlannerPanel" },
           { id: "assist", kind: "workspace.assist", component: "AssistPanel" },
+          { id: "uploads", kind: "workspace.uploads", component: "UploadPanel" },
           { id: "analytics", kind: "workspace.analytics", component: "AnalyticsPanel" },
           { id: "activity", kind: "workspace.activity", component: "ActivityTimeline" },
         ],

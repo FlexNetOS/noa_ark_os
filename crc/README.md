@@ -37,6 +37,21 @@ CRC automatically adapts external code (repos, forks, mirrors, stale codebases) 
 - 📊 **Cross-Reference**: Fast lookups without decompression
 - 🚀 **Zero-Touch**: Complete automation from drop to deploy
 
+## Local Smoke Tests
+
+Quickly validate core CRC workflows before submitting a change:
+
+```bash
+# CAS round-trip hash stability
+cargo test -p noa_crc --test cas_smoke
+
+# Digestors + ingest report generation
+cargo test -p noa_crc --test digest_smoke
+
+# DAG orchestration checkpoint verification
+cargo test -p noa_crc --test dag_seed
+```
+
 ## Directory Structure
 
 ```

@@ -1,0 +1,665 @@
+{
+  "name": "NOA ARK OS – Comprehensive Agentic Kernel Roadmap",
+  "version": "2025-11-14",
+  "description": "Machine-readable roadmap for evolution from OS foundation to fully autonomous, AI-first, kernel-sovereign operating system",
+  "goals": [
+    {
+      "id": 1,
+      "title": "AI-First Operating Core",
+      "description": "Kernel designed for AI agents, not humans"
+    },
+    {
+      "id": 2,
+      "title": "Autonomous Self-Improvement",
+      "description": "System evolves itself safely"
+    },
+    {
+      "id": 3,
+      "title": "Single North Star (Integrity, Reversibility, Capability Gain)",
+      "description": "One unified measure of system health"
+    },
+    {
+      "id": 4,
+      "title": "Kernel Sovereignty",
+      "description": "Kernel controls all resources, policies, and trust"
+    },
+    {
+      "id": 5,
+      "title": "AI-Native (not human-centric)",
+      "description": "Optimized for machine reasoning and execution"
+    },
+    {
+      "id": 6,
+      "title": "Unified Machine-Readable Registry",
+      "description": "Single source of truth for all capabilities"
+    },
+    {
+      "id": 7,
+      "title": "Reduce Context Rot & Token Waste",
+      "description": "Eliminate redundancy and inefficiency"
+    },
+    {
+      "id": 8,
+      "title": "Dynamic Trust & Adaptive Access",
+      "description": "Permissions adjust based on behavior"
+    },
+    {
+      "id": 9,
+      "title": "Full Reversibility & Integrity",
+      "description": "Every change can be rolled back"
+    },
+    {
+      "id": 10,
+      "title": "Policies as Code",
+      "description": "All rules machine-readable and enforceable"
+    },
+    {
+      "id": 11,
+      "title": "Observability & Auditability",
+      "description": "Complete system transparency"
+    },
+    {
+      "id": 12,
+      "title": "System-Health Rewarding",
+      "description": "Incentivize stability and efficiency"
+    },
+    {
+      "id": 13,
+      "title": "World Model",
+      "description": "Comprehensive system understanding"
+    },
+    {
+      "id": 14,
+      "title": "Environment Portability",
+      "description": "Deploy anywhere (single host, edge, air-gapped, cloud)"
+    },
+    {
+      "id": 15,
+      "title": "Supply-Chain Security",
+      "description": "Verifiable builds and dependencies"
+    },
+    {
+      "id": 16,
+      "title": "Proactive Operation",
+      "description": "Anticipate and prevent issues"
+    },
+    {
+      "id": 17,
+      "title": "Humanless Autonomy",
+      "description": "Capable of self-operation"
+    },
+    {
+      "id": 18,
+      "title": "CLI-First Interface",
+      "description": "All capabilities accessible via unified CLI for both humans and AI agents; IDE extensions deprecated"
+    }
+  ],
+  "phases": [
+    {
+      "id": "P0",
+      "title": "Repo Foundation & Dead Code Quarantine",
+      "serves_goals": [1, 5, 7, 9, 10, 11, 16],
+      "status": "planned",
+      "objective": "Zero zombie code; instant reversibility",
+      "tasks": [
+        {
+          "id": "P0-T1",
+          "desc": "Create /archive/quarantine/<component>@<commit>/ with README.md + status.yaml",
+          "status": "planned"
+        },
+        {
+          "id": "P0-T2",
+          "desc": "CI fails if quarantined code is referenced by build/tests",
+          "status": "planned"
+        },
+        {
+          "id": "P0-T3",
+          "desc": "90-day auto-archive job to cold repo",
+          "status": "planned"
+        },
+        {
+          "id": "P0-T4",
+          "desc": "make snapshot / make rollback hooks",
+          "status": "planned"
+        },
+        {
+          "id": "P0-T5",
+          "desc": "AGENT.md: Dead Code + Reintegration Procedure",
+          "status": "planned"
+        }
+      ]
+    },
+    {
+      "id": "P0.5",
+      "title": "CLI-First Foundation",
+      "serves_goals": [1, 5, 6, 7, 10, 11, 14, 18],
+      "status": "planned",
+      "priority": "critical",
+      "objective": "Unified CLI as primary interface for humans and AI agents; deprecate IDE extensions",
+      "tasks": [
+        {
+          "id": "P0.5-T1",
+          "desc": "Create noa CLI core binary with 10+ subcommands (kernel, world, registry, trust, snapshot, agent, policy, sbom, pipeline, profile)",
+          "status": "planned"
+        },
+        {
+          "id": "P0.5-T2",
+          "desc": "Implement dual-mode output: --json, --yaml, --tui, --watch, --format",
+          "status": "planned"
+        },
+        {
+          "id": "P0.5-T3",
+          "desc": "Add streaming and interactive capabilities (live output, TUI navigation, etc.)",
+          "status": "planned"
+        },
+        {
+          "id": "P0.5-T4",
+          "desc": "CLI-based development workflow (init, test, build, deploy, debug)",
+          "status": "planned"
+        },
+        {
+          "id": "P0.5-T5",
+          "desc": "AI agent integration (invoke, query, plan, exec with structured output)",
+          "status": "planned"
+        },
+        {
+          "id": "P0.5-T6",
+          "desc": "Deprecate IDE extensions, document migration path, create noa ide migrate",
+          "status": "planned"
+        },
+        {
+          "id": "P0.5-T7",
+          "desc": "Shell completion and scripting support (bash, zsh, fish, pwsh)",
+          "status": "planned"
+        }
+      ]
+    },
+    {
+      "id": "P1",
+      "title": "Kernel-First Baseline",
+      "serves_goals": [1, 3, 4, 5, 9, 10, 11, 14],
+      "status": "in_progress",
+      "objective": "Kernel as sovereign controller",
+      "progress": 40,
+      "tasks": [
+        {
+          "id": "P1-T1",
+          "desc": "Create kernel bundle: policy, tokens, snapshot, registry, events",
+          "status": "in_progress"
+        },
+        {
+          "id": "P1-T2",
+          "desc": "make kernel, make image separation",
+          "status": "planned"
+        },
+        {
+          "id": "P1-T3",
+          "desc": "Kernel host-control APIs (env takeover)",
+          "status": "planned"
+        },
+        {
+          "id": "P1-T4",
+          "desc": "Prepare SBOM split hooks",
+          "status": "planned"
+        }
+      ]
+    },
+    {
+      "id": "P2",
+      "title": "North Star Implementation",
+      "serves_goals": [3, 4, 8, 9, 10, 11, 12, 16, 17],
+      "status": "planned",
+      "objective": "Internal compass + dynamic access",
+      "depends_on": ["P1"],
+      "tasks": [
+        {
+          "id": "P2-T1",
+          "desc": "Add north_star.deflex.json (metrics/thresholds/trust rules)",
+          "status": "planned"
+        },
+        {
+          "id": "P2-T2",
+          "desc": "Implement kernel/scorekeeper and /v1/trust",
+          "status": "planned"
+        },
+        {
+          "id": "P2-T3",
+          "desc": "Orchestrator gates scopes by trust; violations shrink scopes",
+          "status": "planned"
+        }
+      ]
+    },
+    {
+      "id": "P3",
+      "title": "World Model & Contract Tests",
+      "serves_goals": [1, 3, 4, 5, 7, 10, 11, 13, 16],
+      "status": "planned",
+      "objective": "Machine-readable source of truth",
+      "depends_on": ["P1"],
+      "tasks": [
+        {
+          "id": "P3-T1",
+          "desc": "Define world.graph.schema.json + seed world.graph.json",
+          "status": "planned"
+        },
+        {
+          "id": "P3-T2",
+          "desc": "kernel/reconciler drift detection and PRs",
+          "status": "planned"
+        },
+        {
+          "id": "P3-T3",
+          "desc": "Contract-test-first policy",
+          "status": "planned"
+        },
+        {
+          "id": "P3-T4",
+          "desc": "make world-verify / make world-fix",
+          "status": "planned"
+        }
+      ]
+    },
+    {
+      "id": "P4",
+      "title": "CLI Expansion & Registry Completion",
+      "serves_goals": [5, 6, 7, 8, 9, 10, 11, 14, 18],
+      "status": "planned",
+      "priority": "high",
+      "objective": "Complete CLI suite with full registry integration and advanced capabilities",
+      "depends_on": ["P0.5", "P1", "P3"],
+      "tasks": [
+        {
+          "id": "P4-T1",
+          "desc": "Complete registry/tools.registry.json with full metadata (params, side-effects, budgets, dependencies, CLI mappings)",
+          "status": "planned"
+        },
+        {
+          "id": "P4-T2",
+          "desc": "Expand noa CLI with 40+ commands (observe, auto, share, analyze subcommands)",
+          "status": "planned"
+        },
+        {
+          "id": "P4-T3",
+          "desc": "HTTP/gRPC API with OpenAPI/proto specs, WebSocket, SSE support",
+          "status": "planned"
+        },
+        {
+          "id": "P4-T4",
+          "desc": "CLI plugin system (install, develop, SDK, sandboxed execution)",
+          "status": "planned"
+        },
+        {
+          "id": "P4-T5",
+          "desc": "Enhanced machine interfaces (SQL, JSONPath, GraphQL queries; CSV/Parquet export)",
+          "status": "planned"
+        },
+        {
+          "id": "P4-T6",
+          "desc": "AI agent optimization (minimal context, batch execution, persistent sessions, cache warming)",
+          "status": "planned"
+        },
+        {
+          "id": "P4-T7",
+          "desc": "Wrap legacy MCP adapter under kernel tokens via noa mcp subcommand",
+          "status": "planned"
+        }
+      ]
+    },
+    {
+      "id": "P5",
+      "title": "Gateway Slimming & Capability Tokens",
+      "serves_goals": [1, 4, 6, 8, 9, 11, 14],
+      "status": "planned",
+      "objective": "Gateway = router; kernel = authority",
+      "depends_on": ["P1", "P4"],
+      "tasks": [
+        {
+          "id": "P5-T1",
+          "desc": "Gateway reads kernel capability tokens (fs, net, rate)",
+          "status": "planned"
+        },
+        {
+          "id": "P5-T2",
+          "desc": "Hot-swappable adapters under extensions/ with capability claims",
+          "status": "planned"
+        },
+        {
+          "id": "P5-T3",
+          "desc": "AGENT.md update for tokenized scopes and safety",
+          "status": "planned"
+        }
+      ]
+    },
+    {
+      "id": "P6",
+      "title": "Performance & Retrieval Discipline",
+      "serves_goals": [1, 5, 7, 8, 11, 12, 16],
+      "status": "planned",
+      "objective": "Low latency; minimal tokens",
+      "depends_on": ["P3", "P4"],
+      "tasks": [
+        {
+          "id": "P6-T1",
+          "desc": "kernel/indexer: AST/dep graph; selective retrieval",
+          "status": "planned"
+        },
+        {
+          "id": "P6-T2",
+          "desc": "Hierarchical memory structure",
+          "status": "planned"
+        },
+        {
+          "id": "P6-T3",
+          "desc": "Incremental tests + streaming diffs; binary transport",
+          "status": "planned"
+        },
+        {
+          "id": "P6-T4",
+          "desc": "Penalize bloated contexts",
+          "status": "planned"
+        }
+      ]
+    },
+    {
+      "id": "P7",
+      "title": "Reward System (System-Health First)",
+      "serves_goals": [3, 8, 9, 11, 12, 16, 17],
+      "status": "planned",
+      "objective": "Incentives aligned to stability/capability/efficiency",
+      "depends_on": ["P2", "P6"],
+      "tasks": [
+        {
+          "id": "P7-T1",
+          "desc": "Weighted rewards for stability/capability/efficiency",
+          "status": "planned"
+        },
+        {
+          "id": "P7-T2",
+          "desc": "Penalties: no snapshot, budget overrun, duplication",
+          "status": "planned"
+        },
+        {
+          "id": "P7-T3",
+          "desc": "metrics/reward_history.json persistence",
+          "status": "planned"
+        }
+      ]
+    },
+    {
+      "id": "P8",
+      "title": "SBOM Split & Supply-Chain Integrity",
+      "serves_goals": [1, 9, 10, 11, 14, 15],
+      "status": "planned",
+      "objective": "Verifiable kernel + reproducible extensions",
+      "depends_on": ["P1"],
+      "tasks": [
+        {
+          "id": "P8-T1",
+          "desc": "SBOM.kernel.cdx.json, SBOM.extensions.cdx.json, SBOM.manifest.json",
+          "status": "planned"
+        },
+        {
+          "id": "P8-T2",
+          "desc": "Sign artifacts; make verify",
+          "status": "planned"
+        },
+        {
+          "id": "P8-T3",
+          "desc": "SLSA attestations",
+          "status": "planned"
+        }
+      ]
+    },
+    {
+      "id": "P9",
+      "title": "Deployment Profiles",
+      "serves_goals": [1, 4, 8, 11, 14, 16],
+      "status": "planned",
+      "objective": "Behavior via profiles, not forks",
+      "depends_on": ["P5", "P8"],
+      "tasks": [
+        {
+          "id": "P9-T1",
+          "desc": "/server/profiles/* (single_host, air_gapped, devcontainer, edge_lite)",
+          "status": "planned"
+        },
+        {
+          "id": "P9-T2",
+          "desc": "Profile-driven scopes/budgets/egress",
+          "status": "planned"
+        },
+        {
+          "id": "P9-T3",
+          "desc": "Kernel loads profile and issues matching tokens",
+          "status": "planned"
+        }
+      ]
+    },
+    {
+      "id": "P10",
+      "title": "Tests, CI/CD, Audit Trail (Machine-First)",
+      "serves_goals": [1, 5, 8, 9, 10, 11, 14, 16, 17],
+      "status": "in_progress",
+      "objective": "CI/CD runs locally first; GitHub is just a remote mirror",
+      "progress": 30,
+      "tasks": [
+        {
+          "id": "P10-T1",
+          "desc": "make pipeline.local authoritative; GH Action is thin shim",
+          "status": "in_progress"
+        },
+        {
+          "id": "P10-T2",
+          "desc": "Mandatory checks: contract/policy/rollback/perf/SBOM/score",
+          "status": "planned"
+        },
+        {
+          "id": "P10-T3",
+          "desc": "Publish audit bundle (snapshot, SBOM, trust) per merge",
+          "status": "planned"
+        }
+      ]
+    },
+    {
+      "id": "P11",
+      "title": "Documentation & Agent Policy",
+      "serves_goals": [3, 4, 5, 8, 9, 10, 11, 14],
+      "status": "in_progress",
+      "objective": "One set of rules for humans and agents—machine readable first",
+      "progress": 60,
+      "tasks": [
+        {
+          "id": "P11-T1",
+          "desc": "AGENT.md: Heal-Don't-Harm, registry-only, snapshots, tokens, examples",
+          "status": "in_progress"
+        },
+        {
+          "id": "P11-T2",
+          "desc": "docs/guides/AGENTIC_OS_GUIDE.md for ops",
+          "status": "planned"
+        },
+        {
+          "id": "P11-T3",
+          "desc": "Refresh architecture diagrams",
+          "status": "planned"
+        }
+      ]
+    },
+    {
+      "id": "P12",
+      "title": "Intelligent Growth & Self-Maintenance",
+      "serves_goals": [2, 3, 8, 9, 11, 12, 16, 17],
+      "status": "planned",
+      "objective": "Self-diagnosis, self-refactor, self-repair",
+      "depends_on": ["P2", "P7", "P10"],
+      "tasks": [
+        {
+          "id": "P12-T1",
+          "desc": "Self-repair agent for common issues",
+          "status": "planned"
+        },
+        {
+          "id": "P12-T2",
+          "desc": "Reflection API /v1/self/status",
+          "status": "planned"
+        },
+        {
+          "id": "P12-T3",
+          "desc": "Periodic improvement plans on hotspots",
+          "status": "planned"
+        }
+      ]
+    },
+    {
+      "id": "P13",
+      "title": "Humanless Autonomy",
+      "serves_goals": [2, 3, 8, 9, 11, 12, 16, 17],
+      "status": "planned",
+      "objective": "Show it can run itself safely",
+      "depends_on": ["P12"],
+      "tasks": [
+        {
+          "id": "P13-T1",
+          "desc": "Auto-PR/merge with high trust threshold",
+          "status": "planned"
+        },
+        {
+          "id": "P13-T2",
+          "desc": "Scheduled rollback fire drills",
+          "status": "planned"
+        },
+        {
+          "id": "P13-T3",
+          "desc": "Auto-sign, publish, verify bundles",
+          "status": "planned"
+        }
+      ]
+    }
+  ],
+  "ci_cd": {
+    "mode": "machine-first",
+    "philosophy": "Local first; GitHub Actions is merely a thin wrapper",
+    "entrypoint": "make pipeline.local",
+    "github_actions": "thin-wrapper",
+    "self_hosted_runner": "preferred",
+    "offline_capable": true,
+    "reproducible": true,
+    "stages": [
+      "world-verify",
+      "build",
+      "sbom",
+      "tests",
+      "scorekeeper",
+      "package",
+      "sign"
+    ],
+    "mandatory_checks": [
+      "contract",
+      "policy",
+      "rollback",
+      "performance",
+      "sbom",
+      "trust_score"
+    ],
+    "makefile_targets": {
+      "pipeline.local": "Run complete pipeline locally",
+      "world-verify": "Validate world model consistency",
+      "world-fix": "Auto-repair world model inconsistencies",
+      "kernel": "Build kernel independently",
+      "snapshot": "Create system snapshot",
+      "rollback": "Rollback to previous snapshot",
+      "verify": "Verify build reproducibility",
+      "publish-audit": "Publish audit bundle"
+    }
+  },
+  "automation": {
+    "error_triage": {
+      "enabled": true,
+      "description": "event-rules -> minimal repro -> issue + candidate patch",
+      "confidence_threshold": 0.8
+    },
+    "autofix_categories": [
+      "lint",
+      "types",
+      "imports",
+      "flake",
+      "micro-refactors"
+    ],
+    "autofix_gating": [
+      "snapshot",
+      "incremental_tests",
+      "policy_validation"
+    ],
+    "budgets": {
+      "tokens": "hard-limit",
+      "cpu_ms": "soft-limit",
+      "io_mb": "soft-limit"
+    },
+    "budget_guardians": {
+      "enabled": true,
+      "actions": [
+        "kill_token_explosions",
+        "penalize_latency_spikes",
+        "rewrite_plans_with_stricter_bounds"
+      ]
+    },
+    "offline_mode": {
+      "enabled": true,
+      "description": "air-gapped profile uses cached indices/mirrors",
+      "fallback_strategy": "local_cache"
+    }
+  },
+  "metrics": {
+    "foundation": {
+      "kernel_boots_independently": false,
+      "trust_scores_enforced": false,
+      "world_model_validates": false,
+      "registry_coverage": 0,
+      "gateway_uses_tokens": false
+    },
+    "performance": {
+      "context_retrieval_p95_ms": null,
+      "sbom_generation_sec": null,
+      "ci_pipeline_local_min": null,
+      "offline_capable_pct": 0,
+      "audit_trail_complete": false
+    },
+    "autonomy": {
+      "self_repair_success_rate": 0,
+      "reflection_api_available": false,
+      "auto_merge_success_rate": 0,
+      "autonomous_operation_hours": 0,
+      "fire_drill_success_rate": 0
+    }
+  },
+  "progress": {
+    "overall_pct": 15,
+    "current_focus": ["P0.5", "P1", "P10"],
+    "phases": {
+      "P0": {"status": "planned", "pct": 0},
+      "P0.5": {"status": "planned", "pct": 0, "priority": "critical"},
+      "P1": {"status": "in_progress", "pct": 40},
+      "P2": {"status": "planned", "pct": 0},
+      "P3": {"status": "planned", "pct": 0},
+      "P4": {"status": "planned", "pct": 0, "priority": "high"},
+      "P5": {"status": "planned", "pct": 0},
+      "P6": {"status": "planned", "pct": 0},
+      "P7": {"status": "planned", "pct": 0},
+      "P8": {"status": "planned", "pct": 0},
+      "P9": {"status": "planned", "pct": 0},
+      "P10": {"status": "in_progress", "pct": 30},
+      "P11": {"status": "in_progress", "pct": 60},
+      "P12": {"status": "planned", "pct": 0},
+      "P13": {"status": "planned", "pct": 0}
+    }
+  },
+  "metadata": {
+    "created": "2025-11-14",
+    "version": "1.1.0",
+    "changelog": "Added Goal 18 (CLI-First), Phase 0.5 (CLI Foundation), expanded Phase 4 (CLI Expansion)",
+    "format": "noa_ark_os_roadmap_v1",
+    "schema_url": "https://github.com/FlexNetOS/noa_ark_os/blob/main/docs/schemas/roadmap.schema.json",
+    "maintainer": "NOA ARK OS Core Team",
+    "status": "active"
+  }
+}

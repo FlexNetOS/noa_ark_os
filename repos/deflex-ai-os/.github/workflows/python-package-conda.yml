@@ -1,0 +1,230 @@
+name: Python Package using Conda
+
+on: [push]
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 5
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v3
+      with:
+        python-version: '3.10'
+    - name: Add conda to system path
+      run: |
+        # $CONDA is an environment variable pointing to the root of the miniconda directory
+        echo $CONDA/bin >> $GITHUB_PATH
+    - name: Install dependencies
+      run: |
+        conda env update --file environment.yml --name base
+    - name: Lint with flake8
+      run: |
+        conda install flake8
+        # stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+    - name: Test with pytest
+      run: |
+        conda install pytest
+        pytest
+            - name: Cache
+  uses: actions/cache@v4.3.0
+  with:
+    # A list of files, directories, and wildcard patterns to cache and restore
+    path: 
+    # An explicit key for restoring and saving the cache
+    key: 
+    # An ordered multiline string listing the prefix-matched keys, that are used for restoring stale cache if no cache hit occurred for key. Note `cache-hit` returns false in this case.
+    restore-keys: # optional
+    # The chunk size used to split up large files during upload, in bytes
+    upload-chunk-size: # optional
+    # An optional boolean when enabled, allows windows runners to save or restore caches that can be restored or saved respectively on other platforms
+    enableCrossOsArchive: # optional, default is false
+    # Fail the workflow if cache entry is not found
+    fail-on-cache-miss: # optional, default is false
+    # Check if a cache entry exists for the given input(s) (key, restore-keys) without downloading the cache
+    lookup-only: # optional, default is false
+    # Run the post step to save the cache even if another step before fails
+    save-always: # optional, default is false
+
+            - name: Upload a Build Artifact
+  uses: actions/upload-artifact@v4.6.2
+  with:
+    # Artifact name
+    name: # optional, default is artifact
+    # A file, directory or wildcard pattern that describes what to upload
+    path: 
+    # The desired behavior if no files are found using the provided path.
+Available Options:
+  warn: Output a warning but do not fail the action
+  error: Fail the action with an error message
+  ignore: Do not output any warnings or errors, the action does not fail
+
+    if-no-files-found: # optional, default is warn
+    # Duration after which artifact will expire in days. 0 means using default retention.
+Minimum 1 day. Maximum 90 days unless changed from the repository settings page.
+
+    retention-days: # optional
+    # The level of compression for Zlib to be applied to the artifact archive. The value can range from 0 to 9: - 0: No compression - 1: Best speed - 6: Default compression (same as GNU Gzip) - 9: Best compression Higher levels will result in better compression, but will take longer to complete. For large files that are not easily compressed, a value of 0 is recommended for significantly faster uploads.
+
+    compression-level: # optional, default is 6
+    # If true, an artifact with a matching name will be deleted before a new one is uploaded. If false, the action will fail if an artifact for the given name already exists. Does not fail if the artifact does not exist.
+
+    overwrite: # optional, default is false
+    # If true, hidden files will be included in the artifact. If false, hidden files will be excluded from the artifact.
+
+    include-hidden-files: # optional, default is false
+
+- name: Download a Build Artifact
+  uses: actions/download-artifact@v5.0.0
+  with:
+    # Name of the artifact to download. If unspecified, all artifacts for the run are downloaded.
+    name: # optional
+    # IDs of the artifacts to download, comma-separated. Either inputs `artifact-ids` or `name` can be used, but not both.
+    artifact-ids: # optional
+    # Destination path. Supports basic tilde expansion. Defaults to $GITHUB_WORKSPACE
+    path: # optional
+    # A glob pattern matching the artifacts that should be downloaded. Ignored if name is specified.
+    pattern: # optional
+    # When multiple artifacts are matched, this changes the behavior of the destination directories. If true, the downloaded artifacts will be in the same directory specified by path. If false, the downloaded artifacts will be extracted into individual named directories within the specified path.
+    merge-multiple: # optional, default is false
+    # The GitHub token used to authenticate with the GitHub API. This is required when downloading artifacts from a different repository or from a different workflow run. If this is not specified, the action will attempt to download artifacts from the current repository and the current workflow run.
+    github-token: # optional
+    # The repository owner and the repository name joined together by "/". If github-token is specified, this is the repository that artifacts will be downloaded from.
+    repository: # optional, default is ${{ github.repository }}
+    # The id of the workflow run where the desired download artifact was uploaded from. If github-token is specified, this is the run that artifacts will be downloaded from.
+    run-id: # optional, default is ${{ github.run_id }}
+
+            - name: Priority List
+  # You may pin to the exact commit or the version.
+  # uses: iterative/priority-list@646ca456f8a08495ae4c6259bd20ab274b9eaa03
+  uses: iterative/priority-list@v1.0.2
+  with:
+    # Token with read access to all analysed repos
+    github-token: 
+    # 
+    repos: 
+    # weight for number of comments
+    weight_activity: # default is 14
+    # weight for reactions to original issue
+    weight_reactions: # default is 7
+    # weight for days of inactivity
+    weight_staleness: # default is 1
+    # weight for days open
+    weight_age: # default is 0.142857
+    # weight multiplier for PRs (compared to issues)
+    multiplier_pr: # default is 7
+    # weight multiplier for labels (negative to exclude)
+    multiplier_labels: # default is example:-1 epic:0.142857 blocked:0.142857 invalid:0.142857
+    # largest pN-label (lowest priority)
+    p_label_graveyard: # default is 4
+    # URL to post slack payload to (requires `people.json`)
+    slack_webhook: # optional
+
+            - name: PDM update dependencies
+  # You may pin to the exact commit or the version.
+  # uses: pdm-project/update-deps-action@22852fcff9a131d732730e8db92cc9502643a260
+  uses: pdm-project/update-deps-action@v1.12
+  with:
+    # A personal access token
+    token: # optional, default is ${{ github.token }}
+    # The commit message
+    commit-message: # optional, default is chore: Update pdm.lock
+    # The PR title
+    pr-title: # optional, default is chore: Update pdm.lock
+    # The update strategy, can be 'reuse', 'eager' or 'all'
+    update-strategy: # optional, default is reuse
+    # The save strategy, can be 'compatible', 'wildcard', 'exact' or 'minimum'
+    save-strategy: # optional, default is minimum
+    # Ignore the version constraint of packages in pyproject.toml
+    unconstrained: # optional, default is false
+    # Whether install PDM plugins before update
+    install-plugins: # optional, default is false
+    # Whether commit message contains signed-off-by
+    sign-off-commit: # optional, default is false
+    # Sign commits as github-actions[bot]
+    sign-commits: # optional, default is true
+          
+            - name: Add To GitHub projects
+  uses: actions/add-to-project@v1.0.2
+  with:
+    # URL of the project to add issues to
+    project-url: 
+    # A GitHub personal access token with write access to the project
+    github-token: 
+    # A comma-separated list of labels to use as a filter for issue to be added
+    labeled: # optional
+    # The behavior of the labels filter, AND to match all labels, OR to match any label, NOT to exclude any listed label (default is OR)
+    label-operator: # optional
+             - name: Summary Issues
+  # You may pin to the exact commit or the version.
+  # uses: sourcegraph/summary-issues@9a33468abb4f7415f4dad4424f7ad8aee136fbe9
+  uses: sourcegraph/summary-issues@v1.2.1
+  with:
+    # The newest comment on an issue that matches this regular expression is used in the summary. If not provided, the most recent comment is always used.
+    summaryCommentRegex: # optional
+                   
+            - name: Git Sync Mirror
+  # You may pin to the exact commit or the version.
+  # uses: BRAVO68WEB/gitlab-sync-action@50e2011928b31566ed9813215c6bfc12d47118af
+  uses: BRAVO68WEB/gitlab-sync-action@v1
+  with:
+    # SSH private key for ssh connection to the target repository
+    ssh_private_key: # optional
+    # Target url
+    target_repo_url: 
+    # Username for ssh connection
+    ssh_username: # optional, default is git
+            - name: gitStream repo agent
+  # You may pin to the exact commit or the version.
+  # uses: linear-b/gitstream-github-action@59f7e8b78b77925bc23503d7d2b12e30b2809f7d
+  uses: linear-b/gitstream-github-action@v2
+  with:
+    # Path of full Repository
+    full_repository: 
+    # Head Branch Ref to checkout to
+    head_ref: 
+    # Base Branch Ref to checkout to
+    base_ref: 
+    # The client payload
+    client_payload: 
+    # The github app installation id
+    installation_id: # optional
+    # Resolver url to send results to
+    resolver_url: 
+    # Optional token for resolver
+    resolver_token: # optional
+    # Run parser in debug mode
+    debug_mode: # optional, default is false
+            - name: Get GitHub ProjectV2 Metadata
+  # You may pin to the exact commit or the version.
+  # uses: eleutheria-tech/get-github-project-v2-metadata@167674b780d6b9a835203594655506bdfbdbf21d
+  uses: eleutheria-tech/get-github-project-v2-metadata@v0.0.1-alpha
+  with:
+    # GitHub Token with org permission
+    gh_token: # default is 
+    # Your organization's name
+    org: # optional, default is 
+    # Github Project's number in your organization
+    project_number: # default is 
+    # Single select field name
+    single_select_field_name: # optional, default is 
+    # Option name of the supplied single select field
+    single_select_field_option_name: # optional, default is 
+            - name: Generate SBOM YAML
+  # You may pin to the exact commit or the version.
+  # uses: opencontextinc/generate-sbom-yaml@48657649e89aa5d7b5e768c5b2a2644df273757d
+  uses: opencontextinc/generate-sbom-yaml@v1.0.1
+  with:
+    # Upload OpenContext SBOM artifact YAML to release?
+    upload_yaml: # default is true
+- name: Generate SBOM YAML
+  uses: opencontextinc/generate-sbom-yaml@v1.0.1                    
+ - name: TODO to Issue
+  uses: alstr/todo-to-issue-action@v5.1.13
+  

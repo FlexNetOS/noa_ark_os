@@ -6,3 +6,4 @@ User and developer documentation.
 - CONTRIBUTING.md - How to contribute
 - Troubleshooting guides
 - Integration guides
+- AGENTIC_OS_GUIDE.md - Operator workflows, policy enforcement, and kernel sovereignty diagrams

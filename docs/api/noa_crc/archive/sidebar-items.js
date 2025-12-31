@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["CompressionAlgorithm"],"fn":["source_type_short"],"struct":["ArchiveConfig","ArchiveManager","ArchiveStatistics","CleanupReport"]};

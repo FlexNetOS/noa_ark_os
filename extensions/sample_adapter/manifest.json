@@ -1,0 +1,11 @@
+{
+  "name": "sample-adapter",
+  "version": "0.1.0",
+  "module": "extensions.sample_adapter.adapter",
+  "entrypoint": "SampleAdapter",
+  "scopes": {
+    "fs": "fs.policy.read",
+    "network": "net.gateway",
+    "rate_limit_per_minute": 120
+  }
+}

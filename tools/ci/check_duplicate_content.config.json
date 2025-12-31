@@ -1,0 +1,44 @@
+{
+  "ignore": [
+    ".git",
+    "node_modules",
+    "archive",
+    "build_output",
+    "build_kits",
+    ".gitkeep",
+    "cicd/cache",
+    "storage/db",
+    "tests/fixtures"
+  ],
+  "allowedDuplicateGroups": [
+    [
+      "crc/drop-in/incoming/repos/agent-registry/Cargo.toml",
+      "services/agent-registry/rust/Cargo.toml"
+    ],
+    [
+      "crc/drop-in/incoming/repos/agent-registry/Dockerfile",
+      "services/agent-registry/Dockerfile"
+    ],
+    [
+      "crc/drop-in/incoming/repos/agent-registry/go.mod",
+      "services/agent-registry/go/go.mod"
+    ],
+    [
+      "crc/drop-in/incoming/repos/agent-registry/main.go",
+      "server/go/registry/registry.go",
+      "services/agent-registry/go/main.go"
+    ],
+    [
+      "crc/drop-in/incoming/repos/agent-registry/src/main.rs",
+      "services/agent-registry/rust/src/main.rs"
+    ],
+    [
+      "crc/drop-in/incoming/repos/task_exec_kit/flows/merge_consolidate.sh",
+      "workflow/flows/merge/merge_consolidate.sh"
+    ],
+    [
+      "crc/drop-in/incoming/repos/task_exec_kit/templates/agent_merge_request.yaml",
+      "workflow/templates/merge/agent_merge_request.yaml"
+    ]
+  ]
+}

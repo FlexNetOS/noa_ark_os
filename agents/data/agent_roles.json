@@ -1,0 +1,14 @@
+{
+  "planner": {
+    "agent_id": "PlanAgent",
+    "description": "Plans deployment sequences and orchestrates preflight checks."
+  },
+  "verifier": {
+    "agent_id": "ReviewAgent",
+    "description": "Validates artefacts, policies, and documentation before release."
+  },
+  "operator": {
+    "agent_id": "OperationsBoardAgent",
+    "description": "Handles deployment execution and operational rollout logistics."
+  }
+}

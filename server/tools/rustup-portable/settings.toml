@@ -1,0 +1,6 @@
+version = "12"
+
+# This settings file was relocated from an incorrect Windows-style path.
+# Keep minimal config; add overrides below as needed.
+
+[overrides]

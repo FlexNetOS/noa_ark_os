@@ -1,0 +1,42 @@
+﻿name: Cross-reference agentaskit (archives V2–V7 → production)
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  crossref-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Run cross-reference scanner (Python)
+        run: |
+          python agentaskit-production/tools/analysis/cross_reference.py --root . \
+            --out-dir agentaskit-production/docs/reports/cross_reference/artifacts
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cross-reference-artifacts
+          path: agentaskit-production/docs/reports/cross_reference/artifacts
+  crossref-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Run cross-reference scanner (PowerShell)
+        shell: pwsh
+        run: |
+          ./agentaskit-production/tools/analysis/cross_reference.ps1 -Root . -OutDir agentaskit-production/docs/reports/cross_reference/artifacts
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cross-reference-artifacts-windows
+          path: agentaskit-production/docs/reports/cross_reference/artifacts

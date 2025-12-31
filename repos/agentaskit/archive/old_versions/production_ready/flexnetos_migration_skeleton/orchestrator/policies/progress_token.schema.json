@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ProgressToken",
+  "type": "object",
+  "properties": {
+    "ssa": {
+      "type": "string"
+    },
+    "cap": {
+      "type": "integer"
+    },
+    "in_use": {
+      "type": "integer"
+    },
+    "available": {
+      "type": "integer"
+    }
+  },
+  "required": [
+    "ssa",
+    "cap",
+    "in_use",
+    "available"
+  ]
+}

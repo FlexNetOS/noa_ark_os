@@ -1,0 +1,15 @@
+name: Verify Signatures
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'artifacts/**'
+      - 'agentaskit-production/operational_hash/**'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify hashes/signatures (stub)
+        run: echo "Implement minisign/GPG verification here"

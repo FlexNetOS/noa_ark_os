@@ -1,0 +1,16 @@
+[
+  {
+    "reviewer": "ai-offline",
+    "state": "comment",
+    "body": "AI provider unavailable; manual review required.",
+    "automated": true,
+    "submittedAt": "2025-11-21T18:10:13.372Z"
+  },
+  {
+    "reviewer": "ai-offline",
+    "state": "comment",
+    "body": "AI provider unavailable; manual review required.",
+    "automated": true,
+    "submittedAt": "2025-11-21T18:10:23.290Z"
+  }
+]

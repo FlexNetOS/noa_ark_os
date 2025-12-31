@@ -4,10 +4,12 @@ use std::path::Path;
 
 use chrono::{DateTime, Utc};
 use noa_agents::implementations::documentation::{
-    DocumentationAgent, DocumentationPipelineOutput, ServiceDocumentation, SopDocumentation,
-    WorkflowDocumentation,
+    AgentApprovalRequirement, DocumentationAgent, DocumentationPipelineOutput,
+    ServiceDocumentation, SopDocumentation, WorkflowDocumentation,
 };
 use uuid::Uuid;
+
+use noa_core::kernel::{self, AiControlLoop};
 
 fn main() {
     if let Err(err) = run() {
@@ -23,9 +25,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     while let Some(arg) = args.next() {
         match arg.as_str() {
             "--pipeline-output" => {
-                let value = args
-                    .next()
-                    .ok_or_else(|| "--pipeline-output requires a value")?;
+                let value = args.next().ok_or("--pipeline-output requires a value")?;
                 pipeline_path = Some(value);
             }
             other => return Err(format!("Unknown argument: {other}").into()),
@@ -34,6 +34,15 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     let pipeline_path = pipeline_path.ok_or("--pipeline-output is required")?;
     let payload = fs::read_to_string(&pipeline_path)?;
+
+    let directive = kernel::handle()
+        .map(|handle| handle.machine_directive())
+        .unwrap_or_default();
+
+    println!(
+        "[documentation_sync] machine remediation in effect (confidence {:.2}): {}",
+        directive.confidence, directive.rationale
+    );
 
     let output = DocumentationPipelineOutput::from_json_str(&payload)
         .unwrap_or_else(|_| build_output_from_diff(&payload));
@@ -54,7 +63,18 @@ fn build_output_from_diff(diff_summary: &str) -> DocumentationPipelineOutput {
         run_id: format!("doc-sync-{}", Uuid::new_v4()),
         generated_at,
         diff_summary: diff_summary.trim().to_string(),
-        approvals_required: vec!["doc-lead".to_string(), "release-manager".to_string()],
+        approvals_required: vec![
+            AgentApprovalRequirement {
+                role: "doc-lead".to_string(),
+                minimum_trust_score: 0.7,
+                required_evidence_tags: vec!["ledger:docs".to_string()],
+            },
+            AgentApprovalRequirement {
+                role: "release-manager".to_string(),
+                minimum_trust_score: 0.8,
+                required_evidence_tags: vec!["ledger:release".to_string()],
+            },
+        ],
         approvals_granted: Vec::new(),
         services,
         sops,
@@ -112,8 +132,7 @@ fn collect_sops(now: DateTime<Utc>) -> Vec<SopDocumentation> {
                 let name = entry
                     .file_name()
                     .to_string_lossy()
-                    .replace('-', " ")
-                    .replace('_', " ")
+                    .replace(['-', '_'], " ")
                     .split('.')
                     .next()
                     .unwrap_or_default()
@@ -122,7 +141,7 @@ fn collect_sops(now: DateTime<Utc>) -> Vec<SopDocumentation> {
                 let last_reviewed = entry
                     .metadata()
                     .and_then(|meta| meta.modified())
-                    .map(|ts| DateTime::<Utc>::from(ts))
+                    .map(DateTime::<Utc>::from)
                     .unwrap_or(now);
                 entries.push(SopDocumentation {
                     name,
@@ -156,8 +175,7 @@ fn collect_workflows() -> Vec<WorkflowDocumentation> {
                 let name = entry
                     .file_name()
                     .to_string_lossy()
-                    .replace('-', " ")
-                    .replace('_', " ")
+                    .replace(['-', '_'], " ")
                     .to_string();
                 let path = format!("workflow/{}", entry.file_name().to_string_lossy());
                 entries.push(WorkflowDocumentation {

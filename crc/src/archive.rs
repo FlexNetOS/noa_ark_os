@@ -8,7 +8,7 @@ use tokio::fs;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tracing::{error, info, instrument, warn};
 
-use crate::{ArchiveIndex, ArchiveInfo, Error, FileEntry, Result, SourceType};
+use crate::{ArchiveIndex, ArchiveInfo, FileEntry, Result, SourceType};
 
 /// Archive configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -210,7 +210,11 @@ impl ArchiveManager {
 
                 // Check file age
                 if let Ok(created) = metadata.created() {
-                    let age_secs = created.elapsed().unwrap_or_default().as_secs();
+                    let created_secs = created
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or_else(|_| std::time::Duration::from_secs(0))
+                        .as_secs();
+                    let age_secs = now.saturating_sub(created_secs);
                     let age_days = age_secs / 86400;
 
                     if age_days > *retention_days as u64 {
@@ -320,8 +324,11 @@ impl ArchiveManager {
 
     async fn compress_drop(&self, source_path: &Path, archive_path: &Path) -> Result<u64> {
         info!(
-            "  Compressing with {:?} (level {})",
-            self.config.compression_algorithm, self.config.compression_level
+            "  Compressing {} -> {} with {:?} (level {})",
+            source_path.display(),
+            archive_path.display(),
+            self.config.compression_algorithm,
+            self.config.compression_level
         );
 
         // Simulate compression

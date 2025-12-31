@@ -1,0 +1,2 @@
+# SHA-256 hash manifest
+# Append new entries as: <sha256>  <relative/path>

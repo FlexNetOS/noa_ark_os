@@ -92,3 +92,54 @@ notes = [
   "Kernel is authoritative for quotas; services must honor cgroup signals",
   "Compatible with adaptive scaling controller in server/src",
 ]
+
+[tools]
+allowed = [
+  "bash",
+  "cargo",
+  "git",
+  "python3",
+  "rustc",
+]
+denied = [
+  "docker",
+]
+
+[egress]
+mode = "allow_list"
+allowed_domains = [
+  "updates.noa-ark.local",
+  "registry.npmjs.org",
+  "crates.io",
+]
+notes = "Limited to telemetry and curated registries to preserve deterministic builds."
+
+[budgets.cpu]
+reserved_cores = 4
+max_cores = 8
+
+[budgets.memory]
+soft_mb = 28672
+hard_mb = 32768
+
+[budgets.network]
+egress_mbps = 200
+burst_mbps = 400
+
+[[storage.roots]]
+name = "workspace"
+path = "/var/lib/noa/workspaces"
+mode = "read_write"
+quota_mb = 40960
+
+[[storage.roots]]
+name = "artifacts"
+path = "/var/lib/noa/artifacts"
+mode = "read_only"
+quota_mb = 20480
+
+[[storage.roots]]
+name = "telemetry"
+path = "/var/lib/noa/telemetry"
+mode = "read_write"
+quota_mb = 10240

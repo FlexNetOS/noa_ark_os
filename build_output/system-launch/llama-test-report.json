@@ -1,0 +1,26 @@
+{
+  "healthy": {
+    "percent": 100,
+    "detail": "Binary llama-server (4.5 MB) and model Llama-3.2-3B-Instruct.Q4_K_M.gguf located."
+  },
+  "activated": {
+    "percent": 100,
+    "detail": "Sentinel recorded +0.00h ago (model_size=3b)."
+  },
+  "connected": {
+    "percent": 100,
+    "detail": "Health probe + completion succeeded (response='If you are not ready, please explain why. I am not looking for a')."
+  },
+  "satisfaction": {
+    "percent": 100,
+    "definition": "Satisfaction requires healthy=100%, activated=100%, connected=100%."
+  },
+  "environment": {
+    "workspace": "/home/noa/dev/workspace/noa_ark_os/noa_ark_os",
+    "binary": "/home/noa/dev/workspace/noa_ark_os/noa_ark_os/server/ai/llama-cpp/bin/llama-server",
+    "model": "/home/noa/dev/workspace/noa_ark_os/noa_ark_os/server/ai/llama-cpp/models/Llama-3.2-3B-Instruct.Q4_K_M.gguf",
+    "log": "/home/noa/dev/workspace/noa_ark_os/noa_ark_os/server/ai/llama-cpp/logs/llama-test-20251121080202.log",
+    "port": 18115
+  },
+  "timestamp": "2025-11-21T08:02:05.6993116-06:00"
+}

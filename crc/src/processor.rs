@@ -137,7 +137,7 @@ impl DropProcessor {
             Ok(info) => info,
             Err(e) => {
                 // Propagate the original error after cleanup
-                return Err(e.into());
+                return Err(e);
             }
         };
 
@@ -146,6 +146,7 @@ impl DropProcessor {
             archive_info.archive_path.display(),
             archive_info.hash
         );
+
         let mut metadata = validation.metadata;
         match serde_json::to_string(&build_artifacts) {
             Ok(serialized) => {
@@ -317,7 +318,7 @@ impl DropProcessor {
                 }
                 Err(e) => {
                     warn!("  ✗ Cargo check failed: {}", e);
-                    warnings.push(format!("Cargo check failed: {}", e));
+                    errors.push(format!("Cargo check failed: {}", e));
                     metadata.insert("cargo_check".to_string(), "failed".to_string());
                 }
             }
@@ -420,6 +421,7 @@ impl DropProcessor {
 
     async fn count_files_and_lines(&self, path: &Path) -> Result<(usize, usize)> {
         // Simplified - would recursively count
+        debug!("Counting files within {}", path.display());
         Ok((100, 10000)) // Placeholder
     }
 
@@ -455,6 +457,12 @@ impl DropProcessor {
         if cargo_toml.exists() {
             // Would parse Cargo.toml here
             debug!("Found Cargo.toml, analyzing dependencies");
+            dependencies.push(Dependency {
+                name: "workspace-cargo".to_string(),
+                version: None,
+                source: cargo_toml.display().to_string(),
+                embedded_alternative: None,
+            });
         }
 
         Ok(dependencies)

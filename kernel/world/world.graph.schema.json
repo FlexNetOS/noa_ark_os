@@ -1,0 +1,109 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "NOA ARK OS World Graph",
+  "type": "object",
+  "required": ["version", "metadata", "nodes", "edges"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Semantic version of the world graph snapshot"
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["generated", "description"],
+      "properties": {
+        "generated": {
+          "type": "string",
+          "description": "ISO-8601 timestamp representing when the graph snapshot was generated"
+        },
+        "description": {
+          "type": "string",
+          "description": "Human readable description of the world snapshot"
+        },
+        "source": {
+          "type": "string",
+          "description": "Optional generator identifier"
+        }
+      },
+      "additionalProperties": false
+    },
+    "nodes": {
+      "type": "array",
+      "description": "Declarative inventory of system capabilities, files, and directories",
+      "items": {
+        "$ref": "#/definitions/node"
+      }
+    },
+    "edges": {
+      "type": "array",
+      "description": "Relationships between nodes",
+      "items": {
+        "$ref": "#/definitions/edge"
+      }
+    }
+  },
+  "definitions": {
+    "node": {
+      "type": "object",
+      "required": ["id", "kind", "path", "summary"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.:-]+$",
+          "description": "Unique identifier for the node"
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["directory", "file", "service", "dataset"],
+          "description": "Node classification"
+        },
+        "path": {
+          "type": "string",
+          "description": "Repository-relative path to the resource"
+        },
+        "summary": {
+          "type": "string",
+          "description": "Short description of the node"
+        },
+        "layer": {
+          "type": "string",
+          "description": "Logical layer as defined by the repository architecture"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "owner": {
+          "type": "string",
+          "description": "Owning team or subsystem"
+        }
+      },
+      "additionalProperties": false
+    },
+    "edge": {
+      "type": "object",
+      "required": ["source", "target", "relationship"],
+      "properties": {
+        "source": {
+          "type": "string",
+          "description": "Source node id"
+        },
+        "target": {
+          "type": "string",
+          "description": "Target node id"
+        },
+        "relationship": {
+          "type": "string",
+          "description": "Relationship descriptor"
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

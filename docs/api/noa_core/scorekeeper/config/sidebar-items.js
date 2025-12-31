@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["default_critical_multiplier","default_warning_multiplier"],"struct":["EscalationPolicy","MetricDefinition","NorthStarPolicy","ScopeReduction","Thresholds"]};

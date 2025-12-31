@@ -1,0 +1,22 @@
+name: SBOM
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '**/*.lock'
+      - '**/Cargo.toml'
+      - '**/package.json'
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate SBOM (stub)
+        run: |
+          mkdir -p sbom
+          echo '{"bomFormat":"CycloneDX","specVersion":"1.5","components":[]}' > sbom/placeholder.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom/*.json

@@ -1,0 +1,59 @@
+[profile]
+name = "devcontainer"
+description = "Developer container profile with curated online access and expanded tooling"
+version = "0.1.0"
+
+[tools]
+allowed = [
+  "bash",
+  "cargo",
+  "docker",
+  "git",
+  "node",
+  "pnpm",
+  "python3",
+]
+denied = [
+  "curl",
+  "pip",
+]
+
+[egress]
+mode = "allow_list"
+allowed_domains = [
+  "github.com",
+  "registry.npmjs.org",
+  "crates.io",
+  "index.docker.io",
+]
+notes = "Online access restricted to source control and package registries required for reproducible builds."
+
+[budgets.cpu]
+reserved_cores = 4
+max_cores = 8
+
+[budgets.memory]
+soft_mb = 16384
+hard_mb = 32768
+
+[budgets.network]
+egress_mbps = 400
+burst_mbps = 800
+
+[[storage.roots]]
+name = "workspace"
+path = "/workspaces/noa"
+mode = "read_write"
+quota_mb = 20480
+
+[[storage.roots]]
+name = "toolchains"
+path = "/workspaces/noa/toolchains"
+mode = "read_only"
+quota_mb = 10240
+
+[[storage.roots]]
+name = "cache"
+path = "/workspaces/noa/cache"
+mode = "read_write"
+quota_mb = 15360

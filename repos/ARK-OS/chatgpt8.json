@@ -1,0 +1,127 @@
+{
+  "meta": {
+    "name": "NOA_AgenticOS_Johnson_Bundle",
+    "version": "1.0.1",
+    "style": "Kernel-first • Message-passing • Async-only • No globals • Zero-bloat",
+    "arch": "CECCA (ROOT stem cell) → Board → Executives → Stack-Chief → Specialists → Micro",
+    "capsules": "Built-in via Capsule API + AgentFactory + Manifest",
+    "sbom": "Self-scanning with auto-shims on boot",
+    "generated": "2025-09-15T00:00:00Z"
+  },
+
+  "docs": {
+    "how_to_use_md": "# HOW-TO (Kernel-first, Capsules Built-in)\\n\\n1) **Boot** this bundle with your loader; it runs `sbom.bootScan` then `kernel.start`.\\n2) **Kernel** starts CECCA (root) and the **Message Bus**. No globals; everything via module system.\\n3) **Capsules are built-in**: every Agent is a Capsule `{name, layer, scope, inputs, outputs, tools, guardrails, escalation_to}`. Lifecycle: `create→bind→persist→run→validate→upgrade/heal→compress→connect→integrate→loop`.\\n4) **AgentFactory** reads `manifests.stack` (161/subject archetype) and spawns by layer. Evaluator handles promote/demote.\\n5) **SBOM** scans env/modules, applies **auto-shims** before agents run. Offline-first, additive, auditable.\\n6) **Async-only** message-passing (`bus.tell/ask/subscribe`); no sync IO, no external SaaS.\\n7) Start with a few stacks; scale horizontally toward your 322k envelope.\\n"
+  },
+
+  "boot": {
+    "plan": "async (OS)=>{const m=OS.require; await m('sbom').bootScan(OS); await m('kernel').start(OS);}",
+    "policy": {
+      "offline_first": true,
+      "audit": true,
+      "no_external_saas": true
+    }
+  },
+
+  "capsule_schemas": {
+    "capsule": {
+      "required": ["id","name","layer","scope","inputs","outputs","tools","guardrails","escalation_to"],
+      "layers": ["cecca","board","executive","stack_chief","specialist","micro"]
+    },
+    "manifest": { "required": ["meta","policy","stacks"] }
+  },
+
+  "manifests": {
+    "stack": {
+      "meta": { "source": "normalized.fixed.csv", "version": "3.1" },
+      "policy": { "retention_days": 365, "audit": true, "offline_first": true },
+      "cecca": [
+        { "id": "CECCA-ROOT", "name": "NOA", "layer": "cecca", "scope": ["global"], "inputs": [], "outputs": [], "tools": ["planner"], "guardrails": ["offline-first","audited"], "escalation_to": "Board" }
+      ],
+      "board": [
+        { "id":"BOARD-1","name":"Policy Chair","layer":"board","scope":["governance"],"inputs":[],"outputs":[],"tools":["policy"],"guardrails":["offline-first","no-external-saas"],"escalation_to":"CECCA-ROOT"}
+      ],
+      "executives": [
+        { "id":"EXEC-OPS","name":"Ops Commander","layer":"executive","scope":["operations"],"inputs":[],"outputs":[],"tools":["ops"],"guardrails":["offline-first"],"escalation_to":"BOARD-1"}
+      ],
+      "stacks": [
+        {
+          "stack_name": "Subject-001",
+          "chief": { "id":"STACK-001-CHIEF","name":"Stack Alpha Chief","layer":"stack_chief","scope":["subject-001"],"inputs":[],"outputs":[],"tools":["local_tool_A"],"guardrails":["offline-first"],"escalation_to":"EXEC-OPS" },
+          "specialists": [
+            { "id":"STACK-001-S1","name":"Spec A1","layer":"specialist","scope":["subject-001"],"inputs":["artifact://subject-001"],"outputs":["artifact://subject-001/ds"],"tools":["python"],"guardrails":["offline-first"],"escalation_to":"STACK-001-CHIEF" }
+          ],
+          "micros": [
+            { "id":"STACK-001-M1","name":"Micro A1-1","layer":"micro","scope":["subject-001"],"inputs":["artifact://subject-001/ds"],"outputs":["artifact://subject-001/ds/parsed"],"tools":["parser"],"guardrails":["offline-first"],"escalation_to":"STACK-001-S1" }
+          ]
+        }
+      ]
+    }
+  },
+
+  "modules": [
+    {
+      "name": "loader",
+      "imports": [],
+      "js": "export default (function(){return function createModuleSystem(bundle){const registry=new Map();const cache=new Map();function define(name,imports,code){registry.set(name,{imports,code});}function require(name){if(cache.has(name))return cache.get(name);const mod=registry.get(name);if(!mod) throw new Error('Module '+name+' not found');const local={exports:{}};const deps=mod.imports.map(require);const result=mod.code.apply(null,[...deps])||local.exports;cache.set(name,result);return result;}function installAll(){(bundle.modules||[]).forEach(m=>define(m.name,m.imports||[],m.eval));}return {define,require,installAll};};})();"
+    },
+
+    {
+      "name": "sbom",
+      "imports": [],
+      "js": "export default (function(){return function(){const holes=[];const shims={};const requiredEnv=['NOA_HOME','NOA_MODE'];function ensureEnv(){const hasProc=(typeof process!=='undefined'&&process&&process.env);if(!hasProc){shims.process={env:{}};}const penv=hasProc?process.env:shims.process.env;requiredEnv.forEach(k=>{if(!penv[k]){penv[k]='__auto__';holes.push({type:'env',name:k,action:'defaulted'});}});}function ensureModules(){function def(name,obj){shims[name]=obj;holes.push({type:'module',name,action:'shimmed'});}const fakeFs={readFile:async()=>new Uint8Array(0),writeFile:async()=>true,readdir:async()=>[],stat:async()=>({size:0})};const fakeNet={connect:()=>({on:()=>{},write:()=>{},end:()=>{}})};const fakeOs={homedir:()=>'/noa',platform:()=> 'noa',cpus:()=>[{model:'noa',speed:0}]};if(typeof require==='undefined'){def('fs',fakeFs);def('net',fakeNet);def('os',fakeOs);}return {shims};}async function bootScan(OS){ensureEnv();const {shims}=ensureModules();OS._shims=shims;OS.audit=OS.audit||[];OS.audit.push({event:'sbom_scan',holes});return true;}return {bootScan};}();})();"
+    },
+
+    {
+      "name": "message_bus",
+      "imports": [],
+      "js": "export default (function(){return function(){const topics=new Map();function sub(topic,fn){if(!topics.has(topic)) topics.set(topic,new Set());topics.get(topic).add(fn);return ()=>topics.get(topic).delete(fn);}async function pub(topic,msg){const fns=topics.get(topic);if(!fns) return;await Promise.all([...fns].map(fn=>Promise.resolve().then(()=>fn(msg))));}function endpoint(id){return {id, tell:async (to,msg)=>pub('dir:'+to,{from:id,msg}), ask:async (to,data)=>{return new Promise(res=>{const rid=(typeof crypto!=='undefined'&&crypto.randomUUID)?crypto.randomUUID():('c'+Math.random().toString(36).slice(2));const off=sub('dir:'+id,(m)=>{if(m.msg&&m.msg.corr===rid){off();res(m.msg.data);}});pub('dir:'+to,{from:id,msg:{corr:rid,data}});});}, on:(fn)=>sub('dir:'+id,(m)=>fn(m.from,m.msg))};}return {sub,pub,endpoint};}();})();"
+    },
+
+    {
+      "name": "storage",
+      "imports": [],
+      "js": "export default (function(){return function(){const kv=new Map();function uri(u){if(!u.startsWith('artifact://')) throw new Error('Only artifact:// URIs');return u;}async function get(u){return kv.get(uri(u));}async function put(u,val){kv.set(uri(u),val);return true;}async function list(prefix='artifact://'){return [...kv.keys()].filter(k=>k.startsWith(prefix));}return {get,put,list};}();})();"
+    },
+
+    {
+      "name": "capsule",
+      "imports": ["storage","message_bus"],
+      "js": "export default (function(){return function(storage,bus){function makeCapsule(spec){const id=spec.id||('cap_'+Math.random().toString(36).slice(2));const ep=bus.endpoint(id);const state={spec,health:'green',score:0};async function bind(){return true;}async function persistIn(inputs){for(const u of (inputs||[])){await storage.put(u,await storage.get(u)||null);}return true;}async function run(payload){return {ok:true,echo:payload||null};}async function validate(out){state.score=Math.min(100,(state.score+10));return state.score>=60;}async function upgrade(){state.health='green';return true;}async function heal(){state.health='green';return true;}async function compress(){return true;}async function connect(stack){state.stack=stack;return true;}async function integrate(links){state.links=links||[];return true;}async function loop(payload){await bind();await persistIn(spec.inputs);const res=await run(payload);const ok=await validate(res);if(!ok){await heal();}else{await upgrade();}await compress();await connect(spec.stack||'local');await integrate([]);return res;}return {id, layer:spec.layer, name:spec.name, escalate:spec.escalation_to, loop, endpoint:ep};}return {makeCapsule};}();})();"
+    },
+
+    {
+      "name": "evaluator",
+      "imports": [],
+      "js": "export default (function(){return function(){function score(sample){let s=0;if(sample&&sample.ok) s+=60;if(sample&&sample.echo) s+=20;return Math.min(100,s);}function decide(curr){return (curr>=80)?'promote':(curr<50)?'demote':'stay';}return {score,decide};}();})();"
+    },
+
+    {
+      "name": "agent_factory",
+      "imports": ["capsule","evaluator","message_bus"],
+      "js": "export default (function(){return function(capsule,evaluator,bus){async function spawn(spec){const cap=capsule.makeCapsule(spec);await cap.loop();return cap;}async function spawnStack(stack){const out={chief:null,specialists:[],micros:[]};if(stack.chief) out.chief=await spawn({...stack.chief,stack:stack.stack_name});for(const s of (stack.specialists||[])){out.specialists.push(await spawn({...s,stack:stack.stack_name}));}for(const m of (stack.micros||[])){out.micros.push(await spawn({...m,stack:stack.stack_name}));}return out;}async function lifecycle(cap){const res=await cap.loop();const sc=evaluator.score(res);const action=evaluator.decide(sc);return {id:cap.id,score:sc,action};}return {spawn,spawnStack,lifecycle};}();})();"
+    },
+
+    {
+      "name": "kernel",
+      "imports": ["message_bus","agent_factory","storage"],
+      "js": "export default (function(){return function(bus,factory,storage){async function start(OS){const manifest=OS.bundle.manifests.stack;const root=(manifest.cecca&&manifest.cecca[0])||{id:'CECCA-ROOT',name:'NOA',layer:'cecca',scope:['global'],inputs:[],outputs:[],tools:[],guardrails:['offline-first'],escalation_to:'Board'};const cecca=await factory.spawn(root);OS.state={cecca,stacks:[],bus,storage};for(const st of (manifest.stacks||[])){OS.state.stacks.push(await factory.spawnStack(st));}OS.audit=OS.audit||[];OS.audit.push({event:'kernel_start',stacks:OS.state.stacks.length});return true;}return {start};}();})();"
+    },
+
+    {
+      "name": "ui_runtime",
+      "imports": ["message_bus"],
+      "js": "export default (function(){return function(bus){async function mount(){return true;}return {mount};}();})();"
+    }
+  ],
+
+  "module_eval_wrappers": [
+    {
+      "name": "loader.eval",
+      "js": "function(bundle){const create=OS.require('loader');const ms=create(bundle);bundle.modules.forEach(m=>{m.eval=(...deps)=>{const exports={};const module={exports};const args=[...deps];return (new Function('exports','module',...m.imports, m.js)).apply(null,[exports,module,...args])||module.exports;};});ms.installAll();return ms;}"
+    }
+  ],
+
+  "runtime": {
+    "entry_js": "async function bootJohnson(bundle){const wrap=bundle.module_eval_wrappers[0];const mk=(new Function('OS','bundle', wrap.js));const OS={bundle};const ms=mk(OS,bundle);OS.require=(n)=>ms.require(n);await ms.require('sbom').bootScan(OS);await ms.require('kernel').start(OS);return OS;}"
+  }
+}

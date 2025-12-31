@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["TelemetryStatus"],"struct":["NoopTelemetrySink","TelemetryEvent"],"trait":["TelemetrySink"],"type":["TelemetryHandle"]};

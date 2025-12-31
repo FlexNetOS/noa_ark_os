@@ -23,7 +23,7 @@ describe("handlePromptRequest", () => {
     const logRequest = vi.fn();
     const result = await handlePromptRequest(
       {
-        cardId: "card-1",
+        goalId: "goal-1",
         title: "Sync gateway telemetry",
         description: "Collect logs from gateway service",
         labels: ["gateway", "observability"],

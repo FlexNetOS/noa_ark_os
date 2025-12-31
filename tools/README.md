@@ -4,6 +4,12 @@
 
 Development tools and system utilities for NOA ARK OS workspace management.
 
+### Automated planner inputs
+
+All agent tooling that assembles work queues must read `docs/tasks/index.json` for authoritative roadmap tasks. The
+companion validator (`python tools/task_index_validator.py`) ensures the schema, dependencies, and owning file references
+stay consistent before automation consumes the data.
+
 ## 🧹 Maintenance Scripts (`maintenance/`)
 
 The CRC `scripts-1` drop has been adapted into curated maintenance helpers:

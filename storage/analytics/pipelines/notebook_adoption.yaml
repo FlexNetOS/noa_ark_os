@@ -1,0 +1,21 @@
+# Notebook Adoption Pipeline Specification
+# Produces adoption mode coverage metrics for executive reporting.
+
+pipeline_id: notebook_adoption
+owner: analytics-governance
+schedule: "30 2 * * *"  # nightly refresh
+model: storage/analytics/models/notebook_adoption.sql
+materialization:
+  format: parquet
+  output_path: storage/analytics/pipelines/notebook_adoption.parquet
+sources:
+  - analytics.workspaces_dim
+  - analytics.notebooks_usage_fact
+telemetry_tags:
+  feature: notebook-automation
+  scope: adoption
+checks:
+  - assertion: "unique_authors >= 0"
+    severity: error
+  - assertion: "automated_run_count >= 0"
+    severity: error

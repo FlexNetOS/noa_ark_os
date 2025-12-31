@@ -1,0 +1,31 @@
+name: ml-drift-detection
+on:
+  schedule:
+    - cron: "0 5 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  detect-drift:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - name: Parse artifact registry
+        run: |
+          cargo run --package noa_agents --example load_agent_registry
+      - name: Drift scan
+        run: |
+          python cicd/ml/scripts/drift_scan.py \
+            --artifact-log registry/ml_artifacts.log \
+            --evidence-ledger storage/db/evidence/ledger.jsonl
+      - name: Upload drift report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ml-drift-report
+          path: cicd/ml/reports/

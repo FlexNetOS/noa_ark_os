@@ -1,0 +1,36 @@
+{
+  "status": "ok",
+  "results": [
+    {
+      "service": "gateway",
+      "status": 200,
+      "message": "forwarded"
+    },
+    {
+      "service": "runtime-manager",
+      "status": 200,
+      "message": "forwarded"
+    },
+    {
+      "service": "openai",
+      "status": 200,
+      "message": "forwarded"
+    },
+    {
+      "service": "anthropic",
+      "status": 200,
+      "message": "forwarded"
+    },
+    {
+      "service": "llama.cpp",
+      "status": 200,
+      "message": "forwarded"
+    },
+    {
+      "service": "notebook-sync",
+      "status": 200,
+      "message": "forwarded"
+    }
+  ],
+  "telemetry": "build_output/telemetry/self-heal-metrics.json"
+}

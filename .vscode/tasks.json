@@ -2,69 +2,156 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Activate Portable Cargo",
+      "label": "Activate Portable Toolchain",
       "type": "shell",
-      "command": ".\\server\\tools\\activate-cargo.ps1",
+      "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1",
       "windows": {
-        "command": ".\\server\\tools\\activate-cargo.ps1"
+        "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1"
+      },
+      "linux": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "source ./server/tools/activate-cargo-wsl.sh && source ./server/tools/activate-node.sh && cargo --version && node -v && pnpm -v"
+        ]
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
       },
       "presentation": {
         "reveal": "always",
         "panel": "new"
       },
-      "problemMatcher": []
+      "problemMatcher": [],
+      "detail": "Activate portable Cargo + Node toolchain and print versions."
     },
     {
       "label": "Cargo Build (Portable)",
       "type": "shell",
-      "command": ".\\server\\tools\\activate-cargo.ps1; cargo build",
+      "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo build --workspace",
       "windows": {
-        "command": ".\\server\\tools\\activate-cargo.ps1; cargo build"
+        "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo build --workspace"
+      },
+      "linux": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "source ./server/tools/activate-cargo-wsl.sh && source ./server/tools/activate-node.sh && cargo build --workspace"
+        ]
       },
       "group": {
         "kind": "build",
         "isDefault": true
       },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "presentation": {
         "reveal": "always"
       },
-      "problemMatcher": ["$rustc"]
+      "problemMatcher": [
+        "$rustc"
+      ],
+      "detail": "Build full Rust workspace using portable toolchain."
     },
     {
       "label": "Cargo Run (Portable)",
       "type": "shell",
-      "command": ".\\server\\tools\\activate-cargo.ps1; cargo run",
+      "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo run --workspace",
       "windows": {
-        "command": ".\\server\\tools\\activate-cargo.ps1; cargo run"
+        "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo run --workspace"
+      },
+      "linux": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "source ./server/tools/activate-cargo-wsl.sh && source ./server/tools/activate-node.sh && cargo run --workspace"
+        ]
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
       },
       "presentation": {
         "reveal": "always"
       },
-      "problemMatcher": ["$rustc"]
+      "problemMatcher": [
+        "$rustc"
+      ],
+      "detail": "Run primary workspace binary with portable toolchain."
     },
     {
       "label": "Cargo Test (Portable)",
       "type": "shell",
-      "command": ".\\server\\tools\\activate-cargo.ps1; cargo test",
+      "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo test --workspace",
       "windows": {
-        "command": ".\\server\\tools\\activate-cargo.ps1; cargo test"
+        "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo test --workspace"
+      },
+      "linux": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "source ./server/tools/activate-cargo-wsl.sh && source ./server/tools/activate-node.sh && cargo test --workspace"
+        ]
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
       },
       "presentation": {
         "reveal": "always"
       },
-      "problemMatcher": ["$rustc"]
+      "problemMatcher": [
+        "$rustc"
+      ],
+      "detail": "Run full Rust workspace tests with portable toolchain."
     },
     {
       "label": "Cargo Check (Portable)",
       "type": "shell",
-      "command": ".\\server\\tools\\activate-cargo.ps1; cargo check",
+      "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo check --workspace",
       "windows": {
-        "command": ".\\server\\tools\\activate-cargo.ps1; cargo check"
+        "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo check --workspace"
+      },
+      "linux": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "source ./server/tools/activate-cargo-wsl.sh && source ./server/tools/activate-node.sh && cargo check --workspace"
+        ]
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
       },
       "presentation": {
         "reveal": "always"
       },
-      "problemMatcher": ["$rustc"]
+      "problemMatcher": [
+        "$rustc"
+      ],
+      "detail": "Type-check full Rust workspace using portable toolchain."
+    },
+    {
+      "label": "Pipeline Local (Portable)",
+      "type": "shell",
+      "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; make pipeline.local",
+      "windows": {
+        "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; make pipeline.local"
+      },
+      "linux": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "source ./server/tools/activate-cargo-wsl.sh && source ./server/tools/activate-node.sh && make pipeline.local"
+        ]
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": [],
+      "detail": "Run local CI pipeline with portable toolchain."
     }
   ]
 }

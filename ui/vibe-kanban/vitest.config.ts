@@ -22,6 +22,10 @@ export default defineConfig({
     alias: {
       "@/": `${resolve(__dirname, "./")}/`,
       "server/ai": resolve(__dirname, "../..", "server/ai"),
+      "@noa-ark/server/": `${resolve(__dirname, "../..", "server")}/`,
+      "@noa-ark/server": resolve(__dirname, "../..", "server"),
+      "@noa-ark/shared-ui/": `${resolve(__dirname, "../..", "ui/shared/src")}/`,
+      "@noa-ark/shared-ui": resolve(__dirname, "../..", "ui/shared/src/index"),
       zod: resolve(__dirname, "node_modules/zod"),
     },
   },

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["MAX_HISTORY"],"enum":["LoadLevel"],"fn":["aggregated","current_load_level","current_snapshot","derive_load_level","record","registry"],"struct":["AggregatedTelemetry","TelemetryRegistry","TelemetrySnapshot"]};

@@ -2,6 +2,14 @@
 
 Multi-layered AI agent system with hive mind coordination, swarm deployments, and disposable sub-agents.
 
+## Task Planning Source of Truth
+
+Automated planners and supporting tooling must source roadmap directives from the machine-readable index at
+`docs/tasks/index.json`. The index provides structured task codes, summaries, authoritative owning files, and declared
+dependencies so planners can queue work without scraping free-form roadmap text. Consumers should validate the file with
+`python tools/task_index_validator.py` before executing generated plans to ensure the dependency graph and file references
+are up to date.
+
 ## Architecture
 
 ### 5-Layer Agent Hierarchy
@@ -51,6 +59,12 @@ agents/
 - Strategic decision making
 - Resource allocation
 - Hive mind coordinator
+
+### Policy Enforcement Subject Specialist (pe-ssp)
+- Enforces AGENT.md guardrails across every automation thread
+- Ships dedicated sub-agents (4-D compliance, Truth Gate steward, smoke/self-check sentinels)
+- Generates claims/evidence artifacts and routes remediation tasks back through the gateway
+- Detector → fixer hooks live in `.workspace/registry/pe_ssp.detector_hooks.json` so planners can call the right sub-agent for each failure mode
 
 ### 2. Worker Agents
 - Task execution
