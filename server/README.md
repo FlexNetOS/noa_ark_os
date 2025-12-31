@@ -161,7 +161,7 @@ cargo build
 cargo build --release
 
 # Build the workspace binary that wires the orchestrator + gateway
-cargo build --bin noa-unified-server
+cargo build --bin noa-ui-api-server
 ```
 
 ### Run
