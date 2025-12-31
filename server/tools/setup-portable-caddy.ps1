@@ -53,6 +53,15 @@ $manifest | ConvertTo-Json | Set-Content -Path $manifestPath
 Copy-Item $manifestPath (Join-Path $scriptDir 'caddy-portable.manifest.json') -Force
 
 Remove-Item (Join-Path $caddyRoot 'current') -Force -ErrorAction SilentlyContinue
-New-Item -ItemType SymbolicLink -Path (Join-Path $caddyRoot 'current') -Target $extractDir | Out-Null
+try {
+    New-Item -ItemType SymbolicLink -Path (Join-Path $caddyRoot 'current') -Target $extractDir -ErrorAction Stop | Out-Null
+} catch {
+    if ($IsWindows) {
+        # Fall back to junction if symlink fails (non-admin)
+        cmd /c mklink /J (Join-Path $caddyRoot 'current') $extractDir | Out-Null
+    } else {
+        throw "Failed to create symbolic link: $($_.Exception.Message)"
+    }
+}
 
 Write-Host "✅ Portable Caddy ready at $extractDir"

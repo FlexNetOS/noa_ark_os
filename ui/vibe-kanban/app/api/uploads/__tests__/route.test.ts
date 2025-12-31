@@ -23,18 +23,13 @@ const mockWorkspace = {
 };
 
 vi.mock("@/app/lib/session", () => ({
-  assertUser: () => ({ id: "user-1", name: "Ava" }),
+  assertUser: async () => ({ id: "user-1", name: "Ava" }),
 }));
 
 const getWorkspace = vi.fn();
 const recordUploadReceipt = vi.fn();
 const recordWorkspaceNotification = vi.fn();
 const publishNotification = vi.fn();
-
-vi.mock("node:stream/promises", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("node:stream/promises")>()),
-  pipeline: vi.fn().mockResolvedValue(undefined),
-}));
 
 vi.mock("@/server/workspace-store", () => ({
   getWorkspace: (...args: unknown[]) => getWorkspace(...args),
