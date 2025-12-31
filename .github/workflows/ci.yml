@@ -77,7 +77,7 @@ jobs:
       - name: Verify provider instruction pointers
         run: pnpm exec tsx tools/ci/verify_provider_pointers.ts
 
-      - name: Guardrail: Deletion Lock + Evidence Ledger
+      - name: Guardrail - Deletion Lock + Evidence Ledger
         shell: bash
         run: |
           set -euo pipefail
@@ -89,36 +89,36 @@ jobs:
             echo "$changed" | grep -q '^docs/verification/' || { echo "Deletion/rename found but no evidence ledger update under docs/verification/." >&2; exit 1; }
           fi
 
-      - name: Guardrail: Duplicate Fence (SHA-256 twins)
+      - name: Guardrail - Duplicate Fence (SHA-256 twins)
         shell: bash
         run: |
           set -euo pipefail
-          python3 - << 'PY'
-import hashlib, os, sys, subprocess
-ALLOW_PREFIXES = ("archive/","out/",".git/",".next/","target/","node_modules/","dist/","build/")
-base = os.environ.get('GITHUB_BASE_REF') or 'main'
-changed = subprocess.run(["bash","-lc",f"git diff --name-only origin/{base}..."], capture_output=True, text=True).stdout.split()
-seen = {}
-violations = []
-for p in changed:
-    if any(p.startswith(a) for a in ALLOW_PREFIXES):
-        continue
-    if not os.path.isfile(p):
-        continue
-    with open(p,'rb') as f:
-        h = hashlib.sha256(f.read()).hexdigest()
-    if h in seen and seen[h] != p:
-        violations.append((p, seen[h], h))
-    else:
-        seen[h] = p
-if violations:
-    print('Duplicate content detected:', file=sys.stderr)
-    for a,b,h in violations:
-        print(f"  {a} == {b} ({h})", file=sys.stderr)
-    sys.exit(1)
-PY
+          python3 << 'PYTHON_SCRIPT'
+          import hashlib, os, sys, subprocess
+          ALLOW_PREFIXES = ("archive/","out/",".git/",".next/","target/","node_modules/","dist/","build/")
+          base = os.environ.get('GITHUB_BASE_REF') or 'main'
+          changed = subprocess.run(["bash","-lc",f"git diff --name-only origin/{base}..."], capture_output=True, text=True).stdout.split()
+          seen = {}
+          violations = []
+          for p in changed:
+              if any(p.startswith(a) for a in ALLOW_PREFIXES):
+                  continue
+              if not os.path.isfile(p):
+                  continue
+              with open(p,'rb') as f:
+                  h = hashlib.sha256(f.read()).hexdigest()
+              if h in seen and seen[h] != p:
+                  violations.append((p, seen[h], h))
+              else:
+                  seen[h] = p
+          if violations:
+              print('Duplicate content detected:', file=sys.stderr)
+              for a,b,h in violations:
+                  print(f"  {a} == {b} ({h})", file=sys.stderr)
+              sys.exit(1)
+          PYTHON_SCRIPT
 
-      - name: Guardrail: Report Fence (docs/ only for new .md)
+      - name: Guardrail - Report Fence (docs/ only for new .md)
         shell: bash
         run: |
           set -euo pipefail
@@ -132,7 +132,7 @@ PY
           done
           exit $bad
 
-      - name: Guardrail: Change Budget
+      - name: Guardrail - Change Budget
         shell: bash
         run: |
           set -euo pipefail
