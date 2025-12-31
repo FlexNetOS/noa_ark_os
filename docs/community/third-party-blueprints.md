@@ -7,7 +7,6 @@ External partners can publish blueprint automations that extend Noa Ark workflow
 1. **Repository Layout**
    - Provide a public Git repository or artifact bundle containing blueprint assets.
    - Include `blueprint.yaml` detailing inputs, dependencies, kernel hooks, and UI affordances (see [Blueprint Schema](#blueprint-schema) below).
-   - Include `blueprint.yaml` detailing inputs, dependencies, kernel hooks, and UI affordances (see schema below).
    - Supply documentation (`README.md`) with deployment diagrams and configuration steps.
 2. **Operational Readiness**
    - Demonstrate compatibility with the latest LTS kernel release (`noa-ark>=1.4`).
