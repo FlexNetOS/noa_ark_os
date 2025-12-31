@@ -111,7 +111,9 @@ for agent_name, meta in manifest.items():
 
     # openapi.yaml
     openapi = openapi_skeleton.format(
-        name=agent_name, purpose=meta.get("purpose", ""), version=meta.get("version", "")
+        name=agent_name,
+        purpose=meta.get("purpose", ""),
+        version=meta.get("version", ""),
     )
     with open(os.path.join(agent_dir, "openapi.yaml"), "w", encoding="utf-8") as f:
         f.write(openapi)
@@ -129,5 +131,3 @@ for agent_name, meta in manifest.items():
     print(f"✅ Generated all files for {agent_name}")
 
 print("🎉 Super generator complete! All agent files are now up-to-date.")
-
-

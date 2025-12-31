@@ -1,0 +1,11 @@
+# Test artifacts and runtime directories
+/crc/
+/out/
+/storage/
+/temp/
+/drop-in/incoming/
+/archive/
+
+# Backup files
+*.bak
+*~
