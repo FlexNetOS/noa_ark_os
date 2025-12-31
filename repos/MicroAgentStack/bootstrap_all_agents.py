@@ -1,8 +1,9 @@
 import os
 import json
 
-MANIFEST_PATH = "updated_agent_manifest.json"   # or agent_manifest.json if preferred
+MANIFEST_PATH = "updated_agent_manifest.json"  # or agent_manifest.json if preferred
 AGENTS_DIR = "agents"
+
 
 def approve_all_agents(manifest):
     updated = False
@@ -11,6 +12,7 @@ def approve_all_agents(manifest):
             agent_entry["approval_status"] = "approved"
             updated = True
     return updated
+
 
 def scaffold_agent(agent_name, agent_entry, agents_dir=AGENTS_DIR):
     agent_dir = os.path.join(agents_dir, agent_name)
@@ -29,8 +31,11 @@ def scaffold_agent(agent_name, agent_entry, agents_dir=AGENTS_DIR):
         f.write("fastapi\n")  # Add more requirements as needed
     # Dockerfile
     with open(os.path.join(agent_dir, "Dockerfile"), "w") as f:
-        f.write("FROM python:3.10-slim\nWORKDIR /app\nCOPY . .\nRUN pip install -r requirements.txt\nCMD [\"python\", \"main.py\"]\n")
+        f.write(
+            'FROM python:3.10-slim\nWORKDIR /app\nCOPY . .\nRUN pip install -r requirements.txt\nCMD ["python", "main.py"]\n'
+        )
     return agent_dir
+
 
 def main():
     with open(MANIFEST_PATH, "r") as f:
@@ -53,6 +58,7 @@ def main():
     print(f"\nScaffolded {len(created)} agents:")
     for dir in created:
         print(f" - {dir}")
+
 
 if __name__ == "__main__":
     main()
