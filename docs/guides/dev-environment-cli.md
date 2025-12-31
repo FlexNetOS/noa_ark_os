@@ -118,3 +118,46 @@ The script reuses the CLI bootstrap to ensure the container builds and that `nod
 ## Updating tooling
 
 When you change dependencies (Rust toolchain, Node.js version, VS Code extensions, etc.), edit `tools/devshell/dev-env.manifest.toml`. Re-run `scripts/dev-env.sh build` (or the PowerShell equivalent) to regenerate the image, and add the change to PRs so downstream users keep pace with manifest updates.
+
+## Codex CLI + MCP bootstrap
+
+Codex ships with the container so every terminal session can launch the MCP-enabled workflow without manual npm globals:
+
+- `.devcontainer/post-create.sh` now runs `scripts/codex-bootstrap.sh`, which downloads the latest Codex binary for the host platform, installs `noa-mcp-server` via `cargo install`, and appends a `[mcp_servers.noa]` entry to `${CODEX_HOME:-~/.codex}/config.toml` pointing at the repository root.
+- Run the script manually when working outside the container:
+
+  ```bash
+  scripts/codex-bootstrap.sh
+  ```
+
+  This ensures `codex`, `noa-mcp-server`, and the MCP config exist locally, and that Codex knows to launch the server from `/home/<user>/.local/bin/noa-mcp-server` with `cwd` set to your repo root.
+
+Use `codex mcp list` to confirm the `noa` entry is registered, then start `noa_tools_agent` (for example with `cargo run -p noa_tools_agent`) before running `codex` so the MCP bridge can forward tool invocations.
+
+### Host-specific tips
+
+- **macOS**: Run the script from Terminal/iTerm after installing the Xcode Command Line Tools (`xcode-select --install`). The script auto-detects the proper Codex artifact and uses the system `python3`. When launching from zsh, make sure `$HOME/.local/bin` is on the PATH (`echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc`).
+- **Windows**: Execute the script from Git Bash (ships with Git for Windows) or from WSL. The bootstrapper now auto-detects `python3` vs `python` via the `PYTHON_BIN` override, so a standard `winget install Python.Python.3.11` is sufficient. Add `%USERPROFILE%\.local\bin` to your PATH (`setx PATH "%USERPROFILE%\.local\bin;%PATH%"`) so both `codex` and `noa-mcp-server` are discoverable in PowerShell sessions.
+- **Remote tool targets**: When you need Codex to talk to a shared `noa_tools_agent`, export `NOA_TOOLS_SERVER_URL=https://<remote-host>:<port>/` before running the bootstrap script so the `[mcp_servers.noa]` stanza records the remote gateway URL instead of `http://127.0.0.1:8910/`.
+
+## MCP health check
+
+CI and local preflight runs can validate that Codex still reaches `noa_tools_agent` through the MCP shim:
+
+```bash
+cicd/scripts/codex-mcp-health.sh
+```
+
+The script performs three steps:
+
+1. Runs `codex mcp list --json` and asserts the `noa` entry exists in `~/.codex/config.toml`.
+2. Boots `noa_tools_agent` (bound to `127.0.0.1:8910`) and verifies the HTTP surface responds to a `list_files` request.
+3. Launches the stdio-based `noa-mcp-server`, sends `initialize`, `list_tools`, and `call_tool` (for `noa.list_files`) requests over JSON-RPC, and fails fast if the result payload changes.
+
+Wire this script into CI or local commit hooks to detect regressions in `noa_tools_agent` or the MCP adapter before Codex users encounter them.
+
+### Remote + multi-OS validation
+
+- **Remote-only probes**: Set `NOA_MCP_REMOTE_ONLY=1` and `NOA_TOOLS_SERVER_URL` to a reachable agent endpoint when you want to keep the health script from spawning a local `noa_tools_agent`. In that mode you are responsible for starting the remote agent (for local simulations run `NOA_WORKSPACE_ROOT=$PWD NOA_TOOLS_ADDRESS=127.0.0.1:8910 cargo run -p noa_tools_agent --bin noa_tools_agent --quiet &` before invoking the script).
+- **Log capture**: Both local and remote runs can tee their output into `logs/codex-mcp-health/*.log` for evidence. The script already waits for `/list_files` to respond before exercising the MCP RPC surface, which makes it safe to run on CI runners where startup latency varies.
+- **Fork-only GitHub Actions guard**: The `Fork MCP Health Guard` workflow (`.github/workflows/noa-mcp-health.yml`) runs `scripts/codex-bootstrap.sh` and `cicd/scripts/codex-mcp-health.sh` on `ubuntu-latest`, `macos-latest`, and `windows-latest` for every forked PR. It boots a background `noa_tools_agent`, forces remote-only mode, and surfaces regressions before the branch merges upstream.

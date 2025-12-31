@@ -4,34 +4,13 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from core.kernel.security import issue_capability_token
-from services.gateway.service import Gateway, GatewayRequest, PolicyRule, build_default_config
-
-
-def _service_identity(service_id: str) -> str:
-    return f"self-heal::{service_id}"
-
-
-def _issue_service_token(service_id: str, rule: PolicyRule) -> tuple[str, Optional[str]]:
-    client_id = _service_identity(service_id)
-    if not rule.requires_authentication:
-        return client_id, None
-
-    fs_scopes = [rule.fs_scope] if rule.fs_scope else []
-    network_scopes = [rule.network_scope] if rule.network_scope else []
-    token = issue_capability_token(
-        client_id=client_id,
-        fs_scopes=fs_scopes,
-        network_scopes=network_scopes,
-        rate_limit_per_minute=rule.rate_limit_per_minute,
-    )
-    return client_id, token
+from services.gateway.service import Gateway, GatewayRequest, build_default_config
 
 
 def _exercise_service(gateway: Gateway, service_id: str, rule) -> Dict[str, object]:
@@ -42,13 +21,12 @@ def _exercise_service(gateway: Gateway, service_id: str, rule) -> Dict[str, obje
             "reason": "no policy routes configured",
         }
 
-    client_id, token = _issue_service_token(service_id, rule)
     request = GatewayRequest(
-        client_id=client_id,
+        client_id="self-heal",
         service=service_id,
         path=rule.allowed_paths[0],
         method=rule.allowed_methods[0],
-        token=token,
+        token="self-heal-token",
     )
     response = gateway.handle(request)
     return {

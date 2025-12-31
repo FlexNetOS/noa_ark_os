@@ -6,12 +6,12 @@ import { useBoardState } from "../useBoardState";
 import type { WorkspaceBoard } from "../board-types";
 import * as sessionModule from "@noa-ark/shared-ui/session";
 
-type Listener = (value: unknown) => void;
+vi.mock("@noa-ark/shared-ui/session", async () => {
+  const actual = await vi.importActual<typeof import("@noa-ark/shared-ui/session")>("@noa-ark/shared-ui/session");
 
-function createSessionContinuityMock() {
   class MockSessionContinuityClient {
     static last: MockSessionContinuityClient | null = null;
-    private listeners = new Map<string, Set<Listener>>();
+    private listeners = new Map<string, Set<(value: unknown) => void>>();
     public requested: ResumeToken[] = [];
     private connected = false;
 
@@ -19,140 +19,55 @@ function createSessionContinuityMock() {
       MockSessionContinuityClient.last = this;
     }
 
-    on(event: string, handler: Listener) {
-      const set = this.listeners.get(event) ?? new Set<Listener>();
+    on(event: string, handler: (value: unknown) => void) {
+      const set = this.listeners.get(event) ?? new Set();
       set.add(handler);
       this.listeners.set(event, set);
     }
 
-    off(event: string, handler: Listener) {
+    off(event: string, handler: (value: unknown) => void) {
       const set = this.listeners.get(event);
       set?.delete(handler);
-      if (set && set.size === 0) {
-        this.listeners.delete(event);
-      }
     }
 
     connectWebSocket() {
       this.connected = true;
+      this.emit("connection:open", undefined);
     }
 
     disconnect() {
+      if (!this.connected) return;
       this.connected = false;
-      this.listeners.clear();
-      if (MockSessionContinuityClient.last === this) {
-        MockSessionContinuityClient.last = null;
-      }
+      this.emit("connection:closed", undefined);
     }
 
     requestResume(token: ResumeToken) {
       this.requested.push(token);
     }
 
-    emit(event: string, payload: unknown) {
-      if (!this.connected) {
-        this.connectWebSocket();
-      }
+    emit(event: string, payload?: unknown) {
       const set = this.listeners.get(event);
       set?.forEach((handler) => handler(payload));
     }
   }
 
   return {
-    SessionContinuityClient: MockSessionContinuityClient,
-    getLastClient: () => MockSessionContinuityClient.last,
-  };
-}
-
-vi.mock("@noa-ark/shared-ui/session", async () => {
-  const actual = await vi.importActual<typeof import("@noa-ark/shared-ui/session")>(
-    "@noa-ark/shared-ui/session",
-  );
-  const { SessionContinuityClient, getLastClient } = createSessionContinuityMock();
-
-  return {
     ...actual,
-    SessionContinuityClient,
-    __getLastClient: getLastClient,
+    SessionContinuityClient: MockSessionContinuityClient,
+    __getLastClient: () => MockSessionContinuityClient.last,
   };
 });
 
 const fetchMock = vi.fn();
 
 global.fetch = fetchMock as unknown as typeof fetch;
-type MockMessageEvent = MessageEvent & { data: string };
-type MockEventListener = (event: MockMessageEvent) => void;
 
-class MockEventSource {
-  static readonly CONNECTING = 0;
-  static readonly OPEN = 1;
-  static readonly CLOSED = 2;
+type LastClientAccessor = { __getLastClient?: () => unknown };
+type LastClientLike = { disconnect?: () => void; emit?: (event: string, payload: unknown) => void; requested?: unknown[] };
+const getLastClient = () =>
+  (sessionModule as unknown as LastClientAccessor).__getLastClient?.() as LastClientLike | undefined;
 
-  url: string;
-  readonly CONNECTING = MockEventSource.CONNECTING;
-  readonly OPEN = MockEventSource.OPEN;
-  readonly CLOSED = MockEventSource.CLOSED;
-  readyState = MockEventSource.CONNECTING;
-  onopen: ((this: EventSource, ev: Event) => unknown) | null = null;
-  onmessage: ((this: EventSource, ev: MessageEvent) => unknown) | null = null;
-  onerror: ((this: EventSource, ev: Event) => unknown) | null = null;
-  withCredentials = false;
-  private listeners = new Map<string, Set<MockEventListener>>();
-
-  constructor(url: string) {
-    this.url = url;
-    this.readyState = MockEventSource.OPEN;
-  }
-
-  addEventListener(event: string, listener: MockEventListener) {
-    const handlers = this.listeners.get(event) ?? new Set<MockEventListener>();
-    handlers.add(listener);
-    this.listeners.set(event, handlers);
-  }
-
-  removeEventListener(event: string, listener: MockEventListener) {
-    const handlers = this.listeners.get(event);
-    handlers?.delete(listener);
-    if (handlers && handlers.size === 0) {
-      this.listeners.delete(event);
-    }
-  }
-
-  dispatchEvent(_: Event): boolean {
-    return true;
-  }
-
-  emit(event: string, data: string) {
-    const payload = { data, type: event } as MockMessageEvent;
-    this.listeners.get(event)?.forEach((listener) => listener(payload));
-    if (event === "message") {
-      this.onmessage?.call(this as unknown as EventSource, payload);
-    }
-  }
-
-  close() {
-    this.readyState = MockEventSource.CLOSED;
-    this.listeners.clear();
-    this.onopen = null;
-    this.onmessage = null;
-    this.onerror = null;
-  }
-}
-
-(globalThis as { EventSource?: typeof EventSource }).EventSource =
-  MockEventSource as unknown as typeof EventSource;
-
-type MockClientShape = {
-  requested: ResumeToken[];
-  emit: (event: string, payload: unknown) => void;
-  disconnect: () => void;
-};
-
-type SessionModuleWithMock = typeof sessionModule & {
-  __getLastClient?: () => MockClientShape | null;
-};
-
-const getLastClient = () => (sessionModule as SessionModuleWithMock).__getLastClient?.() ?? null;
+const NOW = new Date().toISOString();
 
 describe("useBoardState planner integration", () => {
   const board: WorkspaceBoard = {
@@ -173,59 +88,58 @@ describe("useBoardState planner integration", () => {
             mood: "focus",
           },
         ],
+        cards: [
+          {
+            id: "card-1",
+            title: "Prototype kanban drag",
+            notes: "Polish easing curve + inertia for drag transitions.",
+            createdAt: new Date().toISOString(),
+            mood: "focus",
+          },
+        ],
       },
       {
         id: "in-progress",
         title: "In Progress",
         accent: "from-sky-500 via-cyan-400 to-emerald-400",
         goals: [],
+        cards: [],
       },
       {
         id: "done",
         title: "Done",
         accent: "from-violet-500 via-indigo-400 to-fuchsia-500",
         goals: [],
+        cards: [],
       },
     ],
     lastUpdated: new Date().toISOString(),
+  };
+
+  const workspace = {
+    id: "studio",
+    name: "Studio",
+    accent: "from-indigo-500 via-purple-500 to-blue-500",
+    createdAt: NOW,
+    billingPlan: "starter",
+    members: [],
+    boards: [board],
+    activity: [],
+    notifications: [],
+    uploadReceipts: [],
   };
 
   beforeEach(() => {
     fetchMock.mockImplementation(async (input: RequestInfo) => {
       const url = typeof input === "string" ? input : input.url;
       if (url.endsWith("/api/workspaces")) {
-        return {
-          ok: true,
-          json: async () => ({
-            workspaces: [
-              {
-                id: "studio",
-                name: "Studio",
-                accent: "from-indigo-500 via-purple-500 to-blue-500",
-                createdAt: new Date().toISOString(),
-                billingPlan: "starter",
-                members: [],
-                boards: [board],
-                activity: [],
-                notifications: [],
-                uploadReceipts: [],
-              },
-            ],
-          }),
-        } as Response;
+        return { ok: true, json: async () => ({ workspaces: [workspace] }) } as Response;
       }
       if (url.endsWith("/api/workspaces/studio")) {
         return {
           ok: true,
           json: async () => ({
-            workspace: {
-              id: "studio",
-              members: [],
-              boards: [board],
-              activity: [],
-              notifications: [],
-              uploadReceipts: [],
-            },
+            workspace,
           }),
         } as Response;
       }
@@ -243,7 +157,7 @@ describe("useBoardState planner integration", () => {
           ok: true,
           json: async () => ({
             suggestions: [],
-            focusCard: board.columns[0].goals[0],
+            focusCard: board.columns[0]!.goals[0]!,
             plan: {
               goalId: "goal-1",
               goalTitle: "Prototype kanban drag",
@@ -257,7 +171,9 @@ describe("useBoardState planner integration", () => {
                 expiresAt: new Date(Date.now() + 1000 * 60 * 60).toISOString(),
               },
               startedAt: new Date().toISOString(),
-              stages: [{ id: "goal-intake", name: "Goal Intake", state: "pending" }],
+              stages: [
+                { id: "goal-intake", name: "Goal Intake", state: "pending" },
+              ],
             },
           }),
         } as Response;
@@ -288,7 +204,7 @@ describe("useBoardState planner integration", () => {
 
     const client = getLastClient();
     await act(async () => {
-      client?.emit("workflow:update", {
+      client?.emit?.("workflow:update", {
         eventType: "workflow/stage",
         workflowId: plan.workflowId,
         payload: { stage_id: "Goal Intake", state: "Running" },
@@ -299,11 +215,11 @@ describe("useBoardState planner integration", () => {
     await waitFor(() => expect(result.current.planner.plans[0].stages[0].state).toBe("running"));
 
     const beforeRefresh = fetchMock.mock.calls.filter(([input]) =>
-      String(input).endsWith("/api/workspaces/studio/boards/launchpad"),
+      String(input).endsWith("/api/workspaces/studio/boards/launchpad")
     ).length;
 
     await act(async () => {
-      client?.emit("workflow:update", {
+      client?.emit?.("workflow:update", {
         eventType: "workflow/state",
         workflowId: plan.workflowId,
         payload: { state: "Completed" },
@@ -314,7 +230,7 @@ describe("useBoardState planner integration", () => {
     await waitFor(() => expect(result.current.planner.plans[0].status).toBe("completed"));
 
     const afterRefresh = fetchMock.mock.calls.filter(([input]) =>
-      String(input).endsWith("/api/workspaces/studio/boards/launchpad"),
+      String(input).endsWith("/api/workspaces/studio/boards/launchpad")
     ).length;
     expect(afterRefresh).toBeGreaterThan(beforeRefresh);
 

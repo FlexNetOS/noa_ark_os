@@ -1,0 +1,31 @@
+# CONSOLIDATION SCAN (2025-10-07)
+
+## services vs mono/services
+legacy: agent-registry
+legacy: ark-ai-os-workspace
+legacy: ark_workspace
+legacy: board-agents
+legacy: coordinator-cluster
+legacy: deployed-app-cluster
+legacy: noa-commander
+legacy: phase1
+legacy: phase6
+legacy: sandbox-cluster
+legacy: workspace_source
+mono:   agent
+mono:   analytics
+mono:   api
+mono:   inference
+mono:   retrieval
+
+## apps vs mono/apps
+legacy: desktop
+legacy: src
+legacy: web
+mono:   desktop
+mono:   web
+
+## unified packages
+pkg:    kernel
+pkg:    shared
+pkg:    shims

@@ -9,9 +9,9 @@
         "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1"
       },
       "linux": {
-        "command": "/bin/bash",
+        "command": "bash",
         "args": [
-          "-lc",
+          "-c",
           "source ./server/tools/activate-cargo-wsl.sh && source ./server/tools/activate-node.sh && cargo --version && node -v && pnpm -v"
         ]
       },
@@ -23,19 +23,19 @@
         "panel": "new"
       },
       "problemMatcher": [],
-      "detail": "Activates portable Cargo/Node toolchains and prints their versions."
+      "detail": "Activate portable Cargo + Node toolchain and print versions."
     },
     {
-      "label": "[Deprecated] Cargo Build (Portable)",
+      "label": "Cargo Build (Portable)",
       "type": "shell",
-      "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo build",
+      "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo build --workspace",
       "windows": {
-        "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo build"
+        "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo build --workspace"
       },
       "linux": {
-        "command": "/bin/bash",
+        "command": "bash",
         "args": [
-          "-lc",
+          "-c",
           "source ./server/tools/activate-cargo-wsl.sh && source ./server/tools/activate-node.sh && cargo build --workspace"
         ]
       },
@@ -52,19 +52,19 @@
       "problemMatcher": [
         "$rustc"
       ],
-      "detail": "Prefer make cargo-build or tools/devshell shims."
+      "detail": "Build full Rust workspace using portable toolchain."
     },
     {
-      "label": "[Deprecated] Cargo Run (Portable)",
+      "label": "Cargo Run (Portable)",
       "type": "shell",
-      "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo run",
+      "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo run --workspace",
       "windows": {
-        "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo run"
+        "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo run --workspace"
       },
       "linux": {
-        "command": "/bin/bash",
+        "command": "bash",
         "args": [
-          "-lc",
+          "-c",
           "source ./server/tools/activate-cargo-wsl.sh && source ./server/tools/activate-node.sh && cargo run --workspace"
         ]
       },
@@ -77,19 +77,19 @@
       "problemMatcher": [
         "$rustc"
       ],
-      "detail": "Prefer make cargo-run or tools/devshell shims."
+      "detail": "Run primary workspace binary with portable toolchain."
     },
     {
-      "label": "[Deprecated] Cargo Test (Portable)",
+      "label": "Cargo Test (Portable)",
       "type": "shell",
-      "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo test",
+      "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo test --workspace",
       "windows": {
-        "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo test"
+        "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo test --workspace"
       },
       "linux": {
-        "command": "/bin/bash",
+        "command": "bash",
         "args": [
-          "-lc",
+          "-c",
           "source ./server/tools/activate-cargo-wsl.sh && source ./server/tools/activate-node.sh && cargo test --workspace"
         ]
       },
@@ -102,19 +102,19 @@
       "problemMatcher": [
         "$rustc"
       ],
-      "detail": "Prefer make cargo-test or tools/devshell shims."
+      "detail": "Run full Rust workspace tests with portable toolchain."
     },
     {
-      "label": "[Deprecated] Cargo Check (Portable)",
+      "label": "Cargo Check (Portable)",
       "type": "shell",
-      "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo check",
+      "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo check --workspace",
       "windows": {
-        "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo check"
+        "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; cargo check --workspace"
       },
       "linux": {
-        "command": "/bin/bash",
+        "command": "bash",
         "args": [
-          "-lc",
+          "-c",
           "source ./server/tools/activate-cargo-wsl.sh && source ./server/tools/activate-node.sh && cargo check --workspace"
         ]
       },
@@ -127,7 +127,7 @@
       "problemMatcher": [
         "$rustc"
       ],
-      "detail": "Prefer make cargo-check or tools/devshell shims."
+      "detail": "Type-check full Rust workspace using portable toolchain."
     },
     {
       "label": "Pipeline Local (Portable)",
@@ -137,9 +137,9 @@
         "command": ".\\server\\tools\\activate-cargo.ps1 -Silent; .\\server\\tools\\activate-node.ps1 -Silent; make pipeline.local"
       },
       "linux": {
-        "command": "/bin/bash",
+        "command": "bash",
         "args": [
-          "-lc",
+          "-c",
           "source ./server/tools/activate-cargo-wsl.sh && source ./server/tools/activate-node.sh && make pipeline.local"
         ]
       },
@@ -150,7 +150,8 @@
         "reveal": "always",
         "panel": "shared"
       },
-      "problemMatcher": []
+      "problemMatcher": [],
+      "detail": "Run local CI pipeline with portable toolchain."
     }
   ]
 }

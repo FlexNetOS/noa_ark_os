@@ -53,7 +53,7 @@ class WorkspaceEventHub {
     workspaceId: string,
     boardId: string,
     cardId: string,
-    automation: GoalAutomationState,
+    automation: GoalAutomationState
   ) {
     this.broadcast({
       type: "automation",

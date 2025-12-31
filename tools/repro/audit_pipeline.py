@@ -196,13 +196,9 @@ class AuditPipeline:
         epoch = self._source_date_epoch()
 
         kernel_tar = self.dist_dir / "noa-ark-os-kernel.tar.zst"
-        kernel_binaries = [
-            "target/release/noa_kernel",
-            "target/release/noa_host_control",
-        ]
         self._create_tarball(
             output=kernel_tar,
-            include=kernel_binaries,
+            include=["target/release/noa_core"],
             epoch=epoch,
         )
 
@@ -210,7 +206,7 @@ class AuditPipeline:
         self._create_tarball(
             output=extensions_tar,
             include=["target/release"],
-            exclude=kernel_binaries,
+            exclude=["target/release/noa_core"],
             epoch=epoch,
         )
 

@@ -1,0 +1,40 @@
+{
+  "$schema": "./registry.schema.json",
+  "description": "Central manifest of VS Code / agent-accessible tooling capabilities. Single source of truth; execution policy in AGENT.md.",
+  "policy_pointer": "AGENT.md",
+  "version": "2025-11-19T00:00:00Z",
+  "tools": [
+    {"name": "read_file", "kind": "io", "scope": "filesystem.read", "policy": "Defer to AGENT.md"},
+    {"name": "create_file", "kind": "io", "scope": "filesystem.write", "policy": "Archive before superseding"},
+    {"name": "apply_patch", "kind": "io", "scope": "filesystem.edit", "policy": "Surgical edits only"},
+    {"name": "replace_string_in_file", "kind": "io", "scope": "filesystem.edit", "policy": "Context 3-5 lines"},
+    {"name": "multi_replace_string_in_file", "kind": "io", "scope": "filesystem.edit.batch", "policy": "Batch surgical edits"},
+    {"name": "list_dir", "kind": "io", "scope": "filesystem.enumerate"},
+    {"name": "file_search", "kind": "search", "scope": "filesystem.glob"},
+    {"name": "grep_search", "kind": "search", "scope": "filesystem.text"},
+    {"name": "semantic_search", "kind": "search", "scope": "code.semantic"},
+    {"name": "run_in_terminal", "kind": "exec", "scope": "process.spawn", "policy": "Activate portable toolchains first"},
+    {"name": "run_task", "kind": "exec", "scope": "vscode.task"},
+    {"name": "create_and_run_task", "kind": "exec", "scope": "vscode.task.create"},
+    {"name": "get_task_output", "kind": "exec", "scope": "vscode.task.output"},
+    {"name": "get_terminal_output", "kind": "exec", "scope": "process.capture"},
+    {"name": "get_errors", "kind": "diagnostics", "scope": "code.compile"},
+    {"name": "get_changed_files", "kind": "git", "scope": "git.status"},
+    {"name": "manage_todo_list", "kind": "planning", "scope": "agent.plan"},
+    {"name": "list_code_usages", "kind": "analysis", "scope": "code.references"},
+    {"name": "github-pull-request_activePullRequest", "kind": "github", "scope": "github.pr.active"},
+    {"name": "github-pull-request_openPullRequest", "kind": "github", "scope": "github.pr.open"},
+    {"name": "github-pull-request_copilot-coding-agent", "kind": "github", "scope": "github.pr.agent"},
+    {"name": "github-pull-request_doSearch", "kind": "github", "scope": "github.search"},
+    {"name": "github-pull-request_formSearchQuery", "kind": "github", "scope": "github.search.query"},
+    {"name": "github-pull-request_issue_fetch", "kind": "github", "scope": "github.issue.fetch"},
+    {"name": "github-pull-request_suggest-fix", "kind": "github", "scope": "github.issue.suggest"},
+    {"name": "github-pull-request_renderIssues", "kind": "github", "scope": "github.issue.render"}
+  ],
+  "notes": [
+    "No duplication of logic; all execution policy details live in AGENT.md.",
+    "Archive-first rule applies before create/patch operations.",
+    "Online operations require explicit ONLINE_* feature flags per policy.",
+    "Manifest is auditable; update Evidence Ledger if modified."
+  ]
+}

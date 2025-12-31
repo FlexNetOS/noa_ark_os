@@ -2,29 +2,31 @@
 resolver = "2"
 
 members = [
-    "core",
     "agents",
     "ai/runtime",
-    "workflow",
-    "sandbox",
+    "apps/cli",
     "cicd",
+    "core",
     "crc",
     "crc-adapter-sdk",
-    "runtime/manager",
-    "ui/core",
-    "server/ai/inference",
-    "server/caddy_manager",
-    "server/gateway",
-    "server/core",
-    "server/observability",
-    "services/relocation-daemon",
-    "apps/cli",
-    "server/relocation",
-    "server/ui_api",
-    "tools/symbol_graph",
-    "tools/security/shim",
     "plugins/sdk",
+    "runtime/manager",
+    "sandbox",
+    "server/ai/inference",
+    "server/api",
+    "server/caddy_manager",
+    "server/core",
+    "server/gateway",
+    "server/observability",
+    "server/relocation",
+    "server/tools_agent",
+    "server/ui_api",
+    "services/relocation-daemon",
     "tools/quarantine_guard",
+    "tools/security/shim",
+    "tools/symbol_graph",
+    "ui/core",
+    "workflow",
 ]
 
 [workspace.package]
@@ -32,15 +34,26 @@ version = "0.1.0"
 edition = "2021"
 authors = ["NOA ARK OS Team"]
 license = "MIT"
+description = "NOA ARK OS - A comprehensive operating system framework"
+repository = "https://github.com/FlexNetOS/noa_ark_os"
+readme = "README.md"
+keywords = ["operating-system", "framework", "rust", "ai", "automation"]
+categories = ["development-tools", "operating-systems"]
 
 [workspace.dependencies]
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
 anyhow = "1.0"
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1", features = [
+    "rt-multi-thread",
+    "macros",
+    "net",
+    "io-util",
+] }
 noa_inference = { path = "server/ai/inference" }
-thiserror = "1.0"
+thiserror = "2.0"
+config = "0.15"
 
 [workspace.lints.rust]
 unsafe_code = "warn"

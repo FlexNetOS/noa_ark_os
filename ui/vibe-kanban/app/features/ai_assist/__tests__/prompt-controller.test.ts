@@ -34,7 +34,7 @@ describe("handlePromptRequest", () => {
         loadTemplate: async () => template,
         provider: new MockProvider(),
         logRequest,
-      },
+      }
     );
 
     expect(result.prompt).toContain("Feature: Sync gateway telemetry");
@@ -42,7 +42,7 @@ describe("handlePromptRequest", () => {
     expect(result.provider).toBe("test-provider");
     expect(result.completion).toBe("completed:" + result.prompt.length);
     expect(logRequest).toHaveBeenCalledWith(
-      expect.objectContaining({ status: "success", provider: "test-provider" }),
+      expect.objectContaining({ status: "success", provider: "test-provider" })
     );
   });
 });

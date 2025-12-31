@@ -6,15 +6,14 @@ Param(
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $WorkspaceRoot = Split-Path -Parent (Split-Path -Parent $ScriptDir)
 $ActivateScript = Join-Path $WorkspaceRoot "server/tools/activate-cargo.ps1"
-$PortableCargoWin = Join-Path $WorkspaceRoot "server/tools/cargo-portable/bin/cargo.exe"
-$PortableCargoUnix = Join-Path $WorkspaceRoot "server/tools/cargo-portable/bin/cargo"
+$PortableCargo = Join-Path $WorkspaceRoot "server/tools/cargo-portable/bin/cargo.exe"
 
 $usePortable = $false
-if (Test-Path $ActivateScript -PathType Leaf -and ((Test-Path $PortableCargoWin -PathType Leaf) -or (Test-Path $PortableCargoUnix -PathType Leaf))) {
+if (Test-Path $ActivateScript -PathType Leaf -and (Test-Path $PortableCargo -PathType Leaf)) {
     . $ActivateScript
     $usePortable = $true
 } elseif ($env:NOA_FORCE_PORTABLE) {
-    Write-Error "NOA_FORCE_PORTABLE is set but portable toolchain was not found at $PortableCargoWin or $PortableCargoUnix"
+    Write-Error "NOA_FORCE_PORTABLE is set but portable toolchain was not found at $PortableCargo"
     exit 1
 } elseif (-not (Get-Command cargo -ErrorAction SilentlyContinue)) {
     Write-Error "Cargo executable not found. Install Rust or provision the portable toolchain."

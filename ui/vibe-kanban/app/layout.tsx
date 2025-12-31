@@ -9,7 +9,11 @@ export const metadata: Metadata = {
   description: "A vibey project management board for creative coding teams.",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en" className="bg-background">
       <body className={`${inter.variable} min-h-screen bg-background`}>{children}</body>

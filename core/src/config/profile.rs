@@ -82,13 +82,15 @@ pub struct ProfileMetadata {
 }
 
 /// Definition of allowed and denied tools.
-#[derive(Debug, Clone, Default, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Default)]
 pub struct ToolSection {
     #[serde(default)]
     pub allowed: Vec<String>,
     #[serde(default)]
     pub denied: Vec<String>,
 }
+
+// Default derived
 
 impl ToolSection {
     fn normalise(&mut self) {

@@ -1,186 +1,45 @@
-﻿# CRC – Continuous ReCode System (`noa_crc`)
+﻿# CRC - Continuous ReCode System
 
-CRC is the Continuous ReCode System for NOA ARK OS. It ingests external or
-stale code, normalizes it into a safe workspace shape, and prepares artifacts
-for downstream CI/CD and relocation flows.
+Intelligent code adaptation system with AI supervision and automatic workspace fitting.
 
-It is implemented as a Rust crate (`noa_crc`) with a CLI (`crc`) plus a set of
-supporting directories under the workspace `crc/` root.
+## ⚠️ Current Status: Manual Integration Mode
 
-## Current Status
+**Full automation (Option B) is under development.** Currently operating in **manual integration mode (Option A)**.
 
-CRC is no longer purely “manual integration only”. The codebase now provides:
+**What Works Now**:
+- ✅ Drop-in folder structure
+- ✅ Manual code analysis
+- ✅ Manual integration with AI assistance
+- ✅ Agent registry loaded from drops
 
-**Implemented**
-- ✅ Content-addressed storage (`crc::cas`) with a CLI subcommand (`crc cas …`)
-- ✅ File watcher for drop-in folders (`crc::watcher`) with source-type detection
-- ✅ Drop processing pipeline (`crc::processor::DropProcessor`) that:
-  - Analyzes drops (file/line counts, languages, dependency scan, basic patterns)
-  - Adapts them to workspace conventions (stubbed but wired)
-  - Validates structure (stubbed cargo check, required files, basic heuristics)
-  - Assigns sandbox models based on `SourceType` and confidence
-  - Produces profile-specific builds under `storage/artifacts/*`
-  - Archives drops via `ArchiveManager` with per-source retention policies
-- ✅ Parallel queueing skeleton (`crc::parallel::ParallelDropProcessor`) for staged
-  analysis → adaptation → validation with synthetic timing
-- ✅ CRC graph + engine (`crc::graph`, `crc::engine`) and an orchestrator for
-  queueing graph-based jobs
-- ✅ CLI commands (`crc/src/main.rs`) for:
-  - `serve` – run watcher + parallel processor together
-  - `run` – execute a CRC graph plan once to a checkpoint
-  - `ingest` – run digestors and emit an ingest report
-  - `cas` – interact with the content addressed store
-  - `migrate` – apply FileReplacePlan migrations
-  - `graph` – inspect CRC graph nodes and traces
-- ✅ Telemetry integration with structured events across CAS, ingest, service,
-  and migration paths
-- ✅ Integration tests for CAS, archive ingestion, digestors, DAG seed, and basic
-  orchestrator/parallel processing flows (`crc/tests/*.rs`)
+**In Development**:
+- ⏳ Automated file watching
+- ⏳ Automated adaptation pipeline
+- ⏳ Automated validation and testing
+- ⏳ Automated sandbox assignment
+- ⏳ Automated archival system
 
-**Simulated / Incomplete**
-- ⚠️ `CRCSystem::scan_incoming` is a stub (returns an empty list).
-- ⚠️ `DropProcessor`’s AI-related behavior (patterns, test generation, cargo
-  checks) is simulated or no-op:
-  - `generate_missing_tests`, `apply_conventions`, `run_cargo_check`, and
-    `find_issues` are intentionally shallow placeholders.
-- ⚠️ `ParallelDropProcessor` uses synthetic timers and does not yet call the
-  real `DropProcessor` / archive pipeline.
-- ⚠️ The watcher does not directly trigger the processor; a proper queue or
-  channel wiring point is left as a TODO.
-- ⚠️ YAML configs in `crc/config/` (rules/patterns/standards/sources) describe
-  desired behavior but are not yet consumed by the Rust pipeline.
+**See**: `DROP_IN_QUICKSTART.md` for current manual process
 
-**Aspirational (docs mention, code not fully there yet)**
-- 🤖 True AI-backed analysis/adaptation instead of heuristics.
-- 🔄 End-to-end “drop → adapt → verify → ready → CI/CD” with no manual hand-offs.
-- 📊 Agent registry integration (“agent registry loaded from drops”) – this is
-  not present in the current crate and should be treated as future work.
+## Overview
 
-For the operator-facing workflow, see:
-- `DROP_IN_QUICKSTART.md` – drop-in directory walkthrough
-- `QUICK_REFERENCE.md` – quick-start card
-- `SANDBOX_MODELS.md` – sandbox model details
-- `USER_WORKFLOW.md` – user-oriented CRC flow
+CRC automatically adapts external code (repos, forks, mirrors, stale codebases) to fit the NOA ARK OS workspace conventions, architecture, and standards.
 
-## Directory Layout (runtime)
+**Vision**: Full automation from drop to deploy  
+**Reality**: Manual integration with AI assistance (for now)
 
-The `crc` crate assumes the following workspace-relative layout (created on
-startup by `verify_directory_structure()` when missing):
+## Key Features
 
-```text
-crc/
-├── config/                         # YAML configuration, not yet fully wired
-│   ├── rules.yaml                  # Adaptation rules (naming, deps, quality)
-│   ├── patterns.yaml               # Pattern detection hints
-│   ├── sources.yaml                # Source-type configuration
-│   └── standards.yaml              # Coding / architecture standards
-├── drop-in/
-│   ├── incoming/
-│   │   ├── repos/                  # Active / maintained repositories
-│   │   ├── forks/                  # Developer-maintained forks
-│   │   ├── mirrors/                # Mirrored/backup repos
-│   │   └── stale/                  # Old/unmaintained code drops
-│   ├── processing/
-│   │   ├── analysis/               # Analysis workspaces
-│   │   ├── adaptation/             # Adaptation workspaces
-│   │   └── validation/             # Validation workspaces
-│   └── ready/
-│       ├── model-a-queue/          # Feature sandbox queue
-│       ├── model-b-queue/          # Bugfix sandbox queue
-│       ├── model-c-queue/          # Experimental sandbox queue
-│       └── model-d-queue/          # Integration sandbox queue
-├── archive/
-│   ├── stale/                      # Archived stale codebases
-│   ├── repos/                      # Archived external repos
-│   ├── forks/                      # Archived forks
-│   ├── mirrors/                    # Archived mirrors
-│   └── internal/                   # Archived internal drops
-├── temp/
-│   ├── analysis-cache/             # Cached analysis outputs
-│   ├── extracts/                   # Temporary extraction roots
-│   └── logs/                       # CRC logs and traces
-├── storage/
-│   └── artifacts/
-│       ├── edge/                   # Edge/agent-friendly build artifacts
-│       └── server/                 # Server-side build artifacts
-└── src/, tests/, sandboxes/, out/  # Crate sources, tests, and examples
-```
+- 🤖 **AI-Supervised**: AI model analyzes and adapts code
+- 🔄 **Auto-Approve**: High-confidence changes deploy automatically
+- 📦 **Drop-In Folder**: Simple code ingestion
+- 🗜️ **Auto-Archive**: Compress originals, no live stale code
+- 📊 **Cross-Reference**: Fast lookups without decompression
+- 🚀 **Zero-Touch**: Complete automation from drop to deploy
 
-The default configuration in `CRCConfig::default()` matches this layout.
+## Local Smoke Tests
 
-## Core Components
-
-CRC is organized into focused modules (all under `crc/src/`):
-
-- `lib.rs` – type definitions (`CodeDrop`, `DropManifest`, `CRCSystem`,
-  `CRCConfig`, `SandboxModel`, `CRCState`, archive index types) and public
-  module exports.
-- `main.rs` – `crc` CLI entrypoint (serve, run, ingest, cas, migrate, graph).
-- `cas.rs` – content-addressed store (BLAKE3-based) for artifacts
-  (`storage/cas` by default), with `Cas::put_bytes`, `Cas::get`, and `Cas::stat`.
-- `archive.rs` – `ArchiveManager` providing compressed archives with retention
-  policies, hash computation, cleanup, and metadata persistence.
-- `processor.rs` – `DropProcessor` pipeline: analyze → adapt → validate →
-  sandbox assignment → ready queue move → build generation → archive +
-  cleanup. Many behaviors are intentionally simplified but fully wired.
-- `watcher.rs` – filesystem watcher that:
-  - Watches the `crc/drop-in/incoming/*` folders
-  - Classifies paths into `SourceType`
-  - Runs extraction and metadata capture
-  - Generates a `DropManifest` and registers it in `CRCSystem`
-- `parallel.rs` – `ParallelDropProcessor` for generic queue-based processing of
-  drop IDs across Analysis/Adaptation/Validation stages (currently simulates
-  work with sleeps and synthetic confidence scores).
-- `graph.rs` / `engine.rs` / `orchestrator.rs` – graph-based pipeline
-  execution, topological ordering, and queued job orchestration for more
-  complex flows.
-- `digestors/` – pluggable digestors for `git`, `config`, `API specs`, SBOMs,
-  and binaries, used by the `crc ingest` command and `crc/tests/digest_smoke.rs`.
-- `build.rs` – build manifest and artifact definitions plus helpers to produce
-  profile-optimized builds into `storage/artifacts/*`.
-- `telemetry.rs` – structured logging helpers (`info`, `warn`, `error`) used
-  across CLI and services.
-- `error.rs`, `types.rs`, `ir.rs` – shared error, type aliases, and pipeline
-  IR (lanes, node states, etc.).
-
-## CLI Overview (`crc` binary)
-
-From the workspace root:
-
-```bash
-cargo run -p noa_crc -- --help
-```
-
-Key subcommands:
-
-- `crc serve` – start the long-lived CRC service:
-  - Ensures the directory layout exists (`verify_directory_structure`).
-  - Instantiates `CRCSystem` + `CRCWatcher` + `ParallelDropProcessor`.
-  - Runs watcher and processor concurrently until shutdown.
-
-- `crc ingest --root <PATH> --report <FILE>` – digest a repo or artifact root
-  with all digestors and emit a JSON ingest report (assets + coverage +
-  trust averages).
-
-- `crc cas put/get/stat` – store and retrieve CAS objects, or inspect their
-  metadata (size, path, timestamps).
-
-- `crc run --checkpoint <DIR>` – construct a simple CRC graph and run it once
-  into a checkpoint directory for debugging or demos.
-
-- `crc migrate --plan <PLAN.yaml|json> [...] --root <PATH>` – apply a sequence
-  of file replacement plans and optionally roll them back, with telemetry
-  events for traceability.
-
-- `crc graph ls|show|trace` – inspect CRC graph nodes and topological traces;
-  useful when debugging orchestrated flows.
-
-The PowerShell `detect-forks.ps1` remains available as a Windows-centric helper
-around the drop-in directories, but the canonical API is now the `crc` CLI.
-
-## Local Tests and Smoke Checks
-
-From the workspace root:
+Quickly validate core CRC workflows before submitting a change:
 
 ```bash
 # CAS round-trip hash stability
@@ -191,52 +50,113 @@ cargo test -p noa_crc --test digest_smoke
 
 # DAG orchestration checkpoint verification
 cargo test -p noa_crc --test dag_seed
-
-# Archive ingestion and retention
-cargo test -p noa_crc --test archive_ingestion
 ```
 
-These tests exercise CAS, digestors, basic graph orchestration, and archive
-handling to catch regressions early.
+## Directory Structure
 
-## Known Gaps & Conflicts (Code vs. Docs)
+```
+crc/
+├── drop-in/           # Active drop folder
+│   ├── incoming/      # Drop code here
+│   ├── processing/    # Being adapted
+│   └── ready/         # Ready for CI/CD
+├── archive/           # Compressed archives
+│   ├── stale/         # Old codebases
+│   ├── repos/         # External repos
+│   ├── forks/         # Forked code
+│   └── mirrors/       # Mirror snapshots
+├── temp/              # Temporary (no live code)
+│   ├── extract/       # Temp extraction
+│   ├── analysis/      # AI analysis
+│   └── cross-ref/     # Compressed references
+└── config/            # Configuration
+    ├── rules.yaml     # Adaptation rules
+    ├── patterns.yaml  # Code patterns
+    └── standards.yaml # Workspace standards
+```
 
-To align with the AGENT policy (“heal, do not harm”) the following gaps are
-explicitly tracked rather than hidden:
+## How It Works
 
-- **Manual vs. automatic integration**
-  - Earlier docs (and older README text) describe CRC as “manual integration
-    only”. The current codebase clearly includes a watcher, processor, and
-    parallel queues. However, the wiring between watcher → CRCSystem →
-    DropProcessor → ParallelDropProcessor is not yet complete; processing is
-    still orchestrated manually or via demos.
+### 1. Drop Code
 
-- **Agent registry integration**
-  - The previous README claimed “Agent registry loaded from drops”. There is
-    no agent registry logic in `noa_crc`; any such integration will likely live
-    in agents/gateway layers and should be added explicitly when designed.
+Drop any code into `drop-in/incoming/`:
 
-- **AI-supervised behavior**
-  - The pipeline carries AI-related fields (`ai_confidence`, auto-approve
-    flags), but uses deterministic heuristics and simulated sleeps rather than
-    actual model calls. Any AI provider integration should be introduced via
-    gateway-managed config (per AGENT.md) and documented as such.
+```bash
+# Drop external repo
+cp -r /path/to/external-project crc/drop-in/incoming/
 
-- **Config usage**
-  - `crc/config/*.yaml` defines rich adaptation/standards metadata that is not
-    fully consumed by the current Rust code. Future work should:
-    - Parse these files into typed structs.
-    - Drive `DropProcessor` behavior directly from them.
-    - Emit evidence into the workspace indexes and evidence ledger.
+# Or clone directly
+cd crc/drop-in/incoming/
+git clone https://github.com/external/project.git
+```
 
-- **CI/CD triggers**
-  - `CRCConfig::trigger_cicd` and related flags exist, but there is no concrete
-    integration with the workspace CI/CD yet. When added, it should go through
-    the kernel/gateway policy surface rather than ad-hoc shell commands.
+### 2. Automatic Processing
 
-As the implementation advances, this README should be kept in sync with actual
-symbols and behavior in `crc/src/*.rs`, treating the crate as the single source
-of truth and keeping aspiration clearly separated from shipped functionality.
+CRC automatically:
+1. Detects new code in incoming/
+2. Analyzes structure and dependencies
+3. Determines adaptation strategy
+4. Adapts code to workspace conventions
+5. Generates tests
+6. Validates adapted code
+7. Compresses original to archive/
+8. Outputs adapted code to ready/
+9. Triggers CI/CD pipeline
+
+### 3. AI Supervision
+
+AI model provides:
+- Code structure analysis
+- Dependency mapping
+- Adaptation recommendations
+- Quality assessment
+- Confidence scoring
+- Auto-approve decisions
+
+### 4. Archive and Cleanup
+
+Original code:
+- Compressed to `archive/` with timestamp
+- Indexed for cross-reference
+- Removed from active workspace
+- Retained per retention policy
+
+## Configuration
+
+### Adaptation Rules
+
+`config/rules.yaml`:
+
+```yaml
+adaptation_rules:
+  # Naming conventions
+  naming:
+    convert_to_snake_case: true
+    prefix_modules: "noa_"
+    max_name_length: 50
+  
+  # Architecture alignment
+  architecture:
+    use_workspace_patterns: true
+    enforce_layer_separation: true
+    apply_security_model: true
+    match_directory_structure: true
+  
+  # Dependencies
+  dependencies:
+    remove_external: true
+    use_embedded_runtimes: true
+    vendor_if_necessary: true
+    self_contained: true
+  
+  # Code quality
+  quality:
+    apply_formatter: true
+    enforce_linting: true
+    add_documentation: true
+    generate_tests: true
+    min_coverage: 80
+```
 
 ### Code Patterns
 

@@ -6,8 +6,11 @@ import { workspaceEventHub } from "@/server/workspace-events";
 
 export const runtime = "nodejs";
 
-export async function GET(_request: Request, { params }: { params: { workspaceId: string } }) {
-  const user = assertUser();
+export async function GET(
+  _request: Request,
+  { params }: { params: { workspaceId: string } }
+) {
+  const user = await assertUser();
   const workspace = await getWorkspace(params.workspaceId);
   if (!workspace || !workspace.members.some((member) => member.id === user.id)) {
     return new NextResponse("Not Found", { status: 404 });

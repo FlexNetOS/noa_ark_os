@@ -76,9 +76,7 @@ export function KanbanCard({
       className={classes.join(" ")}
     >
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-base font-semibold text-white/90 group-hover:text-white">
-          {goal.title}
-        </h3>
+        <h3 className="text-base font-semibold text-white/90 group-hover:text-white">{goal.title}</h3>
         <CardMoodBadge mood={goal.mood} />
       </div>
       {goal.notes && <p className="mt-3 line-clamp-3 text-sm text-white/60">{goal.notes}</p>}

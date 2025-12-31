@@ -1,0 +1,12 @@
+drop_id: drop_90488b3c-ba1e-4e57-9545-9f8206844c13
+profile: server
+source_path: crc/temp/extracts/2388299a-98fa-477c-9765-8d08594a2b03
+optimization_flags:
+- -C
+- opt-level=3
+- -C
+- lto=thin
+feature_gates:
+- throughput
+- gpu-offload
+timestamp: 1763222990

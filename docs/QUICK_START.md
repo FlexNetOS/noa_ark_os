@@ -7,30 +7,6 @@
 
 ## ✅ THE WORKING METHOD
 
-### 🚦 Unified Full Stack Launcher
-
-Run every prerequisite (toolchain activation, installs, builds, tests) and launch the entire stack with one command. Logs stream into `build_output/system-launch/` so you can inspect each service.
-
-**Linux / WSL / macOS**
-
-```bash
-./scripts/full_stack_launch.sh
-```
-
-**Windows PowerShell (through WSL)**
-
-```powershell
-wsl bash ./scripts/full_stack_launch.sh
-```
-
-Add flags as needed:
-
-- `--prepare-only` – install/build/test everything, then exit without launching services.
-- `--skip-tests` – useful when you only need the stack running quickly.
-- `--skip-notebook` – suppress the Jupyter server if you do not need it.
-
-`make full-stack` wraps the same script for CI-style automation.
-
 ### **Step 1: Start Server** (ONE command)
 
 ```powershell
@@ -70,40 +46,7 @@ curl http://127.0.0.1:8080/completion -X POST `
 
 ---
 
-### **Step 3: Start Gateway System**
-
-```powershell
-# Start the NOA Gateway (after AI server is running)
-cargo run --bin gateway
-```
-
-**What you'll see**:
-```
-NOA Gateway starting...
-Loading symbol routing tables...
-Policy engine initialized...
-QoS tiers configured...
-Hardware acceleration enabled...
-Gateway ready on port 3000
-```
-
----
-
-### **Step 4: Test Gateway**
-
-```powershell
-# Test gateway health
-curl http://127.0.0.1:3000/health
-
-# Test symbol routing
-curl http://127.0.0.1:3000/route -X POST \
-  -H "Content-Type: application/json" \
-  -d '{"symbol":"test","tier":"premium"}'
-```
-
----
-
-### **Step 5: Use NOA CLI**
+### **Step 3: Use NOA CLI**
 
 ```powershell
 cargo run --example noa_cli
@@ -120,7 +63,6 @@ Then type any prompt!
 | **Launch script** | 1 second | Opens window |
 | **Model loading** | 30-60 seconds | 9.65 GB → GPU VRAM |
 | **First ready** | ~60 seconds | Server accepting requests |
-| **Gateway start** | 5-10 seconds | Symbol tables, policies, QoS |
 | **First inference** | 10-20 seconds | Generate first response |
 | **Subsequent** | 5-10 seconds | Much faster! |
 

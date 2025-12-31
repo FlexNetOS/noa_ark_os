@@ -158,11 +158,6 @@ fn to_component_metadata(graph: &RegistryGraph, node: &RegistryNode) -> Componen
 pub struct FileSystemService;
 
 impl FileSystemService {
-    /// Construct a new file-system capability handle.
-    pub const fn new() -> Self {
-        Self
-    }
-
     /// Create a file entry tracked by the kernel registry.
     pub fn create_file(&self, path: String, permissions: u32) -> Result<(), &'static str> {
         create_file_inner(path, permissions)
@@ -182,12 +177,12 @@ impl FileSystemService {
 
 /// Create a file.
 pub fn create_file(path: String, permissions: u32) -> Result<(), &'static str> {
-    FileSystemService::new().create_file(path, permissions)
+    FileSystemService.create_file(path, permissions)
 }
 
 /// Get file descriptor.
 pub fn get_file(path: &str) -> Option<FileDescriptor> {
-    FileSystemService::new().get_file(path)
+    FileSystemService.get_file(path)
 }
 
 /// Move a file to a new destination path.

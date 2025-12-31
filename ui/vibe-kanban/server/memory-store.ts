@@ -122,10 +122,7 @@ export async function appendGoalTrace(trace: GoalExecutionTrace): Promise<void> 
   });
 }
 
-export async function listGoalTraces(
-  goalId: string,
-  workspaceId: string,
-): Promise<GoalExecutionTrace[]> {
+export async function listGoalTraces(goalId: string, workspaceId: string): Promise<GoalExecutionTrace[]> {
   const store = await readStore();
   const workspace = store.workspaces.find((entry) => entry.workspaceId === workspaceId);
   if (!workspace) {
@@ -162,8 +159,13 @@ export async function recordWorkspaceSnapshot(workspace: Workspace): Promise<voi
   const store = await readStore();
   const workspaceMemory = findWorkspace(store, workspace.id);
   const cardCount = workspace.boards.reduce(
-    (count, board) => count + board.columns.reduce((acc, column) => acc + column.goals.length, 0),
-    0,
+    (count, board) =>
+      count + board.columns.reduce((acc, column) => acc + (Array.isArray((column as unknown as { goals?: unknown[] }).goals)
+        ? (column as unknown as { goals: unknown[] }).goals.length
+        : Array.isArray((column as unknown as { cards?: unknown[] }).cards)
+          ? (column as unknown as { cards: unknown[] }).cards.length
+          : 0), 0),
+    0
   );
   const snapshot: WorkspaceSnapshot = {
     workspaceId: workspace.id,
@@ -214,6 +216,8 @@ export async function recordWorkspaceSnapshot(workspace: Workspace): Promise<voi
       },
     });
   }
+
+  return;
 }
 
 export async function getWorkspaceSnapshots(workspaceId: string): Promise<WorkspaceSnapshot[]> {

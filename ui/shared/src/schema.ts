@@ -9,16 +9,10 @@ export type WidgetKind =
   | "workspace.planner"
   | "workspace.integrations"
   | "workspace.presence"
-  | "workspace.automation"
-  | "workspace.agentFactory"
   | "layout.region"
   | "layout.section"
   | "cta.primary"
-  | "form.signin"
-  | "research.notebook.summary"
-  | "research.notebook.section"
-  | "research.notebook.citations"
-  | "research.notebook.media";
+  | "form.signin";
 
 export interface EventBinding {
   widgetId: string;

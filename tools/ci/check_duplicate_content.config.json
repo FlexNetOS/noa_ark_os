@@ -5,31 +5,10 @@
     "archive",
     "build_output",
     "build_kits",
-    "crc/storage",
-    "docs/api",
-    "dist",
-    "repos/ARK-OS",
-    "repos/MicroAgentStack",
-    "repos/agentaskit",
-    "repos/ark-os-noa",
-    "repos/deflex-ai-os",
-    "repos/deflexnet-app",
-    "storage/analytics",
-    "target",
-    "ui/vibe-kanban/.data",
-    "ui/vibe-kanban/.next",
-    "tools/.pnpm-home",
-    ".workspace",
-    "noa_ark_os_env",
-    ".venv",
-    "server/tools/rustup-portable",
-    "server/tools/cargo-portable",
-    "server/tools/node-portable",
     ".gitkeep",
     "cicd/cache",
     "storage/db",
-    "tests/fixtures",
-    "audit/bundle-*"
+    "tests/fixtures"
   ],
   "allowedDuplicateGroups": [
     [
@@ -60,10 +39,6 @@
     [
       "crc/drop-in/incoming/repos/task_exec_kit/templates/agent_merge_request.yaml",
       "workflow/templates/merge/agent_merge_request.yaml"
-    ],
-    [
-      "CLAUDE.md",
-      "CODEX.md"
     ]
   ]
 }

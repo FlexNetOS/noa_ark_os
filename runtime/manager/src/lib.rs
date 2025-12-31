@@ -1,7 +1,6 @@
-use std::collections::{HashMap, HashSet};
-use std::fs::File;
-use std::io::Read;
-use std::path::Path;
+use std::collections::HashSet;
+use std::fs;
+use std::path::{Path, PathBuf};
 
 use noa_core::hardware::{AcceleratorKind, HardwareProfile};
 #[cfg(test)]
@@ -132,150 +131,44 @@ pub struct KernelRuntimeGraph {
     pub services: Vec<KernelRuntimeService>,
 }
 
+#[derive(Debug, Error)]
+pub enum KernelRuntimeGraphError {
+    #[error("failed to read kernel runtime graph at {path}: {source}")]
+    Read {
+        path: PathBuf,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("failed to parse kernel runtime graph at {path}: {source}")]
+    Parse {
+        path: PathBuf,
+        #[source]
+        source: serde_yaml::Error,
+    },
+}
+
 impl KernelRuntimeGraph {
     pub fn service(&self, id: &str) -> Option<&KernelRuntimeService> {
         self.services.iter().find(|service| service.id == id)
     }
 
-    /// Load a kernel runtime graph from a YAML reader and validate it.
-    pub fn from_reader(mut reader: impl Read) -> std::result::Result<Self, GraphLoadError> {
-        let mut yaml = String::new();
-        reader.read_to_string(&mut yaml)?;
-        let graph: KernelRuntimeGraph = serde_yaml::from_str(&yaml)?;
-        graph.validate()?;
+    pub fn load_from_path(
+        path: impl AsRef<Path>,
+    ) -> std::result::Result<Self, KernelRuntimeGraphError> {
+        let path_ref = path.as_ref();
+        let path_buf = path_ref.to_path_buf();
+        let data =
+            fs::read_to_string(path_ref).map_err(|source| KernelRuntimeGraphError::Read {
+                path: path_buf.clone(),
+                source,
+            })?;
+        let graph =
+            serde_yaml::from_str(&data).map_err(|source| KernelRuntimeGraphError::Parse {
+                path: path_buf,
+                source,
+            })?;
         Ok(graph)
     }
-
-    /// Load a kernel runtime graph from the provided file path and validate it.
-    pub fn load_from_path(path: impl AsRef<Path>) -> std::result::Result<Self, GraphLoadError> {
-        let file = File::open(path.as_ref())?;
-        let graph = Self::from_reader(file)?;
-        Ok(graph)
-    }
-
-    /// Validate the runtime graph to ensure dependencies are resolvable and acyclic.
-    pub fn validate(&self) -> std::result::Result<(), GraphValidationError> {
-        let mut known = HashSet::new();
-        for service in &self.services {
-            if !known.insert(service.id.clone()) {
-                return Err(GraphValidationError::DuplicateService {
-                    id: service.id.clone(),
-                });
-            }
-        }
-
-        for id in &self.boot_order {
-            if !known.contains(id) {
-                return Err(GraphValidationError::UnknownBootService { id: id.clone() });
-            }
-        }
-
-        for id in &known {
-            if !self.boot_order.iter().any(|entry| entry == id) {
-                return Err(GraphValidationError::ServiceMissingFromBootOrder { id: id.clone() });
-            }
-        }
-
-        for service in &self.services {
-            for dependency in service.requires.iter().chain(service.optional.iter()) {
-                if !known.contains(dependency) {
-                    return Err(GraphValidationError::UnknownDependency {
-                        service: service.id.clone(),
-                        dependency: dependency.clone(),
-                    });
-                }
-            }
-        }
-
-        self.detect_cycles()
-    }
-
-    fn detect_cycles(&self) -> std::result::Result<(), GraphValidationError> {
-        let adjacency: HashMap<&str, Vec<&str>> = self
-            .services
-            .iter()
-            .map(|service| {
-                (
-                    service.id.as_str(),
-                    service.requires.iter().map(|dep| dep.as_str()).collect(),
-                )
-            })
-            .collect();
-
-        let mut visited = HashSet::new();
-        let mut visiting = HashSet::new();
-        let mut stack = Vec::new();
-
-        for node in adjacency.keys() {
-            if !visited.contains(*node) {
-                dfs(node, &adjacency, &mut visited, &mut visiting, &mut stack)?;
-            }
-        }
-
-        Ok(())
-    }
-}
-
-#[derive(Debug, Error)]
-pub enum GraphValidationError {
-    #[error("duplicate service id '{id}' in kernel runtime graph")]
-    DuplicateService { id: String },
-    #[error("service '{service}' references unknown dependency '{dependency}'")]
-    UnknownDependency { service: String, dependency: String },
-    #[error("service '{id}' missing from boot order")]
-    ServiceMissingFromBootOrder { id: String },
-    #[error("boot order references unknown service '{id}'")]
-    UnknownBootService { id: String },
-    #[error("cyclic dependency detected: {cycle:?}")]
-    CyclicDependency { cycle: Vec<String> },
-}
-
-fn dfs<'a>(
-    node: &'a str,
-    adjacency: &HashMap<&'a str, Vec<&'a str>>,
-    visited: &mut HashSet<&'a str>,
-    visiting: &mut HashSet<&'a str>,
-    stack: &mut Vec<&'a str>,
-) -> std::result::Result<(), GraphValidationError> {
-    visiting.insert(node);
-    stack.push(node);
-
-    if let Some(children) = adjacency.get(node) {
-        for child in children {
-            if visiting.contains(child) {
-                let start = stack
-                    .iter()
-                    .rposition(|candidate| candidate == child)
-                    .unwrap_or(0);
-                let mut cycle: Vec<String> = stack[start..]
-                    .iter()
-                    .map(|value| (*value).to_string())
-                    .collect();
-                cycle.push((*child).to_string());
-                return Err(GraphValidationError::CyclicDependency { cycle });
-            }
-
-            if !visited.contains(child) {
-                dfs(child, adjacency, visited, visiting, stack)?;
-            }
-        }
-    }
-
-    visiting.remove(node);
-    visited.insert(node);
-    stack.pop();
-    Ok(())
-}
-
-/// Errors raised when loading kernel runtime graphs from storage.
-#[derive(Debug, Error)]
-pub enum GraphLoadError {
-    #[error("unable to read kernel runtime graph: {0}")]
-    Io(#[from] std::io::Error),
-    #[error("unable to parse kernel runtime graph: {0}")]
-    Parse(#[from] serde_yaml::Error),
-    #[error(transparent)]
-    Validation(#[from] GraphValidationError),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -287,20 +180,6 @@ pub struct CapabilityAssessment {
     pub fallback_notes: Vec<String>,
 }
 
-/// Errors reported when a suitable backend cannot be selected.
-#[derive(Debug, Error)]
-pub enum RuntimeSelectionError {
-    #[error("no backend available for {component:?}")]
-    NoBackend { component: RuntimeComponent },
-    #[error("wasm probe failed: {source}")]
-    WasmProbe {
-        #[from]
-        source: WasmProbeError,
-    },
-}
-
-pub type Result<T> = std::result::Result<T, RuntimeSelectionError>;
-
 pub struct AdaptiveRuntimeController {
     policy: RuntimePolicy,
     graph: KernelRuntimeGraph,
@@ -309,15 +188,6 @@ pub struct AdaptiveRuntimeController {
 impl AdaptiveRuntimeController {
     pub fn new(policy: RuntimePolicy, graph: KernelRuntimeGraph) -> Self {
         Self { policy, graph }
-    }
-
-    /// Construct a controller using a graph loaded from disk.
-    pub fn from_graph_file(
-        policy: RuntimePolicy,
-        path: impl AsRef<Path>,
-    ) -> std::result::Result<Self, GraphLoadError> {
-        let graph = KernelRuntimeGraph::load_from_path(path)?;
-        Ok(Self::new(policy, graph))
     }
 
     pub fn detect(&self, profile: &HardwareProfile, workloads: &[String]) -> CapabilitySignal {
@@ -409,6 +279,21 @@ impl AdaptiveRuntimeController {
         Ok(Some(report))
     }
 }
+
+/// Errors reported when a suitable backend cannot be selected.
+#[derive(Debug, Error)]
+pub enum RuntimeSelectionError {
+    #[error("no backend available for {component:?}")]
+    NoBackend { component: RuntimeComponent },
+    #[error("wasm probe failed: {source}")]
+    WasmProbe {
+        #[from]
+        source: WasmProbeError,
+    },
+}
+
+pub type Result<T> = std::result::Result<T, RuntimeSelectionError>;
+
 /// Select execution backends for the supplied hardware profile.
 pub fn select_execution_plan(
     profile: &HardwareProfile,
@@ -572,6 +457,7 @@ fn deduplicate_fallbacks(plan: &mut RuntimePlan) {
 mod tests {
     use super::*;
     use std::fs;
+    use std::path::PathBuf;
 
     use tempfile::tempdir;
     use wat::parse_str;
@@ -591,6 +477,21 @@ mod tests {
             total_bytes: total_gb * 1024 * 1024 * 1024,
             available_bytes: available_gb * 1024 * 1024 * 1024,
         }
+    }
+
+    #[test]
+    fn load_graph_from_yaml_fixture() {
+        let graph_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../kernel/graph.yaml");
+        let graph =
+            KernelRuntimeGraph::load_from_path(&graph_path).expect("graph fixture should load");
+        assert!(
+            !graph.services.is_empty(),
+            "fixture graph must contain at least one service"
+        );
+        assert!(
+            !graph.boot_order.is_empty(),
+            "fixture graph must declare a boot order"
+        );
     }
 
     #[test]
@@ -654,34 +555,8 @@ mod tests {
 
     fn runtime_graph() -> KernelRuntimeGraph {
         KernelRuntimeGraph {
-            // Updated boot order to include 'observability' before dependent services.
-            boot_order: vec![
-                "kernel".into(),
-                "observability".into(),
-                "runtime-manager".into(),
-                "gateway".into(),
-            ],
+            boot_order: vec!["runtime-manager".into(), "gateway".into()],
             services: vec![
-                KernelRuntimeService {
-                    id: "kernel".into(),
-                    requires: vec![],
-                    optional: vec![],
-                    supported_classes: vec![
-                        HostClassification::Minimal,
-                        HostClassification::Standard,
-                        HostClassification::Accelerated,
-                    ],
-                },
-                KernelRuntimeService {
-                    id: "observability".into(),
-                    requires: vec!["kernel".into()],
-                    optional: vec![],
-                    supported_classes: vec![
-                        HostClassification::Minimal,
-                        HostClassification::Standard,
-                        HostClassification::Accelerated,
-                    ],
-                },
                 KernelRuntimeService {
                     id: "runtime-manager".into(),
                     requires: vec!["kernel".into()],
@@ -703,77 +578,6 @@ mod tests {
                 },
             ],
         }
-    }
-
-    #[test]
-    fn validates_kernel_graph_fixture() {
-        runtime_graph().validate().unwrap();
-    }
-
-    #[test]
-    fn detects_cycles_in_graph() {
-        let graph = KernelRuntimeGraph {
-            boot_order: vec!["a".into(), "b".into()],
-            services: vec![
-                KernelRuntimeService {
-                    id: "a".into(),
-                    requires: vec!["b".into()],
-                    optional: vec![],
-                    supported_classes: vec![HostClassification::Standard],
-                },
-                KernelRuntimeService {
-                    id: "b".into(),
-                    requires: vec!["a".into()],
-                    optional: vec![],
-                    supported_classes: vec![HostClassification::Standard],
-                },
-            ],
-        };
-
-        let err = graph.validate().unwrap_err();
-        assert!(matches!(err, GraphValidationError::CyclicDependency { .. }));
-    }
-
-    #[test]
-    fn loads_graph_from_yaml_file() {
-        let dir = tempdir().unwrap();
-        let path = dir.path().join("graph.yaml");
-        let yaml = r#"
-boot_order:
-  - kernel
-  - gateway
-services:
-  - id: kernel
-    requires: []
-    optional: []
-    supported_classes: [minimal, standard]
-  - id: gateway
-    requires: ["kernel"]
-    optional: []
-    supported_classes: [standard]
-"#;
-        std::fs::write(&path, yaml).unwrap();
-        let graph = KernelRuntimeGraph::load_from_path(&path).unwrap();
-        assert_eq!(graph.boot_order.len(), 2);
-        assert_eq!(graph.services.len(), 2);
-    }
-
-    #[test]
-    fn rejects_invalid_graphs_on_load() {
-        let dir = tempdir().unwrap();
-        let path = dir.path().join("graph.yaml");
-        let yaml = r#"
-boot_order:
-  - unknown
-services:
-  - id: kernel
-    requires: []
-    optional: []
-    supported_classes: [minimal]
-"#;
-        std::fs::write(&path, yaml).unwrap();
-        let err = KernelRuntimeGraph::load_from_path(&path).unwrap_err();
-        assert!(matches!(err, GraphLoadError::Validation(_)));
     }
 
     #[test]
@@ -841,13 +645,11 @@ services:
         .unwrap();
         fs::write(&module_path, wasm_bytes).unwrap();
 
-        let policy = RuntimePolicy {
-            enable_wasm_probes: true,
-            wasm_probe_config: WasmProbeConfig {
-                allow_network: false,
-                ..WasmProbeConfig::default()
-            },
-            ..Default::default()
+        let mut policy = RuntimePolicy::default();
+        policy.enable_wasm_probes = true;
+        policy.wasm_probe_config = WasmProbeConfig {
+            allow_network: false,
+            ..WasmProbeConfig::default()
         };
 
         let controller = AdaptiveRuntimeController::new(policy, runtime_graph());
@@ -876,13 +678,11 @@ services:
         .unwrap();
         fs::write(&module_path, wasm_bytes).unwrap();
 
-        let policy = RuntimePolicy {
-            enable_wasm_probes: true,
-            wasm_probe_config: WasmProbeConfig {
-                max_execution_time_ms: 1,
-                ..WasmProbeConfig::default()
-            },
-            ..Default::default()
+        let mut policy = RuntimePolicy::default();
+        policy.enable_wasm_probes = true;
+        policy.wasm_probe_config = WasmProbeConfig {
+            max_execution_time_ms: 1,
+            ..WasmProbeConfig::default()
         };
 
         let controller = AdaptiveRuntimeController::new(policy, runtime_graph());
@@ -916,13 +716,11 @@ services:
         .unwrap();
         fs::write(&module_path, wasm_bytes).unwrap();
 
-        let policy = RuntimePolicy {
-            enable_wasm_probes: true,
-            wasm_probe_config: WasmProbeConfig {
-                max_memory_mb: 1,
-                ..WasmProbeConfig::default()
-            },
-            ..Default::default()
+        let mut policy = RuntimePolicy::default();
+        policy.enable_wasm_probes = true;
+        policy.wasm_probe_config = WasmProbeConfig {
+            max_memory_mb: 1,
+            ..WasmProbeConfig::default()
         };
 
         let controller = AdaptiveRuntimeController::new(policy, runtime_graph());

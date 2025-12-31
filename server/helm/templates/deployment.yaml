@@ -8,12 +8,27 @@ spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
+<<<<<<< Updated upstream
+=======
+<<<<<<< HEAD
+>>>>>>> Stashed changes
       {{- include "noa-server.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
         {{- include "noa-server.selectorLabels" . | nindent 8 }}
         {{- include "noa-server.extraPodLabels" . | nindent 8 }}
+<<<<<<< Updated upstream
+=======
+=======
+      app.kubernetes.io/name: {{ include "noa-server.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        {{- include "noa-server.labels" . | nindent 8 }}
+>>>>>>> 4931f485 (server: add docker-compose stack, Helm chart, env_manager helper; README: document containerized deployment)
+>>>>>>> Stashed changes
       {{- with .Values.podAnnotations }}
       annotations:
         {{- toYaml . | nindent 8 }}
@@ -30,6 +45,10 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
+<<<<<<< Updated upstream
+=======
+<<<<<<< HEAD
+>>>>>>> Stashed changes
               containerPort: {{ .Values.containerPort }}
             - name: metrics
               containerPort: {{ .Values.containerMetricsPort }}
@@ -59,6 +78,18 @@ spec:
               {{- else if hasKey $value "value" }}
               value: "{{ $value.value }}"
               {{- end }}
+<<<<<<< Updated upstream
+=======
+=======
+              containerPort: {{ .Values.service.port }}
+            - name: metrics
+              containerPort: {{ .Values.service.metricsPort }}
+          env:
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: "{{ $value }}"
+>>>>>>> 4931f485 (server: add docker-compose stack, Helm chart, env_manager helper; README: document containerized deployment)
+>>>>>>> Stashed changes
             {{- end }}
           livenessProbe:
             {{- toYaml .Values.livenessProbe | nindent 12 }}

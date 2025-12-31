@@ -13,11 +13,10 @@ import { BoardShell } from "./BoardShell";
 import { PresenceBar } from "./PresenceBar";
 import { AssistPanel } from "./AssistPanel";
 import { PlannerPanel } from "./PlannerPanel";
+import { AutomationPanel } from "./AutomationPanel";
 import { UploadPanel } from "./UploadPanel";
 import { AnalyticsPanel } from "./AnalyticsPanel";
 import { ActivityTimeline } from "./ActivityTimeline";
-import { AutomationPanel } from "./AutomationPanel";
-import { AgentFactoryPanel } from "./AgentFactoryPanel";
 import { isFeatureEnabled } from "./featureFlags";
 import type { BoardState } from "./useBoardState";
 import type { SessionState } from "./useSession";
@@ -52,14 +51,7 @@ const widgetRegistry = {
         }}
       >
         <div>
-          <p
-            style={{
-              textTransform: "uppercase",
-              letterSpacing: "0.4em",
-              color: tokens.colors["text/subtle"],
-              fontSize: "0.7rem",
-            }}
-          >
+          <p style={{ textTransform: "uppercase", letterSpacing: "0.4em", color: tokens.colors["text/subtle"], fontSize: "0.7rem" }}>
             NOA ARK OS
           </p>
           <h1
@@ -73,15 +65,8 @@ const widgetRegistry = {
             Vibe Kanban Control Hub
           </h1>
           {resumeToken && (
-            <p
-              style={{
-                color: tokens.colors["text/subtle"],
-                marginTop: tokens.spacing.sm,
-                fontSize: "0.85rem",
-              }}
-            >
-              Resume workflow <strong>{resumeToken.workflowId}</strong> from checkpoint{" "}
-              <code>{resumeToken.checkpoint}</code>
+            <p style={{ color: tokens.colors["text/subtle"], marginTop: tokens.spacing.sm, fontSize: "0.85rem" }}>
+              Resume workflow <strong>{resumeToken.workflowId}</strong> from checkpoint <code>{resumeToken.checkpoint}</code>
             </p>
           )}
         </div>
@@ -89,14 +74,7 @@ const widgetRegistry = {
           <div style={{ display: "flex", alignItems: "center", gap: tokens.spacing.lg }}>
             <div style={{ textAlign: "right" }}>
               <p style={{ fontWeight: 600 }}>{name}</p>
-              <p
-                style={{
-                  textTransform: "uppercase",
-                  letterSpacing: "0.2em",
-                  color: tokens.colors["text/subtle"],
-                  fontSize: "0.7rem",
-                }}
-              >
+              <p style={{ textTransform: "uppercase", letterSpacing: "0.2em", color: tokens.colors["text/subtle"], fontSize: "0.7rem" }}>
                 Collaborator
               </p>
             </div>
@@ -155,18 +133,14 @@ const widgetRegistry = {
     const { boardState } = context.data as SchemaDrivenRendererProps["context"]["data"];
     return (
       <WidgetSurface>
-        <PlannerPanel
-          insights={boardState.goalInsights}
-          onRefresh={boardState.refreshBoard}
-          loading={boardState.loading}
-        />
+        <PlannerPanel insights={boardState.goalInsights} onRefresh={boardState.refreshBoard} loading={boardState.loading} />
       </WidgetSurface>
     );
   },
   "workspace.assist": ({ context }: ComponentRenderProps) => {
     const { boardState } = context.data as SchemaDrivenRendererProps["context"]["data"];
     const assistGate = boardState.capabilities.featureGates.find(
-      (gate) => gate.id === "kanban.assist",
+      (gate) => gate.id === "kanban.assist"
     );
     return (
       <WidgetSurface>
@@ -187,6 +161,7 @@ const widgetRegistry = {
       </WidgetSurface>
     );
   },
+  // removed duplicate planner widget using unsupported props
   "workspace.analytics": ({ context }: ComponentRenderProps) => {
     const { boardState } = context.data as SchemaDrivenRendererProps["context"]["data"];
     const enableGoalInsights =
@@ -213,14 +188,6 @@ const widgetRegistry = {
     return (
       <WidgetSurface>
         <AutomationPanel cards={cards} onRetry={boardState.retryAutomation} />
-      </WidgetSurface>
-    );
-  },
-  "workspace.agentFactory": ({ context }: ComponentRenderProps) => {
-    const { boardState } = context.data as SchemaDrivenRendererProps["context"]["data"];
-    return (
-      <WidgetSurface>
-        <AgentFactoryPanel state={boardState} />
       </WidgetSurface>
     );
   },

@@ -185,16 +185,31 @@ fn optional_file(dir: &str, name: &str) -> File<config::FileSourceFile, FileForm
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::Path;
+
+    fn chdir_workspace_root() {
+        // server/core/Cargo.toml -> workspace root is two levels up
+        let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        if let (Some(_parent), Some(root)) = (
+            manifest_dir.parent(),
+            manifest_dir.parent().and_then(|p| p.parent()),
+        ) {
+            // Prefer the actual workspace root if detected; otherwise best-effort
+            std::env::set_current_dir(root).expect("set CWD to workspace root");
+        }
+    }
 
     #[test]
     fn loads_default_configuration() {
+        chdir_workspace_root();
         let config = load(ConfigOverrides::default()).expect("config loads");
         assert_eq!(config.server.port, 8080);
-        assert!(config.observability.log_level.len() > 0);
+        assert!(!config.observability.log_level.is_empty());
     }
 
     #[test]
     fn applies_cli_overrides() {
+        chdir_workspace_root();
         let mut overrides = ConfigOverrides::default();
         overrides.server_port = Some(9090);
         overrides.log_level = Some("debug".into());

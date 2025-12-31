@@ -8,6 +8,22 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
 CONFIG_JSON="$ROOT_DIR/tools/devshell/config.json"
+PYTHON_BIN="${PYTHON_BIN:-python3}"
+
+enforce_duplicate_task_guard() {
+  local detector="$ROOT_DIR/tools/automation/check_todo_duplicates.py"
+  if [[ ! -f "$detector" ]]; then
+    echo "[INFO] Duplicate-task detector not found; skipping AGENT.md check" >&2
+    return
+  fi
+  echo "[INFO] Enforcing AGENT.md anti-duplication policy (workspace TODO scan)" >&2
+  if ! "$PYTHON_BIN" "$detector" --output text; then
+    echo "[ERROR] Duplicate TODO entries detected. Resolve them before continuing." >&2
+    exit 12
+  fi
+}
+
+enforce_duplicate_task_guard
 
 detect_pnpm_version() {
   local version=""
@@ -26,7 +42,7 @@ detect_pnpm_version() {
     ' "$CONFIG_JSON" 2>/dev/null || true)
   fi
   if [[ -z "$version" || "$version" == "None" ]]; then
-    version="8.15.4"
+    version="9.11.0"
   fi
   printf '%s' "$version"
 }
@@ -117,9 +133,14 @@ require_cmd() {
 }
 
 activate_toolchains() {
-  if [[ -z "${NOA_CARGO_ENV:-}" && -f "$ROOT_DIR/server/tools/activate-cargo.sh" ]]; then
-    # shellcheck disable=SC1091
-    source "$ROOT_DIR/server/tools/activate-cargo.sh"
+  if [[ -z "${NOA_CARGO_ENV:-}" ]]; then
+    if [[ -f "$ROOT_DIR/server/tools/activate-cargo-wsl.sh" ]]; then
+      # shellcheck disable=SC1091
+      source "$ROOT_DIR/server/tools/activate-cargo-wsl.sh"
+    elif [[ -f "$ROOT_DIR/server/tools/activate-cargo.sh" ]]; then
+      # shellcheck disable=SC1091
+      source "$ROOT_DIR/server/tools/activate-cargo.sh"
+    fi
   fi
   if [[ -z "${NOA_NODE_ENV:-}" && -f "$ROOT_DIR/server/tools/activate-node.sh" ]]; then
     # shellcheck disable=SC1091
@@ -146,6 +167,9 @@ prepare_env() {
   else
     UI_API_URL="http://$UI_API_BIND"
   fi
+
+  # Export for Rust UI API to read via clap env attributes
+  export NOA_UI_API_ADDR="$UI_API_BIND"
 
   export NOA_UI_DROP_ROOT="${NOA_UI_DROP_ROOT:-$ROOT_DIR/crc/drop-in/incoming}"
   export CRC_CAS_DIR="${CRC_CAS_DIR:-$ROOT_DIR/storage/cas}"
@@ -203,7 +227,7 @@ start_services() {
   log "▶ Launching NOA UI API on $UI_API_BIND"
   (
     set -euo pipefail
-    cargo run -p noa_ui_api -- "$UI_API_BIND"
+    cargo run -p noa_ui_api
   ) |& tee "$API_LOG" &
   API_PID=$!
 

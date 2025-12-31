@@ -46,49 +46,12 @@ path.
   ledger entries must capture the offline cache provenance in their payload.
 - **Verification:** Consumers recompute Merkle roots from `leaves` to confirm
   stage integrity. Signatures chain via `previous_signature`.
-- **Storage doctor:** Run `noa storage doctor` (from `apps/cli`) before
-  committing automation changes to confirm mirrored log pairs are present,
-  begin with a genesis record, and remain in sync.
 
 ## Access
 
 Use the CLI command `noa-cli evidence show` (see `apps/cli`) or subscribe to the
 workflow event stream (`WorkflowEvent::StageReceiptGenerated`) for streaming
 updates.
-
-### CLI usage and filtering
-
-Run `noa-cli evidence show` from a workspace root so the tool can locate
-`storage/db/evidence/ledger.jsonl`. The command now supports several filters:
-
-- `--workflow <ID>` narrows results to entries whose payload contains the
-  matching `workflow_id`.
-- `--kind <kind[,kind...]>` restricts output to specific ledger kinds
-  (`genesis`, `stage_receipt`, `security_scan`, `task_dispatch`,
-  `auto_fix_action`, `budget_decision`).
-- `--since <millis>` / `--until <millis>` bound the timestamps (inclusive) so
-  investigations can focus on a specific window.
-- `--limit <N>` only prints the most recent `N` matching entries.
-- `--verify-signatures` recomputes the operation hash, verifies the signature
-  with the policy secret, and ensures the `previous_signature` chain is intact.
-  Provide the same `NOA_POLICY_SECRET` that was used when emitting the ledger so
-  verification succeeds.
-
-When verification is enabled, each row prints either
-`signature=verified` or `signature=INVALID(...)`. The CLI also emits a warning
-summarising how many displayed rows failed validation.
-
-### Diagnosing missing entries or corrupt chains
-
-If ledger output shows `signature=INVALID(chain)` it means an entry's
-`previous_signature` does not match the prior record—usually signalling a
-missing line or tampering. Use `--since`/`--until` to narrow the range and
-compare with mirrors in `.workspace/indexes/*.log`. Hash mismatches indicate the
-payload was mutated after signing; cross-check the referenced artifact on disk
-and regenerate the stage receipt if required. When both hash and chain validate
-but an expected entry is absent, rebuild the ledger via
-`PipelineInstrumentation` for the affected workflow and append the missing
-record before rerunning verification.
 
 ## Agent Verifier Metadata
 
@@ -165,3 +128,22 @@ record before rerunning verification.
   2. `source ./server/tools/activate-cargo.sh && source ./server/tools/activate-node.sh && make image`
 - **Verification**: `cargo test -p noa_core --tests -- --nocapture` plus the host-control/world suites executed automatically by `make image`; the resulting stdout is recorded in `dist/kernel/test-results.log`.
 - **Purpose**: Confirms the hardened image can be regenerated deterministically and keeps the audit trail current for the Truth Gate.
+
+## 2025-11-19 – Vault Runtime Contract (VAULT-HOME-2025-11-19)
+
+- **Artifacts**: `.workspace/registry/environment.vault.json`, `server/vault/vault.hcl`,
+  `server/vault/configure-gateway-auth-simple.sh`, `server/vault/README.md`,
+  `docs/runtime/vault/README.md`
+- **Purpose**: Replace hard-coded host paths with the gateway-managed
+  `NOA_VAULT_HOME` setting so Vault data, runtime manifests, and gateway auth
+  helpers resolve identically across machines.
+- **Process**:
+  1. Declared `NOA_VAULT_HOME` in the registry and documentation.
+  2. Updated Vault Raft storage to use `{{env "NOA_VAULT_HOME"}}/data`.
+  3. Taught `configure-gateway-auth-simple.sh` to export/seed the managed home
+     and surface the override flag.
+  4. Captured the new bootstrap flow in both `server/vault/README.md` and
+     `docs/runtime/vault/README.md`.
+- **Verification**: Manual review of generated paths plus script dry-run logic
+  (file seeding) to ensure the new location is honored without requiring
+  absolute paths.

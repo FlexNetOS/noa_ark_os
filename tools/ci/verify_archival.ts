@@ -163,6 +163,7 @@ function ensureLedgerEntry(
       // This prevents accepting rename entries for deletions.
     }
   }
+}
   return null;
 }
 

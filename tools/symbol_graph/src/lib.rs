@@ -9,8 +9,6 @@ use thiserror::Error;
 use tree_sitter::{Language, Node, Parser};
 use walkdir::WalkDir;
 
-pub mod notebook;
-
 #[derive(Debug, Error)]
 pub enum GraphError {
     #[error("unsupported language for path {0}")]
@@ -139,10 +137,7 @@ impl SymbolGraphBuilder {
     }
 
     pub fn index_file(&mut self, path: &Path) -> Result<(), GraphError> {
-        let Some((language_id, language)) = language_for(path) else {
-            self.record_generic_file(path)?;
-            return Ok(());
-        };
+        let (language_id, language) = language_for(path)?;
         let source = fs::read_to_string(path)?;
         let mut parser = Parser::new();
         parser
@@ -203,27 +198,6 @@ impl SymbolGraphBuilder {
         write_jsonl(&edges_path, graph.edges.iter())?;
         Ok(())
     }
-
-    fn record_generic_file(&mut self, path: &Path) -> Result<(), GraphError> {
-        let relative = relative_file(path);
-        let extension = path
-            .extension()
-            .and_then(|ext| ext.to_str())
-            .unwrap_or("unknown");
-        let language = format!("generic::{extension}");
-        let signature = format!("file://{relative}");
-        let stable_id = stable_symbol_id(&language, &relative, "file", &signature);
-        self.nodes.entry(stable_id.clone()).or_insert(SymbolNode {
-            stable_id,
-            language,
-            name: relative.clone(),
-            kind: "file".to_string(),
-            file: relative,
-            signature,
-            span: (1, 1),
-        });
-        Ok(())
-    }
 }
 
 fn write_jsonl<'a, I, T>(path: &Path, items: I) -> Result<(), GraphError>
@@ -253,11 +227,11 @@ fn relative_file(path: &Path) -> String {
     path.to_string_lossy().to_string()
 }
 
-fn language_for(path: &Path) -> Option<(&'static str, Language)> {
+fn language_for(path: &Path) -> Result<(&'static str, Language), GraphError> {
     match path.extension().and_then(|ext| ext.to_str()).unwrap_or("") {
-        "rs" => Some(("rust", tree_sitter_rust::language())),
-        "ts" | "tsx" => Some(("typescript", tree_sitter_typescript::language_typescript())),
-        _ => None,
+        "rs" => Ok(("rust", tree_sitter_rust::language())),
+        "ts" | "tsx" => Ok(("typescript", tree_sitter_typescript::language_typescript())),
+        other => Err(GraphError::UnsupportedLanguage(other.to_string())),
     }
 }
 

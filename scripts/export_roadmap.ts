@@ -4,36 +4,17 @@
  * This script is invoked from package scripts and parses docs/plans/roadmap.md.
  */
 
-import { access, readFile, writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-const ROADMAP_CANDIDATES = [
-  "docs/plans/roadmap.md",
-  "docs/plans/roadmaps/roadmap.md",
-];
+const ROADMAP_PATH = resolve("docs/plans/roadmap.md");
 const CSV_PATH = resolve("build_kits/pm_roadmap.csv");
 const JSON_PATH = resolve("build_kits/pm_roadmap.json");
 
 const CSV_HEADER = "code,title,theme,description,priority,status,depends_on,acceptance_criteria";
 
-async function resolveRoadmapPath() {
-  for (const relativePath of ROADMAP_CANDIDATES) {
-    const candidate = resolve(relativePath);
-    try {
-      await access(candidate);
-      return candidate;
-    } catch {
-      continue;
-    }
-  }
-  throw new Error(
-    `Roadmap markdown not found. Checked: ${ROADMAP_CANDIDATES.map((p) => resolve(p)).join(", ")}`,
-  );
-}
-
 async function loadRoadmapContent() {
-  const roadmapPath = await resolveRoadmapPath();
-  const raw = await readFile(roadmapPath, "utf8");
+  const raw = await readFile(ROADMAP_PATH, "utf8");
   const markerStart = "<!-- BEGIN: PM_ROADMAP -->";
   const markerEnd = "<!-- END: PM_ROADMAP -->";
   const startIndex = raw.indexOf(markerStart);

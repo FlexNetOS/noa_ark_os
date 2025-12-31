@@ -13,7 +13,7 @@ use walkdir::WalkDir;
 
 fn build_digestors() -> Vec<Box<dyn Digestor>> {
     vec![
-        Box::new(GitDigestor),
+        Box::new(GitDigestor::default()),
         Box::new(ConfigDigestor),
         Box::new(ApiDigestor),
         Box::new(SbomDigestor),

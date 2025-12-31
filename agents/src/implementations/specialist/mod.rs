@@ -9,6 +9,7 @@ pub mod deployment;
 pub mod integration;
 pub mod learning;
 pub mod monitoring;
+pub mod policy_enforcement;
 pub mod security;
 pub mod testing;
 
@@ -19,5 +20,6 @@ pub use deployment::DeploymentAgent;
 pub use integration::IntegrationAgent;
 pub use learning::LearningAgent;
 pub use monitoring::MonitoringAgent;
+pub use policy_enforcement::PolicyEnforcementAgent;
 pub use security::SecurityAgent;
 pub use testing::TestingAgent;

@@ -13,7 +13,19 @@
 
 ## 0) Purpose
 
-Establish one strict operating policy for every agent-driven action so each task **heals** the codebase, **upgrades** capability, and **never downgrades nor deletes**. The policy blocks content rot, enforces cross-platform offline-first autonomy, and preserves architectural clarity across NOA ARK OS services, CRC, UI, workflows, storage, and tooling.
+Establish one strict operating policy for every agent-driven action so each task:
+- **heals** the codebase, 
+- **upgrades** capability,
+- **never downgrades nor deletes**,
+- **archives** compress and store superseded assets,
+- **verifies** claims through a structured Truth Gate (strictly truth mode only),
+- **documents** every change in the Evidence Ledger,
+- **preserves** architectural clarity,
+- **operates autonomously** through sub-agents,
+- **ensures tasks are never manually repeated** every execution creates mirrored automation; to ensure that task task can be repeated with full autonomous automation.
+- **adheres** to cross-platform standards,
+- **routes** all dependencies, integrations, internal interactions, and external interactions through the gateway stack,
+- The policy blocks content rot, and preserves architectural clarity across NOA ARK OS.
 
 ---
 
@@ -38,9 +50,9 @@ Establish one strict operating policy for every agent-driven action so each task
 ### Offline-First Ownership (Online via Feature Flag)
 
 * **Default mode:** offline/local execution.
-* **Online operations:** allowed only when `ONLINE_*` feature flags are explicitly enabled and logged.
+* **Online operations:** allowed when `ONLINE_*` feature flags are enabled, needed, and logged. Use when external data, models, or services are essential. Complete offline fallbacks when feasible.
 
-### No Duplication, No Deletion
+### No Duplication, No Deletion - Compress + Archive
 
 * Never duplicate instructions or logic across providers; use **gateways** and shared modules.
 * Never delete files; if superseding content, compress+archive the prior version and document the swap.
@@ -49,12 +61,10 @@ Establish one strict operating policy for every agent-driven action so each task
 ### Contained Environment & Dependency Governance
 
 * Treat NOA ARK OS as a **self-contained system**—all runtimes, libraries, assets, and secrets must live inside or be routed through the repository's managed gateways.
+* **User-dynamic paths**: All path references must be relative to the user's installation location (never hardcoded to specific root paths). Users can place `noa_ark_os` anywhere on their system; agents must resolve paths dynamically from the repository root or user workspace.
 * Provision dependencies via gateway-managed manifests (see `services/gateway/service.py`, `server/gateway/`, `.workspace/config/`, `.workspace/registry/*.json`, `tools/portable_builder.py`) so nothing bypasses archival or verification controls.
 * Route every environment variable, credential, configuration knob, dependent runtime, and secret through gateway shims and adapters maintained in `server/gateway/src/*.rs`, `services/gateway/`, `agents/src/implementations/generated/infrastructure/*gateway*`, and related tooling; no ad-hoc `.env` or external service dependencies.
 * Record environmental assumptions and manifest updates in the Evidence Ledger and mirror them in `.workspace/registry/` (or corresponding gateway config files) whenever a task introduces or changes gateway-managed configuration.
-* Provision dependencies via gateway-managed manifests (package registries, build kits, toolchains) so nothing bypasses archival or verification controls.
-* Route every environment variable, credential, configuration knob, and secret through gateway shims (`agents/gateways/`, `tools/`, `.workspace/registry/`) with auditable definitions and fallbacks; no ad-hoc `.env` or external service dependencies.
-* Record environmental assumptions in the Evidence Ledger whenever a task introduces or changes gateway-managed configuration.
 
 **Archival Procedure (mandatory):**
 
@@ -76,22 +86,21 @@ Establish one strict operating policy for every agent-driven action so each task
 8. **Organization Management & Gateway Reuse:** Enforce single sources of truth, re-use assets via gateways, and keep duplicate-check CI passing.
 9. **Provider Instruction Uniformity:** Provider files remain empty pointers that direct readers back to this policy.
 
-### Phase 0.5–10 Operator Patterns
+### Operator Patterns
 
 Detailed execution guidance for the active roadmap phases lives in
 `docs/guides/AGENTIC_OS_GUIDE.md` (sourced from
 `docs/tasks/ROADMAP_AGENTIC_KERNEL_TASK_LINKS.md`). Operators must:
 
-- **Phase 0.5 (CLI-First Foundation):** Drive all actions through CLI targets (`Makefile`, `pnpm`, `cargo`) and record evidence snapshots before state changes.
-- **Phase 1 (Kernel Baseline):** Keep kernel manifests authoritative and trigger `make snapshot` prior to structural migrations.
-- **Phase 2–4 (North Star, Contract Tests, CLI Expansion):** Extend capability registries instead of importing subsystems directly and publish machine-readable evidence for automation replay.
-- **Phase 5 (Gateway Tokens):** Enforce registry-only execution; capability tokens issued via `services/gateway/` gate all runtime launches.
-- **Phase 6–7 (Retrieval Discipline, Reward System):** Update metrics and analytics in lock-step with capability changes to preserve reproducibility.
-- **Phase 8–10 (SBOM Split, Deployment Profiles, Machine-First Pipelines):** Generate SBOM placeholders, promote deployments through gateway-controlled profiles, and document machine-first behaviors in Truth Gate artifacts.
+- **(CLI-First Foundation):** Drive all actions through CLI targets (`Makefile`, `pnpm`, `cargo`) and record evidence snapshots before state changes.
+- **(North Star, Contract Tests, CLI Expansion):** Extend capability registries instead of importing subsystems directly and publish machine-readable evidence for automation replay.
+- **(Gateway Tokens):** Enforce registry-only execution; capability tokens issued via `services/gateway/` gate all runtime launches.
+- **(Retrieval Discipline, Reward System):** Update metrics and analytics in lock-step with capability changes to preserve reproducibility.
+- **(SBOM Split, Deployment Profiles, Machine-First Pipelines):** Generate SBOM placeholders, promote deployments through gateway-controlled profiles, and document machine-first behaviors in Truth Gate artifacts.
 
 ---
 
-## 3) Repository Structure Map (Where Things Belong)
+## 3) AGENTICOS Structure Map (Where Things Belong)
 
 Grounded in the current repository layout:
 
@@ -162,6 +171,14 @@ Reference documents: `HIERARCHY.md`, `WORKSPACE_ORGANIZATION_PLAN.md`, `docs/arc
 4. Model prior knowledge
 
 Resolve conflicts in favor of the highest-priority source.
+
+### Launcher & Tooling Discipline
+
+- `scripts/full_stack_launch.sh` is the canonical “all systems up” entry point. It now exposes `--kernel-mode`, `--cuda-mode`, `--llama-mode`, `--master-controller-mode`, and `--pipeline-mode` flags (values: `auto|force|skip`). Agents must rely on these modes instead of ad-hoc skip flags so the launcher can determine when to harden the kernel, provision CUDA/llama assets, start the inference/master-controller services, and record pipeline evidence.
+- Kernel hardening remains mandatory. The launcher runs `make kernel && make image` automatically whenever `dist/kernel/` is stale, but operators must still treat kernel changes as gated work: inspect the summary table, verify the artifacts, and run the targets manually when working outside the launcher or when CI requires explicit evidence.
+- CUDA, llama.cpp, and master-controller orchestration depend on PowerShell. The launcher surfaces missing prerequisites early; agents must install/configure PowerShell (or set `POWERSHELL_BIN`) before requesting those phases.
+- Every launcher invocation emits a phase summary (kernel/CUDA/llama/master-controller/pipeline). Treat that output as part of the Truth Gate evidence and archive it when signing off on a change.
+- UI/tooling exposure for every script in `./scripts` is tracked in `scripts/INTEGRATION_STATUS.md`. Keep that ledger in sync whenever you add or modify scripts so the frontend can present the correct controls.
 
 ---
 
@@ -288,6 +305,280 @@ Before marking a task complete:
 * [ ] Evidence Ledger and Truth Gate artifacts attached to the task record
 * [ ] Sub-agent logs archived for audit
 
+---
+
+## 12) File Consolidation Protocol
+
+**Definition**: Consolidation is the process of merging multiple files with overlapping purpose into a single canonical file while preserving all functionality, maintaining complete version history, and ensuring zero capability loss.
+
+### When to Consolidate
+
+* Duplicate-check CI identifies similar files with overlapping implementations
+* Manual consolidation request via task workflow or operator directive
+* Refactoring phase discovers redundant implementations across modules
+* Fork integration requires merging external implementations with internal equivalents
+
+### Consolidation Workflow
+
+#### 1. Comparison Phase
+
+* Generate side-by-side diff of source files using standard diff tools
+* Extract function/class/capability inventory from each file (via AST parsing or manual review)
+* Identify true duplicates (exact match) vs. variants (different behavior/signatures)
+* Document behavioral differences in comparison report
+
+#### 2. Merge Phase (Additive Strategy)
+
+* **Bring ALL content** from incoming file(s) into the canonical target file
+* Preserve every function, class, constant, type definition, and logic block
+* Remove only exact duplicates:
+  - Identical function signatures AND implementations
+  - Semantically equivalent code (after normalization)
+* Keep variants if behavior differs, even slightly
+* Reformat merged content per project style guide (rustfmt, prettier, etc.)
+* Add source attribution comments:
+  ```rust
+  // Consolidated from: old/path/auth_v2.rs (v2, 2025-11-19)
+  // Original SHA-256: abc123...
+  ```
+* Update imports and resolve namespace conflicts
+* Add docstring tags: `@consolidated_from <source_path> <version>`
+
+#### 3. Verification Phase
+
+* **Capability Matrix Check**: Verify all functions from source files present in consolidated output
+  - Before consolidation: Extract list of all public functions, types, constants
+  - After consolidation: Verify 100% presence in merged file
+  - Document any intentional omissions (dead code, deprecated functions)
+* Run full test suite (must pass without modification)
+* Check that all imports/dependencies resolve correctly
+* Verify no compilation errors or warnings introduced
+* Generate `consolidation_report.md`:
+  ```markdown
+  # Consolidation Report
+  
+  **Date**: 2025-11-19
+  **Canonical File**: server/gateway/src/auth.rs
+  **Sources Merged**: 3 files
+  
+  ## Capability Comparison
+  
+  | Source File | Functions | Preserved | Notes |
+  |-------------|-----------|-----------|-------|
+  | old/auth_v1.rs | 12 | 12 | All migrated |
+  | experimental/auth_v2.rs | 8 | 8 | Variants kept |
+  | deprecated/auth_legacy.rs | 5 | 3 | 2 dead functions archived |
+  
+  ## Tests
+  - All existing tests pass: ✅
+  - New integration tests added: 2
+  ```
+
+#### 4. Archival Phase
+
+* Archive each incoming file with versioned naming:
+  - Path: `archive/consolidation/YYYY/MM/<relative-path>/v<N>.tar.zst`
+  - Example: `archive/consolidation/2025/11/server/gateway/src/auth_v2/v1.tar.zst`
+* Create or update version ledger: `archive/consolidation/YYYY/MM/<relative-path>/versions.json`
+  ```json
+  {
+    "canonical_file": "server/gateway/src/auth.rs",
+    "versions": [
+      {
+        "version": "v1",
+        "source_path": "old/auth_v1.rs",
+        "timestamp": "2025-11-19T12:00:00Z",
+        "sha256": "abc123...",
+        "consolidation_reason": "Duplicate implementation discovered",
+        "preserved_capabilities": ["authenticate", "authorize", "validate_token"],
+        "archived_capabilities": ["legacy_auth_v1", "deprecated_check"],
+        "merged_by": "agent-consolidation-v1"
+      },
+      {
+        "version": "v2",
+        "source_path": "experimental/auth_v2.rs",
+        "timestamp": "2025-11-19T12:30:00Z",
+        "sha256": "def456...",
+        "consolidation_reason": "Experimental features promoted to production",
+        "preserved_capabilities": ["oauth2_flow", "jwt_refresh"],
+        "merged_by": "agent-consolidation-v1"
+      }
+    ]
+  }
+  ```
+* Record consolidation event in Evidence Ledger (`audit/ledger.jsonl`):
+  ```json
+  {"event":"consolidation","timestamp":"2025-11-19T12:00:00Z","canonical":"server/gateway/src/auth.rs","sources":["old/auth_v1.rs","experimental/auth_v2.rs"],"version":"v1","sha256":"abc123...","capabilities_preserved":15,"capabilities_archived":2}
+  ```
+
+#### 5. Batch Compression (≥100 Archived Versions)
+
+* **Trigger**: When a consolidation directory accumulates 100+ versioned archives
+* Group by month and directory: `archive/consolidation/YYYY/MM/batch_NNN.tar.zst`
+* Include batch manifest: `archive/consolidation/YYYY/MM/batch_NNN_manifest.json`
+  ```json
+  {
+    "batch_id": "batch_001",
+    "compression_date": "2025-11-19T15:00:00Z",
+    "file_count": 127,
+    "total_size_mb": 45.2,
+    "compression_ratio": 8.3,
+    "files": [
+      {
+        "archived_path": "server/gateway/src/auth_v2/v1.tar.zst",
+        "sha256": "abc123...",
+        "original_path": "old/auth_v1.rs",
+        "size_bytes": 8192
+      }
+    ],
+    "notes": "Monthly batch compression of November 2025 consolidations"
+  }
+  ```
+* Update master consolidation index: `.workspace/registry/consolidation_index.json`
+  ```json
+  {
+    "last_updated": "2025-11-19T15:00:00Z",
+    "total_consolidations": 342,
+    "batches": [
+      {
+        "batch_id": "batch_001",
+        "path": "archive/consolidation/2025/11/batch_001.tar.zst",
+        "file_count": 127,
+        "date": "2025-11-19"
+      }
+    ]
+  }
+  ```
+* Delete individual `.tar.zst` files after successful batch compression
+* Verify batch integrity: extract and compare SHA-256 hashes against manifest
+
+### Production File Naming Rules
+
+* **Canonical file retains original production name** throughout consolidation process
+  - Example: `server/gateway/src/auth.rs` stays `auth.rs` even after consolidating 5 variants
+  - Never rename production files based on consolidation activity
+* Archive versioning is independent of production naming conventions
+* Consolidation attribution embedded as inline comments and docstrings, not reflected in filename
+* If production file requires renaming for architectural reasons, treat as separate refactoring task (not part of consolidation)
+
+### Rollback Procedure
+
+1. **Locate version** in consolidation ledger:
+   - Check `.workspace/registry/consolidation_index.json` for batch location
+   - Find version entry in `archive/consolidation/YYYY/MM/<path>/versions.json`
+2. **Extract archived version**:
+   ```bash
+   # Individual version
+   tar -xf archive/consolidation/2025/11/server/gateway/src/auth_v2/v1.tar.zst
+   
+   # From batch
+   tar -xf archive/consolidation/2025/11/batch_001.tar.zst server/gateway/src/auth_v2/v1.tar.zst
+   tar -xf server/gateway/src/auth_v2/v1.tar.zst
+   ```
+3. **Review pre-consolidation snapshot**:
+   ```bash
+   make rollback BUNDLE=audit/bundle-2025-11-19T12-00-00.tar.zst
+   ```
+4. **Restore if needed**: Copy extracted version to production path, run tests, commit with rollback note
+5. **Document rollback**: Update rollback ledger (`audit/rollbacks/`) with reason and outcome
+
+### Consolidation Guardrails (Truth Gate)
+
+* [ ] Pre-merge capability inventory captured (all functions/types/constants listed)
+* [ ] All source functions present in consolidated output (capability matrix = 100%)
+* [ ] Tests pass post-consolidation without modification
+* [ ] Version ledger updated with SHA-256 hashes and timestamps
+* [ ] Consolidation report generated with before/after comparison
+* [ ] Production file name unchanged
+* [ ] Archive paths follow standard structure (`archive/consolidation/YYYY/MM/...`)
+* [ ] Batch compression triggered and verified at 100+ file threshold
+* [ ] Evidence Ledger entry created for consolidation event
+* [ ] Source attribution comments added to merged code
+* [ ] Imports/dependencies verified and resolved
+
+### Consolidation Tooling Recommendations
+
+#### Immediate Implementation
+
+1. **CLI Command**: Extend `server/tools_agent` with consolidation subcommand:
+   ```bash
+   cargo run -p noa-tools-agent consolidate \
+     --sources old/auth_v1.rs,experimental/auth_v2.rs \
+     --target server/gateway/src/auth.rs \
+     --verify \
+     --archive
+   ```
+   - Parse AST to extract function signatures
+   - Generate capability matrix automatically
+   - Run tests before/after merge
+   - Create version ledger entries
+   - Archive source files with compression
+
+2. **Automated Capability Checking**: Use `syn` crate (Rust) or language-specific AST parsers:
+   ```rust
+   pub fn extract_capabilities(file_path: &Path) -> Result<Vec<Capability>> {
+       let content = fs::read_to_string(file_path)?;
+       let syntax = syn::parse_file(&content)?;
+       let mut capabilities = Vec::new();
+       for item in syntax.items {
+           match item {
+               syn::Item::Fn(func) => capabilities.push(Capability::Function(func.sig.ident.to_string())),
+               syn::Item::Struct(s) => capabilities.push(Capability::Type(s.ident.to_string())),
+               // ... extract all public items
+           }
+       }
+       Ok(capabilities)
+   }
+   ```
+
+3. **Consolidation Report Generator**: Markdown template with:
+   - Side-by-side diff visualization
+   - Capability matrix table (preserved/archived/new)
+   - Test results summary
+   - File size comparison
+   - Complexity metrics (cyclomatic, lines of code)
+
+#### Future Enhancements
+
+4. **Consolidation Dashboard** (`ui/core/src/components/ConsolidationDashboard.tsx`):
+   - Track consolidation metrics: total files consolidated, archive growth rate, rollback frequency
+   - Visualize consolidation graph: which files merged into which canonical files
+   - Show capability preservation percentage over time
+   - Alert on failed consolidations or capability loss
+
+5. **Smart Deduplication Engine**:
+   - Use semantic similarity (cosine similarity on AST embeddings) to detect functionally equivalent code
+   - Threshold: >95% similarity = candidate for deduplication
+   - Generate suggestions: "Function `auth_v1` and `auth_v2` are 98% similar. Consolidate?"
+   - ML model trained on codebase to detect patterns (e.g., "this is a refactored version of that")
+
+6. **Conflict Resolution UI** (`ui/core/src/components/ConflictResolver.tsx`):
+   - When merge creates ambiguity (e.g., two functions with same name, different behavior):
+     - Show side-by-side diff
+     - Prompt: "Keep both as variants?" / "Merge with conditional logic?" / "Flag for manual review?"
+   - Track resolution decisions in consolidation ledger
+   - Allow rollback of individual conflict resolutions
+
+7. **CRC Integration**: Treat fork consolidation as special case:
+   - External fork code merges with internal equivalent via consolidation protocol
+   - Fork attribution preserved: `// Consolidated from fork: <repo_url> @ <commit>`
+   - Fork-specific tests maintained alongside internal tests
+   - See `crc/FORK_PROCESSING_SYSTEM.md` for fork-to-consolidation pipeline
+
+8. **Consolidation CI Job** (`.github/workflows/consolidation.yml`):
+   - Detect consolidation candidates automatically (via duplicate-check or similarity scan)
+   - Create consolidation PR with pre-filled report
+   - Run capability checks and tests in CI
+   - Auto-merge if all guardrails pass and approval granted
+
+### Integration with Existing Systems
+
+* **Evidence Ledger**: All consolidation events logged to `audit/ledger.jsonl`
+* **Truth Gate**: Consolidation reports satisfy Truth Gate requirements (artifacts, tests, verification)
+* **Archival System**: Consolidation archives follow standard `archive/YYYY/MM/` structure
+* **CRC Pipeline**: Fork consolidation flows through CRC → consolidation → production
+* **Workspace Registry**: Consolidation index maintained in `.workspace/registry/consolidation_index.json`
+
 @-- END:AGENT_POLICY --
 
 ---
@@ -313,100 +604,6 @@ Before marking a task complete:
 * Record SHA-256 hashes: `sha256sum <file>` (capture in Evidence Ledger)
 * Run duplicate check before commit: mirror CI job locally where available
 
-### D) Environment & Workflow Quick Reference
-
-* **Primary execution context:** Windows 11 + PowerShell 7 with portable Cargo/Node under `server/tools/`; WSL/Linux acceptable for parity as long as you do not mix environments mid-session. Always run `./server/tools/activate-cargo.ps1` (or `source server/tools/activate-cargo-wsl.sh`) before any Rust command and `./server/tools/activate-node.ps1|.sh` before pnpm.
-* **Build/Test cadence:**
-  * `cargo build --workspace`, `cargo test --workspace`, `cargo clippy --workspace -- -D warnings`, `cargo fmt --all`
-  * pnpm targets: `pnpm install --frozen-lockfile`, `pnpm build`, `pnpm lint`, `pnpm typecheck`, `pnpm test`
-  * Kernel shortcut: `source ./server/tools/activate-cargo.sh && make kernel` for the `noa_core` crate when iterating locally.
-  * Hardened kernel image (drops artifacts into `dist/kernel/{noa_kernel,noa_host_control,manifest.yaml,README.md,test-results.log}`):
-
-    ```bash
-    cd /home/noa/dev/workspace/noa_ark_os/noa_ark_os
-    source ./server/tools/activate-cargo.sh
-    source ./server/tools/activate-node.sh
-    make image
-    ```
-
-    Capture `dist/kernel/test-results.log` plus artifact hashes and append a dated entry to `docs/evidence_ledger.md` after every successful image build.
-* **Feature workflow:** create `feature/<name>` branch → edit → run full build/test matrix above → commit using Conventional Commits → push. Archive any replaced assets under `archive/YYYY/MM/` with ledger updates before merging.
-* **Fork processing (CRC):** place incoming fork under `crc/drop-in/incoming/forks/<name>/`, run `crc/detect-forks.ps1 -Mode process -ForkName "<name>"`, review generated branch `fork/<name>`, integrate, then archive originals when done.
-* **Agent restoration pattern:** inspect backup in `agents/src/implementations/_backup/`, bring implementation back to `agents/src/implementations/`, register via `agents/src/registry.rs` and factory, add tests (`cargo test -p noa_agents`), update docs.
-* **Security checklist:** no secrets in repo, prefer async I/O, no `unwrap()` in production paths, enforce gateway-managed env vars, scan forks before execution, honor duplicate/deletion/report guardrails.
-* **Support & troubleshooting:** if Cargo/Node not found, re-run activation scripts; for CI parity use `make pipeline.local` and capture evidence artifacts under `audit/`. Use documentation files listed in Appendix A whenever deeper architectural guidance is required.
-
-### E) Component Snapshot & Status
-
-* **Agents (`agents/`):** 928 agents cataloged in `agents/src/registry.rs`; 26 placeholder integrations live, 902 pending restoration. Factory lives in `agents/src/factory.rs`; original implementations preserved under `agents/src/implementations/_backup/` and must be archived before replacement.
-* **CRC (`crc/`):** Continuous ReCode system managing fork ingestion via `crc/drop-in/incoming/forks/` and archival via `crc/archive/forks/`. `crc/detect-forks.ps1` plus `crc/FORK_PROCESSING_SYSTEM.md` detail automation.
-* **Core (`core/`):** Kernel + core services in Rust; treat manifests as authoritative for Phase 1 gating.
-* **CI/CD (`cicd/`):** Pipeline assets tuned for <20 min commit→prod loops; wired into CRC for fork validation.
-* **Workflow (`workflow/`), Sandbox (`sandbox/`), UI (`ui/`), Server (`server/`):** Multi-language orchestration, integration sandboxes (Pattern A/B/C→D), multi-surface shell targets, and the unified MCP/API server with portable tools under `server/tools/`.
-* **Phase tracking:** Phase 1 complete (registry, fork infra, build verification); Phase 2 in progress (fork testing, CRC AI design, agent trait, DigestAgent); Phase 3 planned (runtime integration, AI engine, server hardening, mass agent restoration).
-
-### F) Command & Toolchain Reference
-
-```
-# Rust workspace
-cargo build --workspace
-cargo build --workspace --release
-cargo test --workspace
-cargo check --workspace
-cargo clean
-cargo fmt --all
-cargo clippy --workspace -- -D warnings
-cargo fix --workspace --allow-dirty
-
-# CRC fork automation
-./crc/detect-forks.ps1 -Mode process -ForkName "fork-name"
-./crc/detect-forks.ps1 -Mode list
-./crc/detect-forks.ps1 -Mode watch -IntervalSeconds 60
-
-# Examples
-cargo run --example agent_registry_demo
-cargo run --example full_system_demo
-cargo run --example crc_cicd_demo
-```
-
-*When PowerShell is unavailable, call the paired `.sh` wrappers; always source the activation script beforehand.*
-
-### G) Coding & Documentation Standards
-
-* **Error handling:** Binaries favor `anyhow::{Result, Context}` with `.context()` on each fallible hop; libraries define typed errors via `thiserror::Error` to encode IO/operation failures.
-* **Async model:** `tokio` runtime (`use tokio::{fs, time};`) is the default for I/O-heavy flows; avoid blocking calls inside async contexts.
-* **Agent traits:** Agents implement metadata accessors plus async `initialize/execute_task/shutdown` operations returning structured `TaskResult` types; keep them `Send + Sync` ready for swarm orchestration.
-* **Module hygiene:** Use `mod.rs` (or inline modules) for hierarchy clarity, keep public APIs documented with Rustdoc (`///` blocks describing args/returns/errors/examples).
-* **Dependency governance:** Prefer workspace-level versions for `tokio`, `anyhow`, `thiserror`, `serde`, `serde_json`, `tracing`, and document new crates (purpose, license, verification run) inside the Evidence Ledger.
-* **Documentation cadence:** Every new public API increments inline docs plus relevant `README`s; large features warrant entries in `docs/` (architecture/operations) and updates to `WORKSPACE_MEMORY.md`.
-
-### H) Workflow Playbooks
-
-* **Feature development:** `git checkout -b feature/<slug>` → implement → `cargo build/test/clippy` (and pnpm equivalents when touching JS) → Conventional Commit with archival notes → push branch.
-* **Fork processing:** Stage fork under `crc/drop-in/incoming/forks/<name>/`, run `detect-forks.ps1 -Mode process`, review `fork/<name>` branch, run workspace build/tests, merge, then compress originals into `crc/archive/forks/` with ledger updates.
-* **Agent restoration:** Inspect `_backup` implementation, port into live `agents/src/implementations/`, register modules + factory, run `cargo test -p noa_agents`, document behavior, and ensure Evidence Ledger references the restored agent.
-* **AI assistant prompts:** When asked to build, test, process forks, add agents, or fix builds, follow the command snippets above and capture outputs for Truth Gate evidence.
-
-### I) Security, Quality & Metrics
-
-* **Always:** activate portable Cargo, run full workspace builds/tests pre-commit, document APIs, follow Rust 2021, prefer async I/O, add `.context()`, keep `cargo clippy` clean.
-* **Never:** mix Windows/WSL paths in a single session, skip builds before commits, leave commented dead code, use `.unwrap()` in production, commit `target/`, retain live fork code post-archive, block async loops with sync I/O, ignore warnings.
-* **Fork security:** scan for malware/secrets, verify licenses, audit dependencies, isolate tests, never auto-run external code, and compress/archive originals immediately after integration.
-* **Code review checklist:** no secrets, validate inputs, no panics in prod, safe error propagation, guard against injection, trust-only dependencies, license compatibility.
-* **Quality/perf targets:** coverage >80%, full build <5 min, tests <10 min, deploy <5 min, CI-to-prod <20 min, p95 response <100 ms, change failure rate <5%, MTTR <5 min.
-
-### J) Troubleshooting & Support
-
-* **Common fixes:**
-  * `cargo: command not found` → re-run activation script.
-  * Language tooling unavailable → reactivate portable Cargo and rely on built-in commands (no VS Code extensions such as rust-analyzer are used here).
-  * Build/test failures → run `cargo build --workspace --verbose` or `cargo test --workspace -- --nocapture` to capture context.
-  * Fork not detected → re-run `detect-forks.ps1 -Mode process -ForkName "name"` to initialize metadata.
-* **Debug helpers:** `cargo check -p <crate> --verbose`, `cargo tree`, `cargo outdated`.
-* **Support path:** consult this policy, `WORKSPACE_MEMORY.md`, component READMEs, documentation map, then escalate via task comments with exact command, error, cwd, tool versions, and expectation vs. outcome.
-
-
 ## Testing
 
-⚠️ Tests not run (documentation-only change).
-
+⚠️ Tests are not optional.

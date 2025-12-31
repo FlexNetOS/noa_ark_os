@@ -1,9 +1,7 @@
 import { createHash } from "crypto";
 import { readFileSync, readdirSync, statSync } from "fs";
-import { join, relative, normalize } from "path";
+import { join, relative } from "path";
 import { execSync } from "child_process";
-
-const globRegexCache = new Map<string, RegExp>();
 
 type Config = {
   ignore: string[];
@@ -33,20 +31,13 @@ function loadConfig(repoRoot: string): Config {
 
 function normalizePath(path: string): string {
   // Use path.normalize to handle ., .., double slashes, etc., then convert to forward slashes for consistency
-  return normalize(path).replace(/\\/g, "/");
+  return require("path").normalize(path).replace(/\\/g, "/");
 }
 
 function shouldIgnore(relPath: string, ignoreList: string[]): boolean {
   for (const ignore of ignoreList) {
     const normalizedIgnore = normalizePath(ignore).replace(/\/$/, "");
     if (normalizedIgnore.length === 0) continue;
-
-    if (normalizedIgnore.includes("*")) {
-      if (matchesGlob(normalizedIgnore, relPath)) {
-        return true;
-      }
-      continue;
-    }
     if (
       relPath === normalizedIgnore ||
       relPath.startsWith(`${normalizedIgnore}/`)
@@ -65,21 +56,6 @@ function shouldIgnore(relPath: string, ignoreList: string[]): boolean {
     }
   }
   return false;
-}
-
-function matchesGlob(pattern: string, relPath: string): boolean {
-  let regex = globRegexCache.get(pattern);
-  if (!regex) {
-    const escaped = escapeForRegex(pattern);
-    const wildcard = escaped.replace(/\\\*/g, ".*");
-    regex = new RegExp(`^${wildcard}(?:/|$)`);
-    globRegexCache.set(pattern, regex);
-  }
-  return regex.test(relPath);
-}
-
-function escapeForRegex(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function collectFiles(
@@ -149,15 +125,10 @@ function main() {
 
   const hashToPaths = new Map<string, string[]>();
   for (const file of files) {
-    let stats;
     try {
-      stats = statSync(file);
+      const stats = statSync(file);
     } catch (error) {
       console.warn(`Skipping file due to stat error (${file}): ${error}`);
-      continue;
-    }
-
-    if (stats.size === 0) {
       continue;
     }
 

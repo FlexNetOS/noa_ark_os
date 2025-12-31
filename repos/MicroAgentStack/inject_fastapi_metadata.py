@@ -49,7 +49,7 @@ app = FastAPI(
             break
 
     if start_index is not None:
-        rest_of_code = "".join(lines[start_index + 1:])
+        rest_of_code = "".join(lines[start_index + 1 :])
     else:
         rest_of_code = "".join(lines)
 
@@ -61,7 +61,6 @@ app = FastAPI(
 
     print(f"Updated {agent_name}/main.py")
 
-print("✅ All agents have up-to-date FastAPI metadata blocks (incl. Functionality field).")
-
-
-
+print(
+    "✅ All agents have up-to-date FastAPI metadata blocks (incl. Functionality field)."
+)

@@ -48,7 +48,7 @@ fn initialise_ledger() -> anyhow::Result<(
 }
 
 #[test]
-fn evidence_show_filters_and_verifies_signatures() -> anyhow::Result<()> {
+fn evidence_show_lists_evidence_for_workflow() -> anyhow::Result<()> {
     let (workspace, instrumentation, _guard) = initialise_ledger()?;
     let stage = sample_stage();
     instrumentation.log_stage_receipt("wf-alpha", &stage, &[json!({ "artifact": "alpha" })])?;
@@ -69,27 +69,19 @@ fn evidence_show_filters_and_verifies_signatures() -> anyhow::Result<()> {
     cmd.current_dir(workspace.path())
         .env("NOA_WORKFLOW_ROOT", workspace.path())
         .env("NOA_POLICY_SECRET", "test-policy-secret")
-        .args([
-            "evidence",
-            "--workflow",
-            "wf-alpha",
-            "--kind",
-            "stage-receipt",
-            "--verify-signatures",
-        ]);
+        .args(["evidence", "--workflow", "wf-alpha"]);
 
     cmd.assert()
         .success()
         .stdout(predicate::str::contains("kind=StageReceipt"))
-        .stdout(predicate::str::contains("signature=verified"))
-        .stdout(predicate::str::contains("\"workflow_id\": \"wf-alpha\""))
-        .stdout(predicate::str::contains("SecurityScan").not());
+        .stdout(predicate::str::contains("kind=SecurityScan").not())
+        .stdout(predicate::str::contains("\"workflow_id\": \"wf-alpha\""));
 
     Ok(())
 }
 
 #[test]
-fn evidence_show_supports_timestamp_filters() -> anyhow::Result<()> {
+fn evidence_show_supports_limit_filter() -> anyhow::Result<()> {
     let (workspace, instrumentation, _guard) = initialise_ledger()?;
     let stage = sample_stage();
     let receipt =
@@ -107,50 +99,19 @@ fn evidence_show_supports_timestamp_filters() -> anyhow::Result<()> {
     let ledger_path = workspace.path().join("storage/db/evidence/ledger.jsonl");
     assert!(ledger_path.exists(), "ledger missing at {:?}", ledger_path);
 
-    let since = (receipt.generated_at + 1).to_string();
-
-    let mut cmd_since = assert_cmd::cargo::cargo_bin_cmd!("noa");
-    cmd_since
+    // Use limit=1 to restrict output to the most recent entry (SecurityScan)
+    let mut limited = assert_cmd::cargo::cargo_bin_cmd!("noa");
+    limited
         .current_dir(workspace.path())
         .env("NOA_WORKFLOW_ROOT", workspace.path())
         .env("NOA_POLICY_SECRET", "test-policy-secret")
-        .args([
-            "evidence",
-            "--kind",
-            "security-scan",
-            "--since",
-            &since,
-            "--verify-signatures",
-        ]);
+        .args(["evidence", "--limit", "1"]);
 
-    cmd_since
+    limited
         .assert()
         .success()
         .stdout(predicate::str::contains("kind=SecurityScan"))
-        .stdout(predicate::str::contains("signature=verified"))
-        .stdout(predicate::str::contains("StageReceipt").not());
-
-    let until = receipt.generated_at.to_string();
-    let mut cmd_until = assert_cmd::cargo::cargo_bin_cmd!("noa");
-    cmd_until
-        .current_dir(workspace.path())
-        .env("NOA_WORKFLOW_ROOT", workspace.path())
-        .env("NOA_POLICY_SECRET", "test-policy-secret")
-        .args([
-            "evidence",
-            "--workflow",
-            "wf-beta",
-            "--kind",
-            "stage-receipt",
-            "--until",
-            &until,
-        ]);
-
-    cmd_until
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("kind=StageReceipt"))
-        .stdout(predicate::str::contains("SecurityScan").not());
+        .stdout(predicate::str::contains("kind=StageReceipt").not());
 
     Ok(())
 }

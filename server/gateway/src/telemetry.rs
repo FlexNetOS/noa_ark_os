@@ -1,4 +1,3 @@
-use crate::rate_limit::RateMetricsSnapshot;
 use crate::router::{Protocol, RoutePlan};
 use chrono::{DateTime, Utc};
 use parking_lot::Mutex;
@@ -58,7 +57,6 @@ pub struct GatewayMetrics {
     pub total_requests: u64,
     pub per_protocol: HashMap<String, u64>,
     pub last_event: Option<TelemetryEvent>,
-    pub rate_limit: RateMetricsSnapshot,
 }
 
 #[derive(Debug, Error)]
@@ -111,7 +109,8 @@ impl TelemetrySink {
                 .or_insert(0) += 1;
             metrics.last_event = Some(event.clone());
 
-            self.persist_metrics(&metrics)?;
+            let json = serde_json::to_vec_pretty(&*metrics)?;
+            std::fs::write(&self.metrics_path, json)?;
         }
 
         let mut file = OpenOptions::new()
@@ -124,20 +123,8 @@ impl TelemetrySink {
         Ok(())
     }
 
-    pub fn record_rate_limits(&self, snapshot: RateMetricsSnapshot) -> Result<(), TelemetryError> {
-        let mut metrics = self.metrics.lock();
-        metrics.rate_limit = snapshot;
-        self.persist_metrics(&metrics)
-    }
-
     pub fn snapshot(&self) -> GatewayMetrics {
         self.metrics.lock().clone()
-    }
-
-    fn persist_metrics(&self, metrics: &GatewayMetrics) -> Result<(), TelemetryError> {
-        let json = serde_json::to_vec_pretty(metrics)?;
-        std::fs::write(&self.metrics_path, json)?;
-        Ok(())
     }
 }
 

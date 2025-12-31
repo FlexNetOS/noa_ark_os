@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import type { CapabilityFeatureGateStatus } from "@/shared/capabilities";
 
@@ -26,8 +26,11 @@ type BoardHeaderProps = {
   canAddColumn?: boolean;
   addColumnDisabledReason?: string;
   columnCount: number;
-  totalGoalCount: number;
-  completedGoalCount: number;
+  // Accept both new and legacy prop names
+  totalGoalCount?: number;
+  totalCardCount?: number;
+  completedGoalCount?: number;
+  completedCount?: number;
   showMetrics?: boolean;
   metrics?: BoardMetrics;
   goalInsightsEnabled?: boolean;
@@ -35,29 +38,34 @@ type BoardHeaderProps = {
   capabilitiesLoading?: boolean;
 };
 
-export function BoardHeader({
-  projectName,
-  lastUpdated,
-  onRename,
-  onAddColumn,
-  canAddColumn = true,
-  addColumnDisabledReason,
-  columnCount = 0,
-  totalGoalCount = 0,
-  completedGoalCount = 0,
-  showMetrics = true,
-  metrics: advancedMetrics,
-  goalInsightsEnabled = false,
-  capabilitySummary = [],
-  capabilitiesLoading = false,
-}: BoardHeaderProps) {
+export function BoardHeader(props: BoardHeaderProps) {
+  const {
+    projectName,
+    lastUpdated,
+    onRename,
+    onAddColumn,
+    canAddColumn = true,
+    addColumnDisabledReason,
+    columnCount,
+    totalGoalCount: totalGoalCountProp,
+    totalCardCount,
+    completedGoalCount: completedGoalCountProp,
+    completedCount,
+    showMetrics = true,
+    metrics: advancedMetrics,
+    goalInsightsEnabled = false,
+    capabilitySummary = [],
+    capabilitiesLoading = false,
+  } = props;
+  const totalGoalCount = totalGoalCountProp ?? totalCardCount ?? 0;
+  const completedGoalCount = completedGoalCountProp ?? completedCount ?? 0;
   const [value, setValue] = useState(projectName);
 
   useEffect(() => {
     setValue(projectName);
   }, [projectName]);
 
-  const metrics = useMemo(() => {
+  const metrics = (() => {
     const base: { label: string; value: string }[] = [
       { label: "Columns", value: columnCount.toString() },
       { label: "Active goals", value: Math.max(totalGoalCount - completedGoalCount, 0).toString() },
@@ -79,7 +87,7 @@ export function BoardHeader({
       }
     }
     return base;
-  }, [advancedMetrics, columnCount, completedGoalCount, goalInsightsEnabled, totalGoalCount]);
+  })();
 
   const hasCapabilitySummary = capabilitySummary.length > 0;
 
@@ -125,7 +133,10 @@ export function BoardHeader({
       )}
 
       {hasCapabilitySummary && (
-        <CapabilitySummaryPanel items={capabilitySummary} loading={capabilitiesLoading} />
+        <CapabilitySummaryPanel
+          items={capabilitySummary}
+          loading={capabilitiesLoading}
+        />
       )}
     </div>
   );
@@ -152,7 +163,11 @@ function CapabilitySummaryPanel({ items, loading }: CapabilitySummaryPanelProps)
       </div>
       <ul className="mt-4 space-y-3">
         {items.map((item) => {
-          const statusLabel = loading ? "Pending" : item.available ? "Available" : "Unavailable";
+          const statusLabel = loading
+            ? "Pending"
+            : item.available
+              ? "Available"
+              : "Unavailable";
           const badgeClasses = loading
             ? "border-white/20 bg-white/5 text-white/50"
             : item.available
@@ -165,35 +180,34 @@ function CapabilitySummaryPanel({ items, loading }: CapabilitySummaryPanelProps)
               data-testid={`capability-${item.id}`}
               className="flex items-start gap-3 rounded-2xl border border-white/10 bg-surface/70 p-4"
             >
-              <span
-                aria-hidden
-                className={`mt-0.5 flex h-6 w-6 items-center justify-center rounded-full border text-sm font-semibold ${badgeClasses}`}
+          <span
+            aria-hidden
+            className={`mt-0.5 flex h-6 w-6 items-center justify-center rounded-full border text-sm font-semibold ${badgeClasses}`}
+          >
+            {icon}
+          </span>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-white">{item.label}</span>
+              <span className={`text-xs font-semibold uppercase tracking-[0.2em] ${
+                loading
+                  ? "text-white/60"
+                  : item.available
+                    ? "text-emerald-200"
+                    : "text-amber-200"
+              }`}
               >
-                {icon}
+                {statusLabel}
               </span>
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-white">{item.label}</span>
-                  <span
-                    className={`text-xs font-semibold uppercase tracking-[0.2em] ${
-                      loading
-                        ? "text-white/60"
-                        : item.available
-                          ? "text-emerald-200"
-                          : "text-amber-200"
-                    }`}
-                  >
-                    {statusLabel}
-                  </span>
-                </div>
-                <p className="text-xs text-white/60">{item.description}</p>
-                {!loading && !item.available && (
-                  <p className="text-[11px] uppercase tracking-[0.2em] text-amber-200/80">
-                    Requires capability token: {item.capability}
-                  </p>
-                )}
-              </div>
-            </li>
+            </div>
+            <p className="text-xs text-white/60">{item.description}</p>
+            {!loading && !item.available && (
+              <p className="text-[11px] uppercase tracking-[0.2em] text-amber-200/80">
+                Requires capability token: {item.capability}
+              </p>
+            )}
+            </div>
+          </li>
           );
         })}
       </ul>

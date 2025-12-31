@@ -1,0 +1,8 @@
+{
+  "id": 2,
+  "title": "Offline PR 2",
+  "branch": "offline/pr/2-offline-pr-2",
+  "base": "feature/workspace-setup-20251119",
+  "createdAt": "2025-11-21T17:56:28.701Z",
+  "status": "open"
+}

@@ -13,7 +13,9 @@ const mockWorkspace = {
   accent: "from-indigo-500 via-purple-500 to-blue-500",
   createdAt: new Date().toISOString(),
   billingPlan: "starter" as const,
-  members: [{ id: "user-1", name: "Ava", role: "owner", avatarHue: 265 }],
+  members: [
+    { id: "user-1", name: "Ava", role: "owner", avatarHue: 265 },
+  ],
   boards: [],
   activity: [],
   notifications: [],
@@ -21,18 +23,13 @@ const mockWorkspace = {
 };
 
 vi.mock("@/app/lib/session", () => ({
-  assertUser: () => ({ id: "user-1", name: "Ava" }),
+  assertUser: async () => ({ id: "user-1", name: "Ava" }),
 }));
 
 const getWorkspace = vi.fn();
 const recordUploadReceipt = vi.fn();
 const recordWorkspaceNotification = vi.fn();
 const publishNotification = vi.fn();
-
-vi.mock("node:stream/promises", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("node:stream/promises")>()),
-  pipeline: vi.fn().mockResolvedValue(undefined),
-}));
 
 vi.mock("@/server/workspace-store", () => ({
   getWorkspace: (...args: unknown[]) => getWorkspace(...args),
@@ -82,8 +79,8 @@ describe("POST /api/uploads", () => {
           cas_keys: ["hash-1"],
           receipt_path: "/tmp/receipt.json",
         }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      ),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
     );
   });
 
@@ -114,12 +111,12 @@ describe("POST /api/uploads", () => {
 
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringMatching(/\/ui\/drop-in\/upload$/),
-      expect.objectContaining({ method: "POST" }),
+      expect.objectContaining({ method: "POST" })
     );
 
     expect(recordUploadReceipt).toHaveBeenCalledWith(
       "studio",
-      expect.objectContaining({ dropId: "drop-1", originalName: "upload.tar.gz" }),
+      expect.objectContaining({ dropId: "drop-1", originalName: "upload.tar.gz" })
     );
     expect(recordWorkspaceNotification).toHaveBeenCalled();
     expect(publishNotification).toHaveBeenCalled();

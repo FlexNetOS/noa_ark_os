@@ -1,5 +1,6 @@
 
 import asyncio
+import logging
 import os
 import subprocess
 import json
@@ -10,8 +11,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 
+from server.python.common.workspace import resolve_workspace_path
+
 from .scorekeeper_client import ScorekeeperClient, TrustSignals
 from .self_status import SelfStatusAggregator
+
+logger = logging.getLogger(__name__)
 
 class Selfdebuggingrepairsystem:
     """Advanced self-repair harness with constitutional and trust gating."""
@@ -23,8 +28,11 @@ class Selfdebuggingrepairsystem:
         audit_log_path: Optional[Path] = None,
     ) -> None:
         self.constitutional_validator = ConstitutionalValidator()
-        self.workspace_path = os.environ.get(
-            "NOA_WORKSPACE_PATH", "/home/ubuntu/ark-ai-os-workspace"
+        self.workspace_path = resolve_workspace_path()
+        logger.info(
+            "%s resolved workspace path: %s",
+            self.__class__.__name__,
+            self.workspace_path,
         )
         self.modification_history: List[Dict[str, Any]] = []
         self.status_aggregator = status_aggregator or SelfStatusAggregator()

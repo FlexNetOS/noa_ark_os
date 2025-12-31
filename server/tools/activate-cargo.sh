@@ -91,33 +91,6 @@ if ! command -v python3 >/dev/null 2>&1; then
     return 1 2>/dev/null || exit 1
 fi
 
-ensure_default_toolchain() {
-    if ! command -v rustup >/dev/null 2>&1; then
-        return
-    fi
-    if rustup show active-toolchain >/dev/null 2>&1; then
-        return
-    fi
-
-    log "\n⚙️  Configuring default Rust toolchain (stable)..."
-    if ! rustup toolchain list 2>/dev/null | grep -q "^stable"; then
-        rustup toolchain install stable >/dev/null 2>&1 || {
-            log "❌ Failed to install stable toolchain via rustup"
-            return 1 2>/dev/null || exit 1
-        }
-    fi
-
-    rustup default stable >/dev/null 2>&1 || {
-        log "❌ Failed to set stable toolchain as default"
-        return 1 2>/dev/null || exit 1
-    }
-    log "✅ Rustup default toolchain set to stable"
-}
-
-ensure_default_toolchain
-
-export NOA_CARGO_ENV=1
-
 TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 STATUS_JSON_FILE="$DEV_SHELL_STATE_DIR/cargo-env.json"
 STATUS_YAML_FILE="$DEV_SHELL_STATE_DIR/cargo-env.yaml"

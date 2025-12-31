@@ -57,8 +57,6 @@ export const vibeDashboardEnvelope: PageEnvelope = {
           { id: "uploads", kind: "workspace.uploads", component: "UploadPanel" },
           { id: "analytics", kind: "workspace.analytics", component: "AnalyticsPanel" },
           { id: "activity", kind: "workspace.activity", component: "ActivityTimeline" },
-          { id: "automation", kind: "workspace.automation", component: "AutomationPanel" },
-          { id: "agent-factory", kind: "workspace.agentFactory", component: "AgentFactoryPanel" },
         ],
       },
     ],

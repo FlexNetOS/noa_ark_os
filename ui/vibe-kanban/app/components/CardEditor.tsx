@@ -46,23 +46,14 @@ export function CardEditor({ goal, columnId, onClose, onUpdate, onDelete }: Card
   };
 
   return (
-    <div
-      className={`fixed inset-0 z-40 flex items-center justify-center bg-background/80 backdrop-blur-xl transition-opacity duration-300 ${visible ? "opacity-100" : "opacity-0"}`}
-    >
-      <div
-        className={`relative w-full max-w-xl rounded-3xl border border-white/10 bg-surface/95 p-8 shadow-[0_40px_120px_-45px_rgba(99,102,241,0.75)] transition-all duration-300 ${visible ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"}`}
-      >
+    <div className={`fixed inset-0 z-40 flex items-center justify-center bg-background/80 backdrop-blur-xl transition-opacity duration-300 ${visible ? "opacity-100" : "opacity-0"}`}>
+      <div className={`relative w-full max-w-xl rounded-3xl border border-white/10 bg-surface/95 p-8 shadow-[0_40px_120px_-45px_rgba(99,102,241,0.75)] transition-all duration-300 ${visible ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"}`}>
         <button
           type="button"
           onClick={onClose}
           className="absolute right-6 top-6 rounded-full bg-white/10 p-2 text-white/70 transition hover:bg-white/20 hover:text-white"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            className="h-4 w-4"
-          >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
             <path
               fillRule="evenodd"
               d="M10 8.586 5.293 3.879 3.879 5.293 8.586 10l-4.707 4.707 1.414 1.414L10 11.414l4.707 4.707 1.414-1.414L11.414 10l4.707-4.707-1.414-1.414L10 8.586Z"
@@ -76,9 +67,7 @@ export function CardEditor({ goal, columnId, onClose, onUpdate, onDelete }: Card
         </div>
         <div className="space-y-5">
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wide text-white/50">
-              Title
-            </label>
+            <label className="text-xs font-semibold uppercase tracking-wide text-white/50">Title</label>
             <input
               value={title}
               onChange={(event) => setTitle(event.target.value)}
@@ -86,9 +75,7 @@ export function CardEditor({ goal, columnId, onClose, onUpdate, onDelete }: Card
             />
           </div>
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wide text-white/50">
-              Notes
-            </label>
+            <label className="text-xs font-semibold uppercase tracking-wide text-white/50">Notes</label>
             <textarea
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
@@ -97,9 +84,7 @@ export function CardEditor({ goal, columnId, onClose, onUpdate, onDelete }: Card
             />
           </div>
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wide text-white/50">
-              Mood
-            </label>
+            <label className="text-xs font-semibold uppercase tracking-wide text-white/50">Mood</label>
             <div className="flex flex-wrap gap-2">
               {MOOD_OPTIONS.map((value) => (
                 <button

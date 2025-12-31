@@ -63,11 +63,6 @@ fn get_process_inner(pid: ProcessId) -> Option<Process> {
 pub struct ProcessService;
 
 impl ProcessService {
-    /// Construct a new process service handle.
-    pub const fn new() -> Self {
-        Self
-    }
-
     /// Create a new process through the kernel-managed capability.
     pub fn create_process(&self, name: String) -> Result<ProcessId, &'static str> {
         create_process_inner(name)
@@ -87,10 +82,10 @@ impl ProcessService {
 
 /// Create a new process.
 pub fn create_process(name: String) -> Result<ProcessId, &'static str> {
-    ProcessService::new().create_process(name)
+    ProcessService.create_process(name)
 }
 
 /// Get process by ID.
 pub fn get_process(pid: ProcessId) -> Option<Process> {
-    ProcessService::new().get_process(pid)
+    ProcessService.get_process(pid)
 }

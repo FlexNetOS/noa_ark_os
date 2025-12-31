@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::events::ShellEvent;
-use crate::state::GlobalStore;
+use crate::state::{GlobalStore, NavigationState};
 use crate::workflows::{WorkflowCatalog, WorkflowRun};
 
 /// Describes a chat action triggered from a command utterance.
@@ -162,9 +162,11 @@ impl ChatWorkspace {
             }
             ChatAction::Navigate { route } => {
                 self.store.update(|state| {
-                    let mut nav = state.navigation.clone();
-                    nav.active_route = Some(route.clone());
-                    state.navigation = nav;
+                    state.navigation = NavigationState {
+                        active_route: Some(route.clone()),
+                        primary_items: state.navigation.primary_items.clone(),
+                        secondary_items: state.navigation.secondary_items.clone(),
+                    };
                 });
                 (self.event_sink)(ShellEvent::RouteActivated {
                     route: route.clone(),

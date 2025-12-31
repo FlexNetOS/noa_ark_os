@@ -7,29 +7,32 @@ type AnalyticsPanelProps = {
   enableGoalInsights?: boolean;
 };
 
+function columnGoals(column: WorkspaceBoard["columns"][number]) {
+  return column.goals ?? column.cards ?? [];
+}
+
 function computeFlow(board: WorkspaceBoard | null) {
   if (!board) {
     return {
       throughput: 0,
       workInProgress: 0,
-      vibeMomentum: 0,
+      goalMomentum: 0,
       goalLeadTime: null as number | null,
       goalSuccessRate: null as number | null,
     };
   }
   const doneColumn = board.columns.find((column) => /done|complete/i.test(column.title));
-  const throughput = doneColumn?.goals.length ?? 0;
-  const workInProgress =
-    board.columns.reduce((count, column) => count + column.goals.length, 0) - throughput;
-  const vibeMomentum =
-    typeof board.metrics?.goalMomentum === "number"
-      ? board.metrics.goalMomentum
-      : Math.min(100, 40 + workInProgress * 5 - throughput * 3);
-  const goalLeadTime =
-    typeof board.metrics?.goalLeadTimeHours === "number" ? board.metrics.goalLeadTimeHours : null;
-  const goalSuccessRate =
-    typeof board.metrics?.goalSuccessRate === "number" ? board.metrics.goalSuccessRate : null;
-  return { throughput, workInProgress, vibeMomentum, goalLeadTime, goalSuccessRate };
+  const doneGoals = doneColumn ? columnGoals(doneColumn) : [];
+  const throughput = doneGoals.length;
+  const totalGoals = board.columns.reduce((count, column) => count + columnGoals(column).length, 0);
+  const workInProgress = Math.max(totalGoals - throughput, 0);
+  const goalMomentum =
+    board.metrics?.goalMomentum ??
+    board.metrics?.vibeMomentum ??
+    Math.min(100, 40 + workInProgress * 5 - throughput * 3);
+  const goalLeadTime = typeof board.metrics?.goalLeadTimeHours === "number" ? board.metrics.goalLeadTimeHours : null;
+  const goalSuccessRate = typeof board.metrics?.goalSuccessRate === "number" ? board.metrics.goalSuccessRate : null;
+  return { throughput, workInProgress, goalMomentum, goalLeadTime, goalSuccessRate };
 }
 
 export function AnalyticsPanel({ board, enableGoalInsights = false }: AnalyticsPanelProps) {
@@ -37,11 +40,10 @@ export function AnalyticsPanel({ board, enableGoalInsights = false }: AnalyticsP
   const cards: { label: string; value: string }[] = [
     { label: "Throughput", value: analytics.throughput.toString() },
     { label: "Work in play", value: analytics.workInProgress.toString() },
-    { label: "Momentum", value: `${analytics.vibeMomentum}%` },
+    { label: "Momentum", value: `${analytics.goalMomentum}%` },
   ];
 
-  const insightsActive =
-    enableGoalInsights && (analytics.goalLeadTime !== null || analytics.goalSuccessRate !== null);
+  const insightsActive = enableGoalInsights && (analytics.goalLeadTime !== null || analytics.goalSuccessRate !== null);
 
   if (insightsActive) {
     if (analytics.goalLeadTime !== null) {
@@ -54,12 +56,8 @@ export function AnalyticsPanel({ board, enableGoalInsights = false }: AnalyticsP
 
   return (
     <div className="rounded-3xl border border-white/10 bg-surface/70 p-5 text-white/70">
-      <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-white/50">
-        Flow analytics
-      </h3>
-      <div
-        className={`mt-4 grid gap-4 text-center ${cards.length > 3 ? "grid-cols-2 md:grid-cols-4" : "grid-cols-3"}`}
-      >
+      <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-white/50">Flow analytics</h3>
+      <div className={`mt-4 grid gap-4 text-center ${cards.length > 3 ? "grid-cols-2 md:grid-cols-4" : "grid-cols-3"}`}>
         {cards.map((card) => (
           <div key={card.label} className="rounded-2xl border border-white/10 bg-white/5 p-4">
             <div className="text-xs uppercase tracking-[0.3em] text-white/40">{card.label}</div>

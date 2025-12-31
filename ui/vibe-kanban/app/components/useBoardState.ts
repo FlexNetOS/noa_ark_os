@@ -9,14 +9,17 @@ import type {
   NotificationEvent,
   PlannerPlan,
   PlannerState,
+  RealTimeEvent,
   PresenceUser,
   UploadReceiptSummary,
+  VibeCard,
   VibeColumn,
   Workspace,
   WorkspaceBoard,
   WorkspaceIntegrationStatus,
   GoalAutomationState,
 } from "./board-types";
+import type { ResumeToken } from "@noa-ark/shared-ui/schema";
 import type { ClientSessionUser } from "./useSession";
 import {
   DEFAULT_CAPABILITY_REGISTRY,
@@ -26,9 +29,8 @@ import {
   normalizeCapabilityRegistry,
 } from "@/shared/capabilities";
 import { logError } from "@noa-ark/shared-ui/logging";
-import type { RealTimeEvent, ResumeToken } from "@noa-ark/shared-ui/schema";
-import { SessionContinuityClient } from "@noa-ark/shared-ui/session";
 import { isFeatureEnabled } from "./featureFlags";
+import { SessionContinuityClient } from "@noa-ark/shared-ui/session";
 
 const accentPalette = [
   "from-indigo-500 via-purple-500 to-blue-500",
@@ -42,7 +44,7 @@ type MemorySuggestion = { title: string; detail: string; source: "memory" | "rea
 
 type AssistState = {
   suggestions: { title: string; detail: string }[];
-  focusCard: Goal | null;
+  focusGoal: Goal | null;
   updatedAt: string;
   memory?: GoalMemoryInsights | null;
   longTermSuggestions?: MemorySuggestion[];
@@ -64,6 +66,8 @@ type WorkspaceHookState = {
   workspaces: Workspace[];
   workspace: Workspace | null;
   snapshot: WorkspaceBoard | null;
+  goalInsights: GoalMemoryInsights | null;
+  planner: PlannerState;
   presence: PresenceUser[];
   activity: ActivityEvent[];
   notifications: NotificationEvent[];
@@ -71,8 +75,6 @@ type WorkspaceHookState = {
   integrations: WorkspaceIntegrationStatus[];
   assist: AssistState;
   autonomy: AutonomyState;
-  goalInsights: GoalMemoryInsights | null;
-  planner: PlannerState;
   capabilities: {
     loading: boolean;
     registry: CapabilityRegistry;
@@ -86,7 +88,7 @@ type WorkspaceHookState = {
   createBoard: (projectName: string) => Promise<void>;
   dismissNotification: (id: string) => void;
   requestAssist: () => Promise<void>;
-  retryAutomation: (cardId: string) => Promise<void>;
+  retryAutomation: (goalId?: string) => Promise<void>;
   uploadArtifact: (input: { file: File; dropType: string }) => Promise<void>;
   addColumn: (title: string) => void;
   removeColumn: (columnId: string) => void;
@@ -95,12 +97,7 @@ type WorkspaceHookState = {
   updateGoal: (columnId: string, goalId: string, patch: Partial<Goal>) => void;
   removeGoal: (columnId: string, goalId: string) => void;
   moveGoalWithinColumn: (columnId: string, activeId: string, overId: string) => void;
-  moveGoalToColumn: (
-    activeColumnId: string,
-    overColumnId: string,
-    activeGoalId: string,
-    overGoalId?: string,
-  ) => void;
+  moveGoalToColumn: (activeColumnId: string, overColumnId: string, activeGoalId: string, overGoalId?: string) => void;
   moveColumn: (activeId: string, overId: string) => void;
   setProjectName: (name: string) => void;
   resumePlan: (token: ResumeToken) => void;
@@ -120,6 +117,12 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
   const [uploadReceipts, setUploadReceipts] = useState<UploadReceiptSummary[]>([]);
   const [integrations, setIntegrations] = useState<WorkspaceIntegrationStatus[]>([]);
   const [assist, setAssist] = useState<AssistState>(null);
+  const [planner, setPlanner] = useState<PlannerState>({
+    status: "idle",
+    plans: [],
+    activePlanId: undefined,
+    lastError: undefined,
+  });
   const [autonomy, setAutonomy] = useState<AutonomyState>({
     replanTriggered: false,
     escalationTriggered: false,
@@ -127,12 +130,6 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     summary: null,
   });
   const [goalInsights, setGoalInsights] = useState<GoalMemoryInsights | null>(null);
-  const [planner, setPlanner] = useState<PlannerState>({
-    status: "idle",
-    plans: [],
-    activePlanId: null,
-    lastError: null,
-  });
   const [capabilityRegistry, setCapabilityRegistry] = useState<CapabilityRegistry>(() => ({
     version: DEFAULT_CAPABILITY_REGISTRY.version,
     capabilities: [],
@@ -144,16 +141,12 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
   const eventSourceRef = useRef<EventSource | null>(null);
   const presenceIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const latestBoardRef = useRef<WorkspaceBoard | null>(null);
+  const continuityClientRef = useRef<SessionContinuityClient | null>(null);
   const goalEvaluationRef = useRef<{ boardId: string | null; signature: string | null }>({
     boardId: null,
     signature: null,
   });
-  const goalInsightsRef = useRef<GoalMemoryInsights | null>(null);
-  const continuityRef = useRef<SessionContinuityClient | null>(null);
-
-  useEffect(() => {
-    goalInsightsRef.current = goalInsights;
-  }, [goalInsights]);
+  const skipNextAutoAssistRef = useRef(false);
 
   const logBoardError = useCallback(
     (event: string, error: unknown, context?: Record<string, unknown>) => {
@@ -166,7 +159,7 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
         context,
       });
     },
-    [],
+    []
   );
 
   const ensureBoard = useCallback(() => {
@@ -189,7 +182,7 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
 
   const featureGates = useMemo(
     () => evaluateFeatureGates(capabilityRegistry),
-    [capabilityRegistry],
+    [capabilityRegistry]
   );
 
   const hasCapability = useCallback(
@@ -199,7 +192,7 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
       }
       return capabilityTokens.has(token);
     },
-    [capabilityTokens, capabilitiesLoading],
+    [capabilityTokens, capabilitiesLoading]
   );
 
   const fetchWorkspaces = useCallback(async () => {
@@ -231,9 +224,7 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     setUploadReceipts(payload.workspace.uploadReceipts ?? []);
     setLoading(false);
     const firstBoard = payload.workspace.boards[0];
-    const boardExists = payload.workspace.boards.some(
-      (board: WorkspaceBoard) => board.id === boardId,
-    );
+    const boardExists = payload.workspace.boards.some((board: WorkspaceBoard) => board.id === boardId);
     if (!boardExists) {
       setBoardId(firstBoard ? firstBoard.id : null);
     }
@@ -244,9 +235,7 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
       setGoalInsights(null);
       return;
     }
-    const response = await fetch(`/api/goals/${boardId}/memory?workspaceId=${workspaceId}`, {
-      cache: "no-store",
-    });
+    const response = await fetch(`/api/goals/${boardId}/memory?workspaceId=${workspaceId}`, { cache: "no-store" });
     if (!response.ok) {
       return;
     }
@@ -257,11 +246,11 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
       setAssist((previous) =>
         previous
           ? {
-              ...previous,
-              memory: normalized,
-              longTermSuggestions: buildMemorySuggestions(normalized),
-            }
-          : previous,
+            ...previous,
+            memory: normalized,
+            longTermSuggestions: buildMemorySuggestions(normalized),
+          }
+          : previous
       );
     } catch (error) {
       logBoardError("goal_memory_parse_failed", error, { workspaceId, boardId });
@@ -270,9 +259,7 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
 
   const fetchBoard = useCallback(async () => {
     if (!workspaceId || !boardId) return;
-    const response = await fetch(`/api/workspaces/${workspaceId}/boards/${boardId}`, {
-      cache: "no-store",
-    });
+    const response = await fetch(`/api/workspaces/${workspaceId}/boards/${boardId}`, { cache: "no-store" });
     if (!response.ok) {
       throw new Error("Failed to load board");
     }
@@ -283,56 +270,9 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     void fetchGoalInsights();
   }, [workspaceId, boardId, fetchGoalInsights]);
 
-  useEffect(() => {
-    if (!user) {
-      continuityRef.current?.disconnect();
-      continuityRef.current = null;
-      return;
-    }
-    const endpoint = process.env.NEXT_PUBLIC_WORKFLOW_STREAM ?? "ws://localhost:8787/ui/session";
-    const client = new SessionContinuityClient({ workflowEndpoint: endpoint });
-    const handleUpdate = (event: RealTimeEvent) => {
-      setPlanner((prev) => reducePlannerFromEvent(prev, event));
-      const eventType = getEventType(event as ContinuityEvent);
-      const payload = event.payload ?? {};
-      if (eventType === "workflow/state") {
-        const state = normalizeWorkflowState(payload.state);
-        if (state === "completed" || state === "failed") {
-          fetchBoard().catch((error) =>
-            logBoardError("planner_refresh_failed", error, { workflowId: event.workflowId }),
-          );
-        }
-      }
-    };
-    const handleResume = (token: ResumeToken) => {
-      setPlanner((prev) => ({
-        ...prev,
-        plans: prev.plans.map((plan) =>
-          plan.workflowId === token.workflowId
-            ? { ...plan, resumeToken: token, updatedAt: new Date().toISOString() }
-            : plan,
-        ),
-      }));
-    };
-    client.on("workflow:update", handleUpdate);
-    client.on("workflow:resume", handleResume);
-    client.connectWebSocket();
-    continuityRef.current = client;
-    return () => {
-      client.off("workflow:update", handleUpdate);
-      client.off("workflow:resume", handleResume);
-      client.disconnect();
-      if (continuityRef.current === client) {
-        continuityRef.current = null;
-      }
-    };
-  }, [user, fetchBoard, logBoardError]);
-
   const fetchIntegrations = useCallback(async () => {
     if (!workspaceId) return;
-    const response = await fetch(`/api/workspaces/${workspaceId}/integrations/status`, {
-      cache: "no-store",
-    });
+    const response = await fetch(`/api/workspaces/${workspaceId}/integrations/status`, { cache: "no-store" });
     if (!response.ok) return;
     const payload = await response.json();
     setIntegrations(payload.integrations ?? []);
@@ -391,31 +331,26 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
   useEffect(() => {
     if (!workspaceId) return;
     fetchWorkspace().catch((error) =>
-      logBoardError("workspace_fetch_failed", error, { workspaceId }),
+      logBoardError("workspace_fetch_failed", error, { workspaceId })
     );
     fetchIntegrations().catch((error) =>
-      logBoardError("integrations_fetch_failed", error, { workspaceId }),
+      logBoardError("integrations_fetch_failed", error, { workspaceId })
     );
   }, [workspaceId, fetchWorkspace, fetchIntegrations, logBoardError]);
 
   useEffect(() => {
     if (!workspaceId || !boardId) return;
     fetchBoard().catch((error) =>
-      logBoardError("board_fetch_failed", error, { workspaceId, boardId }),
+      logBoardError("board_fetch_failed", error, { workspaceId, boardId })
     );
   }, [workspaceId, boardId, fetchBoard, logBoardError]);
 
-  useEffect(() => {
-    if (!workspaceId || !boardId) {
-      setGoalInsights(null);
-      return;
-    }
-    fetchGoalInsights().catch((error) =>
-      logBoardError("goal_memory_fetch_failed", error, { workspaceId, boardId }),
-    );
-  }, [workspaceId, boardId, fetchGoalInsights, logBoardError]);
+  // moved fetchGoalInsights effect below its declaration to avoid TDZ
 
   useEffect(() => {
+    if (typeof window === "undefined" || typeof window.EventSource === "undefined") {
+      return;
+    }
     if (!workspaceId || !user) return;
     const eventSource = new EventSource(`/api/workspaces/${workspaceId}/events`);
     eventSource.onmessage = (event) => {
@@ -425,7 +360,7 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
       const payload = JSON.parse(event.data);
       if (payload.boardId === boardId) {
         fetchBoard().catch((error) =>
-          logBoardError("board_refresh_failed", error, { workspaceId, boardId }),
+          logBoardError("board_refresh_failed", error, { workspaceId, boardId })
         );
       }
     });
@@ -457,7 +392,7 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
           columns: prev.columns.map((column) => ({
             ...column,
             goals: column.goals.map((goal) =>
-              goal.id === payload.cardId ? { ...goal, automation: payload.automation } : goal,
+              goal.id === payload.cardId ? { ...goal, automation: payload.automation } : goal
             ),
           })),
         };
@@ -478,7 +413,7 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ boardId }),
       }).catch((error) =>
-        logBoardError("presence_heartbeat_failed", error, { workspaceId, boardId }),
+        logBoardError("presence_heartbeat_failed", error, { workspaceId, boardId })
       );
     };
     sendHeartbeat();
@@ -487,12 +422,63 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     return () => {
       clearInterval(interval);
       presenceIntervalRef.current = null;
-      const cleanupRequest = fetch(`/api/workspaces/${workspaceId}/presence`, { method: "DELETE" });
-      if (cleanupRequest && typeof (cleanupRequest as { catch?: unknown }).catch === "function") {
-        (cleanupRequest as Promise<Response>).catch(() => undefined);
-      }
+      Promise.resolve(fetch(`/api/workspaces/${workspaceId}/presence`, { method: "DELETE" })).catch(() => undefined);
     };
   }, [workspaceId, boardId, user, logBoardError]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    if (!workspaceId) {
+      continuityClientRef.current?.disconnect();
+      continuityClientRef.current = null;
+      return;
+    }
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    const endpoint = `${protocol}://${window.location.host}/api/workspaces/${workspaceId}/workflow`;
+    const client = new SessionContinuityClient({ workflowEndpoint: endpoint });
+    const handleWorkflowUpdate = (event: RealTimeEvent) => {
+      setPlanner((prev) => reducePlannerFromEvent(prev, event));
+      const eventType = event.eventType ?? (event as { event_type?: string }).event_type;
+      if (eventType === "workflow/state") {
+        const payload = (event as { payload?: Record<string, unknown> }).payload ?? {};
+        const workflowState = normalizeWorkflowState(
+          (payload as { state?: unknown }).state ?? (payload as { status?: unknown }).status
+        );
+        if (workflowState === "completed") {
+          skipNextAutoAssistRef.current = true;
+          fetchBoard()
+            .catch((error) =>
+              logBoardError("workflow_refresh_failed", error, {
+                workspaceId,
+                workflowId: event.workflowId ?? (event as { workflow_id?: string }).workflow_id,
+              })
+            );
+        }
+      }
+    };
+    const handleWorkflowResume = (token: ResumeToken) => {
+      setPlanner((prev) => ({
+        ...prev,
+        plans: prev.plans.map((plan) =>
+          plan.workflowId === token.workflowId ? { ...plan, resumeToken: token } : plan
+        ),
+      }));
+    };
+    client.on("workflow:update", handleWorkflowUpdate);
+    client.on("workflow:resume", handleWorkflowResume);
+    client.connectWebSocket();
+    continuityClientRef.current = client;
+    return () => {
+      client.off("workflow:update", handleWorkflowUpdate);
+      client.off("workflow:resume", handleWorkflowResume);
+      client.disconnect();
+      if (continuityClientRef.current === client) {
+        continuityClientRef.current = null;
+      }
+    };
+  }, [workspaceId, setPlanner, fetchBoard, logBoardError]);
 
   const persistBoard = useCallback(
     async (nextBoard: WorkspaceBoard) => {
@@ -505,7 +491,7 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
         body: JSON.stringify(nextBoard),
       });
     },
-    [workspaceId],
+    [workspaceId]
   );
 
   const updateColumns = useCallback(
@@ -519,10 +505,10 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
         logBoardError("board_persist_failed", error, {
           workspaceId,
           boardId: nextBoard.id,
-        }),
+        })
       );
     },
-    [ensureBoard, persistBoard, logBoardError, workspaceId],
+    [ensureBoard, persistBoard, logBoardError, workspaceId]
   );
 
   const addColumn = useCallback(
@@ -537,62 +523,60 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
         },
       ]);
     },
-    [updateColumns],
+    [updateColumns]
   );
 
   const removeColumn = useCallback(
     (columnId: string) => {
       updateColumns((columns) => columns.filter((column) => column.id !== columnId));
     },
-    [updateColumns],
+    [updateColumns]
   );
 
   const renameColumn = useCallback(
     (columnId: string, title: string) => {
       updateColumns((columns) =>
-        columns.map((column) =>
-          column.id === columnId ? { ...column, title: title.trim() || column.title } : column,
-        ),
+        columns.map((column) => (column.id === columnId ? { ...column, title: title.trim() || column.title } : column))
       );
     },
-    [updateColumns],
+    [updateColumns]
   );
 
-  const createGoal = useCallback((partial: Partial<Goal> & { title: string }): Goal => {
-    const id =
-      partial.id ??
-      (typeof crypto !== "undefined" && crypto.randomUUID
-        ? crypto.randomUUID()
-        : `card-${Date.now()}`);
-    return {
-      id,
-      title: partial.title,
-      notes: partial.notes ?? "",
-      mood: partial.mood ?? "focus",
-      createdAt: partial.createdAt ?? new Date().toISOString(),
-      assigneeId: partial.assigneeId,
-      dueDate: partial.dueDate,
-      integrations: partial.integrations ?? [],
-      automation: partial.automation ?? {
-        goalId: id,
-        history: [],
-        lastUpdated: new Date().toISOString(),
-        retryAvailable: true,
-      },
-    };
-  }, []);
+  const createCard = useCallback(
+    (partial: Partial<VibeCard> & { title: string }): VibeCard => {
+      const id =
+        partial.id ?? (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `card-${Date.now()}`);
+      return {
+        id,
+        title: partial.title,
+        notes: partial.notes ?? "",
+        mood: partial.mood ?? "focus",
+        createdAt: partial.createdAt ?? new Date().toISOString(),
+        assigneeId: partial.assigneeId,
+        dueDate: partial.dueDate,
+        integrations: partial.integrations ?? [],
+        automation: partial.automation ?? {
+          goalId: id,
+          history: [],
+          lastUpdated: new Date().toISOString(),
+          retryAvailable: true,
+        },
+      };
+    },
+    []
+  );
 
   const addGoal = useCallback(
     (columnId: string, title: string, notes?: string) => {
       updateColumns((columns) =>
         columns.map((column) =>
           column.id === columnId
-            ? { ...column, goals: [...column.goals, createGoal({ title, notes })] }
-            : column,
-        ),
+            ? { ...column, goals: [...column.goals, createCard({ title, notes })] }
+            : column
+        )
       );
     },
-    [updateColumns, createGoal],
+    [updateColumns, createCard]
   );
 
   const updateGoal = useCallback(
@@ -601,22 +585,22 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
         columns.map((column) =>
           column.id === columnId
             ? {
-                ...column,
-                goals: column.goals.map((goal) =>
-                  goal.id === goalId
-                    ? {
-                        ...goal,
-                        ...patch,
-                        title: patch.title ? patch.title.trim() || goal.title : goal.title,
-                      }
-                    : goal,
-                ),
-              }
-            : column,
-        ),
+              ...column,
+              goals: column.goals.map((goal) =>
+                goal.id === goalId
+                  ? {
+                    ...goal,
+                    ...patch,
+                    title: patch.title ? patch.title.trim() || goal.title : goal.title,
+                  }
+                  : goal
+              ),
+            }
+            : column
+        )
       );
     },
-    [updateColumns],
+    [updateColumns]
   );
 
   const removeGoal = useCallback(
@@ -625,14 +609,14 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
         columns.map((column) =>
           column.id === columnId
             ? { ...column, goals: column.goals.filter((goal) => goal.id !== goalId) }
-            : column,
-        ),
+            : column
+        )
       );
     },
-    [updateColumns],
+    [updateColumns]
   );
 
-  const arrayMove = useCallback(<T>(list: T[], from: number, to: number) => {
+  const arrayMove = useCallback(<T,>(list: T[], from: number, to: number) => {
     if (from === to) return list;
     const next = [...list];
     const [item] = next.splice(from, 1);
@@ -649,10 +633,10 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
           const newIndex = column.goals.findIndex((goal) => goal.id === overId);
           if (oldIndex === -1 || newIndex === -1) return column;
           return { ...column, goals: arrayMove(column.goals, oldIndex, newIndex) };
-        }),
+        })
       );
     },
-    [updateColumns, arrayMove],
+    [updateColumns, arrayMove]
   );
 
   const moveGoalToColumn = useCallback(
@@ -683,7 +667,7 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
         return nextColumns;
       });
     },
-    [updateColumns],
+    [updateColumns]
   );
 
   const moveColumn = useCallback(
@@ -696,7 +680,7 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
         return arrayMove(columns, oldIndex, newIndex);
       });
     },
-    [updateColumns, arrayMove],
+    [updateColumns, arrayMove]
   );
 
   const setProjectName = useCallback(
@@ -710,21 +694,11 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
         logBoardError("board_persist_failed", error, {
           workspaceId,
           boardId: nextBoard.id,
-        }),
+        })
       );
     },
-    [ensureBoard, persistBoard, logBoardError, workspaceId],
+    [ensureBoard, persistBoard, logBoardError, workspaceId]
   );
-
-  const resumePlan = useCallback((token: ResumeToken) => {
-    continuityRef.current?.requestResume(token);
-    setPlanner((prev) => ({
-      ...prev,
-      status: "planning",
-      activePlanId: token.workflowId,
-      lastError: null,
-    }));
-  }, []);
 
   const createBoardMutation = useCallback(
     async (projectName: string) => {
@@ -744,7 +718,7 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
       });
       setBoardId(payload.board.id);
     },
-    [workspaceId],
+    [workspaceId]
   );
 
   const dismissNotification = useCallback((id: string) => {
@@ -784,119 +758,71 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
         setWorkspace((prev) =>
           prev
             ? {
-                ...prev,
-                uploadReceipts: [upload, ...(prev.uploadReceipts ?? [])].slice(0, 50),
-                notifications: notification
-                  ? [notification, ...(prev.notifications ?? [])].slice(0, 50)
-                  : prev.notifications ?? [],
-              }
-            : prev,
+              ...prev,
+              uploadReceipts: [upload, ...(prev.uploadReceipts ?? [])].slice(0, 50),
+              notifications: notification
+                ? [notification, ...(prev.notifications ?? [])].slice(0, 50)
+                : prev.notifications ?? [],
+            }
+            : prev
         );
       } else if (notification) {
         setWorkspace((prev) =>
           prev
             ? {
-                ...prev,
-                notifications: [notification, ...(prev.notifications ?? [])].slice(0, 50),
-              }
-            : prev,
+              ...prev,
+              notifications: [notification, ...(prev.notifications ?? [])].slice(0, 50),
+            }
+            : prev
         );
       }
     },
-    [workspaceId, boardId],
+    [workspaceId, boardId]
   );
 
-  const retryAutomation = useCallback(
-    async (cardId: string) => {
-      if (!workspaceId || !boardId) {
-        throw new Error("Workspace and board required");
-      }
-      const response = await fetch(`/api/workspaces/${workspaceId}/boards/${boardId}/automation`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cardId, action: "retry" }),
-      });
-      if (!response.ok) {
-        const message = await response.text().catch(() => "Failed to retry automation");
-        logBoardError("automation_retry_failed", new Error(message), {
-          workspaceId,
-          boardId,
-          cardId,
-        });
-        throw new Error(message);
-      }
-    },
-    [workspaceId, boardId, logBoardError],
-  );
+  // Assist fetching and triggering (declared before autonomy effect to avoid TDZ)
+  const fetchAssist = useCallback(async () => {
+    if (!workspaceId || !boardId) return;
+    const boardSnapshot = snapshot ?? latestBoardRef.current;
+    const fallbackFocus = pickFocusCard(boardSnapshot ?? null);
+    const payloadBody: Record<string, unknown> = {};
+    if (boardSnapshot) {
+      payloadBody.signals = buildGoalSignals(boardSnapshot);
+    }
+    if (fallbackFocus) {
+      payloadBody.goal = { focusCardId: fallbackFocus.id };
+    }
+    const hasBody = Object.keys(payloadBody).length > 0;
+    const response = await fetch(`/api/workspaces/${workspaceId}/boards/${boardId}/assist`, {
+      method: "POST",
+      headers: hasBody ? { "Content-Type": "application/json" } : undefined,
+      body: hasBody ? JSON.stringify(payloadBody) : undefined,
+    });
+    if (!response.ok) return;
+    const payload = await response.json();
+    const updatedAt = new Date().toISOString();
+    const memory = payload.memory
+      ? normalizeGoalMemory({ ...payload.memory, goalId: `board:${boardId}`, workspaceId })
+      : goalInsights;
+    if (payload.memory && memory) {
+      setGoalInsights(memory);
+    }
+    setAssist({
+      suggestions: payload.suggestions ?? [],
+      focusGoal: payload.focusCard ?? fallbackFocus ?? null,
+      updatedAt,
+      memory: memory ?? null,
+      longTermSuggestions: memory ? buildMemorySuggestions(memory) : undefined,
+    });
+    const normalizedPlan = normalizePlannerPlan(payload.plan);
+    if (normalizedPlan) {
+      setPlanner((prev) => mergePlannerSnapshot(prev, normalizedPlan));
+    }
+  }, [workspaceId, boardId, goalInsights, setGoalInsights, snapshot, setPlanner]);
 
   const requestAssist = useCallback(async () => {
-    if (!workspaceId || !boardId) {
-      setAssist(null);
-      return;
-    }
-
-    try {
-      setPlanner((prev) => ({
-        ...prev,
-        status: "planning",
-        lastError: null,
-      }));
-      const response = await fetch(`/api/workspaces/${workspaceId}/boards/${boardId}/assist`, {
-        method: "POST",
-      });
-      if (!response.ok) {
-        throw new Error("Assist request failed");
-      }
-      const payload = await response.json();
-      const updatedAt = new Date().toISOString();
-      const fallbackMemory = goalInsightsRef.current;
-      const memory = payload.memory
-        ? normalizeGoalMemory({ ...payload.memory, goalId: `board:${boardId}`, workspaceId })
-        : fallbackMemory;
-      if (payload.memory && memory) {
-        setGoalInsights(memory);
-      }
-      const planPayload = normalizePlannerPlan(payload.plan);
-      if (planPayload) {
-        setPlanner((prev) => {
-          const existing = prev.plans.filter((plan) => plan.workflowId !== planPayload.workflowId);
-          return {
-            status: "planning",
-            plans: [planPayload, ...existing].slice(0, 5),
-            activePlanId: planPayload.goalId,
-            lastError: null,
-          };
-        });
-      }
-      setAssist({
-        suggestions: payload.suggestions ?? [],
-        focusCard: payload.focusCard ?? null,
-        updatedAt,
-        memory: memory ?? null,
-        longTermSuggestions: memory ? buildMemorySuggestions(memory) : undefined,
-      });
-    } catch (error) {
-      logBoardError("assist_request_failed", error, { workspaceId, boardId });
-      setPlanner((prev) => ({
-        ...prev,
-        status: "error",
-        lastError: error instanceof Error ? error.message : "Assist request failed",
-      }));
-      throw error;
-    }
-  }, [workspaceId, boardId, logBoardError]);
-
-  useEffect(() => {
-    if (!workspaceId || !boardId) {
-      setAssist(null);
-      return;
-    }
-
-    const pending = requestAssist();
-    pending?.catch((error) =>
-      logBoardError("assist_bootstrap_failed", error, { workspaceId, boardId }),
-    );
-  }, [workspaceId, boardId, requestAssist, logBoardError]);
+    await fetchAssist();
+  }, [fetchAssist]);
 
   useEffect(() => {
     if (!snapshot || capabilitiesLoading) return;
@@ -931,20 +857,15 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     let escalationTriggered = false;
     let summary: string | null = null;
 
-    if (
-      hasGoalInsights &&
-      autoRetryEnabled &&
-      typeof snapshot.metrics.goalSuccessRate === "number"
-    ) {
+    if (hasGoalInsights && autoRetryEnabled && typeof snapshot.metrics.goalSuccessRate === "number") {
       if (snapshot.metrics.goalSuccessRate < 60) {
         replanTriggered = true;
         summary = `Autonomous retry scheduled at ${snapshot.metrics.goalSuccessRate}% success rate.`;
-        const attempt = requestAssist();
-        attempt?.catch((error) =>
+        requestAssist().catch((error) =>
           logBoardError("autonomous_retry_failed", error, {
             boardId: snapshot.id,
             successRate: snapshot.metrics?.goalSuccessRate,
-          }),
+          })
         );
         setNotifications((prev) => {
           const notification = {
@@ -959,11 +880,7 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
       }
     }
 
-    if (
-      hasGoalInsights &&
-      escalationEnabled &&
-      typeof snapshot.metrics.goalLeadTimeHours === "number"
-    ) {
+    if (hasGoalInsights && escalationEnabled && typeof snapshot.metrics.goalLeadTimeHours === "number") {
       if (snapshot.metrics.goalLeadTimeHours > 12) {
         escalationTriggered = true;
         const message = `Goal lead time reached ${snapshot.metrics.goalLeadTimeHours}h. Escalating to senior agent.`;
@@ -992,12 +909,12 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
       setAutonomy((prev) =>
         prev.replanTriggered || prev.escalationTriggered
           ? {
-              replanTriggered: false,
-              escalationTriggered: false,
-              lastTriggeredAt: nowIso,
-              summary: null,
-            }
-          : prev,
+            replanTriggered: false,
+            escalationTriggered: false,
+            lastTriggeredAt: nowIso,
+            summary: null,
+          }
+          : prev
       );
     }
   }, [
@@ -1009,13 +926,55 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     setNotifications,
   ]);
 
+  // (moved fetchAssist/requestAssist earlier)
+
+  const retryAutomation = useCallback(async (_goalId?: string) => {
+    try {
+      if (!workspaceId || !boardId) return;
+      await fetch(`/api/workspaces/${workspaceId}/boards/${boardId}/automation/retry`, {
+        method: "POST",
+      });
+    } catch {
+      // noop: best-effort retry trigger
+    }
+  }, [workspaceId, boardId]);
+
+  const resumePlan = useCallback((token: ResumeToken) => {
+    setAutonomy((prev) => ({ ...prev, lastTriggeredAt: new Date().toISOString() }));
+    continuityClientRef.current?.requestResume(token);
+    setPlanner((prev) => ({
+      ...prev,
+      plans: prev.plans.map((plan) =>
+        plan.workflowId === token.workflowId ? { ...plan, resumeToken: token } : plan
+      ),
+    }));
+  }, []);
+
   const refreshWorkspace = useCallback(async () => {
     await fetchWorkspace();
   }, [fetchWorkspace]);
-
   const refreshBoard = useCallback(async () => {
     await fetchBoard();
   }, [fetchBoard]);
+
+  useEffect(() => {
+    if (!workspaceId || !boardId) {
+      setGoalInsights(null);
+      return;
+    }
+    fetchGoalInsights().catch((error) =>
+      logBoardError("goal_memory_fetch_failed", error, { workspaceId, boardId })
+    );
+  }, [workspaceId, boardId, fetchGoalInsights, logBoardError]);
+
+  useEffect(() => {
+    if (!workspaceId || !boardId) return;
+    if (skipNextAutoAssistRef.current) {
+      skipNextAutoAssistRef.current = false;
+      return;
+    }
+    fetchAssist().catch(() => undefined);
+  }, [workspaceId, boardId, goalInsights, fetchAssist]);
 
   return {
     hydrated,
@@ -1026,6 +985,8 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     workspaces,
     workspace,
     snapshot,
+    goalInsights,
+    planner,
     presence,
     activity,
     notifications,
@@ -1033,8 +994,6 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
     integrations,
     assist,
     autonomy,
-    goalInsights,
-    planner,
     capabilities: {
       loading: capabilitiesLoading,
       registry: capabilityRegistry,
@@ -1064,46 +1023,40 @@ export function useBoardState(user: ClientSessionUser | null): WorkspaceHookStat
   };
 }
 
-function normalizePlannerPlan(input: unknown): PlannerPlan | null {
-  if (!input || typeof input !== "object") {
-    return null;
+function pickFocusCard(board: WorkspaceBoard | null): VibeCard | null {
+  if (!board) return null;
+  const inProgress = board.columns.find((column) => column.title.toLowerCase().includes("progress"));
+  if (inProgress && inProgress.goals.length) {
+    return [...inProgress.goals].sort(
+      (a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt)
+    )[0];
   }
-  const value = input as Record<string, unknown>;
-  const workflowId = typeof value.workflowId === "string" ? value.workflowId : undefined;
-  if (!workflowId) {
-    return null;
+  for (const column of board.columns) {
+    if (column.goals.length) {
+      return column.goals[0];
+    }
   }
-  const goalId = typeof value.goalId === "string" ? value.goalId : workflowId;
-  const goalTitle = typeof value.goalTitle === "string" ? value.goalTitle : goalId;
-  const status = normalizeWorkflowState((value.state ?? value.status) as string) ?? "pending";
-  const stagesRaw = Array.isArray(value.stages) ? value.stages : [];
-  const stages: PlannerPlan["stages"] = stagesRaw.map((stage) => {
-    const stageRecord = stage as Record<string, unknown>;
-    const id = typeof stageRecord.id === "string" ? stageRecord.id : cryptoRandom();
-    const name = typeof stageRecord.name === "string" ? stageRecord.name : id;
-    return {
-      id,
-      name,
-      state: normalizeStageState(stageRecord.state) ?? "pending",
-    };
-  });
-  return {
-    goalId,
-    goalTitle,
-    workflowId,
-    status,
-    stages,
-    startedAt: typeof value.startedAt === "string" ? value.startedAt : new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    resumeToken: value.resumeToken as ResumeToken | undefined,
-  };
+  return null;
 }
 
-type ContinuityEvent = RealTimeEvent & {
-  event_type?: string;
-  workflow_id?: string;
-  payload: Record<string, unknown>;
-};
+function buildGoalSignals(board: WorkspaceBoard): Record<string, unknown>[] {
+  const totalGoals = board.columns.reduce((count, column) => count + column.goals.length, 0);
+  const hypeGoals = board.columns.reduce(
+    (count, column) => count + column.goals.filter((goal) => goal.mood === "hype").length,
+    0
+  );
+  const staleGoals = board.columns
+    .flatMap((column) => column.goals)
+    .filter((goal) => Date.now() - Date.parse(goal.createdAt) > 1000 * 60 * 60 * 24 * 7).length;
+
+  return [
+    { name: "totalGoals", value: totalGoals },
+    { name: "hypeGoals", value: hypeGoals },
+    { name: "staleGoals", value: staleGoals },
+  ];
+}
+
+type ContinuityEvent = RealTimeEvent & { event_type?: string; workflow_id?: string; payload: Record<string, unknown> };
 
 function getEventType(event: ContinuityEvent): string {
   return event.eventType ?? event.event_type ?? "";
@@ -1116,28 +1069,18 @@ function getWorkflowId(event: ContinuityEvent): string {
 function normalizeWorkflowState(value: unknown): PlannerPlan["status"] | undefined {
   if (typeof value !== "string") return undefined;
   const normalized = value.toLowerCase();
-  if (
-    normalized === "pending" ||
-    normalized === "running" ||
-    normalized === "paused" ||
-    normalized === "completed" ||
-    normalized === "failed"
-  ) {
+  if (normalized === "pending" || normalized === "running" || normalized === "paused" || normalized === "completed" || normalized === "failed") {
     return normalized;
   }
   return undefined;
 }
 
-function normalizeStageState(value: unknown): PlannerPlan["stages"][number]["state"] | undefined {
+function normalizeStageState(
+  value: unknown
+): PlannerPlan["stages"][number]["state"] | undefined {
   if (typeof value !== "string") return undefined;
   const normalized = value.toLowerCase();
-  if (
-    normalized === "pending" ||
-    normalized === "running" ||
-    normalized === "completed" ||
-    normalized === "failed" ||
-    normalized === "skipped"
-  ) {
+  if (normalized === "pending" || normalized === "running" || normalized === "completed" || normalized === "failed" || normalized === "skipped") {
     return normalized;
   }
   return undefined;
@@ -1168,7 +1111,8 @@ function normalizeResumeToken(value: unknown): ResumeToken | undefined {
         ? (source.stage_id as string)
         : undefined;
 
-  const checkpoint = typeof source.checkpoint === "string" ? (source.checkpoint as string) : "";
+  const checkpoint =
+    typeof source.checkpoint === "string" ? (source.checkpoint as string) : "";
   const issuedAt =
     typeof source.issuedAt === "string"
       ? (source.issuedAt as string)
@@ -1194,7 +1138,7 @@ function normalizeResumeToken(value: unknown): ResumeToken | undefined {
 function mergeStageStates(
   stages: PlannerPlan["stages"],
   stageId: string,
-  state: PlannerPlan["stages"][number]["state"],
+  state: PlannerPlan["stages"][number]["state"]
 ): PlannerPlan["stages"] {
   const existing = stages.find((stage) => stage.id === stageId);
   if (!existing) {
@@ -1209,8 +1153,7 @@ function reducePlannerFromEvent(prev: PlannerState, event: RealTimeEvent): Plann
     return prev;
   }
 
-  const timestamp =
-    typeof event.timestamp === "string" ? event.timestamp : new Date().toISOString();
+  const timestamp = typeof event.timestamp === "string" ? event.timestamp : new Date().toISOString();
   let handled = false;
 
   const plans = prev.plans.map((plan) => {
@@ -1276,12 +1219,11 @@ function reducePlannerFromEvent(prev: PlannerState, event: RealTimeEvent): Plann
   if (updatedPlan) {
     if (updatedPlan.status === "completed" || updatedPlan.status === "failed") {
       if (prev.activePlanId === updatedPlan.goalId) {
-        activePlanId =
-          plans.find(
-            (plan) =>
-              plan.workflowId !== workflowId &&
-              (plan.status === "running" || plan.status === "pending" || plan.status === "paused"),
-          )?.goalId ?? null;
+        activePlanId = plans.find(
+          (plan) =>
+            plan.workflowId !== workflowId &&
+            (plan.status === "running" || plan.status === "pending" || plan.status === "paused")
+        )?.goalId;
       }
       if (updatedPlan.status === "failed") {
         plannerStatus = "error";
@@ -1302,12 +1244,108 @@ function reducePlannerFromEvent(prev: PlannerState, event: RealTimeEvent): Plann
   };
 }
 
+function normalizePlannerPlan(value: unknown): PlannerPlan | null {
+  if (!value || typeof value !== "object") return null;
+  const source = value as Record<string, unknown>;
+  const workflowId =
+    typeof source.workflowId === "string"
+      ? source.workflowId
+      : typeof source.workflow_id === "string"
+        ? String(source.workflow_id)
+        : undefined;
+  if (!workflowId) return null;
+  const goalId =
+    typeof source.goalId === "string"
+      ? source.goalId
+      : typeof source.goal_id === "string"
+        ? String(source.goal_id)
+        : workflowId;
+  const status =
+    normalizeWorkflowState(source.status ?? source.state) ??
+    (source.resumeToken || source.resume_token ? "paused" : "pending");
+  const updatedAt =
+    typeof source.updatedAt === "string"
+      ? source.updatedAt
+      : typeof source.updated_at === "string"
+        ? String(source.updated_at)
+        : new Date().toISOString();
+  const goalTitle =
+    typeof source.goalTitle === "string"
+      ? source.goalTitle
+      : typeof source.goal_title === "string"
+        ? String(source.goal_title)
+        : undefined;
+  const stagesRaw = Array.isArray(source.stages) ? (source.stages as unknown[]) : [];
+  const stages = stagesRaw
+    .map((stage): PlannerPlan["stages"][number] | null => {
+      if (!stage || typeof stage !== "object") return null;
+      const record = stage as Record<string, unknown>;
+      const stageIdentifier =
+        typeof record.id === "string"
+          ? record.id
+          : typeof record.stageId === "string"
+            ? record.stageId
+            : typeof record.stage_id === "string"
+              ? String(record.stage_id)
+              : undefined;
+      const stageId = normalizeStageIdentifier(stageIdentifier ?? cryptoRandom());
+      const stageState = normalizeStageState(record.state ?? record.status) ?? "pending";
+      const stageName =
+        typeof record.name === "string"
+          ? record.name
+          : typeof record.label === "string"
+            ? String(record.label)
+            : stageId;
+      return { id: stageId, name: stageName, state: stageState };
+    })
+    .filter((stage): stage is PlannerPlan["stages"][number] => Boolean(stage));
+  const resumeToken = normalizeResumeToken(source.resumeToken ?? source.resume_token);
+  return {
+    goalId,
+    goalTitle,
+    workflowId,
+    status,
+    stages,
+    updatedAt,
+    resumeToken,
+  };
+}
+
+function mergePlannerSnapshot(prev: PlannerState, plan: PlannerPlan): PlannerState {
+  const remaining = prev.plans.filter((existing) => existing.workflowId !== plan.workflowId);
+  const plans = [plan, ...remaining];
+  const isActive =
+    plan.status === "running" || plan.status === "pending" || plan.status === "paused";
+  let activePlanId = prev.activePlanId;
+  if (isActive) {
+    activePlanId = plan.goalId;
+  } else if (prev.activePlanId === plan.goalId) {
+    activePlanId = remaining.find(
+      (candidate) =>
+        candidate.status === "running" ||
+        candidate.status === "pending" ||
+        candidate.status === "paused"
+    )?.goalId;
+  }
+  let status = prev.status;
+  if (plan.status === "failed") {
+    status = "error";
+  } else if (isActive) {
+    status = "planning";
+  } else if (status === "idle") {
+    status = "ready";
+  }
+  return {
+    status,
+    plans,
+    activePlanId,
+    lastError: plan.status === "failed" ? `Plan ${plan.workflowId} failed` : prev.lastError,
+  };
+}
+
 function normalizeGoalMemory(payload: unknown): GoalMemoryInsights {
   const value = (typeof payload === "object" && payload) || {};
-  const summary =
-    typeof (value as { summary?: unknown }).summary === "string"
-      ? (value as { summary: string }).summary
-      : "";
+  const summary = typeof (value as { summary?: unknown }).summary === "string" ? (value as { summary: string }).summary : "";
   const traceCountRaw = (value as { traceCount?: unknown }).traceCount;
   const tracesRaw = (value as { traces?: unknown }).traces;
   const traceCount = Number.isFinite(traceCountRaw)
@@ -1319,83 +1357,58 @@ function normalizeGoalMemory(payload: unknown): GoalMemoryInsights {
   const lastSeen = typeof lastSeenRaw === "string" ? lastSeenRaw : null;
   const traces = Array.isArray(tracesRaw)
     ? tracesRaw.map((trace) => ({
-        id: String((trace as { id?: unknown }).id ?? cryptoRandom()),
-        goalId: String((trace as { goalId?: unknown }).goalId ?? ""),
-        workspaceId: String((trace as { workspaceId?: unknown }).workspaceId ?? ""),
-        boardId:
-          (trace as { boardId?: unknown }).boardId &&
-          typeof (trace as { boardId?: unknown }).boardId === "string"
-            ? String((trace as { boardId?: unknown }).boardId)
-            : null,
-        actorId: (trace as { actorId?: unknown }).actorId
-          ? String((trace as { actorId?: unknown }).actorId)
+      id: String((trace as { id?: unknown }).id ?? cryptoRandom()),
+      goalId: String((trace as { goalId?: unknown }).goalId ?? ""),
+      workspaceId: String((trace as { workspaceId?: unknown }).workspaceId ?? ""),
+      boardId: (trace as { boardId?: unknown }).boardId ? String((trace as { boardId?: unknown }).boardId) : null,
+      actorId: (trace as { actorId?: unknown }).actorId ? String((trace as { actorId?: unknown }).actorId) : null,
+      actorName: (trace as { actorName?: unknown }).actorName ? String((trace as { actorName?: unknown }).actorName) : null,
+      action: String((trace as { action?: unknown }).action ?? "unknown"),
+      summary: (trace as { summary?: unknown }).summary ? String((trace as { summary?: unknown }).summary) : null,
+      metadata:
+        (trace as { metadata?: unknown }).metadata && typeof (trace as { metadata?: unknown }).metadata === "object"
+          ? ((trace as { metadata: Record<string, unknown> }).metadata as Record<string, unknown>)
           : null,
-        actorName: (trace as { actorName?: unknown }).actorName
-          ? String((trace as { actorName?: unknown }).actorName)
-          : null,
-        action: String((trace as { action?: unknown }).action ?? "unknown"),
-        summary: (trace as { summary?: unknown }).summary
-          ? String((trace as { summary?: unknown }).summary)
-          : null,
-        metadata:
-          (trace as { metadata?: unknown }).metadata &&
-          typeof (trace as { metadata?: unknown }).metadata === "object"
-            ? ((trace as { metadata: Record<string, unknown> }).metadata as Record<string, unknown>)
-            : null,
-        createdAt: String((trace as { createdAt?: unknown }).createdAt ?? new Date().toISOString()),
-      }))
+      createdAt: String((trace as { createdAt?: unknown }).createdAt ?? new Date().toISOString()),
+    }))
     : [];
   const lifecycleRaw = (value as { lifecycle?: unknown }).lifecycle;
   const lifecycle = Array.isArray(lifecycleRaw)
     ? lifecycleRaw.map((event) => ({
-        id: Number((event as { id?: unknown }).id ?? Date.now()),
-        goalId: String((event as { goalId?: unknown }).goalId ?? ""),
-        workspaceId: String((event as { workspaceId?: unknown }).workspaceId ?? ""),
-        eventType: String((event as { eventType?: unknown }).eventType ?? "unknown"),
-        status: (event as { status?: unknown }).status
-          ? String((event as { status?: unknown }).status)
-          : null,
-        summary: (event as { summary?: unknown }).summary
-          ? String((event as { summary?: unknown }).summary)
-          : null,
-        payload: (event as { payload?: unknown }).payload,
-        createdAt: String((event as { createdAt?: unknown }).createdAt ?? new Date().toISOString()),
-      }))
+      id: Number((event as { id?: unknown }).id ?? Date.now()),
+      goalId: String((event as { goalId?: unknown }).goalId ?? ""),
+      workspaceId: String((event as { workspaceId?: unknown }).workspaceId ?? ""),
+      eventType: String((event as { eventType?: unknown }).eventType ?? "unknown"),
+      status: (event as { status?: unknown }).status ? String((event as { status?: unknown }).status) : null,
+      summary: (event as { summary?: unknown }).summary ? String((event as { summary?: unknown }).summary) : null,
+      payload: (event as { payload?: unknown }).payload,
+      createdAt: String((event as { createdAt?: unknown }).createdAt ?? new Date().toISOString()),
+    }))
     : [];
   const artifactsRaw = (value as { artifacts?: unknown }).artifacts;
   const artifacts = Array.isArray(artifactsRaw)
     ? artifactsRaw.map((artifact) => ({
-        id: Number((artifact as { id?: unknown }).id ?? Date.now()),
-        goalId: String((artifact as { goalId?: unknown }).goalId ?? ""),
-        workspaceId: String((artifact as { workspaceId?: unknown }).workspaceId ?? ""),
-        artifactType: String((artifact as { artifactType?: unknown }).artifactType ?? "unknown"),
-        artifactUri: String((artifact as { artifactUri?: unknown }).artifactUri ?? ""),
-        title: (artifact as { title?: unknown }).title
-          ? String((artifact as { title?: unknown }).title)
+      id: Number((artifact as { id?: unknown }).id ?? Date.now()),
+      goalId: String((artifact as { goalId?: unknown }).goalId ?? ""),
+      workspaceId: String((artifact as { workspaceId?: unknown }).workspaceId ?? ""),
+      artifactType: String((artifact as { artifactType?: unknown }).artifactType ?? "unknown"),
+      artifactUri: String((artifact as { artifactUri?: unknown }).artifactUri ?? ""),
+      title: (artifact as { title?: unknown }).title ? String((artifact as { title?: unknown }).title) : null,
+      summary: (artifact as { summary?: unknown }).summary ? String((artifact as { summary?: unknown }).summary) : null,
+      metadata:
+        (artifact as { metadata?: unknown }).metadata && typeof (artifact as { metadata?: unknown }).metadata === "object"
+          ? ((artifact as { metadata: Record<string, unknown> }).metadata as Record<string, unknown>)
           : null,
-        summary: (artifact as { summary?: unknown }).summary
-          ? String((artifact as { summary?: unknown }).summary)
-          : null,
-        metadata:
-          (artifact as { metadata?: unknown }).metadata &&
-          typeof (artifact as { metadata?: unknown }).metadata === "object"
-            ? ((artifact as { metadata: Record<string, unknown> }).metadata as Record<
-                string,
-                unknown
-              >)
-            : null,
-        createdAt: String(
-          (artifact as { createdAt?: unknown }).createdAt ?? new Date().toISOString(),
-        ),
-      }))
+      createdAt: String((artifact as { createdAt?: unknown }).createdAt ?? new Date().toISOString()),
+    }))
     : [];
   const similarGoalsRaw = (value as { similarGoals?: unknown }).similarGoals;
   const similarGoals = Array.isArray(similarGoalsRaw)
     ? similarGoalsRaw.map((goal) => ({
-        goalId: String((goal as { goalId?: unknown }).goalId ?? ""),
-        workspaceId: String((goal as { workspaceId?: unknown }).workspaceId ?? ""),
-        score: Number((goal as { score?: unknown }).score ?? 0),
-      }))
+      goalId: String((goal as { goalId?: unknown }).goalId ?? ""),
+      workspaceId: String((goal as { workspaceId?: unknown }).workspaceId ?? ""),
+      score: Number((goal as { score?: unknown }).score ?? 0),
+    }))
     : [];
   const insightSummaryRaw = (value as { insightSummary?: unknown }).insightSummary;
   const insightSummary = typeof insightSummaryRaw === "string" ? insightSummaryRaw : undefined;

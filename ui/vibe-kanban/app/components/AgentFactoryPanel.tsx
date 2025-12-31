@@ -45,7 +45,7 @@ export function deriveAgentFactoryLayers(context: AgentFactoryContext): AgentFac
   const activeColumns = context.snapshot?.columns.length ?? 0;
   const plannerPlan = context.planner.plans[0];
   const orchestratorFocus =
-    context.assist?.focusCard?.title ?? context.assist?.suggestions?.[0]?.title;
+    context.assist?.focusGoal?.title ?? context.assist?.suggestions?.[0]?.title;
   const orchestrationMemory =
     context.goalInsights?.insightSummary ?? context.goalInsights?.summary ?? "Memory synced.";
   const degradedIntegrations = context.integrations.filter(

@@ -745,7 +745,7 @@ mod tests {
     #[test]
     fn test_trigger_config_default() {
         let config = TriggerConfig::default();
-        assert!(config.enabled);
+        assert_eq!(config.enabled, true);
         assert_eq!(config.auto_merge_threshold, 0.95);
         assert_eq!(config.watch_ready_queues.len(), 4);
     }
@@ -811,13 +811,11 @@ mod tests {
     #[tokio::test]
     async fn trust_metrics_require_threshold() {
         let workspace = tempdir().unwrap();
-        let config = TriggerConfig {
-            ledger_path: PathBuf::from("ledger.jsonl"),
-            repo_path: PathBuf::from("."),
-            auto_merge_threshold: 0.95,
-            required_trust_average: 0.95,
-            ..TriggerConfig::default()
-        };
+        let mut config = TriggerConfig::default();
+        config.ledger_path = PathBuf::from("ledger.jsonl");
+        config.repo_path = PathBuf::from(".");
+        config.auto_merge_threshold = 0.95;
+        config.required_trust_average = 0.95;
 
         let manager = TriggerManager::new(workspace.path().to_path_buf(), config);
         let event = TriggerEvent {
@@ -835,13 +833,11 @@ mod tests {
     #[tokio::test]
     async fn trust_metrics_consider_historical_scores() {
         let workspace = tempdir().unwrap();
-        let config = TriggerConfig {
-            ledger_path: PathBuf::from("ledger.jsonl"),
-            repo_path: PathBuf::from("."),
-            auto_merge_threshold: 0.80,
-            required_trust_average: 0.85,
-            ..TriggerConfig::default()
-        };
+        let mut config = TriggerConfig::default();
+        config.ledger_path = PathBuf::from("ledger.jsonl");
+        config.repo_path = PathBuf::from(".");
+        config.auto_merge_threshold = 0.80;
+        config.required_trust_average = 0.85;
 
         let manager = TriggerManager::new(workspace.path().to_path_buf(), config);
         manager
@@ -870,12 +866,10 @@ mod tests {
         let repo = tempdir().unwrap();
         init_git_repo(repo.path());
 
-        let config = TriggerConfig {
-            repo_path: PathBuf::from("."),
-            ledger_path: PathBuf::from("audit/ledger.jsonl"),
-            integration_branch: "main".into(),
-            ..TriggerConfig::default()
-        };
+        let mut config = TriggerConfig::default();
+        config.repo_path = PathBuf::from(".");
+        config.ledger_path = PathBuf::from("audit/ledger.jsonl");
+        config.integration_branch = "main".into();
 
         let manager = TriggerManager::new(repo.path().to_path_buf(), config);
         let event = TriggerEvent {

@@ -1,5 +1,5 @@
 {
-  "generated_at": 1763430266436,
+  "generated_at": 1763507084568,
   "manifests": [
     {
       "path": "Cargo.toml",
@@ -914,6 +914,18 @@
         {
           "name": "uuid",
           "requirement": "1.6",
+          "optional": false
+        }
+      ],
+      "workspace_members": []
+    },
+    {
+      "path": "server/tools/rustup-portable/toolchains/stable-x86_64-unknown-linux-gnu/share/doc/rust/html/error_codes/Cargo.toml",
+      "package": "error_index_generator",
+      "dependencies": [
+        {
+          "name": "mdbook",
+          "requirement": "0.4",
           "optional": false
         }
       ],

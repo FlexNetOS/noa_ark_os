@@ -2,7 +2,7 @@
   "name": "noa-ark-os",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@8.15.4",
+  "packageManager": "pnpm@9.11.0",
   "scripts": {
     "orchestrate": "tsx scripts/orchestrator.ts",
     "guardrails:local": "bash scripts/guardrails-local.sh",
@@ -10,17 +10,16 @@
     "export:roadmap": "tsx scripts/export_roadmap.ts",
     "lint": "pnpm --filter vibe-kanban lint && pnpm --filter vibe-kanban lint:eslint",
     "typecheck": "pnpm --filter vibe-kanban typecheck",
-    "test": "pnpm --filter vibe-kanban test && pnpm exec tsx --test tools/offline_pr_queue/tests/index.test.ts && pnpm exec tsx --test tools/notebook_sync/tests/notebook_agent.test.ts",
+    "test": "pnpm --filter vibe-kanban test && pnpm exec tsx --test tools/offline_pr_queue/tests/index.test.ts",
     "build": "pnpm --filter vibe-kanban build",
     "format": "pnpm --filter vibe-kanban format",
     "docs:lint": "pnpm exec markdownlint-cli2 \"CHANGELOG.md\" \"docs/guides/AGENTIC_OS_GUIDE.md\"",
     "offline:queue": "pnpm exec tsx tools/offline_pr_queue/cli.ts",
-    "commit:copilot": "pnpm exec tsx tools/commit_copilot/cli.ts",
-    "notebooks:sync": "pnpm exec tsx tools/notebook_sync/cli.ts"
+    "commit:copilot": "pnpm exec tsx tools/commit_copilot/cli.ts"
   },
   "devDependencies": {
-    "markdownlint-cli2": "0.14.0",
-    "tsx": "4.7.1",
-    "typescript": "5.4.5"
+    "markdownlint-cli2": "0.19.0",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3"
   }
 }

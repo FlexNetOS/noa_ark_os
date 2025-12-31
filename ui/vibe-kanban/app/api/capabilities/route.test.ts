@@ -27,11 +27,9 @@ describe("GET /api/capabilities", () => {
 
   it("falls back to an empty registry when the data file is missing", async () => {
     vi.resetModules();
-    const readFile = vi
-      .fn()
-      .mockRejectedValue(Object.assign(new Error("missing"), { code: "ENOENT" }));
+    const readFile = vi.fn().mockRejectedValue(Object.assign(new Error("missing"), { code: "ENOENT" }));
     vi.doMock("fs/promises", () => ({
-      default: { readFile },
+      default: { readFile }
     }));
     const { GET } = await import("./route");
     const response = await GET();

@@ -5,7 +5,7 @@
     "theme": "Kernel-first dependency graph & portable packaging",
     "description": "Build a unified dependency graph for kernels covering runtime crates, models, and system services, then emit portable bundles compatible with OCI registries and air-gapped installs.",
     "priority": "P0",
-    "status": "Completed",
+    "status": "Proposed",
     "depends_on": [],
     "acceptance_criteria": [
       "Graph validation command fails on missing or cyclic dependencies.",
@@ -18,7 +18,7 @@
     "theme": "Single-host server profile (full stack on one machine)",
     "description": "Deliver a reference deployment profile that layers gateway, runtime services, storage, and UI on a single host with scripted bootstrap and health diagnostics.",
     "priority": "P0",
-    "status": "Completed",
+    "status": "Proposed",
     "depends_on": [
       "AGENTOS-1"
     ],
@@ -33,7 +33,7 @@
     "theme": "Unified UI/UX shell (desktop + web + immersive)",
     "description": "Create a shared shell framework that synchronizes navigation, session state, and notifications across desktop, web, and immersive canvases with adaptive layouts.",
     "priority": "P1",
-    "status": "Completed",
+    "status": "Proposed",
     "depends_on": [
       "AGENTOS-2"
     ],
@@ -48,7 +48,7 @@
     "theme": "Adaptive runtime/portability (edge/VM/containers)",
     "description": "Extend runtime scheduler to detect edge, VM, and container contexts, applying tuned placement, resource quotas, and failover behaviors.",
     "priority": "P1",
-    "status": "Completed",
+    "status": "Proposed",
     "depends_on": [
       "AGENTOS-2"
     ],
@@ -63,7 +63,7 @@
     "theme": "Advanced gateway & observability (routing, security, metrics)",
     "description": "Harden gateway with policy-driven routing, zero-trust authentication adapters, and end-to-end observability spanning traces, metrics, and alerts.",
     "priority": "P1",
-    "status": "Completed",
+    "status": "Proposed",
     "depends_on": [
       "AGENTOS-4"
     ],
@@ -78,7 +78,7 @@
     "theme": "Value-add ecosystem (blueprints, automation, analytics)",
     "description": "Publish curated blueprints, automation packs, and analytics accelerators with pipelines, sample data, and guided onboarding inside the marketplace.",
     "priority": "P2",
-    "status": "Completed",
+    "status": "Proposed",
     "depends_on": [
       "AGENTOS-5"
     ],

@@ -6,10 +6,17 @@ import { prFile, reviewFile } from "./lib/state.ts";
 
 function parseArgs(argv: string[]): Record<string, string | boolean> {
   const args: Record<string, string | boolean> = {};
-  for (const arg of argv) {
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
     if (arg.startsWith("--")) {
-      const [key, value] = arg.slice(2).split("=", 2);
-      args[key] = value ?? true;
+      const key = arg.slice(2);
+      const next = argv[i + 1];
+      if (next && !next.startsWith("--")) {
+        args[key] = next;
+        i++; // skip the value
+      } else {
+        args[key] = true;
+      }
     }
   }
   return args;
